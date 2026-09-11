@@ -159,6 +159,47 @@ DO $$ BEGIN
   END;
 END $$;
 
+-- Direct database assignments enforce the same mailbox syntax as staff actions.
+DO $$ DECLARE v_email TEXT; BEGIN
+  FOREACH v_email IN ARRAY ARRAY[
+    'missing..local@example.test','.local@example.test','local.@example.test',
+    'local@-example.test','local@example-.test','local@example..test',
+    'local@exam_ple.test','local@localhost','local name@example.test','local@','@example.test',
+    repeat('a',65)||'@example.test','local@'||repeat('a',64)||'.test',
+    'local@'||repeat(repeat('a',63)||'.',4)||'test'
+  ] LOOP
+    UPDATE public.repreneurs SET email=v_email WHERE id='75000000-0000-4000-8000-000000000011';
+    BEGIN
+      INSERT INTO public.opportunity_matches(opportunity_id,repreneur_id,status,created_by)
+      VALUES('75000000-0000-4000-8000-000000000003','75000000-0000-4000-8000-000000000011','proposed','w175-staff');
+      RAISE EXCEPTION 'w175_malformed_mailbox_allowed';
+    EXCEPTION WHEN raise_exception THEN
+      IF SQLERRM <> 'recommendation_assignment_valid_email_required' THEN RAISE; END IF;
+    END;
+  END LOOP;
+END $$;
+
+DO $$ DECLARE v_email TEXT; v_match UUID; BEGIN
+  FOREACH v_email IN ARRAY ARRAY[
+    'valid@example.test','x@y.z','first.last+tag@example.invalid',
+    repeat('a',64)||'@example.test','local@'||repeat('a',63)||'.test'
+  ] LOOP
+    UPDATE public.repreneurs SET email=chr(11)||E' \t'||upper(v_email)||U&'\00A0'
+      WHERE id='75000000-0000-4000-8000-000000000011';
+    BEGIN
+      INSERT INTO public.opportunity_matches(opportunity_id,repreneur_id,status,created_by)
+      VALUES('75000000-0000-4000-8000-000000000003','75000000-0000-4000-8000-000000000011','proposed','w175-staff')
+      RETURNING id INTO v_match;
+      IF public.get_recommendation_assignment_notification(v_match,'w175-staff')->>'recipient_email' IS DISTINCT FROM v_email THEN
+        RAISE EXCEPTION 'w175_valid_mailbox_normalization_mismatch';
+      END IF;
+      RAISE EXCEPTION 'w175_valid_mailbox_probe_rollback';
+    EXCEPTION WHEN raise_exception THEN
+      IF SQLERRM <> 'w175_valid_mailbox_probe_rollback' THEN RAISE; END IF;
+    END;
+  END LOOP;
+END $$;
+
 UPDATE public.opportunities SET teaser_summary='Internal — Never EMAIL!' WHERE id='75000000-0000-4000-8000-000000000003';
 SET LOCAL ROLE service_role;
 INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,created_by) VALUES

@@ -117,13 +117,13 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
             <input type="hidden" name="status" value="proposed" />
             <input type="hidden" name="human_recommendation" value="possible_fit" />
             <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-              <label className="flex flex-col gap-2 text-sm">
+              <label className="flex min-w-0 flex-col gap-2 text-sm">
                 <FormFieldLabel htmlFor="opportunity_id" requirement="required">Recommend an opportunity</FormFieldLabel>
                 <select
                   id="opportunity_id"
                   name="opportunity_id"
                   required
-                  className="h-9 rounded-md border bg-background px-3 text-sm"
+                  className="h-9 w-full min-w-0 rounded-md border bg-background px-3 text-sm"
                   {...fieldErrorProps("opportunity_id", recommendationErrors.opportunity_id)}
                   onChange={() => {
                     setRecommendationErrors({})

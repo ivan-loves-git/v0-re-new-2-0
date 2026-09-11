@@ -2,6 +2,26 @@
 -- portal access, scheduler, provider call, or response-window write.
 -- One immutable intent per newly inserted Proposed REAL match. Delivery state
 -- remains in the existing notification_delivery_claims and email_logs.
+-- Mirror validatePortalEmail, including JavaScript trim whitespace. Return only
+-- a normalized valid mailbox; this does not establish ownership/deliverability.
+CREATE OR REPLACE FUNCTION public.w175_assignment_recipient_email(p_email TEXT)
+RETURNS TEXT LANGUAGE plpgsql IMMUTABLE SET search_path=public,pg_temp AS $$
+DECLARE v_email TEXT; v_parts TEXT[]; v_local TEXT; v_domain TEXT; v_label TEXT;
+BEGIN
+  v_email := lower(btrim(p_email,E' \t\n\r\f'||chr(11)||U&'\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF'));
+  IF v_email IS NULL OR v_email='' THEN RETURN NULL; END IF;
+  v_parts := string_to_array(v_email,'@');
+  IF cardinality(v_parts)<>2 THEN RETURN NULL; END IF;
+  v_local := v_parts[1]; v_domain := v_parts[2];
+  IF v_local='' OR v_domain='' OR length(v_local)>64 OR length(v_domain)>253 OR v_local LIKE '.%' OR v_local LIKE '%.'
+    OR strpos(v_local,'..')>0 OR strpos(v_domain,'.')=0
+    OR v_local !~ '^[a-z0-9.!#$%&''*+/=?^_`{|}~-]+$' THEN RETURN NULL; END IF;
+  FOREACH v_label IN ARRAY string_to_array(v_domain,'.') LOOP
+    IF v_label !~ '^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$' THEN RETURN NULL; END IF;
+  END LOOP;
+  RETURN v_email;
+END $$;
+
 CREATE OR REPLACE FUNCTION public.w175_safe_assignment_teaser(p_teaser TEXT,p_internal TEXT)
 RETURNS TEXT LANGUAGE sql IMMUTABLE SET search_path=public,pg_temp AS $$
   SELECT CASE WHEN NULLIF(BTRIM(p_teaser),'') IS NULL THEN NULL
@@ -36,14 +56,14 @@ BEGIN
   IF (SELECT count(*) FROM public.app_user_roles WHERE role='staff' AND user_id=NEW.created_by) <> 1 THEN
     RAISE EXCEPTION 'recommendation_assignment_staff_required';
   END IF;
-  SELECT lower(BTRIM(r.email)), COALESCE(NULLIF(BTRIM(r.first_name),''),'Bonjour'),
+  SELECT public.w175_assignment_recipient_email(r.email), COALESCE(NULLIF(BTRIM(r.first_name),''),'Bonjour'),
     COALESCE(NULLIF(BTRIM(o.public_title),''),'Confidential acquisition opportunity'),
     public.w175_safe_assignment_teaser(o.teaser_summary,o.description)
   INTO v_email,v_first_name,v_title,v_teaser
   FROM public.opportunities o JOIN public.repreneurs r ON r.id=NEW.repreneur_id
   WHERE o.id=NEW.opportunity_id AND o.status='active' AND o.is_demo=false AND r.is_demo=false;
   IF NOT FOUND THEN RETURN NEW; END IF; -- DEMO never requests external delivery.
-  IF v_email IS NULL OR v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' THEN
+  IF v_email IS NULL THEN
     RAISE EXCEPTION 'recommendation_assignment_valid_email_required';
   END IF;
   INSERT INTO public.opportunity_recommendation_assignment_notifications
@@ -80,7 +100,7 @@ BEGIN
   JOIN public.repreneurs r ON r.id=m.repreneur_id
   WHERE n.match_id=p_match_id AND m.status='proposed' AND o.status='active'
     AND o.is_demo=false AND r.is_demo=false
-    AND lower(BTRIM(r.email))=n.recipient_email
+    AND public.w175_assignment_recipient_email(r.email)=n.recipient_email
     AND COALESCE(NULLIF(BTRIM(o.public_title),''),'Confidential acquisition opportunity')=n.public_title
     AND public.w175_safe_assignment_teaser(o.teaser_summary,o.description) IS NOT DISTINCT FROM n.teaser_summary
     AND NOT EXISTS(SELECT 1 FROM public.opportunity_matches active
@@ -115,11 +135,11 @@ BEGIN
   WHERE n.match_id=ANY(p_match_ids);
 END $$;
 
-REVOKE ALL ON FUNCTION public.w175_safe_assignment_teaser(TEXT,TEXT),
+REVOKE ALL ON FUNCTION public.w175_assignment_recipient_email(TEXT),public.w175_safe_assignment_teaser(TEXT,TEXT),
   public.w175_record_assignment_notification(),public.w175_assignment_notification_immutable(),
   public.get_recommendation_assignment_notification(UUID,TEXT) FROM PUBLIC,anon,authenticated;
 REVOKE ALL ON FUNCTION public.list_recommendation_assignment_notification_states(UUID[],TEXT) FROM PUBLIC,anon,authenticated;
-GRANT EXECUTE ON FUNCTION public.w175_safe_assignment_teaser(TEXT,TEXT),
+GRANT EXECUTE ON FUNCTION public.w175_assignment_recipient_email(TEXT),public.w175_safe_assignment_teaser(TEXT,TEXT),
   public.get_recommendation_assignment_notification(UUID,TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION public.list_recommendation_assignment_notification_states(UUID[],TEXT) TO service_role;
 REVOKE ALL ON FUNCTION public.w175_record_assignment_notification(),

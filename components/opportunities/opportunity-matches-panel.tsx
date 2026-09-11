@@ -381,7 +381,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
               </Alert>
             ) : null}
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <FormFieldLabel htmlFor="repreneur_id" requirement="required">
                   Repreneur
                   <FieldInfo
