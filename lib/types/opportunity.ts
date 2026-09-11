@@ -726,6 +726,8 @@ export interface OpportunityMatchRepreneur {
 }
 
 export interface OpportunityMatch extends OpportunityConfidentialityGate {
+  /** Staff-only readback; never projected into the repreneur portal. */
+  assignment_email_status?: "pending" | "sent" | "failed" | "blocked" | "review_required" | "delivery_issue" | "unavailable" | null
   id: string
   opportunity_id: string
   repreneur_id: string

@@ -1,5 +1,5 @@
--- Decision #123 / Ticket #116: existing invited portal recommendations only.
--- No email, invitation, access grant, historical backfill or pursuit change.
+-- Decision #123 / Tickets #116 and #118: only actual invited portal
+-- publication starts a clock. An uninvited staff assignment grants no access.
 
 ALTER TABLE public.opportunity_matches
   ADD COLUMN IF NOT EXISTS recommendation_published_at TIMESTAMPTZ,
@@ -26,14 +26,14 @@ BEGIN
         WHERE role='staff' AND (user_id=v_actor OR email=v_actor)) <> 1 THEN
       RAISE EXCEPTION 'recommendation_publication_staff_required';
     END IF;
-    IF NOT EXISTS(SELECT 1 FROM public.app_user_roles
-      WHERE role='repreneur' AND repreneur_id=NEW.repreneur_id AND user_id IS NOT NULL) THEN
-      RAISE EXCEPTION 'recommendation_publication_portal_access_required';
-    END IF;
     IF NOT EXISTS(SELECT 1 FROM public.opportunities o JOIN public.repreneurs r
       ON r.id=NEW.repreneur_id AND r.is_demo=o.is_demo
       WHERE o.id=NEW.opportunity_id AND o.status='active') THEN
       RAISE EXCEPTION 'recommendation_publication_active_same_namespace_required';
+    END IF;
+    IF NOT EXISTS(SELECT 1 FROM public.app_user_roles
+      WHERE role='repreneur' AND repreneur_id=NEW.repreneur_id AND user_id IS NOT NULL) THEN
+      RETURN NEW;
     END IF;
     NEW.recommendation_published_at := clock_timestamp();
     NEW.recommendation_expires_at := NEW.recommendation_published_at + INTERVAL '72 hours';

@@ -94,8 +94,16 @@ export const TEMPLATE_METADATA: Record<
     description: string
     category: EmailTemplateCategory
     audience: EmailTemplateAudience
+    manualSend?: boolean
   }
 > = {
+  opportunity_recommendation_assignment: {
+    name: "Opportunity assignment",
+    description: "Versioned title-and-teaser email for a new staff recommendation. No portal access. Sent only from the recommendation, not the generic sender.",
+    category: "status",
+    audience: "rep",
+    manualSend: false,
+  },
   welcome: {
     name: "Welcome",
     description: "Sent after first contact is captured",

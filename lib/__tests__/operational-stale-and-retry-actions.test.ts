@@ -81,7 +81,7 @@ describe("operational stale tabs and retried staff actions", () => {
     expect(from).toHaveBeenCalledTimes(1)
   })
 
-  it("rejects a new manual match for an uninvited repreneur before writing", async () => {
+  it("rejects a new manual match without a valid email before writing", async () => {
     const from = vi.fn((table: string) => {
       if (table === "opportunity_matches") {
         const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
@@ -124,10 +124,10 @@ describe("operational stale tabs and retried staff actions", () => {
 
     await expect(saveOpportunityMatch(formData)).resolves.toEqual({
       ok: false,
-      message: "Enable portal access for this repreneur before creating a staff recommendation.",
+      message: "Add a valid email to this repreneur before creating a staff recommendation.",
       field: "repreneur_id",
     })
-    expect(from).toHaveBeenCalledWith("app_user_roles")
+    expect(from).not.toHaveBeenCalledWith("app_user_roles")
   })
 
   it.each([

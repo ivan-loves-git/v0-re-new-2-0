@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
+import { StaffAssignmentEmailStatus } from "@/components/opportunities/staff-assignment-email-status"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -215,7 +216,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
       showFeedback({
         type: "success",
         title: "Recommendation saved",
-        description: "The match record was updated without changing any active pursuit lock.",
+        description: result.message ?? "The match record was updated without changing any active pursuit lock.",
       })
     } catch (error) {
       showFeedback({
@@ -325,7 +326,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             Add recommendation
           </CardTitle>
           <CardDescription>
-            Store a match. New assignments default to Proposed so they appear in the repreneur portal; Draft and
+            Store a match. New Proposed REAL assignments request a public-summary email without granting portal access; Draft and
             Shortlisted remain available for internal-only staging.
           </CardDescription>
         </CardHeader>
@@ -406,8 +407,8 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                   Match status
                   <FieldInfo
                     label="Match status"
-                    description="Proposed appears in the repreneur portal. Draft and Shortlisted stay internal. Interested records the repreneur flow. Active pursuit is only created with Validate."
-                    example="Use Shortlisted while staff is still discussing; use Proposed when it should reach the repreneur portal."
+                    description="A new Proposed REAL match requests one public-summary email. Portal visibility requires existing access. Draft and Shortlisted stay internal. Interested records the repreneur flow. Active pursuit is only created with Validate."
+                    example="Use Proposed for a new assignment. Updating an existing Draft or Shortlisted row does not send this initial-assignment email."
                   />
                 </FormFieldLabel>
                 <Select name="status" defaultValue="proposed" onValueChange={() => clearFieldError("status")}>
@@ -577,6 +578,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                         <TableCell>
                           <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
                           <StaffRecommendationRenewAction matchId={match.id} status={match.status} expiresAt={match.recommendation_expires_at} />
+                          <StaffAssignmentEmailStatus matchId={match.id} status={match.assignment_email_status} />
                         </TableCell>
                         <TableCell>
                           <Badge variant={recommendationVariant(match.platform_recommendation)}>

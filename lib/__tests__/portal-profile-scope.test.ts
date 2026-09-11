@@ -215,7 +215,7 @@ describe("repreneur portal profile scope", () => {
     expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
   })
 
-  it("uses invitation, not offer or lifecycle, in both staff manual-recommendation pickers", () => {
+  it("uses staff-only valid-email selection without invitation, offer or lifecycle gates", () => {
     const opportunityMatches = source("lib/actions/opportunity-matches.ts")
     const pickerByOpportunity = opportunityMatches.slice(
       opportunityMatches.indexOf("export async function listOpportunityMatchCandidates"),
@@ -227,12 +227,13 @@ describe("repreneur portal profile scope", () => {
     )
 
     for (const picker of [pickerByOpportunity, pickerByRepreneur]) {
-      expect(picker).toContain('from("app_user_roles")')
-      expect(picker).toContain("hasInvitedLinkedIdentity")
+      expect(picker).toContain("requireStaffAccess()")
+      expect(picker).toContain("manualRecommendationEmail")
+      expect(picker).not.toContain('from("app_user_roles")')
       expect(picker).not.toContain("isAcceptedPaidMatchingClient")
     }
     expect(pickerByOpportunity).toContain("candidate.is_demo === opportunity.is_demo")
-    expect(pickerByRepreneur).toContain("opportunity.is_demo === repreneur.is_demo")
+    expect(pickerByRepreneur).toContain("opportunity.is_demo !== repreneur.is_demo")
     expect(pickerByRepreneur).not.toContain('.neq("repreneur_exposure", "staff_only")')
   })
 

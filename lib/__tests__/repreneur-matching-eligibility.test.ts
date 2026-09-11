@@ -13,7 +13,7 @@ describe("matching client eligibility", () => {
     expect(hasInvitedLinkedIdentity({ role: "repreneur", repreneur_id: "rep-1", user_id: "user-1" }, "rep-1")).toBe(true)
   })
 
-  it("keeps DEMO or uninvited profiles out of manual recommendations", () => {
+  it("keeps the legacy REAL-only classifier separate from actual portal identity", () => {
     expect(isEligibleForManualRecommendation({ is_demo: true })).toBe(false)
     expect(hasInvitedLinkedIdentity({ role: "repreneur", repreneur_id: "rep-1", user_id: null }, "rep-1")).toBe(false)
   })

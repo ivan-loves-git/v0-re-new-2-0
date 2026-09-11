@@ -22,7 +22,7 @@ export function StaffRecommendationRenewAction({ matchId, status, expiresAt }: {
   const unclocked = !expiresAt
   return (
     <div className="mt-2 flex max-w-xs flex-col gap-2">
-      <p className="text-xs text-muted-foreground">{unclocked ? "Historical recommendation: no response deadline yet." : "Response window expired. The deal remains visible but new interest is blocked."}</p>
+      <p className="text-xs text-muted-foreground">{unclocked ? "No response deadline yet. Starting the window requires existing portal access; this action does not grant it." : "Response window expired. The deal remains visible but new interest is blocked."}</p>
       <form action={formAction}>
         <input type="hidden" name="match_id" value={matchId} />
         <Button type="submit" size="sm" variant="outline" disabled={pending}>{pending ? "Saving..." : unclocked ? "Start 72-hour window" : "Renew 72-hour window"}</Button>

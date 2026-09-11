@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Local-only W172/W173 rehearsal. It creates a new PG17 cluster beneath
+# Local-only W172/W173/W174/W175 rehearsal. It creates a new PG17 cluster beneath
 # /private/tmp, reads no project environment files, and never contacts
 # Supabase. Invoke with `bash scripts/rehearse-sep11-recommendation-booking.sh` from the
 # platform repository, or set RENEW_SEP11_REPO_ROOT to that repository.
@@ -63,6 +63,8 @@ schema_inputs=(
   "$repo_root/scripts/rehearsals/w173-booking-request-reminders.sql"
   "$repo_root/scripts/rehearsals/w174-colin-email-default-copy.sql"
   "$repo_root/supabase/migrations/20260911160000_w174_colin_email_default_copy.sql"
+  "$repo_root/scripts/rehearsals/w175-recommendation-assignment.sql"
+  "$repo_root/supabase/migrations/20260911180000_w175_recommendation_assignment_notification.sql"
 )
 for input in "${schema_inputs[@]}"; do
   if [[ ! -r "$input" ]]; then
@@ -118,5 +120,6 @@ psql=(
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w172-recommendation-response-window.sql"
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w173-booking-request-reminders.sql"
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w174-colin-email-default-copy.sql"
+"${psql[@]}" --file "$repo_root/scripts/rehearsals/w175-recommendation-assignment.sql"
 
-echo "W172/W173/W174 local PG17 rehearsals passed"
+echo "W172/W173/W174/W175 local PG17 rehearsals passed"

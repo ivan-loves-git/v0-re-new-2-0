@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { saveOpportunityMatch } from "@/lib/actions/opportunity-matches"
 import { StaffRecommendationRenewAction } from "@/components/opportunities/staff-recommendation-renew-action"
+import { StaffAssignmentEmailStatus } from "@/components/opportunities/staff-assignment-email-status"
 import {
   FieldError,
   FormFieldLabel,
@@ -91,7 +92,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
         return
       }
 
-      setRecommendationSuccess("Recommendation saved.")
+      setRecommendationSuccess(result.message ?? "Recommendation saved.")
     } catch (error) {
       console.error("Opportunity recommendation failed")
       setRecommendationError(error instanceof Error ? error.message : "We could not save this recommendation. Please try again.")
@@ -131,7 +132,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                   }}
                 >
                   <option value="">Select opportunity...</option>
-                  {candidates.slice(0, 50).map((candidate) => (
+                  {candidates.map((candidate) => (
                     <option key={candidate.id} value={candidate.id}>
                       {candidate.reference} - {candidate.public_title || candidate.activity || candidate.sector || "Untitled"} ({candidate.platform_score}%)
                     </option>
@@ -139,9 +140,10 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                 </select>
               </label>
               <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Push to portal"}
+                {isSaving ? "Saving..." : "Recommend opportunity"}
               </Button>
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">A new recommendation requests one email with the public title and approved teaser for REAL profiles only. It does not invite this profile or grant portal access.</p>
             <ValidationSummary
               ref={recommendationSummaryRef}
               className="mt-3"
@@ -152,7 +154,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
             {recommendationError ? <p role="alert" className="mt-2 text-sm text-destructive">{recommendationError}</p> : null}
             {recommendationSuccess ? <p role="status" className="mt-2 text-sm text-emerald-700">{recommendationSuccess}</p> : null}
             <p className="mt-2 text-xs text-muted-foreground">
-              New recommendations are saved as Proposed, so they appear in the repreneur portal when the opportunity is repreneur-visible.
+              New recommendations are saved as Proposed. Portal visibility and a response deadline require existing portal access and an active opportunity.
             </p>
           </form>
         )}
@@ -203,6 +205,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                     <TableCell>
                       <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
                       <StaffRecommendationRenewAction matchId={match.id} status={match.status} expiresAt={match.recommendation_expires_at} />
+                      <StaffAssignmentEmailStatus matchId={match.id} status={match.assignment_email_status} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {match.pursuit_stage ? getOpportunityPursuitStageLabel(match.pursuit_stage) : "No pursuit"}

@@ -107,6 +107,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "lib/actions/activities.ts": boundary("staff", ["createActivity", "getActivities", "deleteActivity"]),
   "lib/actions/analytics.ts": boundary("staff", ["getAnalyticsData"]),
   "lib/actions/booking-request-reminders.ts": boundary("staff", ["recordBookingRequestSent", "getLatestBookingRequestEvent"]),
+  "lib/actions/recommendation-assignment-notifications.ts": boundary("staff", ["retryRecommendationAssignmentEmail"]),
   "lib/actions/client-pursuit-portfolio.ts": boundary("staff", ["listClientPursuitPortfolio"]),
   "lib/actions/emails.ts": boundary("staff", ["getEmailStats", "getEmailLogs", "getTemplateSettings", "toggleTemplateEnabled", "updateTemplateSettings", "getRenderedTemplate", "getRepreneursForManualSend", "sendManualEmail", "getDailyEmailCounts"]),
   "lib/actions/evaluation-criteria.ts": boundary("staff", ["updateCriterion", "updateQuestionLabel", "updateMultipleCriteria"]),

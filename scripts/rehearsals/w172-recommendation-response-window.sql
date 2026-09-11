@@ -181,13 +181,15 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM NOT LIKE '%recommendation_publication_staff_required%' THEN RAISE; END IF;
   END;
-  BEGIN
-    INSERT INTO public.opportunity_matches(id, opportunity_id, repreneur_id, status, created_by)
-    VALUES ('72000000-0000-4000-8000-000000000022', '72000000-0000-4000-8000-000000000002', '72000000-0000-4000-8000-000000000012', 'proposed', 'w172-staff');
-    RAISE EXCEPTION 'w172_uninvited_publication_allowed';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM NOT LIKE '%recommendation_publication_portal_access_required%' THEN RAISE; END IF;
-  END;
+  -- Decision #123 / #118: staff may assign without inviting. This is not
+  -- portal publication and therefore must not invent a response deadline.
+  DELETE FROM public.opportunity_matches WHERE id='72000000-0000-4000-8000-000000000032';
+  INSERT INTO public.opportunity_matches(id, opportunity_id, repreneur_id, status, created_by)
+  VALUES ('72000000-0000-4000-8000-000000000032', '72000000-0000-4000-8000-000000000002', '72000000-0000-4000-8000-000000000012', 'proposed', 'w172-staff');
+  IF EXISTS(SELECT 1 FROM public.opportunity_matches WHERE id='72000000-0000-4000-8000-000000000032'
+    AND (recommendation_published_at IS NOT NULL OR recommendation_expires_at IS NOT NULL)) THEN
+    RAISE EXCEPTION 'w172_uninvited_assignment_invented_portal_clock';
+  END IF;
   BEGIN
     INSERT INTO public.opportunity_matches(id, opportunity_id, repreneur_id, status, created_by)
     VALUES ('72000000-0000-4000-8000-000000000023', '72000000-0000-4000-8000-000000000003', '72000000-0000-4000-8000-000000000013', 'proposed', 'w172-staff');

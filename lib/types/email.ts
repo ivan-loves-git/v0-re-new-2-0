@@ -23,6 +23,7 @@ export type EmailTemplateKey =
   | "rejection"
   | "interview_reminder"
   | "booking_reminder"
+  | "opportunity_recommendation_assignment"
   | "ma_opportunity_validity_check"
   | "ma_request_more_information"
   | "ma_repreneur_interest_feedback"

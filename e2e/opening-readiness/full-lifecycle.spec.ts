@@ -593,6 +593,18 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(savedMatch.platform_recommendation).toBe("strong_fit");
     expect(savedMatch.platform_score).toBe(100);
     expect(savedMatch.platform_reasons).toHaveLength(6);
+    const assignmentDelivery = await one<{
+      notifications: number;
+      emails: number;
+      sent: number;
+      internalContent: number;
+    }>(client, `SELECT
+      (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications WHERE match_id=$1) AS notifications,
+      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1) AS emails,
+      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1 AND l.status='sent' AND l.resend_id='qa-allowlist-accepted') AS sent,
+      (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications n JOIN public.opportunity_matches m ON m.id=n.match_id JOIN public.opportunities o ON o.id=m.opportunity_id WHERE n.match_id=$1 AND n.teaser_summary=o.description) AS "internalContent"`, [savedMatch.id]);
+    expect(assignmentDelivery).toEqual({ notifications: 1, emails: 1, sent: 1, internalContent: 0 });
+    await expect(page.getByText("Assignment email sent", { exact: true })).toBeVisible();
     await record({
       step: "staff saved complete-thesis recommendation",
       surface: "database",
