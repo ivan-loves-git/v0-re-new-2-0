@@ -147,8 +147,9 @@ BEGIN
      OR NOT has_function_privilege('service_role', 'public.record_repreneur_booking_request_sent(uuid,timestamptz,text,text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'w173_function_privilege_boundary_failed';
   END IF;
-  IF NOT has_table_privilege('service_role', 'public.repreneur_booking_request_events', 'SELECT, INSERT')
-     OR has_table_privilege('service_role', 'public.repreneur_booking_request_events', 'UPDATE, DELETE') THEN
+  IF NOT has_table_privilege('service_role', 'public.repreneur_booking_request_events', 'SELECT')
+     OR NOT has_table_privilege('service_role', 'public.repreneur_booking_request_events', 'INSERT')
+     OR has_table_privilege('service_role', 'public.repreneur_booking_request_events', 'UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN') THEN
     RAISE EXCEPTION 'w173_table_privilege_boundary_failed';
   END IF;
   IF (SELECT prosecdef FROM pg_proc WHERE oid='public.record_repreneur_booking_request_sent(uuid,timestamptz,text,text)'::regprocedure) THEN

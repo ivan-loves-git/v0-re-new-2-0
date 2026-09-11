@@ -114,6 +114,9 @@ psql=(
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260827103000_w164_lifecycle_namespace_visibility.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260829180000_w169_lifecycle_outcome_separation.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260829203000_w169_pause_guard_scope.sql" >/dev/null
+# Production grants all table privileges to service_role by default. Match
+# that environment so each new migration must explicitly narrow its grants.
+"${psql[@]}" -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260911133000_w172_recommendation_response_window.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260911150000_w173_booking_request_reminders.sql" >/dev/null
 

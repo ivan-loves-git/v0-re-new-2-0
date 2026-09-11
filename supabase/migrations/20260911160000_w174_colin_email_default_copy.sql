@@ -1,4 +1,4 @@
--- REVIEW CANDIDATE ONLY. Do not apply from this file without the release review.
+-- Decision #123 / Ticket #126: apply only the exact verified release candidate.
 -- It changes a field only when it is blank or exactly one enumerated, shipped
 -- default. It preserves every unknown/custom subject or body independently,
 -- and never touches is_active, body_editable, requires_consent, audiences or

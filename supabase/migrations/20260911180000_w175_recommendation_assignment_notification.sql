@@ -1,4 +1,4 @@
--- Build candidate: Decision #123, Ticket #118. No backfill, invitation,
+-- Approved release candidate: Decision #123, Tickets #118/#126. No backfill, invitation,
 -- portal access, scheduler, provider call, or response-window write.
 -- One immutable intent per newly inserted Proposed REAL match. Delivery state
 -- remains in the existing notification_delivery_claims and email_logs.

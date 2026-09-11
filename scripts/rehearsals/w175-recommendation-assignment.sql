@@ -218,5 +218,33 @@ DO $$ BEGIN
   END IF;
 END $$;
 RESET ROLE;
+-- The forward safety rollback stops new notification intents and protects
+-- against an older account-age-only booking sender without erasing evidence.
+SAVEPOINT before_safety_rollback;
+CREATE TEMP TABLE w175_retained_evidence AS
+SELECT id,md5(to_jsonb(n)::text) AS fingerprint
+FROM public.opportunity_recommendation_assignment_notifications n;
+LOCK TABLE public.opportunity_matches, public.email_templates IN SHARE ROW EXCLUSIVE MODE;
+UPDATE public.email_templates SET is_active=false, updated_at=NOW()
+WHERE template_key IN ('opportunity_recommendation_assignment','booking_reminder');
+DROP TRIGGER w175_record_assignment_notification ON public.opportunity_matches;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM public.email_templates WHERE template_key IN ('opportunity_recommendation_assignment','booking_reminder') AND is_active)
+    OR EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='w175_record_assignment_notification') THEN
+    RAISE EXCEPTION 'w175_safety_rollback_did_not_stop_new_notifications';
+  END IF;
+  IF (SELECT count(*) FROM pg_trigger WHERE tgname IN ('w172_set_recommendation_window','w172_reject_expired_interest','w175_assignment_notification_immutable')) <> 3
+    OR to_regclass('public.repreneur_booking_request_events') IS NULL THEN
+    RAISE EXCEPTION 'w175_safety_rollback_removed_history_guards';
+  END IF;
+  IF EXISTS (
+    (SELECT id,md5(to_jsonb(n)::text) FROM public.opportunity_recommendation_assignment_notifications n
+      EXCEPT SELECT id,fingerprint FROM w175_retained_evidence)
+    UNION ALL
+    (SELECT id,fingerprint FROM w175_retained_evidence EXCEPT
+      SELECT id,md5(to_jsonb(n)::text) FROM public.opportunity_recommendation_assignment_notifications n)
+  ) THEN RAISE EXCEPTION 'w175_safety_rollback_changed_retained_snapshots'; END IF;
+END $$;
+ROLLBACK TO SAVEPOINT before_safety_rollback;
 SELECT 'w175 snapshot, retry, disclosure, privilege, lifecycle and retention rehearsals passed' AS result;
 ROLLBACK;

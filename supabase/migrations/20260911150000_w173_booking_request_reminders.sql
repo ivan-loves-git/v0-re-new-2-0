@@ -14,7 +14,8 @@ CREATE INDEX repreneur_booking_request_events_latest_idx
 
 ALTER TABLE public.repreneur_booking_request_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.repreneur_booking_request_events FORCE ROW LEVEL SECURITY;
-REVOKE ALL ON public.repreneur_booking_request_events FROM PUBLIC, anon, authenticated;
+-- Supabase grants service_role broad table defaults; narrow them explicitly.
+REVOKE ALL ON public.repreneur_booking_request_events FROM PUBLIC, anon, authenticated, service_role;
 GRANT SELECT, INSERT ON public.repreneur_booking_request_events TO service_role;
 
 CREATE OR REPLACE FUNCTION public.record_repreneur_booking_request_sent(

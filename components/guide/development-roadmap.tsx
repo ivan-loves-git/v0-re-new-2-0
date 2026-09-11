@@ -25,6 +25,17 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 11, 2026",
+    version: "0.9.65",
+    title: "Clearer recommendations, matching and follow-up",
+    isCompleted: true,
+    events: [
+      { title: "Staff can recommend an opportunity without inviting the repreneur", type: "feature", description: "Both staff dossiers offer the complete eligible directory. New real recommendations request one public-summary email and show its delivery status; they do not grant portal access." },
+      { title: "Response windows and reminders follow actual events", type: "feature", description: "Recommendations with portal access receive a 72-hour response window that staff can renew. Booking reminders depend on a recorded booking request, not account age. Existing recommendations keep their history without invented deadlines." },
+      { title: "Deal Flow and matching explain the next step more clearly", type: "fix", description: "Opportunity interest starts inside the detail view, filters are clearer, and Matching 2.2 uses the approved criteria without rewriting stored scores. The approved email wording is updated while custom copy and activation choices are preserved." },
+    ],
+  },
+  {
     period: "Sep 5, 2026",
     version: "0.9.64",
     title: "NDA handoffs follow the approved pursuit",
