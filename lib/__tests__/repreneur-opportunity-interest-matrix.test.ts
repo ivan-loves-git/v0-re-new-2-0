@@ -22,10 +22,11 @@ const migrationSource = fs.readFileSync(
 )
 
 describe("repreneur opportunity interest matrix", () => {
-  it("offers the self-discovered action for unassigned cards and locked cards even when a current match exists", () => {
-    expect(listSource).toContain("{lockedForAnotherRepreneur || !opportunity.match_id ? (")
-    expect(listSource).toContain("lockedForAnotherRepreneur={lockedForAnotherRepreneur}")
+  it("offers self-discovered interest only in the detail for unassigned or locked opportunities", () => {
+    expect(listSource).not.toContain("LockedOpportunityInterestAction")
+    expect(listSource).toContain("View detail")
     expect(detailSource).toContain("{lockedForAnotherRepreneur || canExpressUnassignedInterest ? (")
+    expect(detailSource).toContain("lockedForAnotherRepreneur={lockedForAnotherRepreneur}")
     expect(querySource).toContain("is_locked_for_other_repreneur: isLockedForOtherRepreneur(")
   })
 
@@ -49,7 +50,7 @@ describe("repreneur opportunity interest matrix", () => {
     expect(detailSource).toContain('opportunity.match_status === "interested" ? "Interest sent"')
     expect(detailSource).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped" ? "Review and reconsider"')
     expect(detailSource).toContain('opportunity.match_status === "active_pursuit"')
-    expect(listSource).toContain("!opportunity.match_id")
+    expect(detailSource).toContain("!opportunity.match_id")
   })
 
   it("keeps accepted staff proposals recommended but never labels a self-signalled interest as selected by Re-New", () => {

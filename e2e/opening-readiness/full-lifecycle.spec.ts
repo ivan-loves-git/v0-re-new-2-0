@@ -744,7 +744,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       .click();
     await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Qualification request sent." })).toBeVisible();
     const e4 = await one<{ delivery_status: string; request_included: boolean; current_blank_exists: boolean; exact_validation: boolean }>(client,
-      `SELECT d.delivery_status,position('modèle de NDA' in i.body_markdown)>0 AS request_included,
+      `SELECT d.delivery_status,position('nous transmettre un NDA à signer' in i.body_markdown)>0 AS request_included,
        EXISTS(SELECT 1 FROM public.opportunity_nda_artifacts a WHERE a.opportunity_id=$2 AND a.artifact_role='blank_template') AS current_blank_exists,
        i.client_operation_key=d.operation_key AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text AS exact_validation
        FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id
