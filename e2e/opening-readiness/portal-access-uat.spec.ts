@@ -493,12 +493,19 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await setupPage.goto(
       `/auth/reset-password?intent=portal#token=${encodeURIComponent(setupToken)}`,
     );
-    await expect(
-      setupPage.getByRole("heading", {
-        name: "Creer votre mot de passe",
-        exact: true,
-      }),
-    ).toBeVisible();
+    for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+      await setupPage.setViewportSize(viewport);
+      await expect(
+        setupPage.getByRole("heading", {
+          name: "Creer votre mot de passe",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(setupPage.locator("#password")).toBeVisible();
+      expect(await setupPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+    // Consume the long-lived setup token on mobile; desktop was checked above
+    // without issuing another token or consuming another login attempt.
     await setupPage.locator("#password").fill(setupPassword);
     await setupPage.locator("#confirmPassword").fill(setupPassword);
     await setupPage
@@ -536,6 +543,8 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     );
     evidence.setup = {
       validLinkConsumedOnce: true,
+      desktopAndMobileForm: true,
+      mobilePasswordCreation: true,
       replayRejected: true,
       consumedBrowserRecovery: true,
     };
