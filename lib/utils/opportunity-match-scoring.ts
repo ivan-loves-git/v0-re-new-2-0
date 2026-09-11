@@ -6,12 +6,21 @@ import {
 } from "@/lib/repreneur-target-thesis"
 import { sectorCompatibilityValues } from "@/lib/utils/opportunity-sector"
 
-/** Matching 2.1 candidate; Matching 2.0 remains live until separately released. */
+/** Matching 2.2 candidate; Matching 2.1 production history remains unchanged. */
 export const MATCHING_V2_CONFIG = {
-  version: "2.1-candidate-2026-08-29",
+  version: "2.2-gaussian-2026-09-11",
   weights: { revenue: 36, absoluteEbitda: 29, ebitdaMargin: 21, headcount: 14 },
-  rangeBuffers: { lower: 0.9, upper: 1.3 },
-  evidence: { reviewMaximumScore: 70 },
+  numericFalloff: {
+    sigma: 0.3,
+    minimumRoundedScore: 1,
+    zeroScaleFloors: {
+      revenueMeur: 1,
+      absoluteEbitdaKeur: 100,
+      ebitdaMarginPercentagePoints: 1,
+      headcount: 1,
+    },
+  },
+  evidence: { reviewMaximumScore: 70, noUsableEvidenceRecommendation: "not_evaluated" },
 } as const
 
 type ScoringRepreneur = {
@@ -78,6 +87,7 @@ const normalizeList = (
 function toNumber(value: number | string | null | undefined) {
   if (typeof value === "number") return Number.isFinite(value) ? value : null
   if (typeof value === "string") {
+    if (!value.trim()) return null
     const parsed = Number(value.replace(",", "."))
     return Number.isFinite(parsed) ? parsed : null
   }
@@ -116,6 +126,27 @@ function recommendationFromScore(
   if (score >= 45) return "weak_fit"
   return "not_fit"
 }
+
+function gaussianPercentage(distance: number, scale: number) {
+  const ratio = distance / scale
+  return Math.max(
+    MATCHING_V2_CONFIG.numericFalloff.minimumRoundedScore,
+    Math.round(
+      100 * Math.exp(-(ratio ** 2) / (2 * MATCHING_V2_CONFIG.numericFalloff.sigma ** 2)),
+    ),
+  )
+}
+
+function numericScale(
+  boundary: number,
+  otherBoundary: number | null,
+  zeroScaleFloor: number,
+) {
+  if (boundary > 0) return boundary
+  if (otherBoundary !== null && otherBoundary > 0) return otherBoundary
+  return zeroScaleFloor
+}
+
 const omitted = (label: string): CriterionResult => ({
   points: 0,
   knownWeight: 0,
@@ -136,6 +167,7 @@ function numericRangeCriterion(
   weight: number,
   label: string,
   allowNegativeValue = false,
+  zeroScaleFloor = 1,
 ): CriterionResult {
   if (minimum === null && maximum === null) return omitted(label)
   if (
@@ -148,35 +180,31 @@ function numericRangeCriterion(
     return review(label, "the opportunity value is missing or invalid")
   }
   if (minimum !== null && value < minimum) {
-    const lower = minimum * MATCHING_V2_CONFIG.rangeBuffers.lower
-    if (value < lower)
-      return {
-        points: 0,
-        knownWeight: weight,
-        outcome: "hard_exclusion",
-        reason: `${label} is below the 90% lower eligibility boundary.`,
-      }
     return {
-      points: weight * clamp((value - lower) / (minimum - lower || 1), 0, 1),
+      points:
+        (weight *
+          gaussianPercentage(
+            minimum - value,
+            numericScale(minimum, maximum, zeroScaleFloor),
+          )) /
+        100,
       knownWeight: weight,
       outcome: "partial",
-      reason: `${label} is within the lower buffer.`,
+      reason: `${label} is outside the target range; score tapers smoothly.`,
     }
   }
   if (maximum !== null && value > maximum) {
-    const upper = maximum * MATCHING_V2_CONFIG.rangeBuffers.upper
-    if (value > upper)
-      return {
-        points: 0,
-        knownWeight: weight,
-        outcome: "hard_exclusion",
-        reason: `${label} is above the 130% upper eligibility boundary.`,
-      }
     return {
-      points: weight * clamp((upper - value) / (upper - maximum || 1), 0, 1),
+      points:
+        (weight *
+          gaussianPercentage(
+            value - maximum,
+            numericScale(maximum, minimum, zeroScaleFloor),
+          )) /
+        100,
       knownWeight: weight,
       outcome: "partial",
-      reason: `${label} is within the upper buffer.`,
+      reason: `${label} is outside the target range; score tapers smoothly.`,
     }
   }
   return {
@@ -204,49 +232,29 @@ function ebitdaMarginCriterion(
       "opportunity revenue or EBITDA is missing or invalid",
     )
   const margin = (ebitda / (revenue * 1_000)) * 100
-  if (threshold === 0)
-    return margin < 0
-      ? {
-          points: 0,
-          knownWeight: weight,
-          outcome: "hard_exclusion",
-          reason: "EBITDA margin is below the 0% eligibility threshold.",
-        }
-      : {
-          points: weight,
-          knownWeight: weight,
-          outcome: "match",
-          reason: "EBITDA margin meets the 0% target.",
-        }
-  const lower = threshold * 0.9
-  if (margin < lower)
-    return {
-      points: 0,
-      knownWeight: weight,
-      outcome: "hard_exclusion",
-      reason: "EBITDA margin is below the 90% eligibility boundary.",
-    }
-  if (margin <= threshold)
+  if (margin < threshold)
     return {
       points:
-        weight * 0.6 * clamp((margin - lower) / (threshold - lower), 0, 1),
+        (weight *
+          gaussianPercentage(
+            threshold - margin,
+            numericScale(
+              threshold,
+              null,
+              MATCHING_V2_CONFIG.numericFalloff.zeroScaleFloors
+                .ebitdaMarginPercentagePoints,
+            ),
+          )) /
+        100,
       knownWeight: weight,
       outcome: "partial",
-      reason: "EBITDA margin is in the lower buffer.",
-    }
-  if (margin < threshold * 2)
-    return {
-      points:
-        weight * (0.6 + 0.4 * clamp((margin - threshold) / threshold, 0, 1)),
-      knownWeight: weight,
-      outcome: "partial",
-      reason: "EBITDA margin is above the target and below the cap.",
+      reason: "EBITDA margin is below the target; score tapers smoothly.",
     }
   return {
     points: weight,
     knownWeight: weight,
     outcome: "match",
-    reason: "EBITDA margin meets the capped target.",
+    reason: "EBITDA margin meets the target.",
   }
 }
 
@@ -255,47 +263,15 @@ function headcountCriterion(
   minimum: number | null,
   maximum: number | null,
 ): CriterionResult {
-  const label = "Headcount"
-  const weight = MATCHING_V2_CONFIG.weights.headcount
-  if (minimum === null && maximum === null) return omitted(label)
-  if (
-    (minimum !== null && minimum < 0) ||
-    (maximum !== null && maximum < 0) ||
-    (minimum !== null && maximum !== null && minimum > maximum)
+  return numericRangeCriterion(
+    value,
+    minimum,
+    maximum,
+    MATCHING_V2_CONFIG.weights.headcount,
+    "Headcount",
+    false,
+    MATCHING_V2_CONFIG.numericFalloff.zeroScaleFloors.headcount,
   )
-    return review(label, "the target range is invalid")
-  if (value === null || value < 0)
-    return review(label, "the opportunity value is missing or invalid")
-  if (
-    (minimum === null || value >= minimum) &&
-    (maximum === null || value <= maximum)
-  )
-    return {
-      points: weight,
-      knownWeight: weight,
-      outcome: "match",
-      reason: "Headcount is within the target range.",
-    }
-  // One-sided targets use their known bound as a finite width. A zero-width target
-  // scores only exact equality. Neither case makes a pair ineligible.
-  const width =
-    minimum !== null && maximum !== null
-      ? maximum - minimum
-      : Math.abs(minimum ?? maximum ?? 0)
-  if (width === 0)
-    return {
-      points: 0,
-      knownWeight: weight,
-      outcome: "partial",
-      reason: "Headcount is outside the zero-width target.",
-    }
-  const boundary = minimum !== null && value < minimum ? minimum : maximum!
-  return {
-    points: weight * clamp(1 - Math.abs(value - boundary) / width, 0, 1),
-    knownWeight: weight,
-    outcome: "partial",
-    reason: "Headcount is outside the target range.",
-  }
 }
 
 function geographyCriterion(
@@ -428,6 +404,8 @@ export function calculateOpportunityMatchScore(
       toNumber(repreneur.target_revenue_max_meur),
       MATCHING_V2_CONFIG.weights.revenue,
       "Revenue",
+      false,
+      MATCHING_V2_CONFIG.numericFalloff.zeroScaleFloors.revenueMeur,
     ),
     numericRangeCriterion(
       toNumber(opportunity.ebitda_keur),
@@ -436,6 +414,7 @@ export function calculateOpportunityMatchScore(
       MATCHING_V2_CONFIG.weights.absoluteEbitda,
       "Absolute EBITDA",
       true,
+      MATCHING_V2_CONFIG.numericFalloff.zeroScaleFloors.absoluteEbitdaKeur,
     ),
     ebitdaMarginCriterion(repreneur, opportunity),
     headcountCriterion(
@@ -470,7 +449,10 @@ export function calculateOpportunityMatchScore(
   )
   return {
     score,
-    recommendation: recommendationFromScore(score),
+    recommendation:
+      needsReview
+        ? MATCHING_V2_CONFIG.evidence.noUsableEvidenceRecommendation
+        : recommendationFromScore(score),
     reasons: criteria.map((criterion) => criterion.reason),
   }
 }

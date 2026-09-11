@@ -11,7 +11,8 @@ import type { InterviewReminderEmailProps } from "@/lib/types/email"
  */
 export function InterviewReminderEmail({ repreneur, metadata }: InterviewReminderEmailProps) {
   const { firstName } = repreneur
-  const { interviewAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), notes } = metadata ?? {}
+  const interviewAt = metadata?.interviewAt
+  if (!interviewAt) throw new Error("An interview reminder requires its scheduled date.")
 
   // `interviewAt` can be either a date-only string (YYYY-MM-DD, from activities.event_date)
   // or a full ISO timestamp. Only include the time component if it looks precise.
@@ -21,38 +22,26 @@ export function InterviewReminderEmail({ repreneur, metadata }: InterviewReminde
     "fr-FR",
     isDateOnly
       ? { weekday: "long", day: "numeric", month: "long" }
-      : { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }
+      : { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }
   )
 
   return (
     <BaseLayout previewText={`Rappel : votre entretien Re-New ${when}`}>
-      <Text style={heading}>Rappel d&apos;entretien</Text>
+      <Text style={heading}>Rappel — votre entretien avec Re-New</Text>
 
       <Text style={paragraph}>Bonjour {firstName},</Text>
 
       <Text style={paragraph}>
-        Petit rappel : nous avons un entretien pr&eacute;vu ensemble <strong>{when}</strong>.
+        Petit rappel : votre rendez-vous avec notre équipe est prévu demain{when ? ` (${when})` : ""}.
       </Text>
 
-      {notes && (
-        <Text style={paragraph}>
-          Pour rejoindre l&apos;entretien, utilisez le lien qui vous a &eacute;t&eacute; transmis
-          lors de la r&eacute;servation&nbsp;:
-          <br />
-          <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 13, color: "#4b5563" }}>
-            {notes}
-          </span>
-        </Text>
-      )}
-
       <Text style={paragraph}>
-        Si vous ne pouvez plus &ecirc;tre pr&eacute;sent, merci de nous pr&eacute;venir au plus
-        vite en r&eacute;pondant &agrave; cet email ou &agrave;{" "}
+        N&apos;hésitez pas à nous contacter si vous souhaitez modifier l&apos;horaire en répondant à cet email ou à{" "}
         <Link href="mailto:contact@re-new.team">contact@re-new.team</Link>.
       </Text>
 
       <Text style={paragraph}>
-        &Agrave; tr&egrave;s vite,
+        À très bientôt,
         <br />
         L&apos;&eacute;quipe Re-New
       </Text>

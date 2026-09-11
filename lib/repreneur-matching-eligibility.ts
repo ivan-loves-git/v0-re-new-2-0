@@ -1,3 +1,11 @@
+import { validatePortalEmail } from "@/lib/portal-access-reconciliation"
+
+/** A manual assignment needs a canonical mailbox, never an auth identity. */
+export function manualRecommendationEmail(value: string | null | undefined): string | null {
+  const result = validatePortalEmail(value)
+  return result.error || !result.email ? null : result.email
+}
+
 export type RepreneurOfferAssignment = {
   status?: string | null
   offer?: { name?: string | null; price?: number | string | null } | Array<{ name?: string | null; price?: number | string | null }> | null
@@ -27,7 +35,7 @@ export function isEligibleForManualRecommendation(
   return repreneur !== null && repreneur !== undefined && repreneur.is_demo !== true
 }
 
-/** Portal invitation is the operating boundary for staff proposals. */
+/** Actual invited identity remains the boundary for portal access, not staff CRM selection. */
 export function hasInvitedLinkedIdentity(
   role: InvitedRepreneurIdentity | null | undefined,
   repreneurId: string,

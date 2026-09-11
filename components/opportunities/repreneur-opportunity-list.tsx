@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
-import { CollectionFilterBar } from "@/components/wave/collection-filter-bar"
 import { WaveMicroLabel } from "@/components/wave/visual-foundations"
-import type { CollectionFilterDefinition } from "@/lib/collection-filter-state"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
@@ -28,6 +28,7 @@ import {
   type RepreneurDealDiscoveryOpportunity,
 } from "@/lib/utils/repreneur-deal-discovery"
 import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
+import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 
 type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
 
@@ -53,6 +54,13 @@ function formatEbitdaMargin(opportunity: RepreneurOpportunityListItem) {
   const margin = getEbitdaMarginPercentage(opportunity)
   if (margin === null) return "—"
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(margin)}%`
+}
+
+function formatRecommendationDeadline(expiresAt: string | null | undefined) {
+  if (!expiresAt) return null
+  const value = new Date(expiresAt)
+  if (Number.isNaN(value.getTime())) return null
+  return new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris", timeZoneName: "short" }).format(value)
 }
 
 function relevanceGrade(opportunity: RepreneurOpportunityListItem) {
@@ -92,19 +100,40 @@ export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportun
   )
 }
 
-function discoveryFilterDefinitions(opportunities: RepreneurOpportunityListItem[]): CollectionFilterDefinition[] {
-  return [
-    {
-      key: "geography",
-      label: "Geography",
-      options: canonicalGeographyFilterOptions(opportunities),
-    },
-    {
-      key: "sector",
-      label: "Sector",
-      options: canonicalSectorFilterOptions(opportunities),
-    },
-  ]
+function toggleValue(values: string[], value: string) {
+  return values.includes(value) ? values.filter((candidate) => candidate !== value) : [...values, value]
+}
+
+const PREFERENCE_NAMESPACE = "re-new:portal:deal-flow:filter-preferences:v1"
+type NumericDealRangeFilterKey = Exclude<keyof RepreneurDealDiscoveryFilters, "geography" | "sector">
+
+function DealDiscoveryToolbar({
+  search, onSearchChange, geographyOptions, sectorOptions, filters, onTaxonomyChange, onClear, resultCount, totalCount, preferencesEnabled,
+}: {
+  search: string
+  onSearchChange: (value: string) => void
+  geographyOptions: { value: string; label: string }[]
+  sectorOptions: { value: string; label: string }[]
+  filters: RepreneurDealDiscoveryFilters
+  onTaxonomyChange: (key: "geography" | "sector", values: string[]) => void
+  onClear: () => void
+  resultCount: number
+  totalCount: number
+  preferencesEnabled: boolean
+}) {
+  const picker = (key: "geography" | "sector", label: string, options: { value: string; label: string }[]) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" size="sm">{label} {filters[key].length ? `(${filters[key].length})` : ""}</Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="max-h-80 w-72 overflow-y-auto">
+        <fieldset className="grid gap-2"><legend className="text-sm font-medium">{label}</legend>
+          {options.map((option) => <div key={option.value} className="flex items-center gap-2"><Checkbox id={`${key}-${option.value}`} checked={filters[key].includes(option.value)} onCheckedChange={() => onTaxonomyChange(key, toggleValue(filters[key], option.value))} /><Label htmlFor={`${key}-${option.value}`} className="font-normal">{option.label}</Label></div>)}
+        </fieldset>
+      </PopoverContent>
+    </Popover>
+  )
+  return <section className="rounded-lg border bg-card p-3" aria-label="Deal flow filters"><div className="flex flex-col gap-3 lg:flex-row lg:items-center"><Input aria-label="Search deal flow" value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search title, teaser, reference, geography or sector" className="lg:max-w-sm" /><div className="flex flex-wrap gap-2">{picker("geography", "Regions", geographyOptions)}{picker("sector", "Sectors", sectorOptions)}<Button type="button" variant="ghost" size="sm" onClick={onClear}>Clear filters</Button></div></div><p className="mt-3 border-t pt-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{resultCount}</span> deals filtered from {totalCount}. {preferencesEnabled ? "Region and sector choices are saved in this browser only." : "Staff preview does not read or save repreneur preferences."}</p></section>
 }
 
 export function DealRangeFilters({
@@ -114,7 +143,7 @@ export function DealRangeFilters({
   onReset,
 }: {
   filters: RepreneurDealDiscoveryFilters
-  onChange: (key: keyof RepreneurDealDiscoveryFilters, value: string) => void
+  onChange: (key: NumericDealRangeFilterKey, value: string) => void
   onClearFilters: () => void
   onReset: () => void
 }) {
@@ -177,6 +206,9 @@ function DealCard({
   const isDeclined = opportunity.match_status === "declined" || opportunity.match_status === "dropped"
   const publicRelevance = relevanceGrade(opportunity)
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
+  const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && !opportunity.interest_expressed_at
+  const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
+  const responseDeadline = responsePending ? formatRecommendationDeadline(opportunity.recommendation_expires_at) : null
 
   return (
     <Card className="rounded-lg border bg-card py-0 shadow-none">
@@ -197,7 +229,7 @@ function DealCard({
           {opportunity.match_status === "interested" ? <Badge variant="outline">Interest sent, awaiting Re-New validation</Badge> : null}
           {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">Active pursuit</Badge> : null}
           {opportunity.match_status && opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" ? <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge> : null}
-          {publicRelevance ? <Badge variant="outline">Relevance: {getOpportunityMatchRecommendationLabel(publicRelevance)}</Badge> : null}
+          {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
           </div>
           <div className="mt-2 flex min-w-0 flex-col gap-1">
             <p className="truncate text-base font-semibold tracking-tight">{opportunityTitle(opportunity)}</p>
@@ -212,6 +244,7 @@ function DealCard({
             </span>
             </div>
           </div>
+          {opportunity.teaser_summary ? <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{opportunity.teaser_summary}</p> : null}
           {!compact ? <dl className="mt-3 grid grid-cols-2 border-y py-2.5 text-sm sm:grid-cols-4">
             <div className="min-w-0 border-r pr-3 sm:px-3 sm:first:pl-0">
               <WaveMicroLabel asChild><dt>Revenue</dt></WaveMicroLabel>
@@ -234,18 +267,11 @@ function DealCard({
             <span className="font-mono text-foreground">{opportunity.reference}</span>
             <span aria-hidden="true"> · </span>
             {opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}
+            {publicRelevance ? <span className="ml-2">Fit: {getOpportunityMatchRecommendationLabel(publicRelevance)}</span> : null}
           </p>
+          {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</p> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3 lg:items-end">
-          {lockedForAnotherRepreneur || !opportunity.match_id ? (
-            <LockedOpportunityInterestAction
-              opportunityId={opportunity.opportunity_id}
-              interestRecorded={Boolean(opportunity.interest_expressed_at)}
-              notificationSent={Boolean(opportunity.interest_notification_sent_at)}
-              lockedForAnotherRepreneur={lockedForAnotherRepreneur}
-              readOnly={readOnly}
-            />
-          ) : null}
           {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
           {detailHref ? (
             <Button asChild variant="outline" className="w-full lg:w-auto">
@@ -317,7 +343,41 @@ export function RepreneurOpportunityList({
 }: RepreneurOpportunityListProps) {
   const [search, setSearch] = useState("")
   const [filters, setFilters] = useState<RepreneurDealDiscoveryFilters>(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS)
-  const definitions = useMemo(() => discoveryFilterDefinitions(opportunities), [opportunities])
+  const [loadedPreferenceKey, setLoadedPreferenceKey] = useState<string | null>(null)
+  const [responseClock, setResponseClock] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => setResponseClock((value) => value + 1), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const geographyOptions = useMemo(() => canonicalGeographyFilterOptions(opportunities), [opportunities])
+  const sectorOptions = useMemo(() => canonicalSectorFilterOptions(opportunities), [opportunities])
+  const preferenceKey = repreneur && !readOnly && typeof repreneur.is_demo === "boolean"
+    ? `${PREFERENCE_NAMESPACE}:${repreneur.is_demo ? "DEMO" : "REAL"}:${repreneur.id}`
+    : null
+  useEffect(() => {
+    if (!preferenceKey) return
+    const allowedGeography = new Set(geographyOptions.map((option) => option.value))
+    const allowedSector = new Set(sectorOptions.map((option) => option.value))
+    try {
+      const parsed: unknown = JSON.parse(window.localStorage.getItem(preferenceKey) ?? "{}")
+      const record = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : {}
+      const values = (value: unknown, allowed: Set<string>) => Array.isArray(value)
+        ? value.filter((candidate): candidate is string => typeof candidate === "string" && allowed.has(candidate))
+        : []
+      setFilters((current) => ({ ...current, geography: values(record.geography, allowedGeography), sector: values(record.sector, allowedSector) }))
+    } catch {
+      setFilters((current) => ({ ...current, geography: [], sector: [] }))
+    }
+    setLoadedPreferenceKey(preferenceKey)
+  }, [geographyOptions, preferenceKey, sectorOptions])
+  useEffect(() => {
+    if (!preferenceKey || loadedPreferenceKey !== preferenceKey) return
+    try {
+      window.localStorage.setItem(preferenceKey, JSON.stringify({ geography: filters.geography, sector: filters.sector }))
+    } catch {
+      // Browser storage is optional. The Deal Flow remains usable without it.
+    }
+  }, [filters.geography, filters.sector, loadedPreferenceKey, preferenceKey])
   const filteredOpportunities = useMemo(
     () => filterRepreneurDeals(opportunities, search, filters),
     [filters, opportunities, search],
@@ -331,6 +391,10 @@ export function RepreneurOpportunityList({
     }
     const usesDealBuckets = filteredOpportunities.some((opportunity) => "deal_bucket" in opportunity && Boolean(opportunity.deal_bucket))
     for (const opportunity of filteredOpportunities) {
+      if (opportunity.match_status === "proposed" && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)) {
+        buckets.live.push(opportunity)
+        continue
+      }
       if (usesDealBuckets && "deal_bucket" in opportunity && opportunity.deal_bucket) {
         if (opportunity.deal_bucket === "recommended") buckets.recommended.push(opportunity)
         if (opportunity.deal_bucket === "declined") buckets.declined.push(opportunity)
@@ -344,7 +408,7 @@ export function RepreneurOpportunityList({
       else buckets.live.push(opportunity)
     }
     return buckets
-  }, [filteredOpportunities])
+  }, [filteredOpportunities, responseClock])
   if (!repreneur) {
     return (
       <Alert>
@@ -373,22 +437,17 @@ export function RepreneurOpportunityList({
 
   return (
     <div className="flex flex-col gap-6">
-      <CollectionFilterBar
+      <DealDiscoveryToolbar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search title, teaser, Re-New ref, geography, sector, or metrics"
-        definitions={definitions}
-        values={filters}
-        onFilterChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-        onFilterRemove={(key) => setFilters((current) => ({ ...current, [key]: "" }))}
-        onClearFilters={() => setFilters(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS)}
-        onReset={() => {
-          setSearch("")
-          setFilters(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS)
-        }}
+        geographyOptions={geographyOptions}
+        sectorOptions={sectorOptions}
+        filters={filters}
+        onTaxonomyChange={(key, values) => setFilters((current) => ({ ...current, [key]: values }))}
+        onClear={() => { setSearch(""); setFilters(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS) }}
         resultCount={filteredOpportunities.length}
         totalCount={opportunities.length}
-        resultLabel="deal"
+        preferencesEnabled={Boolean(preferenceKey)}
       />
       <DealRangeFilters
         filters={filters}

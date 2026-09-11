@@ -14,7 +14,7 @@ describe("repreneur opportunity recommendation save feedback", () => {
   })
 
   it("acknowledges a persisted recommendation and prevents duplicate submits while pending", () => {
-    expect(source).toContain("setRecommendationSuccess(\"Recommendation saved.\")")
+    expect(source).toContain("setRecommendationSuccess(result.message ?? \"Recommendation saved.\")")
     expect(source).toContain('disabled={isSaving}')
     expect(source).toContain('role="status"')
   })

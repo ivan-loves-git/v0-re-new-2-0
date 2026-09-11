@@ -726,6 +726,8 @@ export interface OpportunityMatchRepreneur {
 }
 
 export interface OpportunityMatch extends OpportunityConfidentialityGate {
+  /** Staff-only readback; never projected into the repreneur portal. */
+  assignment_email_status?: "pending" | "sent" | "failed" | "blocked" | "review_required" | "delivery_issue" | "unavailable" | null
   id: string
   opportunity_id: string
   repreneur_id: string
@@ -751,6 +753,9 @@ export interface OpportunityMatch extends OpportunityConfidentialityGate {
   reviewed_at?: string | null
   interest_expressed_at?: string | null
   interest_notification_sent_at?: string | null
+  recommendation_published_at?: string | null
+  recommendation_expires_at?: string | null
+  recommendation_renewed_at?: string | null
   created_at: string
   updated_at: string
   repreneur?: OpportunityMatchRepreneur | null
@@ -888,6 +893,7 @@ export interface RepreneurOpportunityExposure {
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
   interest_notification_sent_at?: string | null
+  recommendation_expires_at?: string | null
   updated_at: string
   is_locked_for_other_repreneur?: boolean
   /** Computed server-side after portal authorization; never accepted from the browser. */
@@ -927,6 +933,7 @@ export interface RepreneurDealFlowOpportunity {
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
   interest_notification_sent_at?: string | null
+  recommendation_expires_at?: string | null
   updated_at: string
   is_staff_recommended: boolean
   is_outside_current_criteria: boolean

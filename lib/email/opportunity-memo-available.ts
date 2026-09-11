@@ -12,7 +12,7 @@ export async function sendOpportunityMemoAvailableEmail(
 
   return sendEmailDirect({
     to: input.recipientEmail,
-    subject: "Votre info memo est disponible",
+    subject: `Le mémo d'information est disponible - ${input.opportunityTitle}`,
     idempotencyKey: input.idempotencyKey,
     react: OpportunityMemoAvailableEmail({
       firstName: input.repreneurFirstName,

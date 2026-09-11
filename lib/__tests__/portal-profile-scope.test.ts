@@ -82,11 +82,13 @@ describe("repreneur portal profile scope", () => {
     expect(profileSummary).toContain("teaser_summary")
     expect(dealDetail).toContain("teaser_summary")
 
-    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
+    for (const field of ["opportunity.reference", "opportunity.sector", "Revenue", "EBITDA", "Margin", "Team"]) {
       expect(dealList).toContain(field)
     }
-    expect(dealList).not.toContain("teaser_summary")
-    expect(dealList).not.toMatch(/line-clamp-[23]/)
+    expect(dealList).toContain("opportunity.teaser_summary")
+    expect(dealList).toContain("line-clamp-3")
+    expect(dealList).not.toContain("opportunity.description")
+    expect(dealList).not.toContain("opportunity.internal_notes")
     expect(dealList).toContain("View detail")
     expect(profileSummary).toContain("View detail")
     expect(dealList).toContain('Added {opportunity.date_added_display ?? "-"}')
@@ -113,6 +115,19 @@ describe("repreneur portal profile scope", () => {
     ]) {
       expect(portalExposureTypes).not.toContain(staffOnlyField)
     }
+  })
+
+  it("allows interest only after opening details and keeps preview props serializable", () => {
+    const list = source("components/opportunities/repreneur-opportunity-list.tsx")
+    const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
+    const preview = source("app/(dashboard)/portal-preview/page.tsx")
+    expect(list).not.toContain("LockedOpportunityInterestAction")
+    expect(list).not.toContain("Express interest")
+    expect(list).toContain("View detail")
+    expect(detail).toContain("LockedOpportunityInterestAction")
+    expect(detail).toContain("markMyOpportunityInterested")
+    expect(preview).not.toContain("documentHrefForDocument")
+    expect(detail).not.toContain("documentHrefForDocument")
   })
 
   it("opens eligible unmatched deal details with the self-interest action", () => {
@@ -200,7 +215,7 @@ describe("repreneur portal profile scope", () => {
     expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
   })
 
-  it("uses invitation, not offer or lifecycle, in both staff manual-recommendation pickers", () => {
+  it("uses staff-only valid-email selection without invitation, offer or lifecycle gates", () => {
     const opportunityMatches = source("lib/actions/opportunity-matches.ts")
     const pickerByOpportunity = opportunityMatches.slice(
       opportunityMatches.indexOf("export async function listOpportunityMatchCandidates"),
@@ -212,12 +227,13 @@ describe("repreneur portal profile scope", () => {
     )
 
     for (const picker of [pickerByOpportunity, pickerByRepreneur]) {
-      expect(picker).toContain('from("app_user_roles")')
-      expect(picker).toContain("hasInvitedLinkedIdentity")
+      expect(picker).toContain("requireStaffAccess()")
+      expect(picker).toContain("manualRecommendationEmail")
+      expect(picker).not.toContain('from("app_user_roles")')
       expect(picker).not.toContain("isAcceptedPaidMatchingClient")
     }
     expect(pickerByOpportunity).toContain("candidate.is_demo === opportunity.is_demo")
-    expect(pickerByRepreneur).toContain("opportunity.is_demo === repreneur.is_demo")
+    expect(pickerByRepreneur).toContain("opportunity.is_demo !== repreneur.is_demo")
     expect(pickerByRepreneur).not.toContain('.neq("repreneur_exposure", "staff_only")')
   })
 

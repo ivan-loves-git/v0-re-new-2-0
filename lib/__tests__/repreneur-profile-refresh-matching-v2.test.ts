@@ -111,13 +111,13 @@ describe("stored Matching v2 refresh", () => {
 
     expect(mocks.updates).toEqual([{
       platform_recommendation: "strong_fit",
-      platform_score: 91,
+      platform_score: 100,
       platform_reasons: [
         "Sector or activity matches the repreneur target preference.",
         "Geography matches the canonical France hierarchy.",
         "Revenue is within the target range.",
         "Absolute EBITDA is not targeted by this repreneur.",
-        "EBITDA margin is above the target and below the cap.",
+        "EBITDA margin meets the target.",
         "Headcount is within the target range.",
       ],
     }])

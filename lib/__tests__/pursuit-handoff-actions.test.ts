@@ -38,7 +38,7 @@ describe("canonical pursuit handoff actions", () => {
     m.prepare.mockResolvedValue(prepared(present))
     expect((await sendPursuitIntermediaryHandoff("match", "e4")).success).toBe(true)
     const [, payload, descriptor] = m.mail.mock.calls[0]
-    expect(payload.body.includes("modèle de NDA")).toBe(!present)
+    expect(payload.body.includes("NDA à signer")).toBe(!present)
     expect(payload.clientOperationKey).toBe("validation")
     expect(descriptor.upstreamId).toBe("validation")
   })

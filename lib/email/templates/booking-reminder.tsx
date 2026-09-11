@@ -18,8 +18,8 @@ export function BookingReminderEmail({ repreneur, bodyOverride }: EmailTemplateP
   const { firstName } = repreneur
 
   return (
-    <BaseLayout previewText={`Bonjour ${firstName}, planifions un premier échange`}>
-      <Text style={heading}>Planifions un premier échange</Text>
+    <BaseLayout previewText="Réservez votre entretien avec Re-New">
+      <Text style={heading}>Réservez votre entretien avec Re-New</Text>
 
       {bodyOverride ? (
         renderMarkdownBody(bodyOverride, { firstName })
@@ -27,29 +27,17 @@ export function BookingReminderEmail({ repreneur, bodyOverride }: EmailTemplateP
         <>
           <Text style={paragraph}>Bonjour {firstName},</Text>
 
-          <Text style={paragraph}>
-            Je vous remercie à nouveau pour le partage de votre profil et de votre projet de reprise.
-          </Text>
-
-          <Text style={paragraph}>
-            J&apos;ai bien pris connaissance de vos premiers éléments et vous propose de planifier un
-            premier échange de 30 minutes, au moment qui vous conviendra le mieux, via le lien
-            ci-dessous :
-          </Text>
+          <Text style={paragraph}>Nous n&apos;avons pas encore de créneau d&apos;entretien réservé de votre part.</Text>
+          <Text style={paragraph}>Pourriez-vous prendre quelques minutes pour choisir un horaire qui vous convient ?</Text>
 
           <Text style={paragraph}>
             <Link href={CALENDLY_URL}>{CALENDLY_URL}</Link>
           </Text>
 
           <Text style={paragraph}>
-            Ce sera l&apos;occasion de mieux comprendre votre recherche, votre trajectoire et la manière
-            dont nous pourrions vous accompagner.
-          </Text>
-
-          <Text style={paragraph}>
-            Au plaisir d&apos;échanger prochainement,
+            À très vite,
             <br />
-            Bertrand Galas
+            L&apos;équipe Re-New
           </Text>
         </>
       )}

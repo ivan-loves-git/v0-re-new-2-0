@@ -6,6 +6,7 @@ import { requirePortalAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
+import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 import type { OpportunityDeclineReasonCategory, OpportunityMatchStatus } from "@/lib/types/opportunity"
 
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "dropped"]
@@ -55,7 +56,7 @@ async function updateMyOpportunityResponse(
   const supabase = createAdminClient()
   const { data: match, error: matchError } = await supabase
     .from("opportunity_matches")
-    .select("id, opportunity_id, status, opportunity:opportunities!inner(status, is_demo), repreneur:repreneurs!inner(is_demo)")
+    .select("id, opportunity_id, status, recommendation_expires_at, opportunity:opportunities!inner(status, is_demo), repreneur:repreneurs!inner(is_demo)")
     .eq("id", matchId)
     .eq("repreneur_id", access.repreneurId)
     .maybeSingle()
@@ -72,6 +73,9 @@ async function updateMyOpportunityResponse(
   }
   if (!REPRENEUR_RESPONSE_ALLOWED_STATUSES.includes(match.status as OpportunityMatchStatus)) {
     throw new RepreneurOpportunityResponseError("This opportunity response can no longer be changed.")
+  }
+  if (status === "interested" && match.status !== "interested" && !isRecommendationResponseOpen(match.recommendation_expires_at)) {
+    throw new RepreneurOpportunityResponseError("The response window for this recommendation has expired. Re-New can renew it if appropriate.")
   }
 
   const declineReasonCategories = status === "declined" ? readDeclineReasonCategories(formData) : []

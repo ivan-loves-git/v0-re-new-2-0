@@ -45,6 +45,8 @@ import { RepreneurOffersList } from "@/components/offers/repreneur-offers-list"
 import { Tier3MilestonesCard } from "@/components/repreneurs/tier3-milestones-card"
 import { RepreneurActionsMenu } from "@/components/repreneurs/repreneur-actions-menu"
 import { ActivityHistory } from "@/components/repreneurs/activity-history"
+import { OutlookBookingRequestControl } from "@/components/repreneurs/outlook-booking-request-control"
+import { getLatestBookingRequestEvent } from "@/lib/actions/booking-request-reminders"
 import { DocumentsCard } from "@/components/repreneurs/documents-card"
 import { LeadershipResultsCard } from "@/components/repreneurs/leadership-results-card"
 import { PortalAccessCard } from "@/components/repreneurs/portal-access-card"
@@ -284,7 +286,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
     notesResult,
     repreneurOffersResult,
     allOffersResult,
-    activitiesResult
+    activitiesResult,
+    latestBookingRequest
   ] = await Promise.all([
     // Fetch notes
     supabase
@@ -309,7 +312,8 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
       .from("activities")
       .select("*")
       .eq("repreneur_id", id)
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    getLatestBookingRequestEvent(id),
   ])
 
   const notes = notesResult.data || []
@@ -1029,7 +1033,10 @@ export default async function RepreneurDetailPage({ params }: { params: Promise<
 
         <TabsContent value="timeline" className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
-            <ActivityHistory repreneurId={id} activities={activitiesWithEmail as Activity[]} />
+            <div className="space-y-3">
+              <OutlookBookingRequestControl repreneurId={id} latest={latestBookingRequest} />
+              <ActivityHistory repreneurId={id} activities={activitiesWithEmail as Activity[]} />
+            </div>
             <RepreneurNotes repreneurId={id} notes={notesWithEmail as Note[]} />
           </div>
         </TabsContent>

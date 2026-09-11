@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { CalendarDays, CheckCircle2, Download, FileText, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -12,19 +15,17 @@ import {
   getOpportunityMatchStatusLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type RepreneurDealFlowOpportunity,
-  type RepreneurOpportunityDocument,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
 import { getEbitdaMarginPercentage, isStaffRecommended } from "@/lib/utils/repreneur-deal-discovery"
 import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
+import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 
 type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
 
 interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityDetailItem
   readOnly?: boolean
-  /** Legacy staff preview link factory; portal disclosure is now canonical and ignores it. */
-  documentHrefForDocument?: (document: RepreneurOpportunityDocument) => string | null
   journey?: PortalCurrentPursuit | null
 }
 
@@ -43,6 +44,13 @@ function formatEbitdaMargin(opportunity: RepreneurOpportunityDetailItem) {
   return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(margin)}%`
 }
 
+function formatRecommendationDeadline(expiresAt: string | null | undefined) {
+  if (!expiresAt) return null
+  const value = new Date(expiresAt)
+  if (Number.isNaN(value.getTime())) return null
+  return new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris", timeZoneName: "short" }).format(value)
+}
+
 function canRespond(status: RepreneurOpportunityDetailItem["match_status"]) {
   return status === "proposed" || status === "interested" || status === "declined" || status === "dropped"
 }
@@ -52,6 +60,11 @@ export function RepreneurOpportunityDetail({
   readOnly = false,
   journey,
 }: RepreneurOpportunityDetailProps) {
+  const [, setResponseClock] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => setResponseClock((value) => value + 1), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
   const interestAction = opportunity.match_id
     ? markMyOpportunityInterested.bind(null, opportunity.match_id)
     : null
@@ -59,6 +72,9 @@ export function RepreneurOpportunityDetail({
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
   const canExpressUnassignedInterest = !opportunity.match_id
+  const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit"
+  const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
+  const responseDeadline = formatRecommendationDeadline(opportunity.recommendation_expires_at)
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,6 +87,7 @@ export function RepreneurOpportunityDetail({
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "active_pursuit" && <Badge variant="outline">Confidential journey</Badge>}
           {isStaffRecommended(opportunity) ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
+          {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-[-0.025em]">{opportunityTitle(opportunity)}</h1>
@@ -91,6 +108,7 @@ export function RepreneurOpportunityDetail({
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span>Re-New ref <span className="font-mono text-foreground">{opportunity.reference}</span></span>
             <span>{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</span>
+            {responsePending && responseDeadline ? <span>{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</span> : null}
           </div>
         </div>
       </header>
@@ -156,6 +174,7 @@ export function RepreneurOpportunityDetail({
               notificationSent={Boolean(opportunity.interest_notification_sent_at)}
               lockedForAnotherRepreneur={lockedForAnotherRepreneur}
               readOnly={readOnly}
+              recommendationExpiresAt={opportunity.recommendation_expires_at}
             />
           ) : null}
 
@@ -170,9 +189,9 @@ export function RepreneurOpportunityDetail({
           {!readOnly && !lockedForAnotherRepreneur && interestAction && canRespond(opportunity.match_status) && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <form action={interestAction} data-wave-action="express_interest" data-wave-workflow="portal_deals">
-                <Button type="submit" disabled={opportunity.match_status === "interested"}>
+                <Button type="submit" disabled={opportunity.match_status === "interested" || responseExpired}>
                   <CheckCircle2 data-icon="inline-start" />
-                  {opportunity.match_status === "interested" ? "Interest sent" : opportunity.match_status === "declined" || opportunity.match_status === "dropped" ? "Review and reconsider" : "I'm interested"}
+                  {opportunity.match_status === "interested" ? "Interest sent" : responseExpired ? "Response window expired" : opportunity.match_status === "declined" || opportunity.match_status === "dropped" ? "Review and reconsider" : "I'm interested"}
                 </Button>
               </form>
             </div>

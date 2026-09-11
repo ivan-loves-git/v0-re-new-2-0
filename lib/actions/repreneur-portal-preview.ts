@@ -88,6 +88,7 @@ interface PreviewOpportunityMatchRow {
   nda_updated_at: string | null
   interest_expressed_at?: string | null
   interest_notification_sent_at?: string | null
+  recommendation_expires_at?: string | null
   updated_at: string
   opportunity: PreviewOpportunityRow | PreviewOpportunityRow[] | null
 }
@@ -169,6 +170,7 @@ function normalizeExposure(
     decline_reason_text: row.decline_reason_text,
     interest_expressed_at: row.interest_expressed_at,
     interest_notification_sent_at: row.interest_notification_sent_at,
+    recommendation_expires_at: row.recommendation_expires_at,
     updated_at: row.updated_at,
   }
 }
@@ -233,6 +235,7 @@ async function listVisibleOpportunitiesForRepreneur(
       nda_waived_at,
       nda_waived_by,
       nda_updated_at,
+      recommendation_expires_at,
       updated_at,
       opportunity:opportunities!inner(
         id,

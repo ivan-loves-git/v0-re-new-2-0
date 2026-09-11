@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
+import { StaffAssignmentEmailStatus } from "@/components/opportunities/staff-assignment-email-status"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StaffRepreneurCombobox } from "@/components/repreneurs/staff-repreneur-combobox"
+import { StaffRecommendationRenewAction } from "@/components/opportunities/staff-recommendation-renew-action"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
@@ -214,7 +216,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
       showFeedback({
         type: "success",
         title: "Recommendation saved",
-        description: "The match record was updated without changing any active pursuit lock.",
+        description: result.message ?? "The match record was updated without changing any active pursuit lock.",
       })
     } catch (error) {
       showFeedback({
@@ -324,7 +326,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
             Add recommendation
           </CardTitle>
           <CardDescription>
-            Store a match. New assignments default to Proposed so they appear in the repreneur portal; Draft and
+            Store a match. New Proposed REAL assignments request a public-summary email without granting portal access; Draft and
             Shortlisted remain available for internal-only staging.
           </CardDescription>
         </CardHeader>
@@ -379,7 +381,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
               </Alert>
             ) : null}
             <div className="grid gap-4 lg:grid-cols-2">
-              <div className="flex flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-2">
                 <FormFieldLabel htmlFor="repreneur_id" requirement="required">
                   Repreneur
                   <FieldInfo
@@ -405,8 +407,8 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                   Match status
                   <FieldInfo
                     label="Match status"
-                    description="Proposed appears in the repreneur portal. Draft and Shortlisted stay internal. Interested records the repreneur flow. Active pursuit is only created with Validate."
-                    example="Use Shortlisted while staff is still discussing; use Proposed when it should reach the repreneur portal."
+                    description="A new Proposed REAL match requests one public-summary email. Portal visibility requires existing access. Draft and Shortlisted stay internal. Interested records the repreneur flow. Active pursuit is only created with Validate."
+                    example="Use Proposed for a new assignment. Updating an existing Draft or Shortlisted row does not send this initial-assignment email."
                   />
                 </FormFieldLabel>
                 <Select name="status" defaultValue="proposed" onValueChange={() => clearFieldError("status")}>
@@ -575,6 +577,8 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
+                          <StaffRecommendationRenewAction matchId={match.id} status={match.status} expiresAt={match.recommendation_expires_at} />
+                          <StaffAssignmentEmailStatus matchId={match.id} status={match.assignment_email_status} />
                         </TableCell>
                         <TableCell>
                           <Badge variant={recommendationVariant(match.platform_recommendation)}>

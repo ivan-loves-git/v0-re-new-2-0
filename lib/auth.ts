@@ -41,24 +41,29 @@ function renderPortalAccessSetupEmail(
   name: string | null | undefined,
   url: string,
 ) {
-  const displayName = name?.trim() || "Bonjour"
+  const displayName = escapeHtml(name?.trim() || "")
+  const safeUrl = escapeHtml(url)
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; color: #1f2937; line-height: 1.5;">
-      <h2 style="color: #111827; margin-bottom: 16px;">Bienvenue sur la plateforme Re-New</h2>
-      <p>Bonjour ${displayName},</p>
-      <p>L'equipe Re-New vous a ouvert un acces a la plateforme.</p>
-      <p>Pour finaliser votre acces, cliquez sur le bouton ci-dessous et creez votre mot de passe.</p>
+      <h2 style="color: #111827; margin-bottom: 16px;">Votre accès à votre espace Re-New</h2>
+      <p>Bonjour${displayName ? ` ${displayName}` : ""},</p>
+      <p>Votre espace personnel Re-New est prêt.</p>
+      <p>Vous pouvez dès à présent créer votre mot de passe et accéder à votre espace pour suivre votre projet de reprise, consulter les opportunités qui vous correspondent, et échanger avec notre équipe.</p>
       <p style="margin: 28px 0;">
-        <a href="${url}" style="background: #111827; color: white; padding: 12px 22px; border-radius: 8px; text-decoration: none; display: inline-block; font-weight: 600;">
-          Creer mon mot de passe
+        <a href="${safeUrl}" style="background: #111827; color: white; padding: 12px 22px; border-radius: 8px; text-decoration: none; display: inline-block; font-weight: 600;">
+          Créer mon mot de passe
         </a>
       </p>
-      <p style="color: #4b5563; font-size: 14px;">Ce lien expire dans 1 heure. Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet email.</p>
+      <p style="color: #4b5563; font-size: 14px;">Ce lien est valable pendant 1 heure.</p>
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
       <p style="color: #6b7280; font-size: 12px;">Re-New Platform</p>
     </div>
   `
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!)
 }
 
 function renderPasswordResetEmail(
@@ -113,6 +118,7 @@ export const auth = betterAuth({
     // an attacker preclaim a repreneur email before the legitimate invitation.
     disableSignUp: true,
     minPasswordLength: 8,
+    resetPasswordTokenExpiresIn: 60 * 60,
     sendResetPassword: async ({ user, url, token }) => {
       const trace = startCriticalOperation("email.password_reset_send")
       try {
@@ -135,7 +141,7 @@ export const auth = betterAuth({
           from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: user.email,
           subject: isPortalAccessSetup
-            ? "Bienvenue sur la plateforme Re-New"
+            ? "Votre accès à votre espace Re-New"
             : "Reset your password",
           html: isPortalAccessSetup
             ? renderPortalAccessSetupEmail(user.name, browserUrl)

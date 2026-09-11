@@ -593,6 +593,18 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(savedMatch.platform_recommendation).toBe("strong_fit");
     expect(savedMatch.platform_score).toBe(100);
     expect(savedMatch.platform_reasons).toHaveLength(6);
+    const assignmentDelivery = await one<{
+      notifications: number;
+      emails: number;
+      sent: number;
+      internalContent: number;
+    }>(client, `SELECT
+      (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications WHERE match_id=$1) AS notifications,
+      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1) AS emails,
+      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1 AND l.status='sent' AND l.resend_id='qa-allowlist-accepted') AS sent,
+      (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications n JOIN public.opportunity_matches m ON m.id=n.match_id JOIN public.opportunities o ON o.id=m.opportunity_id WHERE n.match_id=$1 AND n.teaser_summary=o.description) AS "internalContent"`, [savedMatch.id]);
+    expect(assignmentDelivery).toEqual({ notifications: 1, emails: 1, sent: 1, internalContent: 0 });
+    await expect(page.getByText("Assignment email sent", { exact: true })).toBeVisible();
     await record({
       step: "staff saved complete-thesis recommendation",
       surface: "database",
@@ -744,7 +756,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       .click();
     await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Qualification request sent." })).toBeVisible();
     const e4 = await one<{ delivery_status: string; request_included: boolean; current_blank_exists: boolean; exact_validation: boolean }>(client,
-      `SELECT d.delivery_status,position('modèle de NDA' in i.body_markdown)>0 AS request_included,
+      `SELECT d.delivery_status,position('nous transmettre un NDA à signer' in i.body_markdown)>0 AS request_included,
        EXISTS(SELECT 1 FROM public.opportunity_nda_artifacts a WHERE a.opportunity_id=$2 AND a.artifact_role='blank_template') AS current_blank_exists,
        i.client_operation_key=d.operation_key AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text AS exact_validation
        FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id

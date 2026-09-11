@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { deliverRecommendationAssignment, withAssignmentEmailStatus } from "@/lib/email/recommendation-assignment-delivery"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import {
   loadMatchingGeographyContext,
@@ -11,7 +12,7 @@ import {
   withMatchingGeographyTargets,
 } from "@/lib/repreneur-opportunity-geography"
 import {
-  hasInvitedLinkedIdentity,
+  manualRecommendationEmail,
 } from "@/lib/repreneur-matching-eligibility"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import type {
@@ -57,7 +58,7 @@ const REPRENEUR_MATCHING_INPUT_FIELDS = `
 `
 
 export type OpportunityMatchActionResult =
-  | { ok: true }
+  | { ok: true; message?: string }
   | { ok: false; message: string; field?: string }
 
 class OpportunityMatchFormError extends Error {
@@ -228,12 +229,11 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   return data as { id: string; status: OpportunityMatchStatus; updated_at: string } | null
 }
 
-async function ensureMatchNamespaceAndPortalIdentity(opportunityId: string, repreneurId: string) {
+async function ensureMatchNamespaceAndEmail(opportunityId: string, repreneurId: string) {
   const supabase = createAdminClient()
   const [
     { data: opportunity, error: opportunityError },
     { data: repreneur, error: repreneurError },
-    { data: role, error: roleError },
   ] = await Promise.all([
     supabase
       .from("opportunities")
@@ -242,21 +242,13 @@ async function ensureMatchNamespaceAndPortalIdentity(opportunityId: string, repr
       .maybeSingle(),
     supabase
       .from("repreneurs")
-      .select("id, is_demo")
+      .select("id, is_demo, email")
       .eq("id", repreneurId)
-      .maybeSingle(),
-    supabase
-      .from("app_user_roles")
-      .select("role, repreneur_id, user_id")
-      .eq("role", "repreneur")
-      .eq("repreneur_id", repreneurId)
-      .not("user_id", "is", null)
       .maybeSingle(),
   ])
 
   if (opportunityError) throw new Error(opportunityError.message)
   if (repreneurError) throw new Error(repreneurError.message)
-  if (roleError) throw new Error(roleError.message)
   if (
     !opportunity
     || !repreneur
@@ -266,8 +258,8 @@ async function ensureMatchNamespaceAndPortalIdentity(opportunityId: string, repr
   ) {
     throw formError("Recommendations must stay inside the same REAL or DEMO data namespace.", "repreneur_id")
   }
-  if (!hasInvitedLinkedIdentity(role, repreneurId)) {
-    throw formError("Enable portal access for this repreneur before creating a staff recommendation.", "repreneur_id")
+  if (!manualRecommendationEmail(repreneur.email)) {
+    throw formError("Add a valid email to this repreneur before creating a staff recommendation.", "repreneur_id")
   }
 }
 
@@ -311,7 +303,7 @@ function revalidateMatchPaths(opportunityId: string, matchId?: string) {
 }
 
 export async function listOpportunityMatches(opportunityId: string): Promise<OpportunityMatch[]> {
-  await requireStaffAccess()
+  const access = await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -321,16 +313,16 @@ export async function listOpportunityMatches(opportunityId: string): Promise<Opp
     .order("updated_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? [])
+  return withAssignmentEmailStatus((data ?? [])
     .filter((row) => isOpportunityInRepreneurNamespace(
       Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity,
       Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
     ))
-    .map(normalizeMatch)
+    .map(normalizeMatch), access.user.id)
 }
 
 export async function listOpportunityMatchesForRepreneur(repreneurId: string): Promise<RepreneurOpportunityMatch[]> {
-  await requireStaffAccess()
+  const access = await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -340,6 +332,9 @@ export async function listOpportunityMatchesForRepreneur(repreneurId: string): P
       opportunity_id,
       repreneur_id,
       status,
+      recommendation_published_at,
+      recommendation_expires_at,
+      recommendation_renewed_at,
       pursuit_stage,
       pursuit_stage_updated_at,
       platform_recommendation,
@@ -369,12 +364,12 @@ export async function listOpportunityMatchesForRepreneur(repreneurId: string): P
     .order("updated_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? [])
+  return withAssignmentEmailStatus((data ?? [])
     .filter((row) => isOpportunityInRepreneurNamespace(
       Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity,
       Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
     ))
-    .map(normalizeRepreneurMatch)
+    .map(normalizeRepreneurMatch), access.user.id)
 }
 
 export async function listOpportunityPursuitEvents(opportunityId: string): Promise<OpportunityPursuitEvent[]> {
@@ -467,133 +462,107 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
 export async function listOpportunityMatchCandidates(opportunityId: string): Promise<OpportunityMatchCandidate[]> {
   await requireStaffAccess()
   const supabase = createAdminClient()
-
-  const [{ data: opportunity, error: opportunityError }, { data, error }, { data: roles, error: rolesError }] = await Promise.all([
-    supabase
-      .from("opportunities")
-      .select("id, is_demo, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
-      .eq("id", opportunityId)
-      .maybeSingle(),
-    supabase
-      .from("repreneurs")
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        lifecycle_status,
-        is_demo,
-        journey_stage,
-        recommendation,
-        ${REPRENEUR_MATCHING_INPUT_FIELDS}
-      `)
-      .order("updated_at", { ascending: false })
-      .limit(250),
-    supabase
-      .from("app_user_roles")
-      .select("role, repreneur_id, user_id")
-      .eq("role", "repreneur")
-      .not("user_id", "is", null),
-  ])
-
-  if (opportunityError) throw new Error(opportunityError.message)
+  const { data: opportunity, error } = await supabase
+    .from("opportunities")
+    .select("id, is_demo, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
+    .eq("id", opportunityId)
+    .maybeSingle()
   if (error) throw new Error(error.message)
-  if (rolesError) throw new Error(rolesError.message)
+  if (!opportunity || typeof opportunity.is_demo !== "boolean") return []
 
-  const geography = await loadMatchingGeographyContext(
-    supabase,
-    (data ?? [])
-      .filter((candidate) => opportunity && candidate.is_demo === opportunity.is_demo)
-      .map((candidate) => candidate.id),
-  )
-  return (data ?? []).filter((candidate) =>
-    opportunity && candidate.is_demo === opportunity.is_demo &&
-    (roles ?? []).some((role) => hasInvitedLinkedIdentity(role, candidate.id)),
-  ).map((candidate) => {
-    if (!opportunity) return candidate as OpportunityMatchCandidate
-    const platformMatch = calculateOpportunityMatchScore(
-      withMatchingGeographyTargets(candidate, geography),
-      withMatchingGeography(opportunity, geography),
+  const candidates: OpportunityMatchCandidate[] = []
+  let afterId: string | null = null
+  // Keyset pages are complete without an arbitrary latest-updated cap. Score
+  // each bounded page so geography filters also stay below URL-size limits.
+  while (true) {
+    let query = supabase.from("repreneurs")
+      .select(`id, first_name, last_name, email, lifecycle_status, is_demo,
+        journey_stage, recommendation, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+      .eq("is_demo", opportunity.is_demo)
+      .order("id", { ascending: true })
+      .limit(100)
+    if (afterId) query = query.gt("id", afterId)
+    const { data: page, error: pageError } = await query
+    if (pageError) throw new Error(pageError.message)
+    if (!page?.length) break
+    const eligible = page.filter(candidate =>
+      candidate.is_demo === opportunity.is_demo && manualRecommendationEmail(candidate.email),
     )
-    return {
-      id: candidate.id,
-      first_name: candidate.first_name,
-      last_name: candidate.last_name,
-      email: candidate.email,
-      lifecycle_status: candidate.lifecycle_status,
-      journey_stage: candidate.journey_stage,
-      recommendation: candidate.recommendation,
-      who_score: candidate.who_score,
-      when_score: candidate.when_score,
-      platform_recommendation: platformMatch.recommendation,
-      platform_score: platformMatch.score,
-      platform_reasons: platformMatch.reasons,
-    } satisfies OpportunityMatchCandidate
-  })
+    const geography = await loadMatchingGeographyContext(supabase, eligible.map(candidate => candidate.id))
+    for (const candidate of eligible) {
+      const platformMatch = calculateOpportunityMatchScore(
+        withMatchingGeographyTargets(candidate, geography),
+        withMatchingGeography(opportunity, geography),
+      )
+      candidates.push({
+        id: candidate.id, first_name: candidate.first_name, last_name: candidate.last_name,
+        email: candidate.email, lifecycle_status: candidate.lifecycle_status,
+        journey_stage: candidate.journey_stage, recommendation: candidate.recommendation,
+        who_score: candidate.who_score, when_score: candidate.when_score,
+        platform_recommendation: platformMatch.recommendation,
+        platform_score: platformMatch.score, platform_reasons: platformMatch.reasons,
+      })
+    }
+    if (page.length < 100) break
+    afterId = page[page.length - 1].id
+  }
+  return candidates
 }
 
 export async function listOpportunityCandidatesForRepreneur(repreneurId: string): Promise<RepreneurOpportunityCandidate[]> {
+  // This is the staff CRM picker, never a repreneur portal read.
   await requireStaffAccess()
   const supabase = createAdminClient()
+  const { data: repreneur, error } = await supabase.from("repreneurs")
+    .select(`id, first_name, last_name, email, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+    .eq("id", repreneurId).maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!repreneur || typeof repreneur.is_demo !== "boolean" || !manualRecommendationEmail(repreneur.email)) return []
 
-  const [{ data: repreneur, error: repreneurError }, { data: opportunities, error: opportunitiesError }, { data: existingMatches, error: matchesError }, { data: roles, error: rolesError }] =
-    await Promise.all([
-      supabase
-        .from("repreneurs")
-        .select(`id, first_name, last_name, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
-        .eq("id", repreneurId)
-        .maybeSingle(),
-      supabase
-        .from("opportunities")
-        .select("id, is_demo, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id, status, repreneur_exposure")
-        .eq("status", "active")
-        .order("updated_at", { ascending: false })
-        .limit(250),
-      supabase
-        .from("opportunity_matches")
-        .select("opportunity_id")
-        .eq("repreneur_id", repreneurId),
-      supabase
-        .from("app_user_roles")
-        .select("role, repreneur_id, user_id")
-        .eq("role", "repreneur")
-        .eq("repreneur_id", repreneurId)
-        .not("user_id", "is", null),
-    ])
+  const existingOpportunityIds = new Set<string>()
+  let afterMatchId: string | null = null
+  while (true) {
+    let query = supabase.from("opportunity_matches").select("id, opportunity_id")
+      .eq("repreneur_id", repreneurId).order("id", { ascending: true }).limit(100)
+    if (afterMatchId) query = query.gt("id", afterMatchId)
+    const { data: page, error: pageError } = await query
+    if (pageError) throw new Error(pageError.message)
+    if (!page?.length) break
+    for (const match of page) existingOpportunityIds.add(match.opportunity_id)
+    if (page.length < 100) break
+    afterMatchId = page[page.length - 1].id
+  }
 
-  if (repreneurError) throw new Error(repreneurError.message)
-  if (opportunitiesError) throw new Error(opportunitiesError.message)
-  if (matchesError) throw new Error(matchesError.message)
-  if (rolesError) throw new Error(rolesError.message)
-  if (!repreneur || !(roles ?? []).some((role) => hasInvitedLinkedIdentity(role, repreneurId))) return []
-
-  const existingOpportunityIds = new Set((existingMatches ?? []).map((match) => match.opportunity_id))
   const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
   const geographyAwareRepreneur = withMatchingGeographyTargets(repreneur, geography)
-
-  return (opportunities ?? [])
-    .filter((opportunity) => (
-      opportunity.is_demo === repreneur.is_demo
-      && !existingOpportunityIds.has(opportunity.id)
-    ))
-    .map((opportunity) => {
+  const namespace: boolean = repreneur.is_demo
+  const candidates: RepreneurOpportunityCandidate[] = []
+  let afterId: string | null = null
+  while (true) {
+    const query = supabase.from("opportunities")
+      .select("id, is_demo, reference, public_title, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id, status, repreneur_exposure")
+      .eq("status", "active").eq("is_demo", namespace)
+      .order("id", { ascending: true }).limit(100)
+    const { data: page, error: pageError } = afterId ? await query.gt("id", afterId) : await query
+    if (pageError) throw new Error(pageError.message)
+    if (!page?.length) break
+    for (const opportunity of page) {
+      if (opportunity.is_demo !== repreneur.is_demo || existingOpportunityIds.has(opportunity.id)) continue
       const platformMatch = calculateOpportunityMatchScore(
-        geographyAwareRepreneur,
-        withMatchingGeography(opportunity, geography),
+        geographyAwareRepreneur, withMatchingGeography(opportunity, geography),
       )
-      return {
-        id: opportunity.id,
-        reference: opportunity.reference,
-        public_title: opportunity.public_title,
-        sector: opportunity.sector,
-        activity: opportunity.activity,
-        location: opportunity.location,
+      candidates.push({
+        id: opportunity.id, reference: opportunity.reference, public_title: opportunity.public_title,
+        sector: opportunity.sector, activity: opportunity.activity, location: opportunity.location,
         platform_recommendation: platformMatch.recommendation,
-        platform_score: platformMatch.score,
-        platform_reasons: platformMatch.reasons,
-      } satisfies RepreneurOpportunityCandidate
-    })
-    .sort((a, b) => b.platform_score - a.platform_score)
+        platform_score: platformMatch.score, platform_reasons: platformMatch.reasons,
+      })
+    }
+    if (page.length < 100) break
+    const nextOpportunityId: string = page[page.length - 1].id
+    afterId = nextOpportunityId
+  }
+  return candidates.sort((a, b) => b.platform_score - a.platform_score)
 }
 
 export async function saveOpportunityMatch(formData: FormData): Promise<OpportunityMatchActionResult> {
@@ -616,7 +585,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     if (existingMatch && existingMatch.updated_at !== expectedUpdatedAt) {
       throw formError("This recommendation changed while you were editing it. Refresh to see the latest staff notes.")
     }
-    await ensureMatchNamespaceAndPortalIdentity(opportunityId, repreneurId)
+    await ensureMatchNamespaceAndEmail(opportunityId, repreneurId)
     await ensureOpportunityReadyForExternalMatch(opportunityId, status)
     await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 
@@ -663,6 +632,10 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     }
     revalidatePath(`/opportunities/${opportunityId}`)
     revalidatePath(`/repreneurs/${repreneurId}`)
+    if (!existingMatch && updatedMatch && status === "proposed") {
+      const notification = await deliverRecommendationAssignment(updatedMatch.id, access.user.id)
+      return { ok: true, message: notification.message }
+    }
     return { ok: true }
   } catch (error) {
     return actionFailure(error)

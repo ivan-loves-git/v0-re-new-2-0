@@ -7,6 +7,7 @@ export type RepreneurDealBucketCandidate = {
   matchId: string | null
   matchStatus: OpportunityMatchStatus | null
   isBroadDiscoveryEligible: boolean
+  recommendationResponseOpen?: boolean
 }
 
 /**
@@ -19,7 +20,8 @@ export function classifyRepreneurDeal(
 ): RepreneurDealBucket | null {
   switch (candidate.matchStatus) {
     case "proposed":
-      return candidate.matchId ? "recommended" : null
+      if (!candidate.matchId) return null
+      return candidate.recommendationResponseOpen === false ? "live" : "recommended"
     case "interested":
     case "active_pursuit":
       return candidate.matchId ? "in_progress" : null

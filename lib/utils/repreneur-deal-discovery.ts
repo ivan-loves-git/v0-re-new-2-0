@@ -2,18 +2,19 @@ import type {
   RepreneurDealFlowOpportunity,
   RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
+import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 
 export type RepreneurDealDiscoveryOpportunity =
   | RepreneurOpportunityExposure
   | RepreneurDealFlowOpportunity
 
 /**
- * Deal Flow taxonomy filters are deliberately single-select. Numeric controls
+ * Deal Flow taxonomy filters allow multiple values within one taxonomy. Numeric controls
  * are inclusive bounds; a missing metric never satisfies an active criterion.
  */
 export type RepreneurDealDiscoveryFilters = {
-  geography: string
-  sector: string
+  geography: string[]
+  sector: string[]
   revenueMin: string
   revenueMax: string
   ebitdaMarginMin: string
@@ -22,8 +23,8 @@ export type RepreneurDealDiscoveryFilters = {
 }
 
 export const EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS: RepreneurDealDiscoveryFilters = {
-  geography: "",
-  sector: "",
+  geography: [],
+  sector: [],
   revenueMin: "",
   revenueMax: "",
   ebitdaMarginMin: "",
@@ -74,7 +75,12 @@ export function getEbitdaMarginPercentage(opportunity: RepreneurDealDiscoveryOpp
 }
 
 export function isStaffRecommended(opportunity: RepreneurDealDiscoveryOpportunity) {
-  if ("is_staff_recommended" in opportunity) return opportunity.is_staff_recommended
+  if ("is_staff_recommended" in opportunity) {
+    return opportunity.is_staff_recommended
+      && Boolean(opportunity.interest_expressed_at)
+        ? true
+        : opportunity.is_staff_recommended && isRecommendationResponseOpen(opportunity.recommendation_expires_at)
+  }
   return true
 }
 
@@ -114,10 +120,14 @@ export function filterRepreneurDeals(
       opportunity.headcount_range,
     ].some((value) => normalizeText(value).includes(normalizedSearch))
 
-    const matchesGeography = !filters.geography
-      || opportunity.geography_node_id === filters.geography
-    const matchesSector = !filters.sector
-      || opportunity.canonical_sector === filters.sector
+    const matchesGeography = filters.geography.length === 0
+      || (opportunity.geography_node_id !== null
+        && opportunity.geography_node_id !== undefined
+        && filters.geography.includes(opportunity.geography_node_id))
+    const matchesSector = filters.sector.length === 0
+      || (opportunity.canonical_sector !== null
+        && opportunity.canonical_sector !== undefined
+        && filters.sector.includes(opportunity.canonical_sector))
     const matchesRevenue = isWithinInclusiveRange(
       opportunity.revenue_meur,
       filters.revenueMin,

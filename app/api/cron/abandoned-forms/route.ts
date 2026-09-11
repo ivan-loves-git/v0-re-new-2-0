@@ -15,6 +15,7 @@ import {
   type CriticalOperationTrace,
 } from "@/lib/observability/critical-operation"
 import { cleanupExpiredPrivateUploads } from "@/lib/private-upload-server"
+import { isBookingReminderDue } from "@/lib/booking-request-reminder"
 
 export const maxDuration = 60
 
@@ -277,26 +278,48 @@ export async function GET(request: Request) {
       const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000)
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
-      const { data: candidates } = await supabase
+      const { data: candidates, error: candidatesError } = await supabase
         .from("repreneurs")
         .select("id, first_name, last_name, email, lifecycle_status, created_at, marketing_consent")
         .eq("lifecycle_status", "lead")
         .gt("created_at", thirtyDaysAgo.toISOString())
         .lte("created_at", fiveDaysAgo.toISOString())
+      if (candidatesError) throw new Error("booking_candidates_unavailable")
 
       // Pre-load any interview activities for these repreneurs in one query.
       const candidateIds = (candidates || []).map((c) => c.id)
+      // Q8 is intentionally an additional eligibility gate, not a replacement
+      // for the established cohort, dedupe, consent, cap, BCC or delivery path.
+      // No recorded Outlook send means no new reminder eligibility.
+      const latestBookingEventByRepreneur = new Map<string, { sent_at: string }>()
+      if (candidateIds.length > 0) {
+        const { data: bookingEvents, error: bookingEventsError } = await supabase
+          .from("repreneur_booking_request_events")
+          .select("repreneur_id, sent_at, id")
+          .in("repreneur_id", candidateIds)
+          .order("sent_at", { ascending: false })
+          .order("id", { ascending: false })
+        if (bookingEventsError) throw new Error("booking_events_unavailable")
+        for (const event of bookingEvents || []) {
+          if (!latestBookingEventByRepreneur.has(event.repreneur_id)) {
+            latestBookingEventByRepreneur.set(event.repreneur_id, event)
+          }
+        }
+      }
       let withInterview = new Set<string>()
       if (candidateIds.length > 0) {
-        const { data: existingInterviews } = await supabase
+        const { data: existingInterviews, error: existingInterviewsError } = await supabase
           .from("activities")
           .select("repreneur_id")
           .eq("activity_type", "interview")
           .in("repreneur_id", candidateIds)
+        if (existingInterviewsError) throw new Error("booking_interviews_unavailable")
         withInterview = new Set((existingInterviews || []).map((a) => a.repreneur_id))
       }
 
       for (const c of candidates || []) {
+        const bookingEvent = latestBookingEventByRepreneur.get(c.id)
+        if (!bookingEvent || !isBookingReminderDue(bookingEvent.sent_at, now)) continue
         if (withInterview.has(c.id)) continue
         if (!c.email) continue
 

@@ -34,7 +34,7 @@ export function ManualSend() {
   const [searching, setSearching] = useState(false)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
   const availableTemplates = useMemo(
-    () => Object.entries(TEMPLATE_METADATA).filter(([, meta]) => testMode || meta.audience === "rep"),
+    () => Object.entries(TEMPLATE_METADATA).filter(([, meta]) => meta.manualSend !== false && (testMode || meta.audience === "rep")),
     [testMode],
   )
 

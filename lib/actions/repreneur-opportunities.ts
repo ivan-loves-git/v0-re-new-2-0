@@ -18,6 +18,7 @@ import {
 } from "@/lib/repreneur-opportunity-geography"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
+import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 import { normalizeOpportunitySector } from "@/lib/utils/opportunity-sector"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import {
@@ -148,6 +149,7 @@ function normalizeExposure(
     decline_reason_text: row.decline_reason_text,
     interest_expressed_at: row.interest_expressed_at,
     interest_notification_sent_at: row.interest_notification_sent_at,
+    recommendation_expires_at: row.recommendation_expires_at,
     updated_at: row.updated_at,
   }
 }
@@ -271,6 +273,7 @@ function withDealBucket(
     matchId: opportunity.match_id,
     matchStatus: opportunity.match_status,
     isBroadDiscoveryEligible,
+    recommendationResponseOpen: isRecommendationResponseOpen(opportunity.recommendation_expires_at),
   })
   return dealBucket ? { ...opportunity, deal_bucket: dealBucket } : null
 }
@@ -385,6 +388,7 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     decline_reason_text: opportunity.decline_reason_text,
     interest_expressed_at: opportunity.interest_expressed_at,
     interest_notification_sent_at: opportunity.interest_notification_sent_at,
+    recommendation_expires_at: opportunity.recommendation_expires_at,
     updated_at: opportunity.updated_at,
     is_staff_recommended: opportunity.is_staff_recommended,
     is_outside_current_criteria: opportunity.is_outside_current_criteria,
@@ -415,6 +419,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       nda_waived_at,
       nda_waived_by,
       nda_updated_at,
+      recommendation_expires_at,
       updated_at,
       opportunity:opportunities!inner(
         id,
@@ -524,6 +529,7 @@ async function listRepreneurDealFlowForProfile(
         nda_waived_at,
         nda_waived_by,
         nda_updated_at,
+        recommendation_expires_at,
         updated_at,
         opportunity:opportunities!inner(
           id,
@@ -682,6 +688,7 @@ export async function getMyRepreneurOpportunity(
         nda_waived_at,
         nda_waived_by,
         nda_updated_at,
+        recommendation_expires_at,
         updated_at,
         opportunity:opportunities!inner(
           id,

@@ -16,7 +16,7 @@ export async function sendLockedOpportunityInterestEmail(
 
   return sendEmailDirect({
     to: env.RENEW_STAFF_NOTIFICATION_EMAIL ?? DEFAULT_STAFF_NOTIFICATION_EMAIL,
-    subject: `${input.hasOtherActivePursuit ? "Interest on positioned opportunity" : "Interest in opportunity"} ${input.opportunityReference}`,
+    subject: `Nouvel intérêt repreneur — ${input.opportunityTitle}`,
     idempotencyKey: input.idempotencyKey,
     react: LockedOpportunityInterestEmail({
       repreneurName: input.repreneurName,

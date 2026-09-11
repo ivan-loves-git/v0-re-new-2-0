@@ -20,18 +20,12 @@ interface LockedOpportunityInterestEmailProps {
 }
 
 export function getOpportunityInterestEmailCopy(hasOtherActivePursuit: boolean) {
-  if (hasOtherActivePursuit) {
-    return {
-      heading: "Interest on a positioned opportunity",
-      introduction: "A repreneur expressed interest in an opportunity that already has an active pursuit.",
-      followUp: "Re-New's one-candidate-at-a-time principle remains unchanged. This signal does not create a queue, rank the repreneur, or reassign the opportunity. Please follow up directly and courteously.",
-    }
-  }
-
   return {
-    heading: "Interest in an opportunity",
-    introduction: "A repreneur expressed interest in a currently unassigned opportunity.",
-    followUp: "This signal is a staff-validation request. It does not create an active pursuit, queue, rank, reassignment, or confidentiality change. Please review and follow up directly.",
+    heading: "Nouvel intérêt repreneur",
+    introduction: "Un repreneur vient de manifester son intérêt pour cette opportunité sur la plateforme.",
+    followUp: hasOtherActivePursuit
+      ? "Merci de qualifier cet intérêt et de valider ou rejeter la poursuite depuis la fiche opportunité. Une poursuite déjà active reste inchangée."
+      : "Merci de qualifier cet intérêt et de valider ou rejeter la poursuite depuis la fiche opportunité.",
   }
 }
 function formatDateTime(value: string) {
@@ -55,8 +49,8 @@ export function LockedOpportunityInterestEmail({
   const copy = getOpportunityInterestEmailCopy(hasOtherActivePursuit)
   return (
     <BaseLayout
-      previewText={`${repreneurName} expressed interest in ${opportunityReference}`}
-      footerText="Internal Re-New notification from WAVE."
+      previewText={`${repreneurName} a manifesté son intérêt pour ${opportunityReference}`}
+      footerText="Notification interne Re-New depuis WAVE."
     >
       <Text style={heading}>{copy.heading}</Text>
       <Text style={paragraph}>{copy.introduction}</Text>
@@ -66,19 +60,19 @@ export function LockedOpportunityInterestEmail({
         <Text style={detailValue}>{repreneurName}</Text>
         <Text style={detailMuted}>{repreneurEmail}</Text>
 
-        <Text style={detailLabel}>Opportunity</Text>
+        <Text style={detailLabel}>Opportunité</Text>
         <Text style={detailValue}>{opportunityTitle}</Text>
         <Text style={detailMuted}>{opportunityReference}</Text>
 
-        <Text style={detailLabel}>Expressed at</Text>
+        <Text style={detailLabel}>Intérêt exprimé le</Text>
         <Text style={detailValue}>{formatDateTime(expressedAt)}</Text>
       </Section>
 
       <Text style={paragraph}>{copy.followUp}</Text>
 
       <Section style={actions}>
-        <Link href={opportunityUrl} style={button}>Open opportunity</Link>
-        <Link href={repreneurUrl} style={secondaryButton}>Open repreneur</Link>
+        <Link href={opportunityUrl} style={button}>Voir la fiche</Link>
+        <Link href={repreneurUrl} style={secondaryButton}>Voir le repreneur</Link>
       </Section>
     </BaseLayout>
   )

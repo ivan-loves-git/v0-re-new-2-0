@@ -1,4 +1,4 @@
-"use server"
+import "server-only"
 
 import { resend, FROM_EMAIL, FROM_NAME, DAILY_EMAIL_LIMIT } from "./resend-client"
 import { createAdminClient } from "@/lib/supabase/admin"

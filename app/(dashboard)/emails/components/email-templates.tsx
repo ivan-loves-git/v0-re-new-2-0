@@ -246,7 +246,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                   onChange={(e) =>
                     setPreview({ ...preview, subject: e.target.value, saved: false, error: null })
                   }
-                  disabled={preview.loading || preview.saving}
+                  disabled={preview.loading || preview.saving || TEMPLATE_METADATA[preview.templateKey]?.manualSend === false}
                 />
               </div>
 
@@ -308,6 +308,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                 disabled={
                   preview.loading ||
                   preview.saving ||
+                  TEMPLATE_METADATA[preview.templateKey]?.manualSend === false ||
                   preview.subject.trim() === "" ||
                   (preview.subject === preview.initialSubject &&
                     (!preview.bodyEditable || preview.body === preview.initialBody))

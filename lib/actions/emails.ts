@@ -24,6 +24,7 @@ import { RejectionEmail } from "@/lib/email/templates/rejection"
 import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder"
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
 import { MaIntermediaryEmail } from "@/lib/email/templates/ma-intermediary"
+import { RecommendationAssignmentEmailV1, RECOMMENDATION_ASSIGNMENT_SUBJECT_V1 } from "@/lib/email/templates/recommendation-assignment-v1"
 
 const MA_SAMPLE_VARIABLES = {
   firstName: "Camille",
@@ -231,6 +232,9 @@ export async function updateTemplateSettings(
   settings: { subject?: string; preview_text?: string; body_markdown?: string }
 ) {
   await requireStaffAccess()
+  if (TEMPLATE_METADATA[templateKey]?.manualSend === false) {
+    throw new Error("This notification uses immutable versioned copy. Its content cannot be edited here.")
+  }
   const supabase = createAdminClient()
 
   const { error } = await supabase
@@ -253,6 +257,12 @@ export async function getRenderedTemplate(
   templateKey: EmailTemplateKey,
 ): Promise<{ subject: string; html: string; bodyMarkdown: string | null; bodyEditable: boolean }> {
   await requireStaffAccess()
+  if (templateKey === "opportunity_recommendation_assignment") {
+    const html = await render(RecommendationAssignmentEmailV1({
+      firstName: "Sophie", publicTitle: "Opportunité de reprise — exemple fictif", teaser: "Un aperçu public approuvé de cette opportunité fictive.",
+    }))
+    return { subject: RECOMMENDATION_ASSIGNMENT_SUBJECT_V1, html, bodyMarkdown: null, bodyEditable: false }
+  }
   const supabase = createAdminClient()
   const { data: row } = await supabase
     .from("email_templates")
@@ -397,6 +407,9 @@ export async function sendManualEmail(
   metadata?: Record<string, unknown>
 ) {
   await requireStaffAccess()
+  if (TEMPLATE_METADATA[templateKey]?.manualSend === false) {
+    return { success: false, message: "Send this email only from its staff recommendation." }
+  }
   if (TEMPLATE_METADATA[templateKey]?.audience !== "rep") {
     return {
       success: false,
@@ -517,6 +530,9 @@ export async function sendTestEmail(
   templateKey: EmailTemplateKey
 ): Promise<{ success: boolean; message: string }> {
   await requireStaffAccess()
+  if (TEMPLATE_METADATA[templateKey]?.manualSend === false) {
+    return { success: false, message: "This versioned email is verified with synthetic recommendation fixtures, not the generic sender." }
+  }
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email)) {
