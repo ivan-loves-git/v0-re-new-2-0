@@ -62,8 +62,7 @@ async function logout(page: Page) {
   await expect(page).toHaveURL(/\/auth\/login/);
 }
 
-test("staff reconciliation CSV downloads at desktop and mobile widths without portal exposure", async ({ page }) => {
-  await login(page, fixture.staff.email, /\/dashboard_re/);
+async function verifyStaffReconciliationExport(page: Page) {
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
     await page.goto("/opportunities");
@@ -83,14 +82,8 @@ test("staff reconciliation CSV downloads at desktop and mobile widths without po
     expect(csv).toContain(fixture.ids.realOpportunity);
     expect(csv).toContain("QA OPENING REAL — SYNTHETIC");
   }
-  await logout(page);
-  await login(page, fixture.repreneurs.real.email, /\/portal\/deals/);
-  await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
-  await page.goto("/opportunities");
-  await expect(page).toHaveURL(/\/portal\/deals/);
-  await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
-  await logout(page);
-});
+  await page.setViewportSize({ width: 1440, height: 1000 });
+}
 
 test("synthetic personas, private documents, safe mail, and namespaces are product-runnable", async ({
   page,
@@ -99,6 +92,9 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
   await expect(page).toHaveURL(/\/auth\/login/);
 
   await login(page, fixture.staff.email, /\/dashboard_re/);
+  // Reuse the existing sign-in: adding a second persona loop spends the real
+  // five-attempt login budget shared by this local fixture's IP address.
+  await verifyStaffReconciliationExport(page);
   await page.goto(
     `/opportunities/${fixture.ids.realOpportunity}?tab=documents`,
   );
@@ -145,6 +141,10 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
 
   await logout(page);
   await login(page, fixture.repreneurs.real.email, /\/portal\/deals/);
+  await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
+  await page.goto("/opportunities");
+  await expect(page).toHaveURL(/\/portal\/deals/);
+  await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
   const realLiveOpportunities = page.getByRole("region", {
     name: "Live Opportunities",
   });
