@@ -19,13 +19,13 @@ describe("W-161 optional absolute EBITDA thesis range", () => {
     }
   })
 
-  it("uses the new detail in the Matching 2.1 candidate while allowing it to complete a thesis", () => {
+  it("uses the new detail in the Matching 2.2 candidate while allowing it to complete a thesis", () => {
     const scorer = source("lib/utils/opportunity-match-scoring.ts")
     const completeness = source("lib/repreneur-target-thesis-completeness.ts")
 
     expect(scorer).toContain("target_ebitda_min_keur")
     expect(scorer).toContain("target_ebitda_max_keur")
-    expect(scorer).toContain("2.1-candidate-2026-08-29")
+    expect(scorer).toContain("2.2-gaussian-2026-09-11")
     expect(completeness).toContain("target_ebitda_min_keur")
     expect(completeness).toContain("target_ebitda_max_keur")
   })

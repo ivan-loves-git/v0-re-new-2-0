@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { expressOpportunityInterestAction } from "@/lib/actions/locked-opportunity-interest"
+import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 
 type LockedOpportunityInterestActionState =
   | { status: "idle"; message: ""; recorded: false }
@@ -24,6 +25,7 @@ interface LockedOpportunityInterestActionProps {
   notificationSent: boolean
   lockedForAnotherRepreneur?: boolean
   readOnly?: boolean
+  recommendationExpiresAt?: string | null
 }
 
 export function LockedOpportunityInterestAction({
@@ -32,6 +34,7 @@ export function LockedOpportunityInterestAction({
   notificationSent,
   lockedForAnotherRepreneur = false,
   readOnly = false,
+  recommendationExpiresAt,
 }: LockedOpportunityInterestActionProps) {
   const [state, formAction, pending] = useActionState(
     expressOpportunityInterestAction,
@@ -39,6 +42,7 @@ export function LockedOpportunityInterestAction({
   )
   const recorded = interestRecorded || state.recorded
   const confirmed = notificationSent || state.status === "success"
+  const responseExpired = !recorded && !isRecommendationResponseOpen(recommendationExpiresAt)
 
   if (confirmed) {
     return (
@@ -72,6 +76,13 @@ export function LockedOpportunityInterestAction({
         </p>
       ) : (
         <>
+          {responseExpired ? (
+            <Alert>
+              <LockKeyhole />
+              <AlertTitle>Recommendation response window expired</AlertTitle>
+              <AlertDescription>Re-New can renew this recommendation if it remains appropriate. No interest signal can be sent from this page.</AlertDescription>
+            </Alert>
+          ) : null}
           {state.status === "error" ? (
             <Alert variant={state.recorded ? "default" : "destructive"}>
               <MailWarning />
@@ -82,11 +93,13 @@ export function LockedOpportunityInterestAction({
 
           <form action={formAction} data-wave-action="express_interest" data-wave-workflow="portal_deals">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || responseExpired}>
               {pending ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}
               {pending
                 ? "Sending interest..."
-                : recorded
+                : responseExpired
+                  ? "Response window expired"
+                  : recorded
                   ? "Retry email alert"
                   : "Express interest"}
             </Button>

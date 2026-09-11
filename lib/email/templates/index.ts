@@ -28,15 +28,13 @@ export const TEMPLATE_AUDIENCE_LABELS: Record<EmailTemplateAudience, string> = {
 export const MA_TEMPLATE_DEFAULT_BODIES: Partial<Record<EmailTemplateKey, string>> = {
   ma_opportunity_validity_check: `Bonjour {firstName},
 
-Je me permets de vous contacter au sujet de {opportunityTitle}.
+Nous nous permettons de vous contacter au sujet de {opportunityTitle}.
 
-Pouvez-vous me confirmer si l'opportunite est toujours active, et si le calendrier vendeur a evolue depuis notre dernier echange ?
-
-Si elle est toujours ouverte, nous serions preneurs des prochaines etapes utiles pour qualifier l'interet cote Re-New.
+Pouvez-vous nous confirmer si l'opportunité est toujours active, et si vous êtes encore ouverts à étudier de nouveaux profils de repreneurs ?
 
 Merci beaucoup,
 
-L'equipe Re-New`,
+L'équipe Re-New`,
   ma_request_more_information: `Bonjour {firstName},
 
 Merci pour les premiers elements partages sur {opportunityTitle}.
@@ -77,15 +75,15 @@ Merci beaucoup,
 L'equipe Re-New`,
   ma_process_follow_up: `Bonjour {firstName},
 
-Je reviens vers vous concernant {opportunityTitle}.
+Nous revenons vers vous au sujet de {opportunityTitle}.
 
-Pouvez-vous nous confirmer ou en est le processus vendeur, les prochaines etapes prevues, et s'il existe une date limite pour manifester un interet qualifie ?
+Pouvez-vous nous confirmer si l'opportunité est toujours active, et si vous restez ouverts à étudier de nouveaux profils de repreneurs ?
 
-Cela nous aidera a cadrer le bon niveau d'effort cote Re-New et a eviter de pousser un profil hors timing.
+Si le dossier n'est plus d'actualité, n'hésitez pas à nous le signaler simplement en répondant à cet email.
 
 Merci beaucoup,
 
-L'equipe Re-New`,
+L'équipe Re-New`,
 }
 
 // Template metadata for UI display
@@ -166,7 +164,7 @@ export const TEMPLATE_METADATA: Record<
   },
   booking_reminder: {
     name: "Booking Reminder",
-    description: "Sent once after 5 days if no interview is booked",
+    description: "Sent once to eligible leads after 5 Paris weekdays from a recorded Outlook invitation, if no interview is booked",
     category: "intake",
     audience: "rep",
   },

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { saveOpportunityMatch } from "@/lib/actions/opportunity-matches"
+import { StaffRecommendationRenewAction } from "@/components/opportunities/staff-recommendation-renew-action"
 import {
   FieldError,
   FormFieldLabel,
@@ -201,6 +202,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
+                      <StaffRecommendationRenewAction matchId={match.id} status={match.status} expiresAt={match.recommendation_expires_at} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {match.pursuit_stage ? getOpportunityPursuitStageLabel(match.pursuit_stage) : "No pursuit"}

@@ -82,11 +82,13 @@ describe("repreneur portal profile scope", () => {
     expect(profileSummary).toContain("teaser_summary")
     expect(dealDetail).toContain("teaser_summary")
 
-    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
+    for (const field of ["opportunity.reference", "opportunity.sector", "Revenue", "EBITDA", "Margin", "Team"]) {
       expect(dealList).toContain(field)
     }
-    expect(dealList).not.toContain("teaser_summary")
-    expect(dealList).not.toMatch(/line-clamp-[23]/)
+    expect(dealList).toContain("opportunity.teaser_summary")
+    expect(dealList).toContain("line-clamp-3")
+    expect(dealList).not.toContain("opportunity.description")
+    expect(dealList).not.toContain("opportunity.internal_notes")
     expect(dealList).toContain("View detail")
     expect(profileSummary).toContain("View detail")
     expect(dealList).toContain('Added {opportunity.date_added_display ?? "-"}')

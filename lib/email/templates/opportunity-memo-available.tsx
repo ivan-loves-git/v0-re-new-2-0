@@ -15,22 +15,25 @@ export function OpportunityMemoAvailableEmail({
 }: OpportunityMemoAvailableEmailProps) {
   return (
     <BaseLayout
-      previewText={`L'info memo de ${opportunityTitle} est disponible`}
+      previewText={`Le mémo d'information de ${opportunityTitle} est disponible`}
       footerText="Vous recevez cet email dans le cadre de votre parcours de reprise avec Re-New."
     >
-      <Text style={heading}>Votre info memo est disponible</Text>
+      <Text style={heading}>Le mémo d&apos;information est disponible</Text>
       <Text style={paragraph}>Bonjour {firstName},</Text>
       <Text style={paragraph}>
-        L&apos;info memo de l&apos;opportunité « {opportunityTitle} » est maintenant disponible dans votre espace Re-New.
+        Le mémo pour {opportunityTitle} est désormais disponible sur votre espace Re-New Wave.
       </Text>
       <Text style={paragraph}>
-        Vous pouvez le consulter depuis la page de cette opportunité. Ce document reste confidentiel et ne doit pas être partagé.
+        Prenez le temps de le consulter. Nous vous proposons de revenir vers nous sous 5 jours ouvrés maximum avec vos retours et questions potentielles.
       </Text>
       <Section style={action}>
-        <Link href={opportunityUrl} style={button}>Consulter l&apos;info memo</Link>
+        <Link href={opportunityUrl} style={button}>Consulter le mémo</Link>
       </Section>
       <Text style={paragraph}>
-        Bien à vous,
+        Nous restons à votre disposition pour en discuter et vous accompagner sur les prochaines étapes.
+      </Text>
+      <Text style={paragraph}>
+        Merci,
         <br />
         L&apos;équipe Re-New
       </Text>

@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StaffRepreneurCombobox } from "@/components/repreneurs/staff-repreneur-combobox"
+import { StaffRecommendationRenewAction } from "@/components/opportunities/staff-recommendation-renew-action"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
@@ -575,6 +576,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
+                          <StaffRecommendationRenewAction matchId={match.id} status={match.status} expiresAt={match.recommendation_expires_at} />
                         </TableCell>
                         <TableCell>
                           <Badge variant={recommendationVariant(match.platform_recommendation)}>

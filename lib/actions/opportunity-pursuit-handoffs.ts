@@ -25,9 +25,9 @@ export async function sendPursuitIntermediaryHandoff(matchId: string, type: "e4"
     const blankPresent = context.upstream.metadata?.blank_nda_present_at_validation
     if (type === "e4" && typeof blankPresent !== "boolean") throw new Error("This historical validation has no frozen NDA request. Record a new mutual-interest validation before starting a new handoff.")
     const body = type === "e4"
-      ? `Bonjour,\n\nUn intérêt mutuel a été validé pour {{opportunityTitle}} avec {{repreneurName}}. Merci de confirmer la qualification de ce repreneur et les prochaines étapes.${blankPresent ? "" : "\n\nMerci également de nous transmettre le modèle de NDA applicable à cette opportunité."}\n\nBien cordialement,\nRe-New`
-      : "Bonjour,\n\nVous trouverez en pièces jointes les deux exemplaires signés du NDA validés pour {{opportunityTitle}} avec {{repreneurName}}. Merci de confirmer leur réception et de nous transmettre le mémorandum d'information ou les modalités de son accès sécurisé.\n\nBien cordialement,\nRe-New"
-    const result = await sendMaSourceWorkflowEmailPayload(handoff.opportunityId, { templateKey: "ma_nda_info_memo_request", subject: type === "e4" ? "Re-New — qualification de {{opportunityTitle}}" : "Re-New — NDA signés et mémorandum d'information", body, clientOperationKey: handoff.upstreamId }, handoff)
+      ? `Bonjour {firstName},\n\nUn des repreneurs que nous accompagnons est intéressé par une de vos opportunités : {opportunityTitle}.${blankPresent ? "\n\nLe NDA de votre cabinet étant déjà en notre possession, nous attendons votre validation avant de le faire signer au repreneur." : "\n\nPourriez-vous, s'il vous plaît, nous transmettre un NDA à signer afin de recevoir l'IM ?"}\n\nBien à vous,\n\nL'équipe Re-New`
+      : "Bonjour {firstName},\n\nVous trouverez ci-joint le NDA signé par le repreneur et par nous pour l'opportunité : {opportunityTitle}.\n\nPourriez-vous, s'il vous plaît, nous transmettre l'IM et les éléments de présentation disponibles sur le dossier ?\n\nBien à vous,\n\nL'équipe Re-New"
+    const result = await sendMaSourceWorkflowEmailPayload(handoff.opportunityId, { templateKey: "ma_nda_info_memo_request", subject: type === "e4" ? "Processus NDA - {opportunityTitle}" : "NDA signé - Demande de mémo d'information - {opportunityTitle}", body, clientOperationKey: handoff.upstreamId }, handoff)
     if (!result.success || !result.eventId) return { success: false as const, message: result.message }
     return { success: true as const, message: type === "e4" ? "Qualification request sent." : "Signed copies and memo request sent.", eventId: result.eventId }
   } catch (error) { return failure(error) }
@@ -42,8 +42,8 @@ export async function sendPursuitNdaReadyNotice(matchId: string) {
     if (!email) throw new Error("Add an email to this repreneur before sending the NDA-ready notice.")
     if (await isMaContactEmailAddressSuppressed(email)) throw new Error("The existing email suppression policy blocks this recipient.")
     const url = `${(env.NEXT_PUBLIC_APP_URL ?? "https://app.re-new.team").replace(/\/$/, "")}/portal/deals/${matchId}`
-    const text = `Bonjour${context.repreneur.first_name ? ` ${context.repreneur.first_name}` : ""},\n\nVotre NDA est prêt à être signé. Retrouvez-le dans votre espace Re-New : ${url}\n\nBien cordialement,\nRe-New`
-    const request = { from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [email], subject: "Votre NDA est prêt à être signé", html: `<p>${escapeHtml(text).replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`, text }
+    const text = `Bonjour${context.repreneur.first_name ? ` ${context.repreneur.first_name}` : ""},\n\nLe NDA de l'opportunité est désormais disponible sur votre espace Re-New Wave.\n\nNous enverrons la demande du mémo dès que le NDA aura été signé et uploadé dans la plateforme.\n\nSi vous avez la moindre question sur le contenu du document, n'hésitez pas à revenir vers nous avant signature.\n\nAccéder à mon espace : ${url}\n\nMerci,\n\nL'équipe Re-New`
+    const request = { from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [email], subject: "Votre NDA est prêt à signer", html: `<p>${escapeHtml(text).replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`, text }
     const attempt = await beginPursuitHandoff(db, handoff, fingerprintResendDeliveryRequest(request, `e6:${handoff.upstreamId}`), staff.user.email)
     if (attempt.delivery_status === "sent" && attempt.evidence_id) return { success: true as const, message: "NDA-ready notice was already sent.", eventId: attempt.evidence_id }
     if (attempt.delivery_status === "in_flight") return { success: false as const, message: "The NDA-ready notice is still in flight. Retry the unchanged notice in two minutes." }

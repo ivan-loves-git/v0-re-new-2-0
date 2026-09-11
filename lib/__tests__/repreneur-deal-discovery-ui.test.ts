@@ -18,10 +18,10 @@ const component = readFileSync(
 )
 
 describe("repreneur Deal Flow discovery controls", () => {
-  it("keeps taxonomy filters single-select and exposes usable numeric range controls", () => {
-    expect(component).toContain('key: "geography"')
+  it("keeps taxonomy filters local multi-select controls and exposes usable numeric range controls", () => {
+    expect(component).toContain('"geography" | "sector"')
     expect(component).toContain("opportunity.geography_node_id")
-    expect(component).toContain('key: "sector"')
+    expect(component).toContain('filters[key].includes(option.value)')
     expect(component).toContain("opportunity.canonical_sector")
     expect(component).toContain('aria-label="Minimum revenue"')
     expect(component).toContain('aria-label="Maximum revenue"')
@@ -74,7 +74,7 @@ describe("repreneur Deal Flow discovery controls", () => {
     })
     expect(filterRepreneurDeals([opportunity], "", {
       ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
-      sector: option.value,
+      sector: [option.value],
     })).toEqual([opportunity])
   })
 })

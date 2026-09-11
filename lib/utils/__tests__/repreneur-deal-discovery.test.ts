@@ -100,8 +100,8 @@ describe("repreneur deal discovery", () => {
     expect(getEbitdaMarginPercentage(deal)).toBe(15);
     expect(
       filterRepreneurDeals([deal], "", {
-        geography: "geo-lyon",
-        sector: "Industrie manufacturière",
+        geography: ["geo-lyon"],
+        sector: ["Industrie manufacturière"],
         revenueMin: "3",
         revenueMax: "3",
         ebitdaMarginMin: "15",
@@ -110,6 +110,19 @@ describe("repreneur deal discovery", () => {
       }),
     ).toEqual([deal]);
   });
+
+  it("uses OR within each taxonomy dimension and AND across dimensions", () => {
+    const lyonManufacturing = opportunity({ match_id: "lyon-manufacturing" })
+    const lilleServices = opportunity({ match_id: "lille-services", geography_node_id: "geo-lille", canonical_sector: "Services" })
+    const lyonOther = opportunity({ match_id: "lyon-other", canonical_sector: "Other" })
+    const parisServices = opportunity({ match_id: "paris-services", geography_node_id: "geo-paris", canonical_sector: "Services" })
+
+    expect(filterRepreneurDeals([lyonManufacturing, lilleServices, lyonOther, parisServices], "", {
+      ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      geography: ["geo-lyon", "geo-lille"],
+      sector: ["Industrie manufacturière", "Services"],
+    }).map((deal) => deal.match_id)).toEqual(["lyon-manufacturing", "lille-services"])
+  })
 
   it("uses inclusive bounds and excludes missing metrics when a numeric filter is active", () => {
     const deal = opportunity();

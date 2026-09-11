@@ -5,17 +5,17 @@ describe("opportunity interest notification copy", () => {
   it("uses generic staff-validation copy for an unassigned opportunity", () => {
     const copy = getOpportunityInterestEmailCopy(false)
 
-    expect(copy.heading).toBe("Interest in an opportunity")
-    expect(copy.introduction).toContain("currently unassigned")
-    expect(copy.followUp).toContain("does not create an active pursuit")
-    expect(copy.introduction).not.toContain("active pursuit")
+    expect(copy.heading).toBe("Nouvel intérêt repreneur")
+    expect(copy.introduction).toContain("manifester son intérêt")
+    expect(copy.followUp).toContain("qualifier cet intérêt")
+    expect(copy.followUp).not.toContain("déjà active")
   })
 
   it("uses one-candidate wording only when the server found another active pursuit", () => {
     const copy = getOpportunityInterestEmailCopy(true)
 
-    expect(copy.heading).toBe("Interest on a positioned opportunity")
-    expect(copy.introduction).toContain("already has an active pursuit")
-    expect(copy.followUp).toContain("one-candidate-at-a-time")
+    expect(copy.heading).toBe("Nouvel intérêt repreneur")
+    expect(copy.followUp).toContain("qualifier cet intérêt")
+    expect(copy.followUp).toContain("Une poursuite déjà active reste inchangée")
   })
 })

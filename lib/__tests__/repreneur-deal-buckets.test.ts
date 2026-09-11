@@ -36,6 +36,15 @@ describe("repreneur Deals bucket classifier", () => {
     expect(classifyRepreneurDeal(candidate({ matchId: "match-1", matchStatus: "declined" }))).toBe("declined")
   })
 
+  it("keeps an expired proposed match visible without prominent recommendation placement", () => {
+    expect(classifyRepreneurDeal(candidate({
+      matchId: "match-expired",
+      matchStatus: "proposed",
+      recommendationResponseOpen: false,
+      isBroadDiscoveryEligible: false,
+    }))).toBe("live")
+  })
+
   it("produces no duplicate opportunity across the four exhaustive buckets", () => {
     const buckets = partitionRepreneurDealBuckets([
       candidate({ opportunityId: "proposed", matchId: "match-proposed", matchStatus: "proposed" }),

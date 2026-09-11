@@ -440,11 +440,20 @@ describe("critical route traces", () => {
     expect(mocks.sendEmail).not.toHaveBeenCalled()
   })
 
-  it("uses stable event keys for interview and booking reminder deliveries", async () => {
+  it.each(["due", "missing", "too_recent", "lookup_failed"])("preserves reminder delivery keys and applies the recorded-Outlook gate (%s)", async (bookingState) => {
     let activitiesRead = 0
     let repreneursRead = 0
     mocks.createAdminClient.mockReturnValue({
       from: vi.fn((table: string) => {
+        if (table === "repreneur_booking_request_events") {
+          return chain({
+            data: bookingState === "missing" || bookingState === "lookup_failed" ? [] : [{
+              id: "recorded-outlook-event", repreneur_id: "booking-repreneur-1",
+              sent_at: new Date(Date.now() - (bookingState === "due" ? 14 : 0) * 86_400_000).toISOString(),
+            }],
+            error: bookingState === "lookup_failed" ? { message: "unavailable" } : null,
+          })
+        }
         if (table === "intake_abandonment_tracking") {
           return chain({ data: [], error: null })
         }
@@ -506,7 +515,7 @@ describe("critical route traces", () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toMatchObject({
       interviewSent: 1,
-      bookingSent: 1,
+      bookingSent: bookingState === "due" ? 1 : 0,
     })
     expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -515,12 +524,13 @@ describe("critical route traces", () => {
           "cron-interview-interview-activity-1-2026-08-22",
       }),
     )
-    expect(mocks.sendEmail).toHaveBeenCalledWith(
+    if (bookingState === "due") expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         templateKey: "booking_reminder",
         idempotencyKey: "cron-booking-booking-repreneur-1",
       }),
     )
+    else expect(mocks.sendEmail.mock.calls.every(([request]) => request.templateKey !== "booking_reminder")).toBe(true)
   })
 
   it("shifts only stale leads with no live offer, pursuit, external dossier, or interview", async () => {
