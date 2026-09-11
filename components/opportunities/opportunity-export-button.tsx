@@ -14,7 +14,7 @@ export function downloadOpportunityCsv(csv: string) {
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
-  link.download = "wave-opportunities.csv"
+  link.download = "wave-opportunities-internal.csv"
   link.click()
   // Revoking in the same task can cancel a download in some browsers.
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
@@ -34,9 +34,14 @@ export function OpportunityExportButton() {
   }
 
   return (
-    <Button variant="outline" onClick={handleExport} disabled={isPending}>
+    <Button
+      variant="outline"
+      onClick={handleExport}
+      disabled={isPending}
+      title="Internal staff export for Excel. Includes source names and private notes."
+    >
       <Download data-icon="inline-start" />
-      {isPending ? "Preparing export…" : "Export CSV"}
+      {isPending ? "Preparing export…" : "Export staff CSV"}
     </Button>
   )
 }

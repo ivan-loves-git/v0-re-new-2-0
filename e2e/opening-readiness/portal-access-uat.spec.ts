@@ -128,14 +128,16 @@ async function resetTokenForCurrentRole(
   client: Client,
   userId = repreneur.userId,
 ) {
-  const { rows } = await client.query<{ identifier: string }>(
-    `SELECT "identifier"
+  const { rows } = await client.query<{ identifier: string; lifetime_seconds: number }>(
+    `SELECT "identifier", EXTRACT(EPOCH FROM ("expiresAt" - "createdAt"))::float AS lifetime_seconds
      FROM public."verification"
      WHERE "identifier" LIKE 'reset-password:%' AND "value"=$1
      ORDER BY "createdAt" DESC`,
     [userId],
   );
-  expect(rows).toHaveLength(1);
+  expect(rows.length).toBe(1);
+  expect(/^reset-password:portal_setup_[a-f0-9]{48}$/.test(rows[0]!.identifier)).toBe(true);
+  expect(rows[0]!.lifetime_seconds).toBe(604800);
   return rows[0]!.identifier.replace("reset-password:", "");
 }
 
@@ -330,8 +332,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       confirmedDeliveries: afterResend.resetCount - initial.resetCount,
       credentialRetained: afterResend.passwordHash === initial.passwordHash,
       activeSessionsRetained: afterResend.sessionCount === initial.sessionCount,
-      // Current Better Auth behavior is measured here; the test deliberately
-      // does not declare an unimplemented latest-link-only product rule.
+      // Staff setup issuance retains one current seven-day verification.
       observedUnusedResetRecordsAfterOneResend: afterResend.resetCount,
     };
 
@@ -492,12 +493,19 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await setupPage.goto(
       `/auth/reset-password?intent=portal#token=${encodeURIComponent(setupToken)}`,
     );
-    await expect(
-      setupPage.getByRole("heading", {
-        name: "Creer votre mot de passe",
-        exact: true,
-      }),
-    ).toBeVisible();
+    for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
+      await setupPage.setViewportSize(viewport);
+      await expect(
+        setupPage.getByRole("heading", {
+          name: "Creer votre mot de passe",
+          exact: true,
+        }),
+      ).toBeVisible();
+      await expect(setupPage.locator("#password")).toBeVisible();
+      expect(await setupPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+    // Consume the long-lived setup token on mobile; desktop was checked above
+    // without issuing another token or consuming another login attempt.
     await setupPage.locator("#password").fill(setupPassword);
     await setupPage.locator("#confirmPassword").fill(setupPassword);
     await setupPage
@@ -535,6 +543,8 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     );
     evidence.setup = {
       validLinkConsumedOnce: true,
+      desktopAndMobileForm: true,
+      mobilePasswordCreation: true,
       replayRejected: true,
       consumedBrowserRecovery: true,
     };

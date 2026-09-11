@@ -99,11 +99,13 @@ async function createDraftOpportunity(
   await page.goto("/opportunities/new");
   const form = page.locator("form#opportunity-form");
   await expect(form).toHaveCount(1);
-  const classification = form.locator('[data-slot="radio-group"]');
+  // Select the accessible controls, not Next's transient hidden prerender
+  // copy. More than one user-facing form/control still fails strict mode.
+  const classification = form.getByRole("radiogroup");
   await expect(classification).toHaveCount(1);
-  const classificationChoice = classification.locator(
-    'button[role="radio"][value="' + input.classification + '"]',
-  );
+  const classificationChoice = classification.getByRole("radio", {
+    name: input.classification === "real" ? /^REAL\b/ : /^DEMO\b/,
+  });
   await expect(classificationChoice).toHaveCount(1);
   await classificationChoice.click();
   await expect(page.locator("#generated-reference")).toBeDisabled();

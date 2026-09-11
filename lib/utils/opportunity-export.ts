@@ -17,6 +17,8 @@ export const OPPORTUNITY_EXPORT_HEADERS = [
   "anonymized_description",
   "source_firm_contact",
   "internal_notes",
+  "opportunity_id",
+  "public_title",
 ] as const
 
 export type OpportunityExportRow = Record<
@@ -97,6 +99,8 @@ export function toOpportunityExportRows(
     anonymized_description: valueOrEmpty(opportunity.teaser_summary),
     source_firm_contact: sourceFirmAndContact(opportunity),
     internal_notes: valueOrEmpty(opportunity.internal_notes),
+    opportunity_id: opportunity.id,
+    public_title: valueOrEmpty(opportunity.public_title),
   }))
 }
 
