@@ -17,11 +17,11 @@ export function StaffRecommendationRenewAction({ matchId, status, expiresAt }: {
   }, [])
   if (status !== "proposed") return null
   if (expiresAt && !isRecommendationResponseExpired(expiresAt, now.toISOString())) {
-    return <p className="mt-1 text-xs text-muted-foreground">Respond by {new Date(expiresAt).toLocaleString("en-GB", { timeZone: "Europe/Paris", timeZoneName: "short" })}</p>
+    return <p className="mt-1 max-w-xs whitespace-normal text-xs text-muted-foreground">Respond by {new Date(expiresAt).toLocaleString("en-GB", { timeZone: "Europe/Paris", timeZoneName: "short" })}</p>
   }
   const unclocked = !expiresAt
   return (
-    <div className="mt-2 flex max-w-xs flex-col gap-2">
+    <div className="mt-2 flex max-w-xs flex-col gap-2 whitespace-normal">
       <p className="text-xs text-muted-foreground">{unclocked ? "No response deadline yet. Starting the window requires existing portal access; this action does not grant it." : "Response window expired. The deal remains visible but new interest is blocked."}</p>
       <form action={formAction}>
         <input type="hidden" name="match_id" value={matchId} />
