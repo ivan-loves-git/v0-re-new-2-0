@@ -15,7 +15,6 @@ import {
   getOpportunityMatchStatusLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type RepreneurDealFlowOpportunity,
-  type RepreneurOpportunityDocument,
   type RepreneurOpportunityExposure,
 } from "@/lib/types/opportunity"
 import { getEbitdaMarginPercentage, isStaffRecommended } from "@/lib/utils/repreneur-deal-discovery"
@@ -27,8 +26,6 @@ type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDe
 interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityDetailItem
   readOnly?: boolean
-  /** Legacy staff preview link factory; portal disclosure is now canonical and ignores it. */
-  documentHrefForDocument?: (document: RepreneurOpportunityDocument) => string | null
   journey?: PortalCurrentPursuit | null
 }
 

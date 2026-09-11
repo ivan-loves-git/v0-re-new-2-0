@@ -132,9 +132,6 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             opportunity={selectedOpportunity}
             readOnly
             journey={previewJourney}
-            documentHrefForDocument={(document) =>
-              `/portal-preview/deals/${selectedOpportunity.match_id}/documents/${document.id}?repreneurId=${selectedRepreneurId}`
-            }
           />
         </div>
       )}

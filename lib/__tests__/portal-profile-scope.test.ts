@@ -117,6 +117,19 @@ describe("repreneur portal profile scope", () => {
     }
   })
 
+  it("allows interest only after opening details and keeps preview props serializable", () => {
+    const list = source("components/opportunities/repreneur-opportunity-list.tsx")
+    const detail = source("components/opportunities/repreneur-opportunity-detail.tsx")
+    const preview = source("app/(dashboard)/portal-preview/page.tsx")
+    expect(list).not.toContain("LockedOpportunityInterestAction")
+    expect(list).not.toContain("Express interest")
+    expect(list).toContain("View detail")
+    expect(detail).toContain("LockedOpportunityInterestAction")
+    expect(detail).toContain("markMyOpportunityInterested")
+    expect(preview).not.toContain("documentHrefForDocument")
+    expect(detail).not.toContain("documentHrefForDocument")
+  })
+
   it("opens eligible unmatched deal details with the self-interest action", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const detailGetter = portalOpportunities.slice(

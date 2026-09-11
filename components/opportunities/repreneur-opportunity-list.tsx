@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
 import { WaveMicroLabel } from "@/components/wave/visual-foundations"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -273,16 +272,6 @@ function DealCard({
           {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</p> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3 lg:items-end">
-          {lockedForAnotherRepreneur || !opportunity.match_id ? (
-            <LockedOpportunityInterestAction
-              opportunityId={opportunity.opportunity_id}
-              interestRecorded={Boolean(opportunity.interest_expressed_at)}
-              notificationSent={Boolean(opportunity.interest_notification_sent_at)}
-              lockedForAnotherRepreneur={lockedForAnotherRepreneur}
-              readOnly={readOnly}
-              recommendationExpiresAt={opportunity.recommendation_expires_at}
-            />
-          ) : null}
           {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
           {detailHref ? (
             <Button asChild variant="outline" className="w-full lg:w-auto">
