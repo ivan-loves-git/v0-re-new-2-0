@@ -25,6 +25,16 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 12, 2026",
+    version: "0.9.67",
+    title: "A complete staff opportunity and pursuit export",
+    isCompleted: true,
+    events: [
+      { title: "Download the full picture after a clear confirmation", type: "feature", description: "The new Full export includes all opportunity fields, each repreneur match and recorded pursuit history, including closed records. The popup explains the confidential content before downloading; the existing simpler exports stay available." },
+      { title: "History stays traceable without exposing private file links", type: "decision", description: "Source contacts, internal notes, NDA evidence and document metadata remain staff-only. REAL and DEMO records are clearly identified, and document files, private download links and technical secrets are excluded." },
+    ],
+  },
+  {
     period: "Sep 11, 2026",
     version: "0.9.66",
     title: "More time to join and a clearer staff export",
