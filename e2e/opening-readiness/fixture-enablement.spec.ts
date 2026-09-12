@@ -81,6 +81,56 @@ async function verifyStaffReconciliationExport(page: Page) {
     expect(csv.split("\n")[0]).toContain("internal_notes,opportunity_id,public_title");
     expect(csv).toContain(fixture.ids.realOpportunity);
     expect(csv).toContain("QA OPENING REAL — SYNTHETIC");
+
+    // #137 / Decision #138: opening or cancelling never fetches the full
+    // confidential snapshot. Reuse this staff session and synthetic fixture.
+    await expect(exportButton).toBeEnabled();
+    let fullExportRequests = 0;
+    let fullExportDownloads = 0;
+    const countRequest = (request: import("@playwright/test").Request) => {
+      if (request.method() === "POST" && request.headers()["next-action"]) fullExportRequests += 1;
+    };
+    const countDownload = () => { fullExportDownloads += 1; };
+    page.on("request", countRequest);
+    page.on("download", countDownload);
+    const fullButton = page.getByRole("button", { name: "Full export", exact: true });
+    await fullButton.click();
+    const fullDialog = page.getByRole("dialog", { name: "Full opportunity & pursuit export", exact: true });
+    await expect(fullDialog).toBeVisible();
+    await expect(fullDialog).toContainText("both REAL and DEMO");
+    await expect(fullDialog).toContainText("Keep this file secure");
+    const bounds = await fullDialog.boundingBox();
+    expect(Boolean(bounds && bounds.x >= 0 && bounds.x + bounds.width <= viewport.width)).toBe(true);
+    await fullDialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(fullDialog).toHaveCount(0);
+    expect(fullExportRequests).toBe(0);
+    expect(fullExportDownloads).toBe(0);
+    await expect(fullButton).toBeFocused();
+    await fullButton.click();
+    await page.keyboard.press("Escape");
+    await expect(fullDialog).toHaveCount(0);
+    expect(fullExportRequests).toBe(0);
+    await fullButton.click();
+    const fullDownloadPromise = page.waitForEvent("download");
+    await fullDialog.getByRole("button", { name: "Download full CSV", exact: true }).dblclick();
+    const fullDownload = await fullDownloadPromise;
+    expect(fullDownload.suggestedFilename()).toMatch(/^wave-full-opportunities-pursuits-.*\.csv$/);
+    const fullStream = await fullDownload.createReadStream();
+    const fullChunks: Buffer[] = [];
+    for await (const chunk of fullStream) fullChunks.push(Buffer.from(chunk));
+    const fullCsv = Buffer.concat(fullChunks).toString("utf8");
+    expect(fullCsv.charCodeAt(0)).toBe(0xfeff);
+    expect(fullCsv.split("\n")[0].split(",")).toHaveLength(105);
+    expect(fullCsv).toContain("pursuit_evidence_json");
+    expect(fullCsv).toContain(fixture.ids.realOpportunity);
+    expect(fullCsv).toContain(fixture.ids.demoOpportunity);
+    expect(fullCsv).toContain("QA OPENING REAL — SYNTHETIC");
+    expect(fullCsv.split("\n")[0]).not.toMatch(/storage_path|external_url|provider_|idempotency/);
+    await expect(fullDialog).toHaveCount(0);
+    expect(fullExportRequests).toBe(1);
+    expect(fullExportDownloads).toBe(1);
+    page.off("request", countRequest);
+    page.off("download", countDownload);
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
 }
@@ -142,9 +192,11 @@ test("synthetic personas, private documents, safe mail, and namespaces are produ
   await logout(page);
   await login(page, fixture.repreneurs.real.email, /\/portal\/deals/);
   await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Full export", exact: true })).toHaveCount(0);
   await page.goto("/opportunities");
   await expect(page).toHaveURL(/\/portal\/deals/);
   await expect(page.getByRole("button", { name: "Export staff CSV", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Full export", exact: true })).toHaveCount(0);
   const realLiveOpportunities = page.getByRole("region", {
     name: "Live Opportunities",
   });

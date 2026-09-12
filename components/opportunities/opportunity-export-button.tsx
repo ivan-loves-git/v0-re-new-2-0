@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button"
 import { listOpportunityExportRows } from "@/lib/actions/opportunity-export"
 import { opportunityExportRowsToCsv } from "@/lib/utils/opportunity-export"
 
-export function downloadOpportunityCsv(csv: string) {
+export function downloadOpportunityCsv(csv: string, filename = "wave-opportunities-internal.csv") {
   // Excel otherwise assumes a legacy encoding for a downloaded CSV on some
   // staff devices. Keep the BOM in the downloaded file, not the server data.
   const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = url
-  link.download = "wave-opportunities-internal.csv"
+  link.download = filename
   link.click()
   // Revoking in the same task can cancel a download in some browsers.
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
