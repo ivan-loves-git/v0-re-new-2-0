@@ -4,13 +4,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import pg from "pg";
-import { reconcilePursuitWorkbookV4, sha256, v4ApplyRows, V4_SOURCE_SHA, V4_PRISTINE_MATCH_SQL } from "./pursuit-workbook-v4.mjs";
+import { reconcilePursuitWorkbookV4, sha256, v4ApplyRows, verifyV4Readback, V4_SOURCE_SHA, V4_PRISTINE_MATCH_SQL } from "./pursuit-workbook-v4.mjs";
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const [mode, workbook, envFile, manifestPath, actor, approvedDigest, ...extra] = process.argv.slice(2);
-if (!["--prepare", "--check", "--apply"].includes(mode) || !workbook || !envFile || !manifestPath || extra.length
-  || (mode === "--apply" && (!actor || !approvedDigest)) || (mode !== "--apply" && (actor || approvedDigest))) {
-  throw new Error("Usage: node scripts/run-pursuit-workbook-v4.mjs --prepare|--check|--apply workbook.xlsx env-file private-manifest.json [staff-user-id approved-manifest-sha256]");
+const mutating = mode === "--apply" || mode === "--rollback-statuses";
+if (!["--prepare", "--check", "--readback", "--apply", "--rollback-statuses"].includes(mode) || !workbook || !envFile || !manifestPath || extra.length
+  || (mutating && (!actor || !approvedDigest)) || (!mutating && (actor || approvedDigest))) {
+  throw new Error("Usage: node scripts/run-pursuit-workbook-v4.mjs --prepare|--check|--readback|--apply|--rollback-statuses workbook.xlsx env-file private-manifest.json [staff-user-id approved-manifest-sha256]");
 }
 const env = Object.fromEntries(fs.readFileSync(envFile, "utf8").split(/\r?\n/)
   .map((line) => line.match(/^([^#=\s]+)=(?:"([^"]*)"|'([^']*)'|(.*))$/)).filter(Boolean)
@@ -31,6 +32,26 @@ async function snapshot() {
   return { repreneurs: repreneurs.rows, opportunities: opportunities.rows, matches: matches.rows };
 }
 
+async function readback(approved) {
+  const ledger = await client.query(`SELECT r.*,
+    public.historical_pursuit_import_source_payload_digest(r.source_repreneur_name,r.source_offer_label,r.source_opportunity_reference,
+      r.completed_source_stages,r.not_applicable_source_stages,r.raw_drop_reason,r.source_cells) AS source_payload_digest
+    FROM public.historical_pursuit_import_rows r WHERE source_sha256=$1 ORDER BY source_row`, [V4_SOURCE_SHA]);
+  const matches = await client.query(`SELECT m.id,m.opportunity_id,m.repreneur_id,m.status,
+    encode(sha256(convert_to(to_jsonb(m)::TEXT,'UTF8')),'hex') AS fingerprint,
+    (m.pursuit_stage IS NULL AND m.nda_status='not_required' AND m.nda_document_id IS NULL
+      AND m.interest_expressed_at IS NULL AND m.recommendation_published_at IS NULL
+      AND NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence e WHERE e.match_id=m.id)
+      AND NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_confidential_grants e WHERE e.match_id=m.id)
+      AND NOT EXISTS(SELECT 1 FROM public.opportunity_nda_artifacts e WHERE e.match_id=m.id)
+      AND NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_events e WHERE e.match_id=m.id)
+      AND NOT EXISTS(SELECT 1 FROM public.opportunity_recommendation_assignment_notifications e WHERE e.match_id=m.id)
+    ) AS no_workflow_evidence
+    FROM public.opportunity_matches m JOIN public.historical_pursuit_import_rows r ON r.match_id=m.id WHERE r.source_sha256=$1`, [V4_SOURCE_SHA]);
+  const reversals = await client.query("SELECT ledger_id,match_id,before_sha,after_sha FROM public.pursuit_workbook_v4_status_reversals");
+  return verifyV4Readback(approved, ledger.rows, matches.rows, reversals.rows);
+}
+
 try {
   await client.connect();
   await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
@@ -40,6 +61,7 @@ try {
   const appliedRows = prior.rows[0].count;
   if (appliedRows !== 0 && appliedRows !== 72) throw new Error("Live state contains an incomplete V4 ledger; stop for review.");
   if (appliedRows && mode === "--prepare") throw new Error("Live state already contains the applied V4 source; use --check with the original manifest.");
+  if (!appliedRows && ["--readback", "--rollback-statuses"].includes(mode)) throw new Error("Live state does not contain an applied V4 batch.");
   const manifest = reconcilePursuitWorkbookV4(source, current);
   const rows = v4ApplyRows(manifest, source);
   // Check the cross-language digests against the real, released SQL helper.
@@ -59,18 +81,30 @@ try {
     const approved = JSON.parse(approvedBytes);
     if (JSON.stringify(v4ApplyRows(approved.manifest, source)) !== JSON.stringify(approved.rows)) throw new Error("Manifest source rows differ from the exact V4 workbook.");
     if (!appliedRows && (JSON.stringify(approved.manifest) !== JSON.stringify(manifest) || JSON.stringify(approved.rows) !== JSON.stringify(rows))) throw new Error("Live state or approved resolution has changed; do not apply this manifest.");
-    if (mode === "--check") console.log(JSON.stringify({ mode, source: V4_SOURCE_SHA, summary: approved.manifest.summary, existingDraftDrops: approved.manifest.existingDraftDrops, unchanged: true, alreadyApplied: appliedRows === 72 }));
+    if (!mutating) {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const proof = appliedRows ? await readback(approved) : null;
+      await client.query("COMMIT");
+      console.log(JSON.stringify({ mode, source: V4_SOURCE_SHA, summary: approved.manifest.summary, existingDraftDrops: approved.manifest.existingDraftDrops, unchanged: true, alreadyApplied: appliedRows === 72, proof }));
+    }
     else {
       if (sha256(approvedBytes) !== approvedDigest) throw new Error("The approved manifest-file digest does not match.");
-      // The database locks and independently rechecks every pinned before-image.
-      const result = await client.query("SELECT public.apply_pursuit_workbook_v4($1::JSONB,$2) AS result", [JSON.stringify(approved.rows), actor]);
-      console.log(JSON.stringify({ mode, result: result.rows[0].result }));
+      // Keep apply + readback in one transaction: a failed proof cannot commit.
+      await client.query("BEGIN");
+      await client.query("SET LOCAL statement_timeout='30s'");
+      if (mode === "--rollback-statuses") await readback(approved);
+      const result = mode === "--rollback-statuses"
+        ? await client.query("SELECT public.rollback_pursuit_workbook_v4_statuses($1) AS result", [actor])
+        : await client.query("SELECT public.apply_pursuit_workbook_v4($1::JSONB,$2) AS result", [JSON.stringify(approved.rows), actor]);
+      const proof = await readback(approved);
+      await client.query("COMMIT");
+      console.log(JSON.stringify({ mode, result: result.rows[0].result, proof }));
     }
   }
 } catch (error) {
   try { await client.query("ROLLBACK"); } catch { /* connection may be absent */ }
   // Do not print a connection URL, private payload, or database detail.
-  console.error(error instanceof Error && /^(Live state|Source digest|The approved|Manifest source|Invalid V4|V4 terminal|Expected the exact)/.test(error.message)
+  console.error(error instanceof Error && /^(Readback:|Live state|Source digest|The approved|Manifest source|Invalid V4|V4 terminal|Expected the exact)/.test(error.message)
     ? error.message : "Pursuit V4 operation failed. No successful apply is confirmed; inspect the bounded operator and retry safely.");
   process.exitCode = 1;
 } finally { await client.end(); }

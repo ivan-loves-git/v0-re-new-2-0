@@ -4,6 +4,54 @@ import { normalizeIdentity, normalizedReference } from "./historical-pursuit-man
 export const V4_SOURCE_SHA = "f527683a09d1e67e2c01479c20529963b7b1760578ff558181cad18c7febfbd3";
 export const V4_STAGES = ["interest_confirmed", "nda_received", "nda_signed", "info_memo_received", "qa_with_ma_firm", "seller_meeting", "valuation", "loi_issued", "audits", "financing", "closing"];
 export const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
+const canonical = (value) => JSON.stringify(value, function (_key, item) {
+  return item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item;
+});
+
+/** Compare the persisted ledger and current pairs, not just an apply response. */
+export function verifyV4Readback(approved, ledger, matches, reversals = []) {
+  if (ledger.length !== 72 || new Set(ledger.map((row) => row.source_row)).size !== 72) throw new Error("Readback: incomplete V4 source ledger.");
+  if (![0, 8].includes(reversals.length)) throw new Error("Readback: incomplete status-reversal audit.");
+  const outcomes = {};
+  for (const source of approved.rows) {
+    const row = ledger.find((item) => item.source_row === source.sourceRow);
+    const plan = approved.manifest.records.find((item) => item.sourceRow === source.sourceRow);
+    if (!row || row.source_sha256 !== V4_SOURCE_SHA || row.source_sheet !== "Synthese"
+      || row.source_row_fingerprint !== source.fingerprint || row.source_payload_digest !== source.payloadDigest
+      || row.manifest_digest !== approved.manifest.manifestDigest || row.event_dates_unknown !== true
+      || row.repreneur_id !== source.repreneurId || row.opportunity_id !== source.opportunityId
+      || row.source_terminal !== Boolean(source.dropReason?.trim())
+      || row.last_reported_source_stage !== (source.completedSourceStages.at(-1) ?? "none")
+      || canonical(row.resolution_blockers) !== canonical(source.blockers)
+      || canonical([...new Set(row.review_flags)].sort()) !== canonical([...new Set(source.flags)].sort())) {
+      throw new Error(`Readback: source or resolution mismatch at row ${source.sourceRow}.`);
+    }
+    const expectedOutcome = plan.laterApply.action === "none" ? "external_or_missing" : plan.expectedMatchExists ? "merged" : "created";
+    if (row.apply_outcome !== expectedOutcome) throw new Error(`Readback: outcome mismatch at row ${source.sourceRow}.`);
+    outcomes[expectedOutcome] = (outcomes[expectedOutcome] ?? 0) + 1;
+    if (expectedOutcome === "external_or_missing") {
+      if (row.match_id !== null) throw new Error("Readback: unresolved source was linked to a match.");
+      continue;
+    }
+    const match = matches.find((item) => item.id === row.match_id);
+    const before = approved.beforeImages.find((item) => item.opportunity_id === source.opportunityId && item.repreneur_id === source.repreneurId);
+    const reversal = reversals.find((item) => item.ledger_id === row.id);
+    const expectedStatus = plan.changesExistingStatus || !before ? plan.laterApply.desiredStatus : before.status;
+    if (!match || match.opportunity_id !== source.opportunityId || match.repreneur_id !== source.repreneurId
+      || row.mapped_match_status !== expectedStatus
+      || canonical(row.import_match_before) !== canonical(before?.before_image ?? null)
+      || (before && (match.id !== before.id || before.fingerprint !== plan.expectedMatchFingerprint))
+      || (reversal && (!plan.changesExistingStatus || reversal.match_id !== match.id || reversal.before_sha !== row.import_match_after_sha))
+      || match.fingerprint !== (reversal?.after_sha ?? row.import_match_after_sha)
+      || match.status !== (reversal ? "draft" : expectedStatus)) {
+      throw new Error(`Readback: persisted match or after-image changed at row ${source.sourceRow}.`);
+    }
+    if ((!before || plan.changesExistingStatus) && !match.no_workflow_evidence) throw new Error("Readback: unexpected workflow/access evidence on a historical-only change.");
+  }
+  if (reversals.some((item) => !ledger.some((row) => row.id === item.ledger_id))) throw new Error("Readback: unrelated reversal audit.");
+  return { verifiedRows: 72, outcomes, guardedStatusChanges: approved.manifest.existingDraftDrops, statusCorrectionsReversed: reversals.length };
+}
 // Released historical-import safety predicate plus current notification/window fields.
 // SQL identifiers are fixed; this is never built from user-supplied input.
 export const V4_PRISTINE_MATCH_SQL = `m.pursuit_stage IS NULL AND m.nda_status='not_required' AND m.nda_document_id IS NULL

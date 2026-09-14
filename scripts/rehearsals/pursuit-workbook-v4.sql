@@ -45,6 +45,7 @@ BEGIN
     INSERT INTO v4_test_rows VALUES(i+2,item);
   END LOOP;
 END $$;
+
 RESET session_replication_role;
 GRANT SELECT ON v4_test_rows,v4_test_before TO service_role;
 COMMIT;
@@ -102,4 +103,34 @@ DO $$ BEGIN
     OR (SELECT count(*) FROM public.opportunity_recommendation_assignment_notifications)<>(SELECT notifications FROM v4_test_before) THEN RAISE EXCEPTION 'v4_created_evidence_or_notification'; END IF;
   IF has_function_privilege('authenticated','public.apply_pursuit_workbook_v4(jsonb,text)','EXECUTE')
     OR has_function_privilege('service_role','public.apply_pursuit_workbook_v4_row(text,text,integer,uuid,uuid,text[],text[],text,boolean,text,text,text,text,text,text,text[],text[],jsonb,text)','EXECUTE') THEN RAISE EXCEPTION 'v4_unscoped_access'; END IF;
+END $$;
+
+-- Rollback is a separate staff-only compensating operation, never a delete.
+-- A late changed after-image rolls back all earlier reversals in the batch.
+SET ROLE service_role;
+DO $$ DECLARE rows JSONB; BEGIN
+  BEGIN
+    PERFORM public.rollback_pursuit_workbook_v4_statuses('not-staff');
+    RAISE EXCEPTION 'nonstaff_rollback_accepted';
+  EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'pursuit_v4_staff_required' THEN RAISE; END IF; END;
+  BEGIN
+    UPDATE public.opportunity_matches SET human_notes='Later staff work' WHERE id='13300000-0000-4000-8000-000000000008';
+    PERFORM public.rollback_pursuit_workbook_v4_statuses('v4-synthetic-staff');
+    RAISE EXCEPTION 'rollback_overwrote_later_work';
+  EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'pursuit_v4_rollback_after_image_changed' THEN RAISE; END IF; END;
+  IF (SELECT count(*) FROM public.opportunity_matches WHERE id BETWEEN '13300000-0000-4000-8000-000000000001' AND '13300000-0000-4000-8000-000000000008' AND status='dropped')<>8 THEN RAISE EXCEPTION 'rollback_partially_applied'; END IF;
+  IF public.rollback_pursuit_workbook_v4_statuses('v4-synthetic-staff') IS DISTINCT FROM '{"restored":8}'::JSONB THEN RAISE EXCEPTION 'rollback_count_wrong'; END IF;
+  IF public.rollback_pursuit_workbook_v4_statuses('v4-synthetic-staff') IS DISTINCT FROM '{"replay":8}'::JSONB THEN RAISE EXCEPTION 'rollback_replay_wrong'; END IF;
+  SELECT jsonb_agg(data ORDER BY source_row) INTO rows FROM v4_test_rows;
+  IF public.apply_pursuit_workbook_v4(rows,'v4-synthetic-staff') IS DISTINCT FROM '{"replay":72}'::JSONB THEN RAISE EXCEPTION 'apply_after_rollback_repeated_changes'; END IF;
+END $$;
+RESET ROLE;
+DO $$ BEGIN
+  IF (SELECT count(*) FROM public.pursuit_workbook_v4_status_reversals)<>8 THEN RAISE EXCEPTION 'rollback_audit_missing'; END IF;
+  IF EXISTS(SELECT 1 FROM public.pursuit_workbook_v4_status_reversals r JOIN public.opportunity_matches m ON m.id=r.match_id
+    WHERE m.status<>'draft' OR m.human_notes<>'Preserved synthetic note' OR r.after_sha<>encode(sha256(convert_to(to_jsonb(m)::TEXT,'UTF8')),'hex')) THEN RAISE EXCEPTION 'rollback_changed_other_fields'; END IF;
+  IF (SELECT count(*) FROM public.historical_pursuit_import_rows WHERE source_sha256='f527683a09d1e67e2c01479c20529963b7b1760578ff558181cad18c7febfbd3')<>72
+    OR (SELECT count(*) FROM public.opportunity_matches WHERE created_by='v4-synthetic-staff')<>9 THEN RAISE EXCEPTION 'rollback_deleted_history'; END IF;
+  IF has_function_privilege('authenticated','public.rollback_pursuit_workbook_v4_statuses(text)','EXECUTE')
+    OR has_table_privilege('service_role','public.pursuit_workbook_v4_status_reversals','UPDATE') THEN RAISE EXCEPTION 'rollback_permission_leak'; END IF;
 END $$;

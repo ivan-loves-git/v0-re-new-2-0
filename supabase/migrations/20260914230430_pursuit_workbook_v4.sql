@@ -300,4 +300,54 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.apply_pursuit_workbook_v4(JSONB,TEXT) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.apply_pursuit_workbook_v4(JSONB,TEXT) TO service_role;
+
+-- A compensating status-only reversal is separately audited. Source facts and
+-- the nine historical relationships are never deleted by rollback.
+CREATE TABLE public.pursuit_workbook_v4_status_reversals(
+  ledger_id UUID PRIMARY KEY REFERENCES public.historical_pursuit_import_rows(id),
+  match_id UUID NOT NULL REFERENCES public.opportunity_matches(id),
+  before_sha TEXT NOT NULL CHECK(before_sha ~ '^[0-9a-f]{64}$'),
+  after_sha TEXT NOT NULL CHECK(after_sha ~ '^[0-9a-f]{64}$'),
+  reversed_by TEXT NOT NULL,
+  reversed_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+ALTER TABLE public.pursuit_workbook_v4_status_reversals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pursuit_workbook_v4_status_reversals FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON public.pursuit_workbook_v4_status_reversals FROM PUBLIC,anon,authenticated,service_role;
+CREATE TRIGGER pursuit_workbook_v4_reversals_immutable BEFORE UPDATE OR DELETE ON public.pursuit_workbook_v4_status_reversals
+  FOR EACH ROW EXECUTE FUNCTION public.historical_pursuit_import_rows_immutable();
+
+CREATE FUNCTION public.rollback_pursuit_workbook_v4_statuses(p_actor TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE ledger public.historical_pursuit_import_rows%ROWTYPE; current_match public.opportunity_matches%ROWTYPE;
+  current_sha TEXT; after_sha TEXT; reversal_count INTEGER;
+BEGIN
+  IF (SELECT count(*) FROM public.app_user_roles WHERE role='staff' AND user_id=p_actor)<>1 THEN RAISE EXCEPTION 'pursuit_v4_staff_required'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('pursuit-workbook-v4',131));
+  IF (SELECT count(*) FROM public.historical_pursuit_import_rows WHERE source_sha256='f527683a09d1e67e2c01479c20529963b7b1760578ff558181cad18c7febfbd3')<>72
+    OR (SELECT count(*) FROM public.historical_pursuit_import_rows WHERE source_sha256='f527683a09d1e67e2c01479c20529963b7b1760578ff558181cad18c7febfbd3'
+      AND apply_outcome='merged' AND import_match_before->>'status'='draft' AND mapped_match_status='dropped')<>8 THEN
+    RAISE EXCEPTION 'pursuit_v4_rollback_batch_not_complete';
+  END IF;
+  SELECT count(*) INTO reversal_count FROM public.pursuit_workbook_v4_status_reversals;
+  IF reversal_count=8 THEN RETURN jsonb_build_object('replay',8); END IF;
+  IF reversal_count<>0 THEN RAISE EXCEPTION 'pursuit_v4_rollback_partial_audit'; END IF;
+  FOR ledger IN SELECT * FROM public.historical_pursuit_import_rows
+    WHERE source_sha256='f527683a09d1e67e2c01479c20529963b7b1760578ff558181cad18c7febfbd3'
+      AND apply_outcome='merged' AND import_match_before->>'status'='draft' AND mapped_match_status='dropped'
+    ORDER BY source_row FOR UPDATE LOOP
+    SELECT * INTO current_match FROM public.opportunity_matches WHERE id=ledger.match_id FOR UPDATE;
+    current_sha:=encode(sha256(convert_to(to_jsonb(current_match)::TEXT,'UTF8')),'hex');
+    IF current_match.id IS NULL OR current_match.status<>'dropped' OR current_sha IS DISTINCT FROM ledger.import_match_after_sha THEN
+      RAISE EXCEPTION 'pursuit_v4_rollback_after_image_changed';
+    END IF;
+    UPDATE public.opportunity_matches SET status='draft' WHERE id=ledger.match_id RETURNING * INTO current_match;
+    after_sha:=encode(sha256(convert_to(to_jsonb(current_match)::TEXT,'UTF8')),'hex');
+    INSERT INTO public.pursuit_workbook_v4_status_reversals(ledger_id,match_id,before_sha,after_sha,reversed_by)
+      VALUES(ledger.id,ledger.match_id,current_sha,after_sha,p_actor);
+  END LOOP;
+  RETURN jsonb_build_object('restored',8);
+END $$;
+REVOKE ALL ON FUNCTION public.rollback_pursuit_workbook_v4_statuses(TEXT) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.rollback_pursuit_workbook_v4_statuses(TEXT) TO service_role;
 COMMIT;
