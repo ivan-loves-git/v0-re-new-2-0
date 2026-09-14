@@ -115,9 +115,8 @@ async function createDraftOpportunity(
   await page.locator("#revenue_meur").fill("25");
   await page.locator("#ebitda_keur").fill("3000");
   await page.locator("#headcount_range").fill("80");
-  await page
-    .locator("#description")
-    .fill("QA lifecycle synthetic record. Never commercial.");
+  await expect(form.locator('[name="description"]')).toHaveCount(0);
+  await page.locator("#internal_notes").fill("PRIVATE SYNTHETIC STAFF NOTE — NEVER PUBLIC");
   await chooseOption(page, "#source_office", input.officeName);
   await page.locator("#office_affiliation_" + input.affiliationId).check();
   const primary = page.locator(
@@ -127,7 +126,13 @@ async function createDraftOpportunity(
   await page.locator("#public_title").fill(input.title);
   await page
     .locator("#teaser_summary")
+    .fill("A first synthetic public draft.");
+  await page.locator("#public_description_approved").check();
+  await page
+    .locator("#teaser_summary")
     .fill("Synthetic teaser for the disposable opening proof.");
+  await expect(page.locator("#public_description_approved")).not.toBeChecked();
+  await page.locator("#public_description_approved").check();
   await page.getByRole("button", { name: "Create opportunity" }).click();
   await expect(page).toHaveURL(/\/opportunities\/[0-9a-f-]{36}(?:\?.*)?$/, {
     timeout: 30_000,
@@ -379,9 +384,12 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       repreneur_exposure: string;
       source_office_id: string;
       geography_node_id: string;
+      description: string | null;
+      public_description_approved_hash: string;
+      internal_notes: string;
     }>(
       client,
-      "SELECT reference,status,is_demo,repreneur_exposure,source_office_id,geography_node_id FROM public.opportunities WHERE id=$1",
+      "SELECT reference,status,is_demo,repreneur_exposure,source_office_id,geography_node_id,description,public_description_approved_hash,internal_notes FROM public.opportunities WHERE id=$1",
       [desktopOpportunityId],
     );
     expect(desktopDraft).toMatchObject({
@@ -390,6 +398,9 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       repreneur_exposure: "staff_only",
       source_office_id: fixture.ids.realOffice,
       geography_node_id: "00000000-0000-4092-8000-000000000001",
+      description: null,
+      public_description_approved_hash: createHash("sha256").update("Synthetic teaser for the disposable opening proof.").digest("hex"),
+      internal_notes: "PRIVATE SYNTHETIC STAFF NOTE — NEVER PUBLIC",
     });
     expect(desktopDraft.reference).toMatch(/^Re-New - FR - \d+$/);
     const desktopSource = await one<{ links: number; primary_links: number }>(
