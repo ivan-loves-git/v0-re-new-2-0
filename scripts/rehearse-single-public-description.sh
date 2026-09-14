@@ -3,11 +3,11 @@ set -euo pipefail
 # Full-schema, local-only proof. Never loads credentials or contacts Supabase.
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pg_bin="${PG_BIN:-/opt/homebrew/opt/postgresql@17/bin}"
-cluster_dir="$(mktemp -d /private/tmp/renew-description-rehearsal.XXXXXX)"
+cluster_dir="$(mktemp -d "${TMPDIR:-/tmp}/renew-description-rehearsal.XXXXXX")"
 port="${RENEW_DESCRIPTION_REHEARSAL_PORT:-55503}"
 db_user="renew_description_admin"
 cleanup() {
-  [[ "$cluster_dir" == /private/tmp/renew-description-rehearsal.* && -d "$cluster_dir" ]] || return
+  [[ "$cluster_dir" == */renew-description-rehearsal.* && -d "$cluster_dir" ]] || return
   if [[ -f "$cluster_dir/postmaster.pid" ]]; then "$pg_bin/pg_ctl" -D "$cluster_dir" -m immediate stop >/dev/null 2>&1 || true; fi
   # Retain the stopped, synthetic-only cluster for reproducible diagnostics.
   echo "Stopped synthetic rehearsal retained at $cluster_dir"
@@ -39,4 +39,4 @@ done
 "${psql[@]}" -c "ALTER TABLE public.opportunities DISABLE TRIGGER enforce_ma_provisional_source_review_on_opportunity;" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/single-public-description.sql"
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/pursuit-workbook-v4.sql"
-echo "Single public-description SQL rehearsal passed"
+echo "Single public-description and Pursuit V4 SQL rehearsals passed"
