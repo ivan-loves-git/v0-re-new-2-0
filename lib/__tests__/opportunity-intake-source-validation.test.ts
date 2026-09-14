@@ -152,13 +152,36 @@ describe("staff opportunity save source protection", () => {
         p_source_office_id: officeId,
         p_affiliation_ids: [affiliationId],
         p_primary_affiliation_id: affiliationId,
-        p_description: "Synthetic edited description",
+        p_description: null,
         p_opportunity_fields: expect.objectContaining({
           revenue_meur: 4.2,
           date_added: "2026-09-14",
+          public_description_approved: false,
         }),
       }),
     )
+    expect(boundary.after).not.toHaveBeenCalled()
+  })
+
+  it("saves only deliberate public-text approval, deriving identity at the staff boundary", async () => {
+    const form = ordinaryEdit()
+    form.set("teaser_summary", "  Public synthetic business  ")
+    form.set("public_description_approved", "true")
+    form.set("public_description_approved_by", "spoofed-user")
+    form.set("public_description_approved_hash", "spoofed-hash")
+    expect((await updateOpportunityIntake(opportunityId, form)).success).toBe(true)
+    expect(boundary.rpc).toHaveBeenCalledWith("save_opportunity_office_context", expect.objectContaining({
+      p_actor: "staff-user", p_description: null,
+      p_opportunity_fields: expect.objectContaining({ teaser_summary: "Public synthetic business", public_description_approved: true }),
+    }))
+    expect(JSON.stringify(boundary.rpc.mock.calls)).not.toContain("spoofed")
+  })
+
+  it("explains a missing public confirmation as validation, without a persistence alert", async () => {
+    boundary.rpc.mockResolvedValue({ error: { message: "opportunity_public_description_approval_required", code: "P0001" } })
+    const result = await updateOpportunityIntake(opportunityId, ordinaryEdit())
+    expect(result.success).toBe(false)
+    expect(result.fieldErrors?.public_description_approved).toMatch(/confirm/i)
     expect(boundary.after).not.toHaveBeenCalled()
   })
 

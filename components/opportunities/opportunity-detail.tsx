@@ -402,14 +402,14 @@ export function OpportunityDetail({
                           .join(" / ") || "-"}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Description
-                      </p>
+                    <details>
+                      <summary className="cursor-pointer text-xs text-muted-foreground">
+                        Original source text · staff only
+                      </summary>
                       <p className="whitespace-pre-wrap text-sm leading-6">
                         {opportunity.description || "-"}
                       </p>
-                    </div>
+                    </details>
                     <div>
                       <p className="text-xs text-muted-foreground">
                         Internal notes
@@ -429,10 +429,10 @@ export function OpportunityDetail({
                         id="public-view-title"
                         className="text-sm font-semibold text-foreground"
                       >
-                        Repreneur-visible Version
+                        Public deal information
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        Content eligible for matching or later disclosure.
+                        Public wording prepared for the Deal Flow. Private notes and source text stay staff-only.
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -453,7 +453,7 @@ export function OpportunityDetail({
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Teaser summary
+                        Public business description
                       </p>
                       <p className="whitespace-pre-wrap text-sm leading-6">
                         {opportunity.teaser_summary || "-"}

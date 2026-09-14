@@ -127,7 +127,7 @@ describe("canonical opportunity contact persistence", () => {
       p_source_office_id: OFFICE_ID,
       p_affiliation_ids: [AFFILIATION_ID],
       p_primary_affiliation_id: AFFILIATION_ID,
-      p_description: "A valid internal opportunity record.",
+      p_description: null,
       p_target_status: "active",
       p_actor: "staff-001",
       p_opportunity_fields: expect.objectContaining({
@@ -266,7 +266,7 @@ describe("canonical opportunity contact persistence", () => {
       p_source_office_id: OFFICE_ID,
       p_affiliation_ids: [AFFILIATION_ID],
       p_primary_affiliation_id: AFFILIATION_ID,
-      p_description: "A valid internal opportunity record.",
+      p_description: null,
       p_target_status: "active",
       p_actor: "staff-001",
       p_opportunity_fields: expect.any(Object),

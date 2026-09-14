@@ -63,6 +63,17 @@ function officeControl(html: string) {
 }
 
 describe("staff edit form source-history protection", () => {
+  it("edits one public description and retains original text as collapsed, non-submitted history", () => {
+    const html = render(true, { ...opportunity, teaser_summary: "Public synthetic business", internal_notes: "Private synthetic note" })
+    expect(html).toContain("Public business description")
+    expect(html).toMatch(/<textarea[^>]*name="teaser_summary"[^>]*>Public synthetic business<\/textarea>/)
+    expect(html).not.toMatch(/name="description"/)
+    expect(html).toMatch(/<details[^>]*><summary[^>]*>Original source text/)
+    expect(html).toContain("Synthetic description")
+    expect(html).toContain("Private synthetic note")
+    expect(html).toContain('id="public_description_approved"')
+    expect(html).not.toContain("Activation never")
+  })
   it("locks only source selection when linked history exists and explains why", () => {
     const html = render(true)
     expect(officeControl(html)).toContain(' disabled=""')
@@ -75,7 +86,7 @@ describe("staff edit form source-history protection", () => {
       /<input[^>]*name="primary_affiliation_id"[^>]*checked=""[^>]*>/,
     )
     expect(
-      html.match(/<textarea[^>]*id="description"[^>]*>/)?.[0],
+      html.match(/<textarea[^>]*id="teaser_summary"[^>]*>/)?.[0],
     ).not.toContain(' disabled=""')
     expect(
       html.match(/<button[^>]*id="office_affiliation_[^"]+"[^>]*>/)?.[0],

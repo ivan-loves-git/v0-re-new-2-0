@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type {
   OpportunityDocument,
   OpportunityNdaStatus,
@@ -100,16 +101,27 @@ export function canMarkOpportunityInfoMemoReceived(
   return canAccessOpportunityMemo(evidence, document)
 }
 
-/**
- * Portal summaries must be independently curated. If a teaser is effectively
- * the same text as the staff-only description, hide it instead of falling back
- * to the internal source text.
- */
+export interface PublicDescriptionApproval {
+  public_description_approved_hash?: string | null
+  public_description_approved_at?: string | null
+  public_description_approved_by?: string | null
+}
+
+/** Exact staff approval permits one shared description. Unapproved legacy
+ * pairs retain their copied-private-text guard and never fall back to originals. */
 export function safeRepreneurTeaserSummary(
   teaserSummary: string | null | undefined,
   internalDescription: string | null | undefined,
+  approval?: PublicDescriptionApproval,
 ) {
   if (!teaserSummary?.trim()) return null
+  if (approval?.public_description_approved_hash || approval?.public_description_approved_at || approval?.public_description_approved_by) {
+    return approval.public_description_approved_at &&
+      approval.public_description_approved_by?.trim() &&
+      approval.public_description_approved_hash === createHash("sha256").update(teaserSummary).digest("hex")
+      ? teaserSummary
+      : null
+  }
   if (!internalDescription?.trim()) return teaserSummary
 
   const normalize = (value: string) =>

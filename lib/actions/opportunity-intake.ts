@@ -50,6 +50,7 @@ type IntakeOptionalFields = {
   date_added_confirm_day?: boolean
   public_title: string | null
   teaser_summary: string | null
+  public_description_approved: boolean
   internal_notes: string | null
   is_demo?: boolean
 }
@@ -81,7 +82,6 @@ interface ParsedOpportunityIntake {
   sourceOfficeId: string | null
   affiliationIds: string[]
   primaryAffiliationId: string | null
-  description: string | null
   optionalFields: IntakeOptionalFields
 }
 
@@ -160,8 +160,16 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
       "The selected operating office does not match this opportunity's source context.",
   },
   opportunity_activation_requires_description: {
-    field: "description",
-    message: "Add a description before activating or pausing this opportunity.",
+    field: "teaser_summary",
+    message: "Add and confirm a public business description before activating or pausing this opportunity.",
+  },
+  opportunity_public_description_approval_required: {
+    field: "public_description_approved",
+    message: "Confirm that this exact public description is safe to show to repreneurs, then save again.",
+  },
+  opportunity_public_description_approval_invalid: {
+    field: "public_description_approved",
+    message: "Review the public description and confirm it again before saving.",
   },
   opportunity_activation_requires_contact: {
     field: "affiliation_ids",
@@ -270,11 +278,6 @@ function normalizeDbError(error: { message?: string | null }) {
 
   const mapped = DB_ERROR_MESSAGES[code]
   return actionFailure(mapped.message, { [mapped.field]: mapped.message })
-}
-
-function readRawFormText(formData: FormData, key: string) {
-  const value = formData.get(key)
-  return typeof value === "string" ? value : null
 }
 
 function readUuid(formData: FormData, key: string) {
@@ -432,7 +435,6 @@ function parseOpportunityIntake(
     sourceOfficeId: sourceOffice.value,
     affiliationIds: affiliations.value,
     primaryAffiliationId: primaryAffiliation.value,
-    description: readRawFormText(formData, "description"),
     optionalFields: {
       ...(geographyNodeId ? { geography_node_id: geographyNodeId } : {}),
       sector: sector.value,
@@ -444,6 +446,7 @@ function parseOpportunityIntake(
       ...dateFields,
       public_title: readOpportunityFormString(formData, "public_title"),
       teaser_summary: readOpportunityFormString(formData, "teaser_summary"),
+      public_description_approved: formData.get("public_description_approved") === "true",
       internal_notes: readOpportunityFormString(formData, "internal_notes"),
       ...(options?.requireClassification ? { is_demo: classification.value! } : {}),
     },
@@ -592,7 +595,7 @@ export async function createOpportunityIntake(
         p_source_office_id: parsed.sourceOfficeId,
         p_affiliation_ids: parsed.affiliationIds,
         p_primary_affiliation_id: parsed.primaryAffiliationId,
-        p_description: parsed.description,
+        p_description: null,
         p_target_status: parsed.status,
         p_actor: user.id,
         p_opportunity_fields: parsed.optionalFields,
@@ -650,7 +653,7 @@ export async function updateOpportunityIntake(
         p_source_office_id: parsed.sourceOfficeId,
         p_affiliation_ids: parsed.affiliationIds,
         p_primary_affiliation_id: parsed.primaryAffiliationId,
-        p_description: parsed.description,
+        p_description: null,
         p_target_status: parsed.status,
         p_actor: user.id,
         p_opportunity_fields: parsed.optionalFields,
