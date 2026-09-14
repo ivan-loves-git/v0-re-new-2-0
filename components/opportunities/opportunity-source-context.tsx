@@ -54,6 +54,7 @@ type ExistingFirmOfficePath = "existing_office" | "new_real_office"
 
 interface OpportunitySourceContextProps {
   opportunity?: OpportunityWithSource
+  sourceOfficeHasHistory?: boolean
   officeOptions: MaOfficeIntakeOffice[]
   disabled: boolean
   fieldErrors: Record<string, string>
@@ -68,11 +69,19 @@ function currentAffiliationIds(opportunity?: OpportunityWithSource) {
 
 export function OpportunitySourceContext({
   opportunity,
+  sourceOfficeHasHistory,
   officeOptions,
   disabled,
   fieldErrors,
   clearFieldError,
 }: OpportunitySourceContextProps) {
+  const sourceOfficeLocked =
+    disabled || Boolean(opportunity && sourceOfficeHasHistory !== false)
+  const sourceOfficeLockMessage = opportunity && sourceOfficeHasHistory !== false
+    ? sourceOfficeHasHistory
+      ? "The operating office is locked because this opportunity has linked interaction history. You can still edit its details and current-office contacts. Ask Ivan to review any source correction separately so the history is preserved."
+      : "Source changes are unavailable until interaction history is verified. You can still save other edits using the current office."
+    : null
   const [selectedOfficeId, setSelectedOfficeId] = useState(
     opportunity?.source_office_id ?? "",
   )
@@ -166,6 +175,7 @@ export function OpportunitySourceContext({
       return next
     })
   function chooseOffice(value: string) {
+    if (sourceOfficeLocked) return
     const nextOfficeId = resolveOpportunityOfficeChoice(
       value,
       NO_OFFICE_OPTION_VALUE,
@@ -196,6 +206,7 @@ export function OpportunitySourceContext({
   }
   async function handleCreateOfficeContext(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (sourceOfficeLocked) return
     setOfficeContextFieldErrors({})
 
     if (
@@ -362,7 +373,7 @@ export function OpportunitySourceContext({
             variant="outline"
             size="sm"
             onClick={() => setCreateOfficeDialogOpen(true)}
-            disabled={disabled}
+            disabled={sourceOfficeLocked}
           >
             Add firm context
           </Button>
@@ -378,13 +389,14 @@ export function OpportunitySourceContext({
           <Select
             value={selectedOfficeId || NO_OFFICE_OPTION_VALUE}
             onValueChange={chooseOffice}
-            disabled={disabled}
+            disabled={sourceOfficeLocked}
           >
             <SelectTrigger
               id="source_office"
               {...fieldErrorProps(
                 "source_office",
                 fieldErrors.source_office_id,
+                sourceOfficeLockMessage ? "source_office_protection" : undefined,
               )}
             >
               <SelectValue placeholder="Choose an operating office" />
@@ -406,6 +418,11 @@ export function OpportunitySourceContext({
             id="source_office"
             message={fieldErrors.source_office_id}
           />
+          {sourceOfficeLockMessage ? (
+            <p id="source_office_protection" className="text-sm text-muted-foreground">
+              {sourceOfficeLockMessage}
+            </p>
+          ) : null}
           {selectedOffice ? (
             <p className="text-xs text-muted-foreground">
               Firm: {selectedOffice.firm_name} · Office:{" "}

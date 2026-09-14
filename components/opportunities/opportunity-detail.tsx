@@ -616,6 +616,7 @@ export function OpportunityDetail({
         <TabsContent value="edit">
           <OpportunityForm
             opportunity={opportunity}
+            sourceOfficeHasHistory={maWorkflow.interactions.length > 0}
             action={updateAction}
             submitLabel="Save changes"
             officeOptions={officeOptions}

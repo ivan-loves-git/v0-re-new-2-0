@@ -128,6 +128,16 @@ const DB_ERROR_MESSAGES: Record<string, { field: string; message: string }> = {
     field: "source_office_id",
     message: "Choose an available operating office.",
   },
+  ma_interaction_history_blocks_source_office_change: {
+    field: "source_office_id",
+    message:
+      "The operating office cannot change because this opportunity has linked interaction history. Keep the original office to save other edits. Ask Ivan to review any source correction separately so the history is preserved.",
+  },
+  ma_source_office_change_blocked_during_email_send: {
+    field: "source_office_id",
+    message:
+      "A source email is being sent. Keep the original operating office to save other edits. Review the interaction history after the send finishes before changing the office.",
+  },
   opportunity_source_office_requires_real_office_selection: {
     field: "source_office_id",
     message: "Choose the real operating office for this firm.",
