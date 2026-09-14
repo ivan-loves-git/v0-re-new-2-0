@@ -51,6 +51,8 @@ import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date
 
 interface OpportunityFormProps {
   opportunity?: OpportunityWithSource
+  /** Staff-only history existence, not interaction contents; unknown locks edits. */
+  sourceOfficeHasHistory?: boolean
   action: (formData: FormData) => Promise<OpportunityActionResult | void>
   submitLabel?: string
   officeOptions: MaOfficeIntakeOffice[]
@@ -62,6 +64,7 @@ interface OpportunityFormProps {
 
 export function OpportunityForm({
   opportunity,
+  sourceOfficeHasHistory,
   action,
   submitLabel = "Save opportunity",
   officeOptions,
@@ -495,6 +498,7 @@ export function OpportunityForm({
 
             <OpportunitySourceContext
               opportunity={opportunity}
+              sourceOfficeHasHistory={sourceOfficeHasHistory}
               officeOptions={officeOptions}
               disabled={isHistorical}
               fieldErrors={fieldErrors}
