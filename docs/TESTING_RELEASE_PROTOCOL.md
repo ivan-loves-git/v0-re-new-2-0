@@ -51,8 +51,26 @@ integration.
    send the standard Slack product-update-card message, and report the result
    in plain language.
 
-That is the whole process. There are no risk tiers, no QA lease, no synthetic
-fixture programme, no evidence packets, and no build-number ceremony.
+This is the routine process. Retired risk tiers, QA leases, a universal synthetic
+fixture programme, evidence packets and build-number ceremonies are not required.
+The focused opening fixture authorized by [Ticket #93](https://github.com/re-new-team/renew-governance/issues/93)
+and its existing workflow remain separate, scoped verification. Their presence does
+not make them a new required status check or authorize real-data testing.
+
+### Which checks apply
+
+| Rule | When it applies | Owner |
+| --- | --- | --- |
+| Build and release authority | Eligible Ready work follows #70; a narrower Ticket or Codex instruction wins. | GitHub scope and the standing authority above |
+| `pnpm verify` / required `Verify` | Code and tooling changes; documentation-only changes need source and reference review. | This protocol and the current workflow |
+| `pnpm design:check` | Advisory for UI work; inspect changed screens in a browser. | `AGENTS.md` Design quality and `DESIGN.md` |
+| `pnpm data-model:check` | M&A schema, validation, visibility or import-mapping changes. It remains outside lint; use `DATA_MODEL_BASE_REF` for the intended committed comparison. | `AGENTS.md` and the canonical M&A contract |
+| Focused opening fixture | Its governing Ticket and current workflow; not a universal release gate. | #93 and the applicable lifecycle Ticket |
+
+This clarification preserves the [24 August process simplification](https://github.com/ivan-loves-git/v0-re-new-2-0/commit/cd78e958f215c6d968590d2b3039e9262ce376f2)
+and [Decision #142](https://github.com/re-new-team/renew-governance/issues/142).
+The data-model checker flags potential contract changes for review. Passing it
+cannot establish business correctness or replace review of an import's meaning.
 
 ## Tests
 
