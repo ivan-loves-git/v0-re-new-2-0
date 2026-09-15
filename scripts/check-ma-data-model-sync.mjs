@@ -9,10 +9,27 @@ const sqlModelTokens =
 const applicationModelTokens =
   /\b(ma_source_networks|ma_sources|ma_source_contacts|ma_source_contact_moves|ma_source_interactions|ma_firms|ma_offices|ma_contacts|ma_contact_office_affiliations|ma_contact_email_policy_events|opportunity_source_contacts|opportunity_ma_contacts|ma_interactions|source_office_id|source_office|source_id|source_label|is_primary|primary_contact|contact_email|recipient_email|campaign_email_suppressed|campaign_email_suppression_reason|repreneur_exposure|opportunity_documents|imported_from|imported_at|date_added)\b/
 
+// These modules own the historical source-to-record mapping documented in the
+// canonical contract. A literal-only change can alter treatment without adding
+// a model identifier, so review any substantive edit to these modules.
+const importMappingModules = new Set([
+  "scripts/prepare-historical-pursuit-import.mjs",
+  "scripts/run-historical-pursuit-import.mjs",
+  "scripts/pursuit-workbook-v4.mjs",
+  "scripts/historical-pursuit-manifest.mjs",
+  "scripts/run-pursuit-workbook-v4.mjs",
+  "scripts/parse-historical-pursuit-workbook.py",
+  "scripts/parse-pursuit-workbook-v4.py",
+  "scripts/116_historical_pursuit_ledger.sql",
+  "supabase/migrations/20260914230430_pursuit_workbook_v4.sql",
+])
+const importModelTokens = /\b(opportunities|opportunity_id|opportunityId|opportunityReference|repreneur_id|mapped_match_status|desiredStatus|changesExistingStatus|source_terminal|completedSourceStages|normalizedReference|import_match_before|import_match_after|historical_pursuit_import_rows)\b/
+
 function git(args, allowFailure = false) {
   const result = spawnSync("git", args, {
     cwd: process.cwd(),
     encoding: "utf8",
+    env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
   })
 
   if (result.status !== 0 && !allowFailure) {
@@ -23,15 +40,28 @@ function git(args, allowFailure = false) {
   return result
 }
 
-function lines(value) {
-  return value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
+function paths(value) {
+  return value.split("\0").filter(Boolean)
 }
 
-function validRef(ref) {
-  return git(["rev-parse", "--verify", "--quiet", ref], true).status === 0
+function resolveRef(ref) {
+  const result = git(["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`], true)
+  return result.status === 0 ? result.stdout.trim() : null
+}
+
+function comparison(patchArgs, committed, untracked = new Set()) {
+  const entries = paths(git([...patchArgs, "--name-status", "-z"]).stdout)
+  const pathspecs = new Map()
+  for (let i = 0; i < entries.length; i++) {
+    const status = entries[i], path = entries[++i]
+    if (status.startsWith("R") || status.startsWith("C")) {
+      const destination = entries[++i]
+      pathspecs.set(path, [path, destination])
+      pathspecs.set(destination, [path, destination])
+    } else pathspecs.set(path, [path])
+  }
+  for (const path of untracked) pathspecs.set(path, [path])
+  return { files: [...pathspecs.keys()], pathspecs, patchArgs, committed, untracked }
 }
 
 function detectChangeSet() {
@@ -41,38 +71,26 @@ function detectChangeSet() {
     : undefined
   const baseRef = configuredBase || githubBase
 
-  if (baseRef && validRef(baseRef)) {
-    const range = `${baseRef}...HEAD`
-    return {
-      files: lines(git(["diff", "--name-only", range]).stdout),
-      patchArgs: ["diff", "--unified=0", range],
-      untracked: new Set(),
+  if (baseRef) {
+    const base = resolveRef(baseRef)
+    if (!base) {
+      process.stderr.write("Cannot assess M&A contract changes: the requested base revision is unavailable. Provide a valid DATA_MODEL_BASE_REF; no fallback comparison was made.\n")
+      process.exit(2)
     }
+    return comparison(["diff", "--find-renames", `${base}...HEAD`], true)
   }
 
   const untracked = new Set(
-    lines(git(["ls-files", "--others", "--exclude-standard"]).stdout),
+    paths(git(["ls-files", "--others", "--exclude-standard", "-z"]).stdout),
   )
-  const workingChanges = new Set([
-    ...lines(git(["diff", "--name-only", "HEAD"]).stdout),
-    ...untracked,
-  ])
+  const working = comparison(["diff", "--find-renames", "HEAD"], false, untracked)
 
-  if (workingChanges.size > 0) {
-    return {
-      files: [...workingChanges],
-      patchArgs: ["diff", "--unified=0", "HEAD"],
-      untracked,
-    }
-  }
+  if (working.files.length > 0) return working
 
-  return {
-    files: lines(
-      git(["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]).stdout,
-    ),
-    patchArgs: ["show", "--format=", "--unified=0", "HEAD"],
-    untracked: new Set(),
-  }
+  const parent = resolveRef("HEAD^")
+  return parent
+    ? comparison(["diff", "--find-renames", parent, "HEAD"], true)
+    : comparison(["show", "--format=", "--find-renames", "--root", "HEAD"], true)
 }
 
 const changeSet = detectChangeSet()
@@ -85,7 +103,7 @@ function changedPatch(path) {
       .join("\n")
   }
 
-  return git([...changeSet.patchArgs, "--", path], true).stdout
+  return git([...changeSet.patchArgs, "--unified=0", "--", ...changeSet.pathspecs.get(path)]).stdout
 }
 
 function patchLines(path, prefixes) {
@@ -110,11 +128,11 @@ function addedContent(path) {
 }
 
 function hasAddedChangeLogRow() {
-  if (!existsSync(contractPath)) {
-    return false
-  }
-
-  const contract = readFileSync(contractPath, "utf8")
+  const snapshot = changeSet.committed
+    ? git(["show", `HEAD:${contractPath}`], true)
+    : null
+  if (snapshot ? snapshot.status !== 0 : !existsSync(contractPath)) return false
+  const contract = snapshot ? snapshot.stdout : readFileSync(contractPath, "utf8")
   const section = contract.split("## Change log\n")[1]?.split("\n## ")[0] ?? ""
   const currentRows = new Set(
     section
@@ -132,11 +150,17 @@ function hasAddedChangeLogRow() {
 function isContractRelevant(path) {
   if (
     path.includes("/__tests__/") ||
-    path.endsWith(".test.ts") ||
-    path.endsWith(".test.tsx") ||
+    path.includes("/fixtures/") ||
+    /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(path) ||
     path === "scripts/check-ma-data-model-sync.mjs"
   ) {
     return false
+  }
+
+  if (importMappingModules.has(path)) {
+    return changedContent(path).split("\n").some((line) =>
+      line.trim() && !/^\s*(?:\/\/|\/\*|\*|\*\/|#|--)/.test(line),
+    )
   }
 
   if (
@@ -145,6 +169,11 @@ function isContractRelevant(path) {
     path.endsWith(".sql")
   ) {
     return sqlModelTokens.test(changedContent(path))
+  }
+
+  if (path.startsWith("scripts/") && /(?:\.[cm]?[jt]sx?|\.py)$/.test(path)) {
+    const content = changedContent(path)
+    return applicationModelTokens.test(content) || importModelTokens.test(content)
   }
 
   if (
@@ -183,7 +212,7 @@ if (relevant.length > 0 && !hasAddedChangeLogRow()) {
       "M&A data contract change log update required.",
       "",
       `A relevant implementation change and ${contractPath} were detected, but no dated change-log row changed.`,
-      "Add the business reason and PDR or migration reference to the contract change log.",
+      "Add the business reason and governing GitHub or migration reference to the contract change log.",
       "",
     ].join("\n"),
   )
@@ -191,7 +220,8 @@ if (relevant.length > 0 && !hasAddedChangeLogRow()) {
 }
 
 process.stdout.write(
-  relevant.length > 0
+  (changeSet.committed ? "Compared committed changes; uncommitted files are outside this comparison.\n" : "Compared working-tree changes against HEAD, including untracked files.\n") +
+  (relevant.length > 0
     ? `M&A data contract is synchronized with ${relevant.length} relevant changed file(s).\n`
-    : "No M&A data contract update is required for the detected changes.\n",
+    : "No M&A data contract update is required for the detected changes.\n"),
 )
