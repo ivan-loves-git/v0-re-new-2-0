@@ -338,7 +338,12 @@ BEGIN
     ORDER BY source_row FOR UPDATE LOOP
     SELECT * INTO current_match FROM public.opportunity_matches WHERE id=ledger.match_id FOR UPDATE;
     current_sha:=encode(sha256(convert_to(to_jsonb(current_match)::TEXT,'UTF8')),'hex');
-    IF current_match.id IS NULL OR current_match.status<>'dropped' OR current_sha IS DISTINCT FROM ledger.import_match_after_sha THEN
+    IF current_match.id IS NULL OR current_match.status<>'dropped' OR current_sha IS DISTINCT FROM ledger.import_match_after_sha
+      OR EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence e WHERE e.match_id=ledger.match_id)
+      OR EXISTS(SELECT 1 FROM public.opportunity_pursuit_confidential_grants e WHERE e.match_id=ledger.match_id)
+      OR EXISTS(SELECT 1 FROM public.opportunity_nda_artifacts e WHERE e.match_id=ledger.match_id)
+      OR EXISTS(SELECT 1 FROM public.opportunity_pursuit_events e WHERE e.match_id=ledger.match_id)
+      OR EXISTS(SELECT 1 FROM public.opportunity_recommendation_assignment_notifications e WHERE e.match_id=ledger.match_id) THEN
       RAISE EXCEPTION 'pursuit_v4_rollback_after_image_changed';
     END IF;
     UPDATE public.opportunity_matches SET status='draft' WHERE id=ledger.match_id RETURNING * INTO current_match;

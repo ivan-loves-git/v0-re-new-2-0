@@ -118,6 +118,12 @@ DO $$ DECLARE rows JSONB; BEGIN
     PERFORM public.rollback_pursuit_workbook_v4_statuses('v4-synthetic-staff');
     RAISE EXCEPTION 'rollback_overwrote_later_work';
   EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'pursuit_v4_rollback_after_image_changed' THEN RAISE; END IF; END;
+  BEGIN
+    INSERT INTO public.opportunity_pursuit_events(match_id,opportunity_id,repreneur_id,stage,note,created_by)
+      VALUES('13300000-0000-4000-8000-000000000008','13200000-0000-4000-8000-000000000008','13100000-0000-4000-8000-000000000008','interest','Later synthetic staff evidence','v4-synthetic-staff');
+    PERFORM public.rollback_pursuit_workbook_v4_statuses('v4-synthetic-staff');
+    RAISE EXCEPTION 'rollback_ignored_later_child_evidence';
+  EXCEPTION WHEN raise_exception THEN IF SQLERRM <> 'pursuit_v4_rollback_after_image_changed' THEN RAISE; END IF; END;
   IF (SELECT count(*) FROM public.opportunity_matches WHERE id BETWEEN '13300000-0000-4000-8000-000000000001' AND '13300000-0000-4000-8000-000000000008' AND status='dropped')<>8 THEN RAISE EXCEPTION 'rollback_partially_applied'; END IF;
   IF public.rollback_pursuit_workbook_v4_statuses('v4-synthetic-staff') IS DISTINCT FROM '{"restored":8}'::JSONB THEN RAISE EXCEPTION 'rollback_count_wrong'; END IF;
   IF public.rollback_pursuit_workbook_v4_statuses('v4-synthetic-staff') IS DISTINCT FROM '{"replay":8}'::JSONB THEN RAISE EXCEPTION 'rollback_replay_wrong'; END IF;
