@@ -31,6 +31,19 @@ function readCsv(csv: string): Record<string, string>[] {
 }
 
 describe("confirmed full opportunity export", () => {
+  it("exports versioned pursuit facts without rollback snapshots or raw source cells", () => {
+    const [row] = readCsv(fullOpportunitySnapshotToCsv({
+      opportunities: [{ id: "opp-1", status: "active", is_demo: false }],
+      matches: [{ id: "match-1", opportunity_id: "opp-1", repreneur_id: "buyer-1", status: "draft" }],
+      workbookHistory: [{ id: "history-1", match_id: "match-1", source_sha256: "v4-source", source_row: 3,
+        last_reported_source_stage: "info_memo_received", source_terminal: true, raw_drop_reason: "Withdrawal",
+        import_match_before: { human_notes: "Secret before-image" }, source_cells: { private: "Raw cell" } }],
+    }))
+    const history = JSON.parse(row.pursuit_workbook_history_json)
+    expect(history[0]).toMatchObject({ source_sha256: "v4-source", source_row: 3, raw_drop_reason: "Withdrawal" })
+    expect(history[0]).not.toHaveProperty("import_match_before")
+    expect(history[0]).not.toHaveProperty("source_cells")
+  })
   it("keeps each match on its own row and retains an unmatched opportunity", () => {
     const rows = readCsv(
       fullOpportunitySnapshotToCsv({

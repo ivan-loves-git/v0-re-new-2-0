@@ -73,6 +73,9 @@ type RepreneurDealFlowOpportunityRow = {
   public_title: string | null
   teaser_summary: string | null
   description?: string | null
+  public_description_approved_hash?: string | null
+  public_description_approved_at?: string | null
+  public_description_approved_by?: string | null
   sector: string | null
   activity: string | null
   location: string | null
@@ -125,6 +128,7 @@ function normalizeExposure(
     teaser_summary: safeRepreneurTeaserSummary(
       opportunity.teaser_summary,
       opportunity.description,
+      opportunity,
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
@@ -298,6 +302,7 @@ function toDealFlowOpportunity(
     teaser_summary: safeRepreneurTeaserSummary(
       opportunity.teaser_summary,
       opportunity.description,
+      opportunity,
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
@@ -335,6 +340,7 @@ function toNeutralDealFlowOpportunity(
     teaser_summary: safeRepreneurTeaserSummary(
       opportunity.teaser_summary,
       opportunity.description,
+      opportunity,
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
@@ -430,6 +436,9 @@ export async function listMyRepreneurOpportunities(): Promise<{
         public_title,
         teaser_summary,
         description,
+        public_description_approved_hash,
+        public_description_approved_at,
+        public_description_approved_by,
         sector,
         activity,
         location,
@@ -540,6 +549,9 @@ async function listRepreneurDealFlowForProfile(
           public_title,
           teaser_summary,
           description,
+          public_description_approved_hash,
+          public_description_approved_at,
+          public_description_approved_by,
           sector,
           activity,
           location,
@@ -699,6 +711,9 @@ export async function getMyRepreneurOpportunity(
           public_title,
           teaser_summary,
           description,
+          public_description_approved_hash,
+          public_description_approved_at,
+          public_description_approved_by,
           sector,
           activity,
           location,

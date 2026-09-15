@@ -27,6 +27,7 @@ function stageLabel(stage: string) {
 
 function statusLabel(row: StaffHistoricalPursuitImportRow) {
   if (row.appliedOutcome === "external_or_missing") return "Review needed"
+  if (row.sourceVersion === "V4") return row.sourceTerminal ? "Reported dropped" : "Reported active"
   if (row.sourceTerminal) return "Historical drop"
   return "Historical record"
 }
@@ -38,6 +39,9 @@ function statusVariant(row: StaffHistoricalPursuitImportRow): "outline" | "secon
 }
 
 function reviewMessage(row: StaffHistoricalPursuitImportRow) {
+  if (row.reviewFlags.includes("source_active_current_dropped")) return "V4 reports active; WAVE remains Dropped. Staff review is needed before reopening."
+  if (row.reviewFlags.includes("existing_draft_workflow_preserved")) return "Existing WAVE activity is preserved; the workbook has not changed this match status."
+  if (row.reviewFlags.includes("opportunity_not_active")) return "The opportunity is archived or inactive. No new relationship was created."
   if (row.appliedOutcome === "external_or_missing") {
     return "This historic proposal is kept for reference but is not linked to a WAVE opportunity."
   }
@@ -48,6 +52,35 @@ function reviewMessage(row: StaffHistoricalPursuitImportRow) {
     return "The source marks this pursuit as closed without a recorded reason."
   }
   return null
+}
+
+export function HistoricalPursuitHistoryTable({ rows }: { rows: StaffHistoricalPursuitImportRow[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader><TableRow>
+          <TableHead>Opportunity</TableHead><TableHead>Reported reached stage</TableHead>
+          <TableHead>Reported outcome</TableHead><TableHead>Drop reason / review</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>{rows.map((row) => {
+          const review = reviewMessage(row)
+          return <TableRow key={row.sourceKey}>
+            <TableCell className="min-w-52">
+              <div className="font-medium">{row.opportunityReference || row.offerLabel || "Unidentified opportunity"}</div>
+              <div className="text-xs text-muted-foreground">Pursuit {row.sourceVersion}{row.sourceVersion === "V4" ? " · 14 Sep 2026" : " · earlier source"}</div>
+              {row.opportunityReference && row.offerLabel ? <div className="text-xs text-muted-foreground">{row.offerLabel}</div> : null}
+            </TableCell>
+            <TableCell className="min-w-64 text-sm text-muted-foreground">{completedStages(row)}</TableCell>
+            <TableCell><Badge variant={statusVariant(row)}>{statusLabel(row)}</Badge></TableCell>
+            <TableCell className="min-w-64 space-y-1 text-sm text-muted-foreground">
+              <p>{row.rawDropReason || (row.sourceTerminal ? "No reason recorded" : "No drop reported")}</p>
+              {review ? <p className="font-medium text-foreground">{review}</p> : null}
+            </TableCell>
+          </TableRow>
+        })}</TableBody>
+      </Table>
+    </div>
+  )
 }
 
 function completedStages(row: StaffHistoricalPursuitImportRow) {
@@ -102,55 +135,28 @@ export async function HistoricalPursuitHistoryCard({ repreneurId }: { repreneurI
   }
 
   if (rows.length === 0) return null
+  const currentRows = rows.filter((row) => row.sourceVersion === "V4")
+  const olderRows = rows.filter((row) => row.sourceVersion !== "V4")
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <History className="size-5" />
-          Historical deal proposals
+          Reported pursuit history
         </CardTitle>
         <CardDescription>
-          Previous pursuit tracker only. Dates are unknown and these entries do not create current NDA, document, or portal access.
+          Source-reported milestones, separate from validated WAVE pursuit stages. Dates are unknown and these entries do not create current NDA, document, or portal access.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Opportunity</TableHead>
-                <TableHead>Reached stage</TableHead>
-                <TableHead>Historical outcome</TableHead>
-                <TableHead>Drop reason / review</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => {
-                const review = reviewMessage(row)
-                return (
-                  <TableRow key={row.sourceRow}>
-                    <TableCell className="min-w-52">
-                      <div className="font-medium">{row.opportunityReference || row.offerLabel || "Unidentified opportunity"}</div>
-                      {row.opportunityReference && row.offerLabel ? (
-                        <div className="text-xs text-muted-foreground">{row.offerLabel}</div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="min-w-64 text-sm text-muted-foreground">
-                      {completedStages(row)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(row)}>{statusLabel(row)}</Badge>
-                    </TableCell>
-                    <TableCell className="min-w-64 text-sm text-muted-foreground">
-                      {row.rawDropReason || review || "No reason recorded"}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </div>
+        {currentRows.length ? <HistoricalPursuitHistoryTable rows={currentRows} /> : null}
+        {olderRows.length ? (
+          currentRows.length ? <details className="mt-4 rounded-md border p-3">
+            <summary className="cursor-pointer text-sm font-medium">Earlier tracker history ({olderRows.length})</summary>
+            <div className="mt-3"><HistoricalPursuitHistoryTable rows={olderRows} /></div>
+          </details> : <HistoricalPursuitHistoryTable rows={olderRows} />
+        ) : null}
       </CardContent>
     </Card>
   )

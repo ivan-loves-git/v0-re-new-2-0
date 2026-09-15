@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { createHash } from "node:crypto"
 import {
   canAccessOpportunityMemo,
   canMarkOpportunityInfoMemoReceived,
@@ -23,6 +24,17 @@ const signedNda = {
 }
 
 describe("opportunity confidentiality gate", () => {
+  it("publishes the exact staff-approved public text even when the preserved original is equal", () => {
+    const text = "Independent French engineering business."
+    const approval = {
+      public_description_approved_hash: createHash("sha256").update(text).digest("hex"),
+      public_description_approved_at: "2026-09-15T08:00:00Z",
+      public_description_approved_by: "synthetic-staff",
+    }
+    expect(safeRepreneurTeaserSummary(text, text, approval)).toBe(text)
+    expect(safeRepreneurTeaserSummary(text + " Changed", text, approval)).toBeNull()
+    expect(safeRepreneurTeaserSummary(text, text, { ...approval, public_description_approved_by: null })).toBeNull()
+  })
   it("does not treat NDA receipt, a sent NDA, or a signed label alone as permission", () => {
     expect(hasCompletedNdaSignature({ nda_status: "sent" })).toBe(false)
     expect(hasCompletedNdaSignature({ nda_status: "signed" })).toBe(false)

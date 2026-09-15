@@ -62,6 +62,9 @@ interface PreviewOpportunityRow {
   public_title: string | null
   teaser_summary: string | null
   description: string | null
+  public_description_approved_hash?: string | null
+  public_description_approved_at?: string | null
+  public_description_approved_by?: string | null
   sector: string | null
   activity: string | null
   location: string | null
@@ -147,6 +150,7 @@ function normalizeExposure(
     teaser_summary: safeRepreneurTeaserSummary(
       opportunity.teaser_summary,
       opportunity.description,
+      opportunity,
     ),
     geography_node_id: opportunity.geography_node_id,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
@@ -246,6 +250,9 @@ async function listVisibleOpportunitiesForRepreneur(
         public_title,
         teaser_summary,
         description,
+        public_description_approved_hash,
+        public_description_approved_at,
+        public_description_approved_by,
         sector,
         activity,
         location,

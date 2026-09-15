@@ -67,6 +67,14 @@ done < <(
     | awk -F/ '$NF >= "20260824093456" && $NF < "20260830113100"'
 )
 
+# Restore released numbered-script foundations before later migrations depend
+# on their ledger or replace their strict save/create functions. These inputs
+# create schema/bindings only; no historical production rows are imported.
+"${psql_safe[@]}" -f scripts/116_historical_pursuit_ledger.sql
+"${psql_safe[@]}" -f scripts/117_explicit_demo_real_creation.sql
+"${psql_safe[@]}" -f scripts/118_ticket_94_strict_creation_cutover.sql
+"${psql_safe[@]}" -f scripts/120_ticket_95_safe_classification_conversion.sql
+
 # The final PDR-retirement migration deliberately fails unless this exact
 # restrictive policy is already staged by Supabase Storage. Local Supabase
 # exposes that provider owner as a separate login on the same fixed loopback
@@ -247,14 +255,6 @@ INSERT INTO public.ma_w039_release_control(
   TRUE,TRUE,'qa-opening-schema-support',clock_timestamp()
 );
 SQL
-
-# The sanitized snapshot and additive migrations predate the final ordered
-# Ticket #94 cutover. Reconstruct the same strict creation endpoint used by the
-# current application: the additive v2 writer must exist, while its omission-
-# capable predecessor remains private for rollback only.
-"${psql_safe[@]}" -f scripts/117_explicit_demo_real_creation.sql
-"${psql_safe[@]}" -f scripts/118_ticket_94_strict_creation_cutover.sql
-"${psql_safe[@]}" -f scripts/120_ticket_95_safe_classification_conversion.sql
 
 # Script 119 is a sealed, manifest-bound production data treatment. The
 # disposable database contains no historical cross-namespace rows, so replaying

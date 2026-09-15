@@ -447,6 +447,10 @@ export interface Opportunity {
   repreneur_exposure: OpportunityVisibility
   public_title?: string | null
   teaser_summary?: string | null
+  /** Staff-only approval of the exact public text, never returned to portal clients. */
+  public_description_approved_hash?: string | null
+  public_description_approved_at?: string | null
+  public_description_approved_by?: string | null
   internal_notes?: string | null
   imported_from?: string | null
   imported_at?: string | null

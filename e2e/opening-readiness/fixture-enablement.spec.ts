@@ -120,7 +120,14 @@ async function verifyStaffReconciliationExport(page: Page) {
     for await (const chunk of fullStream) fullChunks.push(Buffer.from(chunk));
     const fullCsv = Buffer.concat(fullChunks).toString("utf8");
     expect(fullCsv.charCodeAt(0)).toBe(0xfeff);
-    expect(fullCsv.split("\n")[0].split(",")).toHaveLength(105);
+    const fullHeaders = fullCsv.split("\n")[0].split(",");
+    expect(fullHeaders).toHaveLength(109);
+    expect(fullHeaders).toEqual(expect.arrayContaining([
+      "opportunity_public_description_approved_hash",
+      "opportunity_public_description_approved_at",
+      "opportunity_public_description_approved_by",
+      "pursuit_workbook_history_json",
+    ]));
     expect(fullCsv).toContain("pursuit_evidence_json");
     expect(fullCsv).toContain(fixture.ids.realOpportunity);
     expect(fullCsv).toContain(fixture.ids.demoOpportunity);

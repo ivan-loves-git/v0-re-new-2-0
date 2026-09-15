@@ -73,6 +73,8 @@ export function OpportunityForm({
 }: OpportunityFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [publicDescription, setPublicDescription] = useState(opportunity?.teaser_summary ?? "")
+  const [publicDescriptionApproved, setPublicDescriptionApproved] = useState(false)
   const [dateAddedConfirmedDay, setDateAddedConfirmedDay] = useState(false)
   const [clearMonthOnlyDate, setClearMonthOnlyDate] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -139,10 +141,11 @@ export function OpportunityForm({
         toast.error(result?.message ?? "Opportunity could not be saved.")
       } else {
         toast.success(result.message)
+        setPublicDescriptionApproved(false)
         if (!opportunity && result.opportunityId) {
           router.push(`/opportunities/${result.opportunityId}`)
-          router.refresh()
         }
+        router.refresh()
       }
     } catch (error) {
       console.error("Opportunity save failed")
@@ -183,6 +186,8 @@ export function OpportunityForm({
                 reference: "Ref. Mandat",
                 geography_node_id: "Canonical geography",
                 public_title: "Public title",
+                teaser_summary: "Public business description",
+                public_description_approved: "Public description confirmation",
                 status: "Status",
                 demo_classification: "Classification",
                 source_office_id: "Operating office",
@@ -481,19 +486,6 @@ export function OpportunityForm({
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <FormFieldLabel htmlFor="description" requirement="conditional" requirementText="Required to activate or pause">Description</FormFieldLabel>
-                <Textarea
-                  id="description"
-                  name="description"
-                  rows={4}
-                  defaultValue={opportunity?.description ?? ""}
-                  disabled={isHistorical}
-                  onChange={() => clearFieldError("description")}
-                  {...fieldErrorProps("description", fieldErrors.description)}
-                />
-                <FieldError id="description" message={fieldErrors.description} />
-              </div>
             </section>
 
             <OpportunitySourceContext
@@ -508,12 +500,12 @@ export function OpportunityForm({
             <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
               <div>
                 <h3 className="text-sm font-medium">
-                  Potential repreneur-facing content
+                  Public deal information
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  These details can be prepared early. Activation never
-                  publishes a deal; disclosure is a separate, controlled
-                  workflow.
+                  Active opportunities appear in the matching REAL or DEMO Deal Flow.
+                  Keep confidential information in internal notes. Source identity
+                  and documents follow their separate access rules.
                 </p>
               </div>
               <div className="space-y-2">
@@ -530,15 +522,48 @@ export function OpportunityForm({
                 <FieldError id="public_title" message={fieldErrors.public_title} />
               </div>
               <div className="space-y-2">
-                <FormFieldLabel htmlFor="teaser_summary" requirement="conditional" requirementText="Required before proposal">Teaser summary</FormFieldLabel>
+                <FormFieldLabel htmlFor="teaser_summary" requirement="conditional" requirementText="Confirm new or changed text before saving">Public business description</FormFieldLabel>
                 <Textarea
                   id="teaser_summary"
                   name="teaser_summary"
-                  rows={3}
-                  defaultValue={opportunity?.teaser_summary ?? ""}
+                  rows={5}
+                  value={publicDescription}
                   disabled={isHistorical}
+                  onChange={(event) => {
+                    setPublicDescription(event.target.value)
+                    setPublicDescriptionApproved(false)
+                    clearFieldError("teaser_summary")
+                    clearFieldError("public_description_approved")
+                  }}
+                  {...fieldErrorProps("teaser_summary", fieldErrors.teaser_summary)}
                 />
+                <FieldError id="teaser_summary" message={fieldErrors.teaser_summary} />
+                <input type="hidden" name="public_description_approved" value={String(publicDescriptionApproved)} />
+                <div className="flex items-start gap-2 pt-1">
+                  <Checkbox
+                    id="public_description_approved"
+                    checked={publicDescriptionApproved}
+                    disabled={isHistorical || !publicDescription.trim()}
+                    onCheckedChange={(checked) => {
+                      setPublicDescriptionApproved(checked === true)
+                      clearFieldError("public_description_approved")
+                    }}
+                    {...fieldErrorProps("public_description_approved", fieldErrors.public_description_approved)}
+                  />
+                  <label htmlFor="public_description_approved" className="text-sm leading-5">
+                    I confirm this exact text is safe to show to repreneurs.
+                  </label>
+                </div>
+                <FieldError id="public_description_approved" message={fieldErrors.public_description_approved} />
+                <p className="text-xs text-muted-foreground">Unchanged descriptions do not need another confirmation. Clearing this field does not publish the original source text.</p>
               </div>
+              {opportunity?.description ? (
+                <details className="rounded-md border p-3">
+                  <summary className="cursor-pointer text-sm font-medium">Original source text · staff only</summary>
+                  <p className="mt-2 text-xs text-muted-foreground">Preserved for reference. This text is not edited or automatically published.</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{opportunity.description}</p>
+                </details>
+              ) : null}
             </section>
 
             <section className="space-y-4 rounded-lg border bg-muted/20 p-5">
