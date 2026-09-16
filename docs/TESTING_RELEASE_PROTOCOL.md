@@ -51,8 +51,62 @@ integration.
    send the standard Slack product-update-card message, and report the result
    in plain language.
 
-That is the whole process. There are no risk tiers, no QA lease, no synthetic
-fixture programme, no evidence packets, and no build-number ceremony.
+This is the routine process. Retired risk tiers, QA leases, a universal synthetic
+fixture programme, evidence packets and build-number ceremonies are not required.
+The focused opening fixture authorized by [Ticket #93](https://github.com/re-new-team/renew-governance/issues/93)
+and its existing workflow remain separate, scoped verification. Their presence does
+not make them a new required status check or authorize real-data testing.
+
+### Which checks apply
+
+| Rule | When it applies | Owner |
+| --- | --- | --- |
+| Build and release authority | Eligible Ready work follows #70; a narrower Ticket or Codex instruction wins. | GitHub scope and the standing authority above |
+| `pnpm verify` / required `Verify` | Code and tooling changes; documentation-only changes need source and reference review. | This protocol and the current workflow |
+| `pnpm design:check` | Advisory for UI work; inspect changed screens in a browser. | `AGENTS.md` Design quality and `DESIGN.md` |
+| `pnpm data-model:check` | M&A schema, validation, visibility or import-mapping changes. It remains outside lint; use `DATA_MODEL_BASE_REF` for the intended committed comparison. | `AGENTS.md` and the canonical M&A contract |
+| Focused opening fixture | Its governing Ticket and current workflow; not a universal release gate. | #93 and the applicable lifecycle Ticket |
+
+This clarification preserves the [24 August process simplification](https://github.com/ivan-loves-git/v0-re-new-2-0/commit/cd78e958f215c6d968590d2b3039e9262ce376f2)
+and [Decision #142](https://github.com/re-new-team/renew-governance/issues/142).
+The data-model checker flags potential contract changes for review. Passing it
+cannot establish business correctness or replace review of an import's meaning.
+
+### Local environment limitations
+
+A local sandbox failure caused by unavailable ports or external font access is
+environment evidence, not a product pass or failure. Record the command and
+failure, then reuse completed local lint, typecheck and test results for that
+unchanged revision; do not repeat the same-host full build unless the environment
+changes. The exact candidate commit must still receive a full green required
+`Verify` in GitHub CI. Use one status watcher for required `Verify`. Focused or
+supplemental workflows are reported separately and never block routine completion
+unless their governing Ticket makes them required.
+
+### Local intake test mode
+
+Set `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` in `.env.local` and restart the local
+server to show yellow Autofill buttons on `/intake-v2`; use dummy data only. The
+variable defaults to `false` and must remain off in production.
+
+## Optional PR evidence summary
+
+Run `pnpm agent:pr-status --pr <number>` for a read-only snapshot of an explicit
+GitHub PR. Add `--json` for structured output or `--repo owner/repo` to select the
+repository without using the local origin. It reports the observed head/base,
+their ahead/behind relationship, and GitHub's required and supplemental checks.
+It resolves the live base reference independently before and after collection,
+then retains the actual ahead/behind result. A mismatch with the PR-recorded
+base makes aggregate evidence partial or unknown; a moving base makes it stale.
+It also rechecks PR identity after collection. Drift, missing evidence and
+inconsistent check views remain explicit rather than becoming a pass.
+
+This is an optional reporting helper, not a CI or release gate. A complete report
+can contain failed checks. Exit 0 means collection completed; exit 1 means partial,
+unavailable or stale evidence; exit 2 means invalid input. No required checks
+reported is not a passing result. The command does not run workflows or establish
+merge authority, production deployment or live correctness. Decision #142 and
+Ticket #146 bound its implementation.
 
 ## Tests
 

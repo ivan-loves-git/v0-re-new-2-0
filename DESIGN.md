@@ -107,7 +107,7 @@ components:
 
 WAVE is a restrained operating surface for a small team doing consequential acquisition work. It should feel mature, compact, familiar, and dependable. Structure comes from spacing, typography, shared borders, and progressive disclosure. Decoration never substitutes for hierarchy.
 
-The WAVE layer governs shadcn building blocks. New screens use the shared classes and components in `app/globals.css` and `components/wave/visual-foundations.tsx`. Impeccable is limited to implementation-level visual polish. It must not propose or change KPIs, product logic, workflows, information hierarchy, information architecture, filters, or strategy.
+The WAVE layer governs shadcn building blocks. New screens use the shared classes and components in `app/globals.css` and `components/wave/visual-foundations.tsx`. Design tooling is limited to implementation-level visual polish. It must not propose or change KPIs, product logic, workflows, information hierarchy, information architecture, filters, or strategy.
 
 ## Colors
 
@@ -146,6 +146,15 @@ WAVE is flat by default. Panels use a one-pixel structural border and tonal laye
 
 ## Components
 
+### shadcn composition
+
+Check installed `components/ui` components before adding a new primitive. The
+local configuration uses Next.js App Router, RSC, Tailwind v4, `new-york` style,
+Radix base, Lucide icons, and imports from `@/components/ui`. For dashboards
+and operational pages, prefer shadcn `Card`, `Table`, `Badge`, `Tabs`, `Sheet`,
+`Dialog`, `Select`, `Input`, `Button`, `Skeleton`, `Tooltip`, `DropdownMenu`,
+and `Chart` over custom markup.
+
 ### Quiet panels
 
 Use `WavePanel` or `.wave-panel`. Panels have an 8px radius, one-pixel border, white surface, and no decorative edge. Grouped collections and pipeline columns use the same neutral container.
@@ -175,7 +184,7 @@ Use the WAVE chart facade in `components/wave/charts`. EvilCharts supplies found
 - **Do** use full structural borders and light semantic tints.
 - **Do** use Re-New semantic color tokens instead of raw purple or screen-specific colors.
 - **Do** load operational content immediately and reserve motion for state feedback.
-- **Do** preserve active tabs, navigation selection, focus rings, loading feedback, and genuine status color.
+- **Do** preserve active tabs, navigation selection, focus rings, loading feedback, genuine status color, and the WAVE tide marker. A border used for these product meanings is not a decorative accent.
 
 ### Don't:
 
