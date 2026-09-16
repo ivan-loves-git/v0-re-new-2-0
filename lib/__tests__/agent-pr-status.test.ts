@@ -7,16 +7,18 @@ import { inspectPrStatus, formatPrStatus } from "../../scripts/agent-pr-status.m
 
 const head = "a".repeat(40), base = "b".repeat(40)
 const pr = { number: 136, state: "OPEN", isDraft: true, headRefOid: head, baseRefOid: base, baseRefName: "release/next", mergeStateStatus: "CLEAN" }
+const baseRef = { ref: "refs/heads/release/next", object: { type: "commit", sha: base } }
 const check = (name = "Verify", bucket = "pass", state = "SUCCESS", event = "pull_request") => ({
   name, bucket, state, event, workflow: "Verify", link: `https://github.com/example/project/actions/runs/${event === "push" ? 2 : 1}/job/3`,
 })
 type Options = {
   first?: object | null; after?: object | null; all?: object[] | null; required?: object[] | null
   comparison?: object | null; checkExit?: number; root?: string
+  baseRef?: object | null; baseRefAfter?: object | null
 }
 function mock(options: Options = {}) {
   const calls: string[][] = []
-  let views = 0
+  let views = 0, refs = 0
   const runner = (command: string, args: string[], cwd: string) => {
     calls.push([command, ...args])
     if (command === "git") {
@@ -26,6 +28,9 @@ function mock(options: Options = {}) {
     let value: unknown, status = 0
     if (args[0] === "pr" && args[1] === "view") {
       value = views++ === 0 ? options.first === undefined ? pr : options.first : options.after === undefined ? pr : options.after
+    } else if (args[0] === "api" && args[5].includes("/git/ref/heads/")) {
+      const initial = options.baseRef === undefined ? baseRef : options.baseRef
+      value = refs++ === 0 || options.baseRefAfter === undefined ? initial : options.baseRefAfter
     } else if (args[0] === "api") {
       value = options.comparison === undefined ? { status: "ahead", ahead_by: 1, behind_by: 0 } : options.comparison
     } else if (args[0] === "pr" && args[1] === "checks") {
@@ -54,8 +59,50 @@ describe("read-only explicit PR evidence", () => {
     expect(result.supplemental.checks).toHaveLength(1)
     expect(calls.some((args) => args.includes(`repos/example/project/compare/${base}...${head}`))).toBe(true)
     expect(calls.filter((args) => args[1] === "pr").every((args) => args.includes("github.com/example/project"))).toBe(true)
-    expect(formatPrStatus(result)).toContain('Base: "release/next"')
+    expect(formatPrStatus(result)).toContain('Live base: "release/next"')
+    expect(calls.filter((args) => args.includes("repos/example/project/git/ref/heads/release%2Fnext"))).toHaveLength(2)
     expect(formatPrStatus(result)).toContain("production status are not assessed")
+  })
+
+  it("compares the live branch when unchanged PR metadata still records an older base", () => {
+    const live = "c".repeat(40)
+    const { result, calls } = inspect({
+      baseRef: { ...baseRef, object: { type: "commit", sha: live } },
+      comparison: { status: "diverged", ahead_by: 2, behind_by: 1 },
+    })
+    expect(result).toMatchObject({ state: "partial", base: { recorded_sha: base, live_sha: live, metadata_match: false }, comparison: { base_sha: live, behind_by: 1 } })
+    expect(result.reasons).toContain("pr_base_metadata_outdated")
+    expect(result.required.summary).toBe("unknown")
+    expect(result.supplemental.summary).toBe("unknown")
+    expect(calls.some((args) => args.includes(`repos/example/project/compare/${live}...${head}`))).toBe(true)
+    expect(calls.some((args) => args.includes(`repos/example/project/compare/${base}...${head}`))).toBe(false)
+    expect(formatPrStatus(result)).toContain(`PR-recorded base: ${base}`)
+    expect(formatPrStatus(result)).toContain("behind 1")
+  })
+
+  it("invalidates a moving live branch even when both PR metadata reads are unchanged", () => {
+    const { result } = inspect({ baseRefAfter: { ...baseRef, object: { type: "commit", sha: "c".repeat(40) } } })
+    expect(result).toMatchObject({ state: "stale_snapshot", snapshot: { state: "changed" }, required: { summary: "unknown" }, supplemental: { summary: "unknown" } })
+    expect(result.reasons).toContain("live_base_changed_during_collection")
+  })
+
+  it.each([
+    null,
+    { ...baseRef, object: { type: "commit", sha: "invalid" } },
+    { ...baseRef, object: { type: "tag", sha: base } },
+    { ...baseRef, ref: "refs/heads/other" },
+  ])("never falls back to PR metadata when the live base ref is unavailable or invalid (%j)", (value) => {
+    const { result, calls } = inspect({ baseRef: value })
+    expect(result).toMatchObject({ state: "partial", comparison: { state: "unknown" }, required: { summary: "unknown" } })
+    expect(calls.some((args) => args.some((arg) => arg.includes("/compare/")))).toBe(false)
+    expect(JSON.stringify(result)).not.toMatch(/secret-token|private response/)
+  })
+
+  it("keeps observed checks but invalidates summaries when the final live base read fails", () => {
+    const { result } = inspect({ baseRefAfter: null })
+    expect(result).toMatchObject({ state: "partial", snapshot: { state: "unknown" }, required: { summary: "unknown" }, supplemental: { summary: "unknown" } })
+    expect(result.required.checks).toHaveLength(1)
+    expect(result.reasons).toContain("live_base_recheck_unavailable")
   })
 
   it.each([

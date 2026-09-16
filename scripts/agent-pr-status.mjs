@@ -68,7 +68,7 @@ export function inspectPrStatus({ pr, repository, cwd = process.cwd(), runner = 
   const report = {
     schema: 1, read_only: true, state: "complete", observed_at: new Date().toISOString(),
     repository, url: `https://github.com/${repository}/pull/${pr}`, pr: before,
-    comparison: { state: "unknown" },
+    base: { state: "unknown" }, comparison: { state: "unknown" },
     required: { state: "unknown", summary: "unknown", checks: [] },
     supplemental: { state: "unknown", summary: "unknown", checks: [] },
     snapshot: { state: "unknown" }, reasons: [],
@@ -79,15 +79,32 @@ export function inspectPrStatus({ pr, repository, cwd = process.cwd(), runner = 
     report.reasons.push("pr_unavailable_or_invalid")
     return report
   }
-  const comparison = json([
+  const readBase = () => {
+    const value = json([
+      "api", "--hostname", "github.com", "--method", "GET",
+      `repos/${repository}/git/ref/heads/${encodeURIComponent(before.baseRefName)}`,
+    ])
+    return value?.ref === `refs/heads/${before.baseRefName}` && value.object?.type === "commit"
+      && shaPattern.test(value.object.sha) ? value.object.sha : null
+  }
+  // PR baseRefOid can lag behind the branch. Resolve the live ref independently, without falling back.
+  const liveBase = readBase()
+  report.base = {
+    state: liveBase ? "known" : "unknown", branch: before.baseRefName,
+    recorded_sha: before.baseRefOid, live_sha: liveBase,
+    metadata_match: liveBase ? before.baseRefOid === liveBase : null, source: "github_git_ref",
+  }
+  if (!liveBase) report.reasons.push("live_base_unavailable")
+  else if (!report.base.metadata_match) report.reasons.push("pr_base_metadata_outdated")
+  const comparison = liveBase ? json([
     "api", "--hostname", "github.com", "--method", "GET",
-    `repos/${repository}/compare/${before.baseRefOid}...${before.headRefOid}`,
+    `repos/${repository}/compare/${liveBase}...${before.headRefOid}`,
     "--jq", "{status,ahead_by,behind_by}",
-  ])
+  ]) : null
   if (["identical", "ahead", "behind", "diverged"].includes(comparison?.status)
     && Number.isSafeInteger(comparison.ahead_by) && comparison.ahead_by >= 0
     && Number.isSafeInteger(comparison.behind_by) && comparison.behind_by >= 0) {
-    report.comparison = { state: "known", ...comparison, base_sha: before.baseRefOid, head_sha: before.headRefOid }
+    report.comparison = { state: "known", ...comparison, base_sha: liveBase, head_sha: before.headRefOid }
   } else report.reasons.push("base_comparison_unavailable")
 
   const readChecks = (required) => {
@@ -120,14 +137,21 @@ export function inspectPrStatus({ pr, repository, cwd = process.cwd(), runner = 
   } else report.reasons.push("check_evidence_unavailable")
 
   const after = readPr()
+  const liveBaseAfter = readBase()
   report.finished_at = new Date().toISOString()
   if (!after) report.reasons.push("snapshot_recheck_unavailable")
-  else if (["headRefOid", "baseRefOid", "baseRefName", "state", "isDraft"].some((key) => before[key] !== after[key])) {
+  if (!liveBaseAfter) report.reasons.push("live_base_recheck_unavailable")
+  const prChanged = after && ["headRefOid", "baseRefOid", "baseRefName", "state", "isDraft"].some((key) => before[key] !== after[key])
+  const baseChanged = liveBase && liveBaseAfter && liveBase !== liveBaseAfter
+  if (prChanged || baseChanged) {
     report.state = "stale_snapshot"
-    report.snapshot = { state: "changed", after }
-    report.reasons.push("pr_changed_during_collection")
-  } else report.snapshot = { state: "stable_at_observation", head_sha: before.headRefOid, base_sha: before.baseRefOid }
-  if (report.snapshot.state !== "stable_at_observation" || report.comparison.state !== "known") {
+    report.snapshot = { state: "changed", after, live_base_after_sha: liveBaseAfter }
+    if (prChanged) report.reasons.push("pr_changed_during_collection")
+    if (baseChanged) report.reasons.push("live_base_changed_during_collection")
+  } else if (after && liveBase && liveBaseAfter) {
+    report.snapshot = { state: "stable_at_observation", head_sha: before.headRefOid, base_sha: liveBase }
+  }
+  if (report.snapshot.state !== "stable_at_observation" || report.comparison.state !== "known" || report.base.metadata_match !== true) {
     // Keep the observed rows as evidence, but never retain an aggregate pass for a stale/unverified snapshot.
     report.required.summary = "unknown"
     report.supplemental.summary = "unknown"
@@ -142,7 +166,8 @@ export function formatPrStatus(report) {
   const lines = [`PR evidence: ${report.url}`, `Collection: ${report.state} (${report.observed_at})`]
   if (report.pr) {
     lines.push(`PR: ${report.pr.state}${report.pr.isDraft ? " / draft" : ""}; head ${report.pr.headRefOid}`)
-    lines.push(`Base: ${quote(report.pr.baseRefName)} ${report.pr.baseRefOid}`)
+    lines.push(`PR-recorded base: ${report.pr.baseRefOid}`)
+    lines.push(`Live base: ${quote(report.pr.baseRefName)} ${report.base.live_sha ?? "unknown"}`)
   }
   lines.push(report.comparison.state === "known"
     ? `Base comparison: ${report.comparison.status}; ahead ${report.comparison.ahead_by}, behind ${report.comparison.behind_by}`

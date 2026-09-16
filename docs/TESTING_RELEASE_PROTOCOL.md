@@ -72,13 +72,33 @@ and [Decision #142](https://github.com/re-new-team/renew-governance/issues/142).
 The data-model checker flags potential contract changes for review. Passing it
 cannot establish business correctness or replace review of an import's meaning.
 
+### Local environment limitations
+
+A local sandbox failure caused by unavailable ports or external font access is
+environment evidence, not a product pass or failure. Record the command and
+failure, then reuse completed local lint, typecheck and test results for that
+unchanged revision; do not repeat the same-host full build unless the environment
+changes. The exact candidate commit must still receive a full green required
+`Verify` in GitHub CI. Use one status watcher for required `Verify`. Focused or
+supplemental workflows are reported separately and never block routine completion
+unless their governing Ticket makes them required.
+
+### Local intake test mode
+
+Set `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` in `.env.local` and restart the local
+server to show yellow Autofill buttons on `/intake-v2`; use dummy data only. The
+variable defaults to `false` and must remain off in production.
+
 ## Optional PR evidence summary
 
 Run `pnpm agent:pr-status --pr <number>` for a read-only snapshot of an explicit
 GitHub PR. Add `--json` for structured output or `--repo owner/repo` to select the
 repository without using the local origin. It reports the observed head/base,
 their ahead/behind relationship, and GitHub's required and supplemental checks.
-It rechecks the PR identity after collection; drift, missing evidence and
+It resolves the live base reference independently before and after collection,
+then retains the actual ahead/behind result. A mismatch with the PR-recorded
+base makes aggregate evidence partial or unknown; a moving base makes it stale.
+It also rechecks PR identity after collection. Drift, missing evidence and
 inconsistent check views remain explicit rather than becoming a pass.
 
 This is an optional reporting helper, not a CI or release gate. A complete report
