@@ -26,6 +26,8 @@ function stageLabel(stage: string) {
 }
 
 function statusLabel(row: StaffHistoricalPursuitImportRow) {
+  if (row.clarificationOutcome === "confidential_history") return "Confidential history only"
+  if (row.clarificationOutcome === "external_history" || row.clarificationOutcome === "closed_history") return "Confirmed history only"
   if (row.appliedOutcome === "external_or_missing") return "Review needed"
   if (row.sourceVersion === "V4") return row.sourceTerminal ? "Reported dropped" : "Reported active"
   if (row.sourceTerminal) return "Historical drop"
@@ -39,6 +41,11 @@ function statusVariant(row: StaffHistoricalPursuitImportRow): "outline" | "secon
 }
 
 function reviewMessage(row: StaffHistoricalPursuitImportRow) {
+  if (row.clarificationOutcome === "confidential_history") return "Confirmed staff-only history. Not published in Deal Flow and not an External Pursuit dossier."
+  if (row.clarificationOutcome === "closed_history") return "Confirmed closed legacy deal; retained without a WAVE link."
+  if (row.clarificationOutcome === "external_history") return "Confirmed external deal; retained as history without a WAVE link."
+  if (row.clarificationOutcome === "reopened") return "Confirmed ongoing. Reopened through the audited workflow to Interested; reported milestones do not grant access."
+  if (row.clarificationOutcome === "linked_history") return "Reference clarified and historical relationship linked. Reported milestones remain separate from validated WAVE progress."
   if (row.reviewFlags.includes("source_active_current_dropped")) return "V4 reports active; WAVE remains Dropped. Staff review is needed before reopening."
   if (row.reviewFlags.includes("existing_draft_workflow_preserved")) return "Existing WAVE activity is preserved; the workbook has not changed this match status."
   if (row.reviewFlags.includes("opportunity_not_active")) return "The opportunity is archived or inactive. No new relationship was created."
@@ -67,6 +74,7 @@ export function HistoricalPursuitHistoryTable({ rows }: { rows: StaffHistoricalP
           return <TableRow key={row.sourceKey}>
             <TableCell className="min-w-52">
               <div className="font-medium">{row.opportunityReference || row.offerLabel || "Unidentified opportunity"}</div>
+              {row.resolvedReference && row.resolvedReference !== row.opportunityReference ? <div className="text-xs text-muted-foreground">Confirmed WAVE reference: {row.resolvedReference}</div> : null}
               <div className="text-xs text-muted-foreground">Pursuit {row.sourceVersion}{row.sourceVersion === "V4" ? " · 14 Sep 2026" : " · earlier source"}</div>
               {row.opportunityReference && row.offerLabel ? <div className="text-xs text-muted-foreground">{row.offerLabel}</div> : null}
             </TableCell>

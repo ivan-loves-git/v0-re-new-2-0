@@ -37,12 +37,18 @@ describe("confirmed full opportunity export", () => {
       matches: [{ id: "match-1", opportunity_id: "opp-1", repreneur_id: "buyer-1", status: "draft" }],
       workbookHistory: [{ id: "history-1", match_id: "match-1", source_sha256: "v4-source", source_row: 3,
         last_reported_source_stage: "info_memo_received", source_terminal: true, raw_drop_reason: "Withdrawal",
+        clarification_outcome: "linked_history", resolved_reference: "Synthetic corrected reference", clarified_at: "2026-09-16T12:00:00Z",
+        clarification_source: "Private source communication", manifest: { private: "Private manifest" }, before_match: { private: "Private before-image" },
         import_match_before: { human_notes: "Secret before-image" }, source_cells: { private: "Raw cell" } }],
     }))
     const history = JSON.parse(row.pursuit_workbook_history_json)
     expect(history[0]).toMatchObject({ source_sha256: "v4-source", source_row: 3, raw_drop_reason: "Withdrawal" })
     expect(history[0]).not.toHaveProperty("import_match_before")
     expect(history[0]).not.toHaveProperty("source_cells")
+    expect(history[0]).toMatchObject({ clarification_outcome: "linked_history", resolved_reference: "Synthetic corrected reference", clarified_at: "2026-09-16T12:00:00Z" })
+    expect(history[0]).not.toHaveProperty("clarification_source")
+    expect(history[0]).not.toHaveProperty("manifest")
+    expect(history[0]).not.toHaveProperty("before_match")
   })
   it("keeps each match on its own row and retains an unmatched opportunity", () => {
     const rows = readCsv(
