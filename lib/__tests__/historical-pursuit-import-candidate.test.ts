@@ -65,6 +65,6 @@ describe("W-112 historical pursuit import candidate", () => {
   it("exposes retained history through a server-only staff projection only", () => {
     expect(staffProjection).toContain('import "server-only"')
     expect(staffProjection).toContain("requireStaffAccess()")
-    expect(staffProjection).toContain("historical_pursuit_import_rows")
+    expect(staffProjection).toContain("historical_pursuit_resolved_rows_for_staff")
   })
 })
