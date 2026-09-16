@@ -42,7 +42,7 @@ CREATE TRIGGER pursuit_v4_clarifications_immutable BEFORE UPDATE OR DELETE OR TR
 -- explicitly clarified linkage/review outcome; raw references and stages survive.
 CREATE VIEW public.historical_pursuit_resolved_rows WITH (security_invoker = true) AS
 SELECT projected.*, c.outcome AS clarification_outcome, c.resolved_reference,
-  b.source_reference AS clarification_source, b.applied_at AS clarified_at
+  b.applied_at AS clarified_at
 FROM public.historical_pursuit_import_rows h
 LEFT JOIN public.pursuit_v4_clarifications c ON c.ledger_id = h.id
 LEFT JOIN public.pursuit_v4_clarification_batches b ON b.id = c.batch_id

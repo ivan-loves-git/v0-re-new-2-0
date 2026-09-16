@@ -61,9 +61,13 @@ try {
     await rejectTransaction(async()=>{await client.query(`SET LOCAL ROLE ${role}`); await client.query('SELECT * FROM public.pursuit_v4_clarifications');},/permission denied/);
   }
   for(const role of ['anon','authenticated']) await rejectTransaction(async()=>{await client.query(`SET LOCAL ROLE ${role}`); await client.query('SELECT * FROM public.historical_pursuit_resolved_rows_for_staff(NULL)');},/permission denied/);
+  for(const role of ['anon','authenticated']) await rejectTransaction(async()=>{await client.query(`SET LOCAL ROLE ${role}`); await client.query('SELECT * FROM public.historical_pursuit_resolved_rows');},/permission denied/);
   await client.query('SET ROLE service_role');
   const projected=(await client.query('SELECT * FROM public.historical_pursuit_resolved_rows_for_staff(NULL)')).rows;
   assert.equal(projected.length,73);
+  assert.equal('clarification_source' in projected[0],false);
+  assert.equal('manifest' in projected[0],false);
+  assert.equal('before_match' in projected[0],false);
   const link=projected.find(r=>r.source_row===41);
   assert.equal(link.source_opportunity_reference,'Original reference 41'); assert.equal(link.resolved_reference,'Synthetic target 41'); assert.equal(link.mapped_match_status,'draft'); assert.deepEqual(link.resolution_blockers,[]);
   const confidential=projected.find(r=>r.source_row===71); assert.equal(confidential.clarification_outcome,'confidential_history'); assert.equal(confidential.match_id,null);
