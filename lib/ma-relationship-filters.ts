@@ -1,5 +1,16 @@
 import type { MaRelationshipTimelineItem } from "@/lib/actions/ma-relationships"
 
+export const MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT = 250
+
+export function maRelationshipResultSummary(matched: number, loaded: number) {
+  return {
+    count: `${matched} of ${loaded} loaded ${loaded === 1 ? "activity" : "activities"}`,
+    windowNotice: loaded >= MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT
+      ? `Filters apply only to the latest ${MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT} loaded activities. Older activity is not included.`
+      : null,
+  }
+}
+
 export interface MaRelationshipTimelineFilters {
   officeId?: string | null
   contactId?: string | null

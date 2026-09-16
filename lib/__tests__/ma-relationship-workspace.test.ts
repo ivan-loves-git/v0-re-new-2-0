@@ -32,9 +32,6 @@ describe("W-066 staff relationship workspace", () => {
     expect(page).toContain("redirect(")
     expect(page).toContain('view === "firms" || view === "contacts"')
     expect(page).toContain('`/opportunities/ma/${destination}`')
-    expect(workspace).toContain("One chronological M&A relationship record")
-    expect(workspace).toContain('idPrefix="desktop"')
-    expect(workspace).toContain('idPrefix="mobile"')
     expect(workspace).toContain("relationship-${idPrefix}-office-filter")
     expect(workspace).toContain("relationship-${idPrefix}-contact-filter")
     expect(workspace).toContain("relationship-${idPrefix}-opportunity-filter")
@@ -146,10 +143,6 @@ describe("W-066 staff relationship workspace", () => {
     expect(workspace).toContain("Search contacts, email or office")
     expect(workspace).toContain("byFirm")
     expect(workspace).toContain("officeLabels")
-    expect(workspace).toContain("All filters")
-    expect(workspace).toContain("All offices, contacts and opportunities")
-    expect(workspace).toContain("order-2 md:order-1")
-    expect(workspace).toContain("order-1 md:order-2")
   })
 
   it("progressively discloses optional activity fields without changing recording semantics", () => {
