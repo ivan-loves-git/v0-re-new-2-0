@@ -172,14 +172,15 @@ export const FULL_EXPORT_LEGACY_CONTACT_COLUMNS = [
 
 export const FULL_EXPORT_COLLECTIONS = {
   workbookHistory: {
-    table: "historical_pursuit_import_rows",
+    table: "historical_pursuit_resolved_rows",
     header: "pursuit_workbook_history_json",
     scope: "match",
     time: "applied_at",
     columns: ["id", "match_id", "opportunity_id", "repreneur_id", "source_sha256", "source_sheet", "source_row",
       "source_offer_label", "source_opportunity_reference", "completed_source_stages", "not_applicable_source_stages",
       "last_reported_source_stage", "raw_drop_reason", "event_dates_unknown", "source_terminal", "resolution_blockers",
-      "review_flags", "mapped_match_status", "apply_outcome", "applied_by", "applied_at"],
+      "review_flags", "mapped_match_status", "apply_outcome", "applied_by", "applied_at",
+      "clarification_outcome", "resolved_reference", "clarified_at"],
   },
   documents: {
     table: "opportunity_documents",
