@@ -72,6 +72,22 @@ and [Decision #142](https://github.com/re-new-team/renew-governance/issues/142).
 The data-model checker flags potential contract changes for review. Passing it
 cannot establish business correctness or replace review of an import's meaning.
 
+## Optional PR evidence summary
+
+Run `pnpm agent:pr-status --pr <number>` for a read-only snapshot of an explicit
+GitHub PR. Add `--json` for structured output or `--repo owner/repo` to select the
+repository without using the local origin. It reports the observed head/base,
+their ahead/behind relationship, and GitHub's required and supplemental checks.
+It rechecks the PR identity after collection; drift, missing evidence and
+inconsistent check views remain explicit rather than becoming a pass.
+
+This is an optional reporting helper, not a CI or release gate. A complete report
+can contain failed checks. Exit 0 means collection completed; exit 1 means partial,
+unavailable or stale evidence; exit 2 means invalid input. No required checks
+reported is not a passing result. The command does not run workflows or establish
+merge authority, production deployment or live correctness. Decision #142 and
+Ticket #146 bound its implementation.
+
 ## Tests
 
 Add or update tests in `lib/**/__tests__/` when you change behaviour. Match the
