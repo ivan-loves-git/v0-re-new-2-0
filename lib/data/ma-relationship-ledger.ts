@@ -1,5 +1,8 @@
 import "server-only"
 
+import { presentMaOffice } from "@/lib/ma-office-presentation"
+import { MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT } from "@/lib/ma-relationship-filters"
+
 import {
   activityProvenance,
   type MaRelationshipActivityProvenance,
@@ -179,9 +182,11 @@ export function normalizeMaRelationshipActivity(
   return {
     id: row.id,
     officeId: row.office_id,
-    officeLabel:
-      [firm?.name, office?.name].filter(Boolean).join(" · ") ||
-      "Unknown office",
+    officeLabel: presentMaOffice({
+      id: row.office_id,
+      firmName: firm?.name,
+      officeName: office?.name,
+    }).label,
     affiliationId: row.affiliation_id ?? null,
     contactId: contact?.id ?? null,
     contactLabel: contact ? maRelationshipContactLabel(contact) : null,
@@ -325,7 +330,7 @@ export async function readMaRelationshipLedger(
     purpose === "detail"
       ? null
       : purpose === "global"
-        ? 250
+        ? MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT
         : options.interactionLimit
   if (interactionLimit !== null) {
     interactionsQuery = interactionsQuery.limit(interactionLimit)
