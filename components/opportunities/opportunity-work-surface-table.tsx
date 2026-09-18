@@ -164,9 +164,10 @@ function getGroupKey(journey: OpportunityJourney): OpportunityGroupKey {
   if (journey === "live_in_inventory") return "inventory"
   if (journey === "matching" || journey === "proposed") return "matching"
   if (journey === "interest_received") return "interest"
-  if (journey === "active_pursuit" || journey === "info_memo_received")
+  if (journey === "active_pursuit" || journey === "nda_signed" || journey === "info_memo_received")
     return "active"
   if (
+    journey === "qa_with_ma_firm" ||
     journey === "intermediary_meeting" ||
     journey === "seller_meeting" ||
     journey === "loi"

@@ -78,6 +78,17 @@ describe("deriveMaWorkflowRecommendation", () => {
     expect(recommendation).toBeNull()
   })
 
+  it("does not create an old NDA or memo request from staff-confirmed historical progress", () => {
+    const recommendation = deriveMaWorkflowRecommendation({
+      opportunity: baseOpportunity,
+      activeMatch: { ...baseActiveMatch, pursuit_stage: "qa_with_ma_firm", pursuit_stage_provenance: "staff_confirmed_history" },
+      interactions: [],
+      memoAvailable: false,
+      now,
+    })
+    expect(recommendation).toBeNull()
+  })
+
   it("recommends a first opportunity freshness check after 90 calendar days", () => {
     const recommendation = deriveMaWorkflowRecommendation({
       opportunity: {

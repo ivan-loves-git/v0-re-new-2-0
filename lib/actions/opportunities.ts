@@ -320,6 +320,7 @@ export async function listOpportunityWorkSurfaceRecords(options?: {
       opportunity_id,
       status,
       pursuit_stage,
+      pursuit_stage_provenance,
       updated_at,
       repreneur:repreneurs(id, first_name, last_name, email, is_demo, lifecycle_status, journey_stage, recommendation, who_score, when_score)
       `,

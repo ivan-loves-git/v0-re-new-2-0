@@ -43,7 +43,9 @@ export type OpportunityMatchStatus =
 
 export type OpportunityPursuitStage =
   | "interest"
+  | "nda_signed"
   | "info_memo_received"
+  | "qa_with_ma_firm"
   | "intermediary_meeting"
   | "seller_meeting"
   | "loi"
@@ -200,7 +202,9 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
 
 export const OPPORTUNITY_PURSUIT_STAGE_OPTIONS = [
   { value: "interest", label: "Interest" },
+  { value: "nda_signed", label: "NDA signed" },
   { value: "info_memo_received", label: "Info memo received" },
+  { value: "qa_with_ma_firm", label: "Q&A with M&A firm" },
   { value: "intermediary_meeting", label: "Intermediary meeting" },
   { value: "seller_meeting", label: "Seller meeting" },
   { value: "loi", label: "LOI" },
@@ -591,6 +595,7 @@ export interface OpportunityWorkSurfaceMatch {
   opportunity_id: string
   status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   updated_at: string
   repreneur?: OpportunityMatchRepreneur | null
 }
@@ -737,6 +742,7 @@ export interface OpportunityMatch extends OpportunityConfidentialityGate {
   repreneur_id: string
   status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   pursuit_stage_notes?: string | null
   pursuit_stage_updated_by?: string | null
   pursuit_stage_updated_at?: string | null
@@ -869,6 +875,8 @@ export interface RepreneurOpportunityExposure {
   match_status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
   pursuit_stage_updated_at?: string | null
+  /** Safe explanation only; it never grants document access or establishes a gate. */
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
@@ -909,6 +917,7 @@ export interface RepreneurDealFlowOpportunity {
   match_status: OpportunityMatchStatus | null
   pursuit_stage?: OpportunityPursuitStage | null
   pursuit_stage_updated_at?: string | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
