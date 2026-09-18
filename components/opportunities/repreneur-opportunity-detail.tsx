@@ -13,6 +13,7 @@ import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity
 import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 import {
   getOpportunityMatchStatusLabel,
+  getOpportunityPursuitStageLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type RepreneurDealFlowOpportunity,
   type RepreneurOpportunityExposure,
@@ -86,6 +87,8 @@ export function RepreneurOpportunityDetail({
           ) : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "active_pursuit" && <Badge variant="outline">Confidential journey</Badge>}
+          {opportunity.match_status === "active_pursuit" && opportunity.pursuit_stage && <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge>}
+          {opportunity.pursuit_stage_provenance === "staff_confirmed_history" && <Badge variant="outline">Stage confirmed by Re-New</Badge>}
           {isStaffRecommended(opportunity) ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
         </div>
@@ -110,6 +113,7 @@ export function RepreneurOpportunityDetail({
             <span>{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</span>
             {responsePending && responseDeadline ? <span>{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</span> : null}
           </div>
+          {opportunity.pursuit_stage_provenance === "staff_confirmed_history" ? <p className="mt-2 text-xs text-muted-foreground">This progress was confirmed by Re-New from the existing process. Document checks and access remain separate.</p> : null}
         </div>
       </header>
 

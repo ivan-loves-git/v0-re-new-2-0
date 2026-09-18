@@ -24,6 +24,7 @@ interface OpportunityContext {
 
 interface MatchContext {
   pursuit_stage: string | null
+  pursuit_stage_provenance?: string | null
   pursuit_stage_updated_at: string | null
   updated_at: string
 }
@@ -89,6 +90,7 @@ function deriveNdaInfoMemoReminder(
   now: Date,
 ): MaWorkflowRecommendation | null {
   if (!activeMatch || memoAvailable) return null
+  if (activeMatch.pursuit_stage_provenance === "staff_confirmed_history") return null
   if (activeMatch.pursuit_stage && !["interest", "info_memo_received"].includes(activeMatch.pursuit_stage)) return null
 
   const ndaRequest = latestSentInteraction(interactions, "ma_nda_info_memo_request")
@@ -165,7 +167,7 @@ export function deriveMaWorkflowRecommendation({
 }): MaWorkflowRecommendation | null {
   const ndaInfoMemoReminder = deriveNdaInfoMemoReminder(activeMatch, interactions, memoAvailable, now)
   if (ndaInfoMemoReminder) return ndaInfoMemoReminder
-  if (activeMatch && !memoAvailable) {
+  if (activeMatch && !memoAvailable && activeMatch.pursuit_stage_provenance !== "staff_confirmed_history") {
     return {
       title: "NDA/info memo request available",
       message: "The next expected M&A action is to request the firm's NDA and info memo using their process.",

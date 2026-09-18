@@ -88,6 +88,7 @@ type RepreneurDealFlowOpportunityRow = {
   date_added: string | null
   date_added_precision: "day" | "month" | null
   updated_at: string
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
 }
 
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
@@ -119,6 +120,7 @@ function normalizeExposure(
     match_status: row.status,
     pursuit_stage: row.pursuit_stage,
     pursuit_stage_updated_at: row.pursuit_stage_updated_at,
+    pursuit_stage_provenance: row.pursuit_stage_provenance ?? null,
     nda_status: row.nda_status,
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
@@ -371,6 +373,7 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     match_status: opportunity.match_status,
     pursuit_stage: opportunity.pursuit_stage,
     pursuit_stage_updated_at: opportunity.pursuit_stage_updated_at,
+    pursuit_stage_provenance: opportunity.pursuit_stage_provenance ?? null,
     nda_status: opportunity.nda_status,
     nda_updated_at: opportunity.nda_updated_at,
     visible_documents: opportunity.visible_documents,
@@ -420,6 +423,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       decline_reason_text,
       pursuit_stage,
       pursuit_stage_updated_at,
+      pursuit_stage_provenance,
       nda_status,
       nda_signed_at,
       nda_waived_at,
@@ -533,6 +537,7 @@ async function listRepreneurDealFlowForProfile(
         decline_reason_text,
         pursuit_stage,
         pursuit_stage_updated_at,
+        pursuit_stage_provenance,
         nda_status,
         nda_signed_at,
         nda_waived_at,
@@ -695,6 +700,7 @@ export async function getMyRepreneurOpportunity(
         decline_reason_text,
         pursuit_stage,
         pursuit_stage_updated_at,
+        pursuit_stage_provenance,
         nda_status,
         nda_signed_at,
         nda_waived_at,

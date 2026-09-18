@@ -55,6 +55,7 @@ export async function listClientPursuitPortfolio(): Promise<ClientPursuitPortfol
           interest_expressed_at,
           reviewed_at,
           pursuit_stage_updated_at,
+          pursuit_stage_provenance,
           opportunity:opportunities!inner(id, reference, public_title, status, is_demo)
         `)
         .in("repreneur_id", ids)

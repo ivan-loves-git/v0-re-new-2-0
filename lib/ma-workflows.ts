@@ -125,6 +125,7 @@ interface MatchRow {
   id: string
   status: OpportunityMatchStatus
   pursuit_stage: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   pursuit_stage_updated_at: string | null
   nda_status: OpportunityNdaStatus | null
   nda_signed_at: string | null
@@ -523,6 +524,7 @@ async function loadOpportunityContext(opportunityId: string) {
         id,
         status,
         pursuit_stage,
+        pursuit_stage_provenance,
         pursuit_stage_updated_at,
         nda_status,
         nda_signed_at,

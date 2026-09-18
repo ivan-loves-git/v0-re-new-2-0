@@ -14,6 +14,7 @@ export interface ReNewPursuitBoardRecord {
   stage: ExternalPursuitStage
   canonicalStage: OpportunityPursuitStage | null
   canonicalJourney: string
+  stageProvenance?: "staff_confirmed_history" | null
   href: string
   ownerName: string | null
   updatedAt: string
@@ -21,11 +22,11 @@ export interface ReNewPursuitBoardRecord {
 
 function recordFromCanonical(input: {
   id: string; title: string; href: string; ownerName: string | null; updatedAt: string
-  opportunityStatus: OpportunityStatus; matchStatus: OpportunityMatchStatus; pursuitStage: OpportunityPursuitStage | null
+  opportunityStatus: OpportunityStatus; matchStatus: OpportunityMatchStatus; pursuitStage: OpportunityPursuitStage | null; stageProvenance?: "staff_confirmed_history" | null
 }): ReNewPursuitBoardRecord | null {
   const { journey, stage } = projectCanonicalJourneyToBoard(input)
   if (!stage) return null
-  return { id: input.id, title: input.title, stage, canonicalStage: input.pursuitStage, canonicalJourney: journey, href: input.href, ownerName: input.ownerName, updatedAt: input.updatedAt }
+  return { id: input.id, title: input.title, stage, canonicalStage: input.pursuitStage, canonicalJourney: journey, stageProvenance: input.stageProvenance ?? null, href: input.href, ownerName: input.ownerName, updatedAt: input.updatedAt }
 }
 
 export async function listPortalReNewPursuitBoard(): Promise<ReNewPursuitBoardRecord[]> {
@@ -35,7 +36,7 @@ export async function listPortalReNewPursuitBoard(): Promise<ReNewPursuitBoardRe
       id: opportunity.match_id, title: opportunity.public_title || opportunity.reference,
       href: `/portal/deals/${opportunity.match_id}`, ownerName: null, updatedAt: opportunity.updated_at,
       // The established portal reader exposes only active opportunities.
-      opportunityStatus: "active", matchStatus: opportunity.match_status, pursuitStage: opportunity.pursuit_stage ?? null,
+      opportunityStatus: "active", matchStatus: opportunity.match_status, pursuitStage: opportunity.pursuit_stage ?? null, stageProvenance: opportunity.pursuit_stage_provenance ?? null,
     })
     return record ? [record] : []
   })
@@ -63,6 +64,7 @@ export async function listStaffReNewPursuitBoard(): Promise<ReNewPursuitBoardRec
             opportunityStatus: opportunity.status,
             matchStatus: match.status,
             pursuitStage: match.pursuit_stage ?? null,
+            stageProvenance: match.pursuit_stage_provenance ?? null,
           })
           return record ? [record] : []
         }),

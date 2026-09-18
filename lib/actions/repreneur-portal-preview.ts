@@ -84,6 +84,7 @@ interface PreviewOpportunityMatchRow {
   decline_reason_text: string | null
   pursuit_stage: RepreneurOpportunityExposure["pursuit_stage"]
   pursuit_stage_updated_at: string | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status: RepreneurOpportunityExposure["nda_status"]
   nda_signed_at: string | null
   nda_waived_at: string | null
@@ -141,6 +142,7 @@ function normalizeExposure(
     match_status: row.status,
     pursuit_stage: row.pursuit_stage,
     pursuit_stage_updated_at: row.pursuit_stage_updated_at,
+    pursuit_stage_provenance: row.pursuit_stage_provenance ?? null,
     nda_status: row.nda_status,
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
@@ -234,6 +236,7 @@ async function listVisibleOpportunitiesForRepreneur(
       decline_reason_text,
       pursuit_stage,
       pursuit_stage_updated_at,
+      pursuit_stage_provenance,
       nda_status,
       nda_signed_at,
       nda_waived_at,
