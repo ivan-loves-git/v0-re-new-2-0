@@ -84,6 +84,8 @@ type RepreneurDealFlowOpportunityRow = {
   headcount: number | null
   geography_node_id: string | null
   geography_label?: string | null
+  geography_node_level?: "country" | "macro_zone" | "region" | null
+  geography_parent_label?: string | null
   headcount_range: string | null
   date_added: string | null
   date_added_precision: "day" | "month" | null
@@ -134,6 +136,8 @@ function normalizeExposure(
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -308,6 +312,8 @@ function toDealFlowOpportunity(
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -346,6 +352,8 @@ function toNeutralDealFlowOpportunity(
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -383,6 +391,8 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     teaser_summary: opportunity.teaser_summary,
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
     canonical_sector: opportunity.canonical_sector,
     sector: opportunity.sector,
     activity: opportunity.activity,

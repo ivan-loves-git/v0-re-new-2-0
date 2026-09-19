@@ -6,10 +6,13 @@ import {
   withMatchingGeographyTargets,
 } from "@/lib/repreneur-opportunity-geography"
 
-function queryResult(data: unknown) {
+function queryResult(data: unknown, onSelect?: (selection: string) => void) {
   const result = { data, error: null }
   const builder: Record<string, unknown> = {}
-  builder.select = () => builder
+  builder.select = (selection: string) => {
+    onSelect?.(selection)
+    return builder
+  }
   builder.in = () => builder
   builder.then = (
     resolve: (value: unknown) => unknown,
@@ -20,18 +23,20 @@ function queryResult(data: unknown) {
 
 describe("Matching v2 geography context", () => {
   it("builds self-to-root paths for opportunities and repreneur targets", async () => {
+    const geographySelect = vi.fn()
     const from = vi.fn((table: string) => {
       if (table === "geography_nodes") {
         return queryResult([
-          { id: "fr", stable_key: "france", label: "France", parent_id: null },
-          { id: "west", stable_key: "fr-macro-west", label: "Grand Ouest", parent_id: "fr" },
+          { id: "fr", stable_key: "france", label: "France", node_level: "country", parent_id: null },
+          { id: "west", stable_key: "fr-macro-west", label: "Grand Ouest", node_level: "macro_zone", parent_id: "fr" },
           {
             id: "bretagne",
             stable_key: "fr-region-bretagne",
             label: "Bretagne",
+            node_level: "region",
             parent_id: "west",
           },
-        ])
+        ], geographySelect)
       }
       if (table === "repreneur_geography_targets") {
         return queryResult([
@@ -57,6 +62,8 @@ describe("Matching v2 geography context", () => {
         "france",
       ],
       geography_label: "Bretagne",
+      geography_node_level: "region",
+      geography_parent_label: "Grand Ouest",
     })
     expect(withMatchingGeographyTargets(
       { id: "repreneur-1" },
@@ -67,6 +74,7 @@ describe("Matching v2 geography context", () => {
       ],
     })
     expect(from).toHaveBeenCalledTimes(2)
+    expect(geographySelect).toHaveBeenCalledWith("id, stable_key, label, node_level, parent_id")
   })
 
   it("does not query target rows when there are no repreneurs", async () => {

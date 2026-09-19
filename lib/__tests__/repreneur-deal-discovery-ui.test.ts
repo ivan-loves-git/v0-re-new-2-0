@@ -64,6 +64,42 @@ describe("repreneur Deal Flow discovery controls", () => {
     ])
   })
 
+  it("orders canonical geographies by level and disambiguates duplicate labels", () => {
+    const opportunities = [
+      { ...deal(), opportunity_id: "unknown", geography_node_id: "geo-unknown", geography_label: "Auvergne" },
+      { ...deal(), opportunity_id: "unknown-parent", geography_node_id: "geo-unknown-parent", geography_label: "Auvergne", geography_parent_label: "France" },
+      { ...deal(), opportunity_id: "idf-region", geography_node_id: "geo-idf-region", geography_label: "Île-de-France", geography_node_level: "region" as const, geography_parent_label: "Île-de-France" },
+      { ...deal(), opportunity_id: "grand-est", geography_node_id: "geo-grand-est", geography_label: "Grand Est", geography_node_level: "macro_zone" as const, geography_parent_label: "France" },
+      { ...deal(), opportunity_id: "alsace", geography_node_id: "geo-alsace", geography_label: "Alsace", geography_node_level: "region" as const, geography_parent_label: "Grand Est" },
+      { ...deal(), opportunity_id: "france", geography_node_id: "geo-france", geography_label: "France", geography_node_level: "country" as const, geography_parent_label: null },
+      { ...deal(), opportunity_id: "idf-macro", geography_node_id: "geo-idf-macro", geography_label: "Île-de-France", geography_node_level: "macro_zone" as const, geography_parent_label: "France" },
+    ]
+    const expected = [
+      { value: "geo-france", label: "France" },
+      { value: "geo-grand-est", label: "Grand Est" },
+      { value: "geo-idf-macro", label: "Île-de-France — Macro-zone · France" },
+      { value: "geo-alsace", label: "Alsace" },
+      { value: "geo-idf-region", label: "Île-de-France — Region · Île-de-France" },
+      { value: "geo-unknown", label: "Auvergne" },
+      { value: "geo-unknown-parent", label: "Auvergne — Parent · France" },
+    ]
+
+    expect(canonicalGeographyFilterOptions(opportunities)).toEqual(expected)
+    expect(canonicalGeographyFilterOptions([...opportunities].reverse())).toEqual(expected)
+  })
+
+  it("keeps canonical node IDs as the filter values after display disambiguation", () => {
+    const macro = { ...deal(), opportunity_id: "idf-macro-deal", geography_node_id: "geo-idf-macro", geography_label: "Île-de-France", geography_node_level: "macro_zone" as const, geography_parent_label: "France" }
+    const region = { ...deal(), opportunity_id: "idf-region-deal", geography_node_id: "geo-idf-region", geography_label: "Île-de-France", geography_node_level: "region" as const, geography_parent_label: "Île-de-France" }
+    const options = canonicalGeographyFilterOptions([region, macro])
+
+    expect(options.map((option) => option.value)).toEqual(["geo-idf-macro", "geo-idf-region"])
+    expect(filterRepreneurDeals([macro, region], "", {
+      ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
+      geography: [options[1]!.value],
+    }).map((opportunity) => opportunity.opportunity_id)).toEqual(["idf-region-deal"])
+  })
+
   it("passes the canonical sector label selected in the UI through to the Deal Flow predicate", () => {
     const opportunity = {
       ...deal(),

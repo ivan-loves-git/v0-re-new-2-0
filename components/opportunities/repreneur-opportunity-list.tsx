@@ -82,15 +82,50 @@ export function canonicalSectorFilterOptions(opportunities: RepreneurOpportunity
 }
 
 export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportunityListItem[]) {
-  const optionsByNodeId = new Map<string, string>()
+  const optionsByNodeId = new Map<string, {
+    value: string
+    label: string
+    nodeLevel: "country" | "macro_zone" | "region" | null
+    parentLabel: string | null
+  }>()
   for (const opportunity of opportunities) {
     if (!opportunity.geography_node_id || !opportunity.geography_label) continue
-    optionsByNodeId.set(opportunity.geography_node_id, opportunity.geography_label)
+    optionsByNodeId.set(opportunity.geography_node_id, {
+      value: opportunity.geography_node_id,
+      label: opportunity.geography_label,
+      nodeLevel: opportunity.geography_node_level ?? null,
+      parentLabel: opportunity.geography_parent_label ?? null,
+    })
   }
 
-  return Array.from(optionsByNodeId, ([value, label]) => ({ value, label })).sort((first, second) =>
-    first.label.localeCompare(second.label, "fr"),
+  const options = Array.from(optionsByNodeId.values())
+  const duplicateLabels = new Set(
+    options
+      .map((option) => option.label.trim().toLocaleLowerCase("fr-FR"))
+      .filter((label, index, labels) => labels.indexOf(label) !== index),
   )
+  const levelRank = { country: 0, macro_zone: 1, region: 2 } as const
+  const levelLabel = { country: "Country", macro_zone: "Macro-zone", region: "Region" } as const
+  const collator = new Intl.Collator("fr-FR", { sensitivity: "base" })
+
+  return options
+    .sort((first, second) => {
+      const firstRank = first.nodeLevel ? levelRank[first.nodeLevel] : 3
+      const secondRank = second.nodeLevel ? levelRank[second.nodeLevel] : 3
+      if (firstRank !== secondRank) return firstRank - secondRank
+      const labelOrder = collator.compare(first.label, second.label)
+      if (labelOrder !== 0) return labelOrder
+      return first.value < second.value ? -1 : first.value > second.value ? 1 : 0
+    })
+    .map(({ value, label, nodeLevel, parentLabel }) => {
+      const isDuplicate = duplicateLabels.has(label.trim().toLocaleLowerCase("fr-FR"))
+      if (!isDuplicate) return { value, label }
+      const context = nodeLevel
+        ? parentLabel ? `${levelLabel[nodeLevel]} · ${parentLabel}` : levelLabel[nodeLevel]
+        : parentLabel ? `Parent · ${parentLabel}` : null
+      if (!context) return { value, label }
+      return { value, label: `${label} — ${context}` }
+    })
 }
 
 function toggleValue(values: string[], value: string) {

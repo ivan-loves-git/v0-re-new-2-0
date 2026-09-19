@@ -889,6 +889,10 @@ export interface RepreneurOpportunityExposure {
   geography_node_id?: string | null
   /** Canonical geography label paired with the portal-safe node identity. */
   geography_label?: string | null
+  /** Display-only taxonomy level used to order the portal geography filter. */
+  geography_node_level?: OpportunityGeographyOption["node_level"] | null
+  /** Display-only canonical parent label used when geography labels collide. */
+  geography_parent_label?: string | null
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null
@@ -930,6 +934,10 @@ export interface RepreneurDealFlowOpportunity {
   geography_node_id?: string | null
   /** Canonical geography label paired with the portal-safe node identity. */
   geography_label?: string | null
+  /** Display-only taxonomy level used to order the portal geography filter. */
+  geography_node_level?: OpportunityGeographyOption["node_level"] | null
+  /** Display-only canonical parent label used when geography labels collide. */
+  geography_parent_label?: string | null
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null
