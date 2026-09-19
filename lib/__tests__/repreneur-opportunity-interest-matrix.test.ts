@@ -41,7 +41,7 @@ describe("repreneur opportunity interest matrix", () => {
     expect(listSource).toContain("formatNumber(opportunity.revenue_meur")
     expect(listSource).toContain("formatNumber(opportunity.ebitda_keur")
     expect(listSource).toContain("formatEbitdaMargin(opportunity)")
-    expect(listSource).toContain("opportunity.reference")
+    expect(listSource).not.toContain("opportunity.reference")
     expect(listSource).toContain("opportunity.sector ?? opportunity.activity")
   })
 

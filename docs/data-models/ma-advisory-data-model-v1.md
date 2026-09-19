@@ -226,7 +226,7 @@ W-063 adds a new person to an existing office through `create_or_affiliate_ma_co
 | Attribute | Type or values | Requiredness | Visibility | Source of truth | Meaning and validation |
 | --- | --- | --- | --- | --- | --- |
 | `id` | UUID | System | Staff only | WAVE | Stable internal identity |
-| `reference` | Text | System for new records; retained for history | Staff and repreneur when visible | WAVE | Immutable unique Re-New reference; W-099 generates new values from selected canonical geography |
+| `reference` | Text | System for new records; retained for history | Staff only | WAVE | Immutable unique Re-New reference; W-099 generates new values from selected canonical geography. Portal projections retain the generic `Confidential opportunity` compatibility field, but shared repreneur surfaces do not render it |
 | `is_demo` | Boolean | Always; staff creation requires an explicit `REAL` or `DEMO` choice | Staff only | WAVE | Explicit namespace classification. REAL pairs only with REAL and DEMO only with DEMO; display text is never classification logic. DEMO-linked rows are excluded from production operations and statistics while controlled DEMO-to-DEMO UAT remains available |
 | `demo_classification_created_by`, `demo_classification_created_at` | Staff ID, timestamp | System on new opportunity creation | Staff only | WAVE | Additive immutable attribution of the deliberate initial namespace choice; existing record creation attribution remains unchanged |
 | `demo_classification_updated_by`, `demo_classification_updated_at` | Staff ID, timestamp | System on a zero-match classification change | Staff only | WAVE | Last deliberate post-creation REAL/DEMO change. The atomic service reads these values back and a no-op preserves them |
