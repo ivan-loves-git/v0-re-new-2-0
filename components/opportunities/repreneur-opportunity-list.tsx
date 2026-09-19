@@ -468,9 +468,9 @@ export function RepreneurOpportunityList({
       ) : (
         <div className="flex flex-col gap-6">
           <DealSection sectionKey="recommended" title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
-          <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
           <DealSection sectionKey="in-progress" title="In Progress" description="Interest sent to Re-New or a validated active pursuit." opportunities={sections.inProgress} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
           <DealSection sectionKey="live-opportunities" title="Live Opportunities" description="Other live opportunities available for you to review." opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
+          <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
         </div>
       )}
     </div>
