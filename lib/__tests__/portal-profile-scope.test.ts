@@ -73,17 +73,20 @@ describe("repreneur portal profile scope", () => {
     const profileSummary = source("components/portal/repreneur-profile-summary.tsx")
     const dealDetail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
-    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
+    for (const field of ["Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
       expect(profileSummary).toContain(field)
     }
-    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Team"]) {
+    for (const field of ["Sector", "Revenue", "EBITDA", "EBITDA margin", "Team"]) {
       expect(dealDetail).toContain(field)
     }
     expect(profileSummary).toContain("teaser_summary")
     expect(dealDetail).toContain("teaser_summary")
 
-    for (const field of ["opportunity.reference", "opportunity.sector", "Revenue", "EBITDA", "Margin", "Team"]) {
+    for (const field of ["opportunity.sector", "Revenue", "EBITDA", "Margin", "Team"]) {
       expect(dealList).toContain(field)
+    }
+    for (const repreneurSurface of [dealList, profileSummary, dealDetail]) {
+      expect(repreneurSurface).not.toContain("Re-New ref")
     }
     expect(dealList).toContain("opportunity.teaser_summary")
     expect(dealList).toContain("line-clamp-3")

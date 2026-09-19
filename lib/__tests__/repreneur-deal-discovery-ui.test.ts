@@ -29,6 +29,9 @@ describe("repreneur Deal Flow discovery controls", () => {
     expect(component).toContain('aria-label="Minimum employees"')
     expect(component).toContain('aria-label="Maximum employees"')
     expect(component).toContain("Search title, teaser")
+    expect(component).toContain("Confidential acquisition opportunity")
+    expect(component).not.toContain("getOpportunityMatchRecommendationLabel")
+    expect(component).not.toContain('aria-label={`Position')
   })
 
   it("keeps clear and reset actions available when only numeric filters are active", () => {

@@ -113,7 +113,7 @@ function thesisFields(repreneur: PortalRepreneurProfile) {
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityListItem) {
-  return opportunity.public_title || opportunity.sector || "Opportunity"
+  return opportunity.public_title || "Confidential acquisition opportunity"
 }
 
 function formatOpportunityMetric(value: number | null | undefined, suffix: string) {
@@ -156,11 +156,7 @@ function DealGroup({
               <li key={opportunity.match_id} className="flex flex-col gap-4 py-4 text-sm">
                 <div className="flex flex-col gap-2">
                   <h4 className="font-medium">{title}</h4>
-                  <dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="flex flex-col gap-1">
-                      <WaveMicroLabel asChild><dt>Re-New ref</dt></WaveMicroLabel>
-                      <dd className="font-mono text-foreground">{opportunity.reference}</dd>
-                    </div>
+                  <dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
                     <div className="flex flex-col gap-1">
                       <WaveMicroLabel asChild><dt>Geography</dt></WaveMicroLabel>
                       <dd className="text-foreground">{displayRepreneurOpportunityGeography(opportunity.location)}</dd>
