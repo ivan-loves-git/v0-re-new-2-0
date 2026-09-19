@@ -229,7 +229,11 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   return data as { id: string; status: OpportunityMatchStatus; updated_at: string } | null
 }
 
-async function ensureMatchNamespaceAndEmail(opportunityId: string, repreneurId: string) {
+async function ensureMatchNamespaceAndEmail(
+  opportunityId: string,
+  repreneurId: string,
+  requireClient: boolean,
+) {
   const supabase = createAdminClient()
   const [
     { data: opportunity, error: opportunityError },
@@ -242,7 +246,7 @@ async function ensureMatchNamespaceAndEmail(opportunityId: string, repreneurId: 
       .maybeSingle(),
     supabase
       .from("repreneurs")
-      .select("id, is_demo, email")
+      .select("id, is_demo, email, lifecycle_status")
       .eq("id", repreneurId)
       .maybeSingle(),
   ])
@@ -260,6 +264,9 @@ async function ensureMatchNamespaceAndEmail(opportunityId: string, repreneurId: 
   }
   if (!manualRecommendationEmail(repreneur.email)) {
     throw formError("Add a valid email to this repreneur before creating a staff recommendation.", "repreneur_id")
+  }
+  if (requireClient && repreneur.lifecycle_status !== "client") {
+    throw formError("Only client repreneurs can receive a new staff recommendation.", "repreneur_id")
   }
 }
 
@@ -479,6 +486,7 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
       .select(`id, first_name, last_name, email, lifecycle_status, is_demo,
         journey_stage, recommendation, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
       .eq("is_demo", opportunity.is_demo)
+      .eq("lifecycle_status", "client")
       .order("id", { ascending: true })
       .limit(100)
     if (afterId) query = query.gt("id", afterId)
@@ -486,7 +494,9 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
     if (pageError) throw new Error(pageError.message)
     if (!page?.length) break
     const eligible = page.filter(candidate =>
-      candidate.is_demo === opportunity.is_demo && manualRecommendationEmail(candidate.email),
+      candidate.lifecycle_status === "client"
+      && candidate.is_demo === opportunity.is_demo
+      && manualRecommendationEmail(candidate.email),
     )
     const geography = await loadMatchingGeographyContext(supabase, eligible.map(candidate => candidate.id))
     for (const candidate of eligible) {
@@ -514,10 +524,15 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
   await requireStaffAccess()
   const supabase = createAdminClient()
   const { data: repreneur, error } = await supabase.from("repreneurs")
-    .select(`id, first_name, last_name, email, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+    .select(`id, first_name, last_name, email, lifecycle_status, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
     .eq("id", repreneurId).maybeSingle()
   if (error) throw new Error(error.message)
-  if (!repreneur || typeof repreneur.is_demo !== "boolean" || !manualRecommendationEmail(repreneur.email)) return []
+  if (
+    !repreneur
+    || repreneur.lifecycle_status !== "client"
+    || typeof repreneur.is_demo !== "boolean"
+    || !manualRecommendationEmail(repreneur.email)
+  ) return []
 
   const existingOpportunityIds = new Set<string>()
   let afterMatchId: string | null = null
@@ -585,7 +600,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     if (existingMatch && existingMatch.updated_at !== expectedUpdatedAt) {
       throw formError("This recommendation changed while you were editing it. Refresh to see the latest staff notes.")
     }
-    await ensureMatchNamespaceAndEmail(opportunityId, repreneurId)
+    await ensureMatchNamespaceAndEmail(opportunityId, repreneurId, !existingMatch)
     await ensureOpportunityReadyForExternalMatch(opportunityId, status)
     await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 

@@ -31,7 +31,7 @@ interface RepreneurOpportunityDetailProps {
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityDetailItem) {
-  return opportunity.public_title || opportunity.sector || "Opportunity"
+  return opportunity.public_title || "Confidential acquisition opportunity"
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
@@ -109,7 +109,6 @@ export function RepreneurOpportunityDetail({
             </span>
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>Re-New ref <span className="font-mono text-foreground">{opportunity.reference}</span></span>
             <span>{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</span>
             {responsePending && responseDeadline ? <span>{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</span> : null}
           </div>

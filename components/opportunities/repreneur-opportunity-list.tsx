@@ -13,7 +13,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
   type RepreneurDealFlowOpportunity,
   type RepreneurOpportunityExposure,
@@ -42,7 +41,7 @@ interface RepreneurOpportunityListProps {
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityListItem) {
-  return opportunity.public_title || opportunity.sector || "Opportunity"
+  return opportunity.public_title || "Confidential acquisition opportunity"
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
@@ -61,12 +60,6 @@ function formatRecommendationDeadline(expiresAt: string | null | undefined) {
   const value = new Date(expiresAt)
   if (Number.isNaN(value.getTime())) return null
   return new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris", timeZoneName: "short" }).format(value)
-}
-
-function relevanceGrade(opportunity: RepreneurOpportunityListItem) {
-  return "relevance_grade" in opportunity
-    ? opportunity.relevance_grade
-    : null
 }
 
 function filterOptions(
@@ -89,15 +82,50 @@ export function canonicalSectorFilterOptions(opportunities: RepreneurOpportunity
 }
 
 export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportunityListItem[]) {
-  const optionsByNodeId = new Map<string, string>()
+  const optionsByNodeId = new Map<string, {
+    value: string
+    label: string
+    nodeLevel: "country" | "macro_zone" | "region" | null
+    parentLabel: string | null
+  }>()
   for (const opportunity of opportunities) {
     if (!opportunity.geography_node_id || !opportunity.geography_label) continue
-    optionsByNodeId.set(opportunity.geography_node_id, opportunity.geography_label)
+    optionsByNodeId.set(opportunity.geography_node_id, {
+      value: opportunity.geography_node_id,
+      label: opportunity.geography_label,
+      nodeLevel: opportunity.geography_node_level ?? null,
+      parentLabel: opportunity.geography_parent_label ?? null,
+    })
   }
 
-  return Array.from(optionsByNodeId, ([value, label]) => ({ value, label })).sort((first, second) =>
-    first.label.localeCompare(second.label, "fr"),
+  const options = Array.from(optionsByNodeId.values())
+  const duplicateLabels = new Set(
+    options
+      .map((option) => option.label.trim().toLocaleLowerCase("fr-FR"))
+      .filter((label, index, labels) => labels.indexOf(label) !== index),
   )
+  const levelRank = { country: 0, macro_zone: 1, region: 2 } as const
+  const levelLabel = { country: "Country", macro_zone: "Macro-zone", region: "Region" } as const
+  const collator = new Intl.Collator("fr-FR", { sensitivity: "base" })
+
+  return options
+    .sort((first, second) => {
+      const firstRank = first.nodeLevel ? levelRank[first.nodeLevel] : 3
+      const secondRank = second.nodeLevel ? levelRank[second.nodeLevel] : 3
+      if (firstRank !== secondRank) return firstRank - secondRank
+      const labelOrder = collator.compare(first.label, second.label)
+      if (labelOrder !== 0) return labelOrder
+      return first.value < second.value ? -1 : first.value > second.value ? 1 : 0
+    })
+    .map(({ value, label, nodeLevel, parentLabel }) => {
+      const isDuplicate = duplicateLabels.has(label.trim().toLocaleLowerCase("fr-FR"))
+      if (!isDuplicate) return { value, label }
+      const context = nodeLevel
+        ? parentLabel ? `${levelLabel[nodeLevel]} · ${parentLabel}` : levelLabel[nodeLevel]
+        : parentLabel ? `Parent · ${parentLabel}` : null
+      if (!context) return { value, label }
+      return { value, label: `${label} — ${context}` }
+    })
 }
 
 function toggleValue(values: string[], value: string) {
@@ -192,19 +220,16 @@ function DealCard({
   detailHref,
   detailLabel,
   readOnly,
-  position,
   compact = false,
 }: {
   opportunity: RepreneurOpportunityListItem
   detailHref: string | null
   detailLabel: string
   readOnly: boolean
-  position: number
   compact?: boolean
 }) {
   const staffRecommended = isStaffRecommended(opportunity)
   const isDeclined = opportunity.match_status === "declined" || opportunity.match_status === "dropped"
-  const publicRelevance = relevanceGrade(opportunity)
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
   const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && !opportunity.interest_expressed_at
   const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
@@ -221,9 +246,6 @@ function DealCard({
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs tabular-nums text-muted-foreground" aria-label={`Position ${position}`}>
-              {String(position).padStart(2, "0")}
-            </span>
           {staffRecommended && !isDeclined ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "interested" ? <Badge variant="outline">Interest sent, awaiting Re-New validation</Badge> : null}
@@ -264,10 +286,7 @@ function DealCard({
             </div>
           </dl> : null}
           <p className="mt-2 text-xs text-muted-foreground">
-            <span className="font-mono text-foreground">{opportunity.reference}</span>
-            <span aria-hidden="true"> · </span>
             {opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}
-            {publicRelevance ? <span className="ml-2">Fit: {getOpportunityMatchRecommendationLabel(publicRelevance)}</span> : null}
           </p>
           {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</p> : null}
         </div>
@@ -317,14 +336,13 @@ export function DealSection({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="grid gap-3">
-        {opportunities.map((opportunity, index) => (
+        {opportunities.map((opportunity) => (
           <DealCard
             key={opportunity.match_id ?? opportunity.opportunity_id}
             opportunity={opportunity}
             detailHref={detailHrefForOpportunity(opportunity)}
             detailLabel={detailLabel}
             readOnly={readOnly}
-            position={index + 1}
             compact={compact}
           />
         ))}
@@ -468,9 +486,9 @@ export function RepreneurOpportunityList({
       ) : (
         <div className="flex flex-col gap-6">
           <DealSection sectionKey="recommended" title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
-          <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
           <DealSection sectionKey="in-progress" title="In Progress" description="Interest sent to Re-New or a validated active pursuit." opportunities={sections.inProgress} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
           <DealSection sectionKey="live-opportunities" title="Live Opportunities" description="Other live opportunities available for you to review." opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
+          <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
         </div>
       )}
     </div>
