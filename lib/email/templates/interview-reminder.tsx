@@ -1,4 +1,4 @@
-import { Text, Link } from "@react-email/components"
+import { Text } from "@react-email/components"
 import * as React from "react"
 import { BaseLayout, heading, paragraph } from "./base-layout"
 import type { InterviewReminderEmailProps } from "@/lib/types/email"
@@ -32,12 +32,11 @@ export function InterviewReminderEmail({ repreneur, metadata }: InterviewReminde
       <Text style={paragraph}>Bonjour {firstName},</Text>
 
       <Text style={paragraph}>
-        Petit rappel : votre rendez-vous avec notre équipe est prévu demain{when ? ` (${when})` : ""}.
+        Petit rappel : votre rendez-vous avec notre équipe est prévu demain.
       </Text>
 
       <Text style={paragraph}>
-        N&apos;hésitez pas à nous contacter si vous souhaitez modifier l&apos;horaire en répondant à cet email ou à{" "}
-        <Link href="mailto:contact@re-new.team">contact@re-new.team</Link>.
+        N&apos;hésitez pas à nous contacter si vous souhaitez modifier l&apos;horaire.
       </Text>
 
       <Text style={paragraph}>

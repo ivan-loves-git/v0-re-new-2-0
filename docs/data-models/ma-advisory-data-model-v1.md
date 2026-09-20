@@ -333,6 +333,43 @@ Colin's 8 September catalogue coverage in this candidate:
 
 The optional E4 fiche-de-cadrage attachment is not claimed implemented: no governed attachment source currently exists. The separately approved #118 email-to-uninvited-profile candidate is implemented within the public-summary-only boundary above; actual invitation and portal-access requirements remain unchanged. Description unification is an assessed proposal under #124, with no production text disclosure or data migration. The public dashboard and DealFlow examples are synthetic discussion prototypes, not operating analytics.
 
+### September 20 catalogue content alignment — Product Change #119
+
+Ivan requested content alignment with `Wave_Email_Catalogue_Ivan_20260908.docx`
+following a direct comparison of the held source and current send paths. This is
+content-only scope; the three open trigger/operating proposals remain unapproved.
+
+- Current completed intake continues using the existing `welcome` delivery key,
+  activation and consent settings, but renders P1-07 registration-confirmation
+  copy. The legacy first-contact call explicitly retains its earlier variant and
+  does not claim a completed registration. No second registration email is added.
+- Template settings, preview, manual/test preparation and automatic subject
+  lookup resolve blank or exact enumerated shipped subjects to catalogue defaults.
+  Unknown staff-written subjects and editable bodies remain authoritative. Stored
+  rows, switches, recipient configuration and history are not rewritten.
+- P1-08bis has its own confirmation-of-interest subject. P1-10 includes only the
+  approved public opportunity title in subject/body, with an anonymous fallback;
+  source names and private descriptions remain excluded. Existing delivery keys,
+  fingerprint checks and gates stay unchanged. An earlier uncertain attempt may
+  not be retried with changed copy: existing fingerprint protection fails closed.
+- P1-03 includes the catalogue sign-off and the already-approved seven-day setup
+  lifetime. P1-04 uses the named repreneur/opportunity introduction while retaining
+  staff context and the active-pursuit warning. P2-04a uses the requested booking
+  button; P2-04b keeps the catalogue's hour-free reminder text. P2-08's staff Reject
+  action uses the same resolved subject as its preview and manual send.
+- Explicit approved exceptions remain: P1-02 makes no automatic-archive promise;
+  P1-08/08bis claim no unavailable fiche attachment; P1-11 retains the useful memo
+  link; P2-05's immutable title/teaser email keeps its no-link/no-access/no-expiry
+  contract. No recommendation copy version or pending intent is rewritten.
+- P1-05, P1-06, P1-12, P2-06 and P2-07 are still separate unfinished automation
+  scope. Content alignment does not represent all 19 scenarios as delivered.
+
+Acceptance covers the actual current registration send and preview with defaults
+and staff overrides, catalogue subjects, booking destination, E4/08bis selection,
+E6 public-title escaping and unchanged retry/suppression guards. Verification uses
+synthetic data and mocked providers; no real email is sent by the checks.
+Rollback is the application change only; there is no schema or data migration.
+
 ### Atomic intake write boundary
 
 W-063 and W-020 save opportunity source context, contact selection, description, target status and optional intake fields through the audited `save_opportunity_office_context` and `create_opportunity_with_office_context` RPCs. New opportunity creation requires a selected canonical geography and a non-blank safe public title; WAVE ignores any caller-supplied reference, allocates the immutable reference in the same transaction, returns the persisted identity on success, and otherwise returns one global message with optional field errors without changing the submitted draft. Their final parameter is `p_opportunity_fields JSONB`, which accepts exactly:

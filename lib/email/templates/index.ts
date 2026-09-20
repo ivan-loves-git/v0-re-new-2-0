@@ -105,8 +105,8 @@ export const TEMPLATE_METADATA: Record<
     manualSend: false,
   },
   welcome: {
-    name: "Welcome",
-    description: "Sent after first contact is captured",
+    name: "Registration confirmation",
+    description: "Confirms completed registration in the current intake form; the legacy first-contact variant remains separate",
     category: "intake",
     audience: "rep",
   },
