@@ -1061,10 +1061,57 @@ Decision #128's 16 September amendment records Ivan's explicit approval to apply
 5. Later normal document and access workflow remains independent. Its current checklist continues to require its own evidence and must not regress a staff-confirmed operating stage.
 6. A one-shot compensation may run only against the exact unchanged 18 after-images and no live grant. It retains the truthful mutual-interest evidence, restores only the mutable match fields changed by this operator, writes separate immutable compensation receipts, and leaves `updated_at` as the time of compensation rather than pretending it is the historical timestamp.
 
+## Staff pursuit macro-board v1.0 (Decision #166, Ticket #167)
+
+Ivan approved v1.0 on 20 September 2026 under Product Change #120: a compact
+staff overview with the exact business stage retained on every repreneur ×
+opportunity card. Five active columns avoid a twelve-column default before
+usage establishes the need. This changes presentation, not the business process.
+
+| Column | Current match facts represented |
+| --- | --- |
+| Matching | Draft or shortlisted pair |
+| Proposed | Proposed pair |
+| Interest to validate | Interested response, not yet an active pursuit |
+| Active pursuit | Active pursuit with null/interest, NDA signed, Info memo received, Q&A with M&A firm, Intermediary meeting or Seller meeting |
+| LOI | Active pursuit at LOI |
+
+The precise stage remains visible and filterable; search matches repreneur or
+opportunity names. Cards link to the existing staff opportunity detail. They
+cannot be moved to write a stage. Completed and Dropped/declined have separate
+accessible outcome views, preserving Dropped versus Declined wording. Paused,
+archived and draft opportunity contexts are accessible in Inactive opportunities
+with the actual pair stage retained. For a closed opportunity, only a genuinely
+completed match or active-pursuit/closed stage enters Completed; dropped or
+declined pairs retain their outcome and other siblings enter Inactive with an
+explicit opportunity-closed, pursuit-not-completed explanation. Unknown stage
+data is labelled unavailable and retained outside the active board for review.
+Each REAL pair from the existing staff reader maps once. DEMO opportunities and
+DEMO repreneurs remain excluded under the existing staff board boundary.
+
+Historical-confirmation provenance remains visible and never establishes an
+NDA, document grant, source disclosure or historical date. Mutable `updated_at`
+is not projected as milestone timing. Repreneur portal projection/authorization
+and External Pursuits stages, data, editing, follow-up and permissions are
+unchanged; staff switches between the default Re-New view and the existing
+External board, including its original read-only Re-New context cards. View
+switches retain local filter/editor state. No schema, migration, event
+reconstruction or import replay is needed.
+
+**Version evolution:** v1.0 can become the full twelve-stage view if actual use
+shows repeated demand for stage-specific queues, hidden bottlenecks inside
+Active pursuit, or excessive filtering/opening to compare stages. Record those
+examples and decide the next version explicitly. Existing exact stages make a
+future display expansion possible without rewriting business facts. This is not
+approval for unsupported stages, reconstructed dates, new telemetry, the P2
+operating dashboard, #29/#31 analytics or #132 repreneur next actions. This entry
+records the approved v1.0 contract; GitHub Ticket #167 owns release evidence.
+
 ## Change log
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-09-20 | Staff pursuit macro-board v1.0 candidate | Five staff Re-New columns retain precise stages and provenance, with separate outcome/inactive views and search/stage filtering. Existing portal, External Pursuits, business facts and document access stay unchanged. Future twelve-stage expansion depends on observed usage limitations. | GitHub Decision #166, Ticket #167, Product Change #120 |
 | 2026-09-19 | Canonical geography-filter presentation candidate | Adds portal-safe geography level and parent-label metadata solely to order canonical options country, macro-zone, then region, disambiguate duplicate labels with available context and retain unknown metadata last without inventing a level. Canonical IDs, selections, matching, result membership, browser preference storage and OR-within/AND-between filtering remain unchanged. | GitHub Decision #161, Product Change #159 and Ticket #165 |
 | 2026-09-19 | Client-only manual-assignment candidate | Limits both new staff-assignment pickers and server insertion to canonical repreneurs whose `lifecycle_status` is exactly `client`, while retaining the existing usable-email and REAL/DEMO namespace rules. Invitation, payment, offer, score and thesis completeness are not new gates; existing non-client pairs, history and pursuits remain available without migration. | GitHub Decision #161 and Ticket #164 under Product Change #156 |
 | 2026-09-19 | Repreneur deal-label presentation candidate | Removes automatic Fit labels, the generic portal reference filler and decorative position numbers from shared repreneur deal surfaces and read-only staff preview. Preserves the neutral missing-title fallback, public content, stored ranking data, staff-only references/Fit, deal ordering and all operating gates. | GitHub Decision #161 and Ticket #163 under Product Change #155 |
