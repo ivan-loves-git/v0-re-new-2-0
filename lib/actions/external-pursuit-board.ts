@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import type { ExternalPursuitStage } from "@/lib/types/external-pursuit"
 import type { OpportunityMatchStatus, OpportunityPursuitStage, OpportunityStatus } from "@/lib/types/opportunity"
 import { projectCanonicalJourneyToBoard } from "@/lib/utils/external-pursuit-board"
+import { projectStaffReNewPursuit, type ReNewStaffBoardRecord } from "@/lib/utils/renew-pursuit-board"
 
 export interface ReNewPursuitBoardRecord {
   id: string
@@ -43,8 +44,17 @@ export async function listPortalReNewPursuitBoard(): Promise<ReNewPursuitBoardRe
 }
 
 export async function listStaffReNewPursuitBoard(): Promise<ReNewPursuitBoardRecord[]> {
+  return (await listStaffReNewPursuitBoards()).externalContext
+}
+
+/** Both staff views share one read; the existing External context retains its own mapping. */
+export async function listStaffReNewPursuitBoards(): Promise<{
+  macro: ReNewStaffBoardRecord[]
+  externalContext: ReNewPursuitBoardRecord[]
+}> {
   const opportunities = await listOpportunityWorkSurfaceRecords({ includeSourceReview: false })
-  return opportunities
+  const externalContext: ReNewPursuitBoardRecord[] = []
+  const macro = opportunities
     .filter((opportunity) => !opportunity.is_demo)
     .flatMap((opportunity) =>
       opportunity.matches
@@ -55,7 +65,12 @@ export async function listStaffReNewPursuitBoard(): Promise<ReNewPursuitBoardRec
                 .filter(Boolean)
                 .join(" ") || null
             : null
-          const record = recordFromCanonical({
+          const projection = projectStaffReNewPursuit({
+            opportunityStatus: opportunity.status,
+            matchStatus: match.status,
+            pursuitStage: match.pursuit_stage ?? null,
+          })
+          const context = recordFromCanonical({
             id: match.id,
             title: opportunity.public_title || opportunity.reference,
             href: `/opportunities/${opportunity.id}`,
@@ -66,9 +81,18 @@ export async function listStaffReNewPursuitBoard(): Promise<ReNewPursuitBoardRec
             pursuitStage: match.pursuit_stage ?? null,
             stageProvenance: match.pursuit_stage_provenance ?? null,
           })
-          return record ? [record] : []
+          if (context) externalContext.push(context)
+          return [{
+            ...projection,
+            id: match.id,
+            title: opportunity.public_title || opportunity.reference,
+            href: `/opportunities/${opportunity.id}`,
+            ownerName,
+            stageProvenance: match.pursuit_stage_provenance ?? null,
+          }]
         }),
     )
+  return { macro, externalContext }
 }
 
 export async function listExternalPursuitOwners() {
