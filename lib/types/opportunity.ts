@@ -870,7 +870,14 @@ export type RepreneurMemoAvailability =
   | "awaiting_confidentiality"
   | "awaiting_document_approval"
 
+export interface RepreneurPersonalReview {
+  viewed: boolean
+  reviewed: boolean
+}
+
 export interface RepreneurOpportunityExposure {
+  /** Own navigation state only; null means unavailable, absent means no personal projection. */
+  personal_review?: RepreneurPersonalReview | null
   match_id: string
   match_status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
@@ -917,6 +924,7 @@ export interface RepreneurOpportunityExposure {
 }
 
 export interface RepreneurDealFlowOpportunity {
+  personal_review?: RepreneurPersonalReview | null
   match_id: string | null
   match_status: OpportunityMatchStatus | null
   pursuit_stage?: OpportunityPursuitStage | null

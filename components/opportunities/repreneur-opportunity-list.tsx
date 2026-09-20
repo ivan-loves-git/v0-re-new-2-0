@@ -1,6 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { partitionPersonalReviews } from "@/lib/utils/repreneur-personal-review"
+import { PersonalReviewHint, RepreneurPersonalReviewControl } from "@/components/opportunities/repreneur-personal-review"
+import { DealOrderInfo, DEAL_SECTION_ORDER } from "@/components/opportunities/deal-order-info"
 import Link from "next/link"
 import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -228,6 +231,14 @@ function DealCard({
   readOnly: boolean
   compact?: boolean
 }) {
+  const detailLink = useRef<HTMLAnchorElement>(null)
+  const restoreFocus = useRef(false)
+  useEffect(() => {
+    if (restoreFocus.current && !opportunity.personal_review?.reviewed) {
+      detailLink.current?.focus()
+      restoreFocus.current = false
+    }
+  }, [opportunity.personal_review?.reviewed])
   const staffRecommended = isStaffRecommended(opportunity)
   const isDeclined = opportunity.match_status === "declined" || opportunity.match_status === "dropped"
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
@@ -291,10 +302,16 @@ function DealCard({
           {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</p> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3 lg:items-end">
+          {!readOnly ? <PersonalReviewHint state={opportunity.personal_review} /> : null}
+          {!readOnly && opportunity.personal_review?.reviewed ? <RepreneurPersonalReviewControl
+            key={`${opportunity.opportunity_id}-${opportunity.personal_review.reviewed}`}
+            opportunityId={opportunity.opportunity_id} initialState={opportunity.personal_review}
+            onUndo={() => { restoreFocus.current = true }}
+          /> : null}
           {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
           {detailHref ? (
             <Button asChild variant="outline" className="w-full lg:w-auto">
-              <Link href={detailHref}>
+              <Link ref={detailLink} href={detailHref}>
                 {isDeclined ? "Review and reconsider" : detailLabel}
                 <ArrowRight data-icon="inline-end" />
               </Link>
@@ -328,15 +345,35 @@ export function DealSection({
   if (opportunities.length === 0) return null
 
   const headingId = `deal-section-${sectionKey}`
+  const reviewOrdering = !readOnly && (sectionKey === "recommended" || sectionKey === "live-opportunities")
+  const groups = partitionPersonalReviews(opportunities)
+  const ordered = reviewOrdering ? [...groups.unreviewed, ...groups.reviewed] : opportunities
+  const rationale = sectionKey === "recommended" ? "Re-New selections come first so you can respond to the team."
+    : sectionKey === "in-progress" ? "Your existing interest and active pursuits stay together; personal review marks do not change their priority."
+    : sectionKey === "live-opportunities" ? "Explore other available opportunities after your selections and ongoing discussions."
+    : "Declined deals stay last and remain available to reconsider."
 
   return (
-    <section className="flex flex-col gap-3" aria-labelledby={headingId}>
+    <section className="flex flex-col gap-3 border-t pt-5" aria-labelledby={headingId}>
       <div className="flex flex-col gap-1">
-        <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
+          <span className="text-xs tabular-nums text-muted-foreground" aria-label={`${opportunities.length} ${opportunities.length === 1 ? "deal" : "deals"}`}>{opportunities.length}</span>
+          <DealOrderInfo label={`About ${title} ordering`}>
+            <p>{rationale}</p>
+            {reviewOrdering ? <p className="mt-2">Not reviewed first, reviewed below. Your existing order is kept inside each group.</p> : null}
+            <p className="mt-2">Overall order: {DEAL_SECTION_ORDER}</p>
+          </DealOrderInfo>
+        </div>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="grid gap-3">
-        {opportunities.map((opportunity) => (
+        {ordered.map((opportunity, index) => (
+          <Fragment key={opportunity.match_id ?? opportunity.opportunity_id}>
+          {reviewOrdering && groups.reviewed.length > 0 && index === groups.unreviewed.length ? <div className="flex items-center gap-3 pt-2">
+            <h3 className="shrink-0 text-xs font-medium text-muted-foreground">Reviewed · {groups.reviewed.length}</h3>
+            <span className="h-px flex-1 bg-border" aria-hidden="true" />
+          </div> : null}
           <DealCard
             key={opportunity.match_id ?? opportunity.opportunity_id}
             opportunity={opportunity}
@@ -345,6 +382,7 @@ export function DealSection({
             readOnly={readOnly}
             compact={compact}
           />
+          </Fragment>
         ))}
       </div>
     </section>
@@ -485,6 +523,14 @@ export function RepreneurOpportunityList({
         </Alert>
       ) : (
         <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <p>Recommended → In Progress → Live Opportunities → Declined</p>
+            <DealOrderInfo label="How your deal list is ordered">
+              <p>Re-New selections first, then ongoing discussions, other live deals and declined deals.</p>
+              {!readOnly ? <><p className="mt-2">Reviewed deals move down within Recommended and Live Opportunities. Opening a detail only marks it Viewed and does not move it.</p>
+              <p className="mt-2">Not yet viewed means no opening recorded since tracking began. It does not mean newly published. Reviewed means finished for now, not a response or confirmation that you read later updates.</p></> : null}
+            </DealOrderInfo>
+          </div>
           <DealSection sectionKey="recommended" title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
           <DealSection sectionKey="in-progress" title="In Progress" description="Interest sent to Re-New or a validated active pursuit." opportunities={sections.inProgress} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
           <DealSection sectionKey="live-opportunities" title="Live Opportunities" description="Other live opportunities available for you to review." opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />

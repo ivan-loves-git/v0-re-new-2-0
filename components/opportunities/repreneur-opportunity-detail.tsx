@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { RepreneurPersonalReviewControl } from "@/components/opportunities/repreneur-personal-review"
 import { CalendarDays, CheckCircle2, Download, FileText, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -207,6 +208,13 @@ export function RepreneurOpportunityDetail({
               initialDetails={opportunity.decline_reason_text ?? ""}
             />
           )}
+          {!readOnly ? <RepreneurPersonalReviewControl
+            key={opportunity.opportunity_id}
+            opportunityId={opportunity.opportunity_id}
+            initialState={opportunity.personal_review}
+            detail
+            affectsOrder={opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped"}
+          /> : null}
         </CardContent>
       </Card> : null}
 
