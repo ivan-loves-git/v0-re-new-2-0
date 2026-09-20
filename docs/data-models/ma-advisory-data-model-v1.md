@@ -1077,7 +1077,15 @@ usage establishes the need. This changes presentation, not the business process.
 | LOI | Active pursuit at LOI |
 
 The precise stage remains visible and filterable; search matches repreneur or
-opportunity names. Cards link to the existing staff opportunity detail. They
+opportunity names. The Sort by control (Ticket #169) orders cards within each
+column or outcome view by Stage progression (earliest to latest, default),
+Repreneur A–Z or Opportunity A–Z. Name comparisons ignore case/accents and use
+natural numeric order; missing names and unavailable stages sort last within
+their respective sort keys. Ties use the other identity/stage and finally record
+ID for repeatable ordering. Sort selection survives filter/view/source-tab
+changes on the mounted page; clearing filters retains it and reload restores
+the default. Sorting changes presentation only and never infers age from row
+timestamps. Cards link to the existing staff opportunity detail. They
 cannot be moved to write a stage. Completed and Dropped/declined have separate
 accessible outcome views, preserving Dropped versus Declined wording. Paused,
 archived and draft opportunity contexts are accessible in Inactive opportunities

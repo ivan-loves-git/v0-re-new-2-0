@@ -2,7 +2,7 @@ import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 import { ReNewPursuitBoard } from "@/components/pursuits/renew-pursuit-board"
-import { filterStaffReNewPursuits, projectStaffReNewPursuit, type ReNewStaffBoardRecord } from "@/lib/utils/renew-pursuit-board"
+import { filterStaffReNewPursuits, projectStaffReNewPursuit, sortStaffReNewPursuits, type ReNewStaffBoardRecord } from "@/lib/utils/renew-pursuit-board"
 import type { OpportunityMatchStatus, OpportunityPursuitStage, OpportunityStatus } from "@/lib/types/opportunity"
 
 function project(matchStatus: OpportunityMatchStatus, pursuitStage: OpportunityPursuitStage | null = null, opportunityStatus: OpportunityStatus = "active") {
@@ -77,5 +77,65 @@ describe("staff Re-New board v1.0 (Decision #166)", () => {
     expect(html).not.toContain("Completed target")
     expect(html).not.toContain("Access granted")
     expect(html).not.toContain("Move ")
+  })
+
+  it("sorts by business progression, then identities, without mutating input facts", () => {
+    const records = [
+      record({ id: "seller", ownerName: "Alice", ...project("active_pursuit", "seller_meeting") }),
+      record({ id: "nda-z", ownerName: "Zoé", ...project("active_pursuit", "nda_signed") }),
+      record({ id: "unknown", stage: "unknown" }),
+      record({ id: "nda-a", ownerName: "Alice", ...project("active_pursuit", "nda_signed") }),
+      record({ id: "start", ...project("active_pursuit") }),
+    ]
+    const before = structuredClone(records)
+    expect(sortStaffReNewPursuits(records, "stage").map((r) => r.id)).toEqual(["start", "nda-a", "nda-z", "seller", "unknown"])
+    expect(records).toEqual(before)
+  })
+
+  it("sorts repreneurs naturally with missing names last and opportunity tie-breaks", () => {
+    const records = [
+      record({ id: "missing", ownerName: null }),
+      record({ id: "zoe", ownerName: "Zoé" }),
+      record({ id: "e10", ownerName: "Élodie", title: "Projet 10" }),
+      record({ id: "e2", ownerName: "elodie", title: "Projet 2" }),
+      record({ id: "blank", ownerName: "  " }),
+      record({ id: "alice", ownerName: " Alice " }),
+    ]
+    expect(sortStaffReNewPursuits(records, "repreneur").map((r) => r.id)).toEqual(["alice", "e2", "e10", "zoe", "blank", "missing"])
+  })
+
+  it("sorts opportunities then repreneurs and uses a deterministic final tie-break", () => {
+    const records = [
+      record({ id: "z", title: "Projet 10" }),
+      record({ id: "b", title: "Énergie", ownerName: "Alice" }),
+      record({ id: "a", title: "energie", ownerName: "alice" }),
+      record({ id: "c", title: "Énergie", ownerName: "Zoé" }),
+      record({ id: "p2", title: "Projet 2" }),
+    ]
+    expect(sortStaffReNewPursuits(records, "opportunity").map((r) => r.id)).toEqual(["a", "b", "c", "p2", "z"])
+    expect(sortStaffReNewPursuits([...records].reverse(), "opportunity")).toEqual(sortStaffReNewPursuits(records, "opportunity"))
+  })
+
+  it("sorts filtered outcome records without moving them to another view", () => {
+    const records = [
+      record({ id: "z", ownerName: "Zoé", ...project("declined") }),
+      record({ id: "active", ownerName: "Alice" }),
+      record({ id: "a", ownerName: "Alice", ...project("declined") }),
+      record({ id: "dropped", ...project("dropped") }),
+    ]
+    const filtered = filterStaffReNewPursuits(records, { view: "dropped", stage: "declined", query: "alfa" })
+    const sorted = sortStaffReNewPursuits(filtered, "repreneur")
+    expect(sorted.map((r) => r.id)).toEqual(["a", "z"])
+    expect(sorted.every((r) => r.view === "dropped" && r.column === null)).toBe(true)
+  })
+
+  it("renders cards in default progression order within their macro-column", () => {
+    const html = renderToStaticMarkup(createElement(ReNewPursuitBoard, { records: [
+      record({ id: "seller", title: "Later seller discussion", ...project("active_pursuit", "seller_meeting") }),
+      record({ id: "nda", title: "Earlier NDA stage", ...project("active_pursuit", "nda_signed") }),
+    ] }))
+    expect(html.indexOf("Earlier NDA stage")).toBeLessThan(html.indexOf("Later seller discussion"))
+    expect(html).toContain('id="renew-pursuit-sort"')
+    expect(html).toContain("Sort by")
   })
 })

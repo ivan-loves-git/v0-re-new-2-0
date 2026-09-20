@@ -33,6 +33,14 @@ export const RENEW_BOARD_VIEWS = [
   { value: "inactive", label: "Inactive opportunities" },
 ] as const
 
+export const RENEW_BOARD_SORTS = [
+  { value: "stage", label: "Stage progression" },
+  { value: "repreneur", label: "Repreneur A–Z" },
+  { value: "opportunity", label: "Opportunity A–Z" },
+] as const
+
+export type ReNewBoardSort = typeof RENEW_BOARD_SORTS[number]["value"]
+
 export type ReNewBoardStage = typeof RENEW_BOARD_STAGES[number]["value"]
 export type ReNewBoardColumn = typeof RENEW_BOARD_COLUMNS[number]["value"]
 export type ReNewBoardView = typeof RENEW_BOARD_VIEWS[number]["value"]
@@ -113,4 +121,27 @@ export function filterStaffReNewPursuits(records: ReNewStaffBoardRecord[], filte
   return records.filter((record) => record.view === filters.view
     && (filters.stage === "all" || record.stage === filters.stage)
     && (!needle || [record.title, record.ownerName ?? ""].some((value) => value.toLocaleLowerCase().includes(needle))))
+}
+
+const boardNameCollator = new Intl.Collator("fr", { sensitivity: "base", numeric: true })
+const stageRanks = new Map<ReNewBoardStage, number>(RENEW_BOARD_STAGES.map((stage, index) => [stage.value, index]))
+
+function compareBoardNames(left: string | null, right: string | null): number {
+  const a = left?.trim() ?? ""
+  const b = right?.trim() ?? ""
+  if (!a || !b) return a ? -1 : b ? 1 : 0
+  return boardNameCollator.compare(a, b)
+}
+
+/** Sort presentation only; callers retain the existing column/view grouping. */
+export function sortStaffReNewPursuits(records: ReNewStaffBoardRecord[], sort: ReNewBoardSort): ReNewStaffBoardRecord[] {
+  return [...records].sort((a, b) => {
+    const stage = (stageRanks.get(a.stage) ?? RENEW_BOARD_STAGES.length) - (stageRanks.get(b.stage) ?? RENEW_BOARD_STAGES.length)
+    const owner = compareBoardNames(a.ownerName, b.ownerName)
+    const title = compareBoardNames(a.title, b.title)
+    const order = sort === "stage" ? stage || owner || title
+      : sort === "repreneur" ? owner || title || stage
+      : title || owner || stage
+    return order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  })
 }
