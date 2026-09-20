@@ -14,6 +14,7 @@ import { getTier1ScoringCriteria } from "@/lib/data/evaluation-criteria"
 import { revalidateRepreneurDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { sendEmail } from "@/lib/email"
 import { RejectionEmail } from "@/lib/email/templates/rejection"
+import { getTemplateSubject } from "@/lib/email/template-content"
 import { canonicalSectorSelections } from "@/lib/utils/opportunity-sector"
 import { repreneurWriteErrorMessage } from "@/lib/repreneur-write-error"
 import {
@@ -609,7 +610,7 @@ export async function rejectRepreneur(id: string) {
   // Send rejection email
   sendEmail({
     to: repreneur.email,
-    subject: "Mise à jour concernant votre candidature Re-New",
+    subject: await getTemplateSubject("rejection", "Suite à la revue de votre dossier repreneur"),
     repreneurId: id,
     templateKey: "rejection",
     react: RejectionEmail({
