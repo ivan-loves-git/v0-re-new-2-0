@@ -114,7 +114,10 @@ export interface EmailTemplateProps {
 }
 
 // Specific template props
-export interface WelcomeEmailProps extends EmailTemplateProps {}
+export interface WelcomeEmailProps extends EmailTemplateProps {
+  /** False only for the legacy first-contact step, before form completion. */
+  registrationComplete?: boolean
+}
 
 export interface FormStepCompleteEmailProps extends EmailTemplateProps {
   metadata?: Record<string, unknown> & {

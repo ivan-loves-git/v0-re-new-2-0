@@ -12,7 +12,7 @@ vi.mock("@/lib/env", () => ({ env: { NEXT_PUBLIC_APP_URL: "https://app.re-new.te
 import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
 
 function prepared(blank = false) {
-  return { handoff: { matchId: "match", opportunityId: "opp", upstreamId: "validation", type: "e4", snapshot: [] }, context: { upstream: { metadata: { blank_nda_present_at_validation: blank } }, repreneur: { id: "buyer", email: "buyer@re-new.invalid", first_name: "Buyer" } } }
+  return { handoff: { matchId: "match", opportunityId: "opp", upstreamId: "validation", type: "e4", snapshot: [] }, context: { opportunity: { public_title: "PME industrielle" }, upstream: { metadata: { blank_nda_present_at_validation: blank } }, repreneur: { id: "buyer", email: "buyer@re-new.invalid", first_name: "Buyer" } } }
 }
 beforeEach(() => {
   vi.clearAllMocks()
@@ -39,6 +39,8 @@ describe("canonical pursuit handoff actions", () => {
     expect((await sendPursuitIntermediaryHandoff("match", "e4")).success).toBe(true)
     const [, payload, descriptor] = m.mail.mock.calls[0]
     expect(payload.body.includes("NDA à signer")).toBe(!present)
+    expect(payload.subject).toBe(present ? "Confirmation d'intérêt repreneur - {opportunityTitle}" : "Processus NDA - {opportunityTitle}")
+    expect(payload.body).not.toContain("fiche de cadrage")
     expect(payload.clientOperationKey).toBe("validation")
     expect(descriptor.upstreamId).toBe("validation")
   })
@@ -60,9 +62,18 @@ describe("canonical pursuit handoff actions", () => {
     expect(request.from).toBe("Configured Re-New <configured@re-new.invalid>")
     expect(request.to).toEqual(["buyer@re-new.invalid"])
     expect(request.text).toContain("https://app.re-new.team/portal/deals/match")
+    expect(request.subject).toBe("Votre NDA est prêt à signer - PME industrielle")
+    expect(request.text).toContain("Le NDA de l'opportunité : PME industrielle")
     expect(Object.keys(request).sort()).toEqual(["from", "html", "subject", "text", "to"])
     expect(options).toEqual({ idempotencyKey: "same-operation" })
     expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: "same-operation" }), "staff@re-new.invalid", "sent", "accepted", null)
+  })
+  it("escapes the approved public title in E6 without exposing source fields", async () => {
+    const p = prepared()
+    p.context.opportunity.public_title = "PME <industrie> & services"
+    m.prepare.mockResolvedValue(p)
+    expect((await sendPursuitNdaReadyNotice("match")).success).toBe(true)
+    expect(m.resend.mock.calls[0][0].html).toContain("PME &lt;industrie&gt; &amp; services")
   })
   it.each(["provider", "transport"])("preserves an uncertain E6 operation after %s failure", async (mode) => {
     if (mode === "provider") m.resend.mockResolvedValue({ data: null, error: { name: "rate_limit_exceeded", message: "retry" } })

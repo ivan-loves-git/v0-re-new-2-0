@@ -2,7 +2,7 @@ import "server-only"
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { EmailTemplateKey } from "@/lib/types/email"
-import { TEMPLATE_DEFAULT_SUBJECTS } from "@/lib/email/template-default-subjects"
+import { resolveTemplateSubject } from "@/lib/email/template-default-subjects"
 
 /** Internal template lookup for trusted server workflows; never a Server Action. */
 export async function getTemplateBody(
@@ -32,8 +32,8 @@ export async function getTemplateSubject(
       .select("subject")
       .eq("template_key", templateKey)
       .single()
-    return data?.subject?.trim() || TEMPLATE_DEFAULT_SUBJECTS[templateKey] || fallback
+    return resolveTemplateSubject(templateKey, data?.subject, fallback)
   } catch {
-    return TEMPLATE_DEFAULT_SUBJECTS[templateKey] || fallback
+    return resolveTemplateSubject(templateKey, null, fallback)
   }
 }
