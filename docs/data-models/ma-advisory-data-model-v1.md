@@ -1024,7 +1024,7 @@ Decision #128's 16 September amendment records Ivan's explicit approval to apply
 5. Later normal document and access workflow remains independent. Its current checklist continues to require its own evidence and must not regress a staff-confirmed operating stage.
 6. A one-shot compensation may run only against the exact unchanged 18 after-images and no live grant. It retains the truthful mutual-interest evidence, restores only the mutable match fields changed by this operator, writes separate immutable compensation receipts, and leaves `updated_at` as the time of compensation rather than pretending it is the historical timestamp.
 
-## Staff pursuit macro-board v1.0 (Decision #166, Ticket #167; build candidate)
+## Staff pursuit macro-board v1.0 (Decision #166, Ticket #167)
 
 Ivan approved v1.0 on 20 September 2026 under Product Change #120: a compact
 staff overview with the exact business stage retained on every repreneur ×
@@ -1068,7 +1068,7 @@ examples and decide the next version explicitly. Existing exact stages make a
 future display expansion possible without rewriting business facts. This is not
 approval for unsupported stages, reconstructed dates, new telemetry, the P2
 operating dashboard, #29/#31 analytics or #132 repreneur next actions. This entry
-records a build candidate; production release remains separate.
+records the approved v1.0 contract; GitHub Ticket #167 owns release evidence.
 
 ## Change log
 
