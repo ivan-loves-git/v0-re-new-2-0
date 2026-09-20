@@ -3,17 +3,17 @@ import * as React from "react"
 import { BaseLayout, heading, paragraph, button } from "./base-layout"
 import { renderMarkdownBody } from "./markdown-body"
 import type { WelcomeEmailProps } from "@/lib/types/email"
+import { ThankYouEmail } from "./thank-you"
 
 /**
- * Welcome Email - French
- * Sent after successful intake form submission.
- *
- * Body is editable from the Templates UI: when `bodyOverride` is passed
- * (admin-edited copy from email_templates.body_markdown), it replaces
- * the hardcoded paragraphs below. The branded layout, heading and CTA
- * stay constant so the email looks consistent regardless of edits.
+ * Current intake registration confirmation (P1-07), under the existing welcome
+ * switch. Explicit legacy first-contact calls retain the earlier welcome copy.
+ * Staff body overrides are preserved in either variant.
  */
-export function WelcomeEmail({ repreneur, bodyOverride }: WelcomeEmailProps) {
+export function WelcomeEmail({ repreneur, bodyOverride, registrationComplete = true }: WelcomeEmailProps) {
+  // Current intake keeps its existing welcome delivery settings and staff copy,
+  // while using the catalogue's registration-confirmation content.
+  if (registrationComplete) return <ThankYouEmail repreneur={repreneur} bodyOverride={bodyOverride} />
   const { firstName } = repreneur
 
   return (

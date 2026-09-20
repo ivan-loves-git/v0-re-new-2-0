@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { requireStaffAccess } from "@/lib/access-control"
 import { sendEmail } from "@/lib/email"
 import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-content"
+import { resolveTemplateSubject } from "@/lib/email/template-default-subjects"
 import { revalidatePath } from "next/cache"
 import { render } from "@react-email/render"
 import type { EmailTemplateKey } from "@/lib/types/email"
@@ -201,7 +202,10 @@ export async function getTemplateSettings() {
     throw new Error(error.message)
   }
 
-  return data || []
+  return (data || []).map((template) => ({
+    ...template,
+    subject: resolveTemplateSubject(template.template_key as EmailTemplateKey, template.subject),
+  }))
 }
 
 /**
@@ -269,7 +273,7 @@ export async function getRenderedTemplate(
     .select("subject, body_markdown, body_editable")
     .eq("template_key", templateKey)
     .single()
-  const subject = row?.subject || TEMPLATE_METADATA[templateKey]?.name || ""
+  const subject = resolveTemplateSubject(templateKey, row?.subject, TEMPLATE_METADATA[templateKey]?.name)
   const bodyEditable = !!row?.body_editable
   const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
   const bodyMarkdown: string | null = bodyEditable ? (row?.body_markdown?.trim() || fallbackBody) : null
@@ -298,6 +302,7 @@ export async function getRenderedTemplate(
     case "thank_you":
       element = ThankYouEmail({
         repreneur: sampleRepreneur,
+        bodyOverride,
         metadata: { whoScore: 85, whenScore: 70, recommendation: "interview" },
       })
       break
@@ -443,8 +448,8 @@ export async function sendManualEmail(
 
   switch (templateKey) {
     case "welcome":
-      template = WelcomeEmail({ repreneur: emailData })
-      subject = "Bienvenue chez Re-New"
+      template = WelcomeEmail({ repreneur: emailData, bodyOverride: await getTemplateBody("welcome") })
+      subject = await getTemplateSubject("welcome", "Votre inscription Re-New est confirmée")
       break
     case "form_step_complete":
       template = FormStepCompleteEmail({ repreneur: emailData, metadata })
@@ -455,8 +460,8 @@ export async function sendManualEmail(
       subject = "Finalisez votre profil repreneur"
       break
     case "thank_you":
-      template = ThankYouEmail({ repreneur: emailData, metadata })
-      subject = "Merci pour votre inscription Re-New"
+      template = ThankYouEmail({ repreneur: emailData, metadata, bodyOverride: await getTemplateBody("thank_you") })
+      subject = await getTemplateSubject("thank_you", "Votre inscription Re-New est confirmée")
       break
     case "high_score_alert":
       template = HighScoreAlertEmail({ repreneur: emailData, metadata })
@@ -480,7 +485,7 @@ export async function sendManualEmail(
       break
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
-      subject = "Suite à la revue de votre dossier repreneur"
+      subject = await getTemplateSubject("rejection", "Suite à la revue de votre dossier repreneur")
       break
     case "interview_reminder":
       template = InterviewReminderEmail({
@@ -489,14 +494,14 @@ export async function sendManualEmail(
           interviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         },
       })
-      subject = "Rappel de votre entretien Re-New"
+      subject = await getTemplateSubject("interview_reminder", "Rappel — votre entretien avec Re-New")
       break
     case "booking_reminder":
       template = BookingReminderEmail({
         repreneur: emailData,
         bodyOverride: await getTemplateBody(templateKey),
       })
-      subject = "Planifiez votre entretien Re-New"
+      subject = await getTemplateSubject("booking_reminder", "Réservez votre entretien avec Re-New")
       break
     default:
       throw new Error(`Unknown template: ${templateKey}`)
@@ -596,8 +601,8 @@ export async function sendTestEmail(
 
   switch (templateKey) {
     case "welcome":
-      template = WelcomeEmail({ repreneur: emailData })
-      subject = "[TEST] Bienvenue chez Re-New"
+      template = WelcomeEmail({ repreneur: emailData, bodyOverride: await getTemplateBody("welcome") })
+      subject = `[TEST] ${await getTemplateSubject("welcome", "Votre inscription Re-New est confirmée")}`
       break
     case "form_step_complete":
       template = FormStepCompleteEmail({ repreneur: emailData, metadata })
@@ -608,8 +613,8 @@ export async function sendTestEmail(
       subject = "[TEST] Finalisez votre profil repreneur"
       break
     case "thank_you":
-      template = ThankYouEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Merci pour votre inscription Re-New"
+      template = ThankYouEmail({ repreneur: emailData, metadata, bodyOverride: await getTemplateBody("thank_you") })
+      subject = `[TEST] ${await getTemplateSubject("thank_you", "Votre inscription Re-New est confirmée")}`
       break
     case "high_score_alert":
       template = HighScoreAlertEmail({ repreneur: emailData, metadata })
@@ -633,21 +638,21 @@ export async function sendTestEmail(
       break
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
-      subject = "[TEST] Suite à la revue de votre dossier repreneur"
+      subject = `[TEST] ${await getTemplateSubject("rejection", "Suite à la revue de votre dossier repreneur")}`
       break
     case "interview_reminder":
       template = InterviewReminderEmail({
         repreneur: emailData,
         metadata: { interviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
       })
-      subject = "[TEST] Rappel de votre entretien Re-New"
+      subject = `[TEST] ${await getTemplateSubject("interview_reminder", "Rappel — votre entretien avec Re-New")}`
       break
     case "booking_reminder":
       template = BookingReminderEmail({
         repreneur: emailData,
         bodyOverride: await getTemplateBody(templateKey),
       })
-      subject = "[TEST] Planifiez votre entretien Re-New"
+      subject = `[TEST] ${await getTemplateSubject("booking_reminder", "Réservez votre entretien avec Re-New")}`
       break
     default:
       return { success: false, message: `Unknown template: ${templateKey}` }
