@@ -10,11 +10,14 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   filterStaffReNewPursuits,
+  sortStaffReNewPursuits,
   getReNewBoardStageLabel,
   RENEW_BOARD_COLUMNS,
   RENEW_BOARD_STAGES,
+  RENEW_BOARD_SORTS,
   RENEW_BOARD_VIEWS,
   type ReNewBoardStage,
+  type ReNewBoardSort,
   type ReNewBoardView,
   type ReNewStaffBoardRecord,
 } from "@/lib/utils/renew-pursuit-board"
@@ -23,7 +26,8 @@ export function ReNewPursuitBoard({ records }: { records: ReNewStaffBoardRecord[
   const [view, setView] = useState<ReNewBoardView>("active")
   const [stage, setStage] = useState<ReNewBoardStage | "all">("all")
   const [query, setQuery] = useState("")
-  const filtered = filterStaffReNewPursuits(records, { view, stage, query })
+  const [sort, setSort] = useState<ReNewBoardSort>("stage")
+  const filtered = sortStaffReNewPursuits(filterStaffReNewPursuits(records, { view, stage, query }), sort)
   const viewRecords = records.filter((record) => record.view === view)
   const stageOptions = RENEW_BOARD_STAGES.filter((option) => viewRecords.some((record) => record.stage === option.value))
 
@@ -42,7 +46,7 @@ export function ReNewPursuitBoard({ records }: { records: ReNewStaffBoardRecord[
           </Button>
         ))}
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="w-full space-y-1.5 sm:max-w-sm">
           <Label htmlFor="renew-pursuit-search">Search</Label>
           <Input id="renew-pursuit-search" placeholder="Repreneur or opportunity" value={query} onChange={(event) => setQuery(event.target.value)} />
@@ -54,6 +58,15 @@ export function ReNewPursuitBoard({ records }: { records: ReNewStaffBoardRecord[
             <SelectContent>
               <SelectItem value="all">All stages</SelectItem>
               {stageOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-full space-y-1.5 sm:w-56">
+          <Label htmlFor="renew-pursuit-sort">Sort by</Label>
+          <Select value={sort} onValueChange={(value) => setSort(value as ReNewBoardSort)}>
+            <SelectTrigger id="renew-pursuit-sort" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {RENEW_BOARD_SORTS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

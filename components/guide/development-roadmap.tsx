@@ -26,6 +26,15 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 20, 2026",
+    version: "0.9.69",
+    title: "Sort the staff pursuit board",
+    isCompleted: true,
+    events: [
+      { title: "Three useful ways to review pursuits", type: "feature", description: "Sort cards within each column by stage progression, repreneur A–Z or opportunity A–Z. Your choice stays selected while filtering or switching views, so you can review the same work from different angles." },
+    ],
+  },
+  {
+    period: "Sep 20, 2026",
     version: "0.9.68",
     title: "A compact staff pursuit board, v1.0",
     isCompleted: true,
