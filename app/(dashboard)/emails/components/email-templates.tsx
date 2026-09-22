@@ -171,9 +171,9 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
   )
 
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid min-w-0 gap-4 xl:grid-cols-2">
       {Object.entries(groupedTemplates).map(([category, items]) => (
-        <Card key={category}>
+        <Card key={category} className="min-w-0">
           <CardHeader>
             <div className="flex items-center gap-2">
               <CardTitle>{categoryLabels[category] || category}</CardTitle>
@@ -182,24 +182,24 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="min-w-0">
             <div className="space-y-4">
               {items.map((item) => (
                 <div
                   key={item.key}
-                  className="flex flex-col justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
+                  className="flex min-w-0 flex-col justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium">{item.name}</h4>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <h4 className="min-w-0 font-medium break-words">{item.name}</h4>
                       <Badge variant={item.audience === "opp" ? "outline" : "secondary"}>
                         {TEMPLATE_AUDIENCE_LABELS[item.audience]}
                       </Badge>
-                      <code className="rounded bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{item.key}</code>
+                      <code className="max-w-full min-w-0 rounded bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground break-all">{item.key}</code>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                    <p className="mt-1 break-words text-sm text-muted-foreground">{item.description}</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex shrink-0 items-center gap-3">
                     <Button
                       type="button"
                       variant="outline"

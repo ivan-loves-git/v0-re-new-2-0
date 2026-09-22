@@ -9,6 +9,10 @@ export const TEMPLATE_DEFAULT_SUBJECTS: Partial<Record<EmailTemplateKey, string>
   ma_process_follow_up: "Toujours d'actualité ? — {opportunityTitle}",
   booking_reminder: "Réservez votre entretien avec Re-New",
   interview_reminder: "Rappel — votre entretien avec Re-New",
+  memo_feedback_reminder: "Un retour sur votre mémorandum — {opportunityTitle}",
+  interest_outcome_validated: "Suite à votre intérêt pour {opportunityTitle}",
+  interest_outcome_rejected: "Suite à votre intérêt pour {opportunityTitle}",
+  proposed_opportunity_response_staff: "Réponse à une opportunité proposée — {opportunityTitle}",
 }
 
 // Exact shipped subjects only: staff-written subjects remain authoritative.

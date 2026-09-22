@@ -27,6 +27,7 @@ import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
 import { MaIntermediaryEmail } from "@/lib/email/templates/ma-intermediary"
 import { RecommendationAssignmentEmailV1, RECOMMENDATION_ASSIGNMENT_SUBJECT_V1 } from "@/lib/email/templates/recommendation-assignment-v1"
 import { InterestNotificationEmail } from "@/lib/email/templates/interest-notification"
+import { MemoFeedbackReminderEmail } from "@/lib/email/templates/memo-feedback-reminder"
 
 const MA_SAMPLE_VARIABLES = {
   firstName: "Camille",
@@ -359,6 +360,18 @@ export async function getRenderedTemplate(
         body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
         variables,
         staff: templateKey === "proposed_opportunity_response_staff",
+      })
+      break
+    }
+    case "memo_feedback_reminder": {
+      const variables = {
+        firstName: "Sophie",
+        opportunityTitle: "Opportunité fictive",
+      }
+      element = MemoFeedbackReminderEmail({
+        subject: substituteTemplateVariables(subject, variables),
+        body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
+        variables,
       })
       break
     }
