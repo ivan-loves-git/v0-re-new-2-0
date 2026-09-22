@@ -149,7 +149,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       const item = {
         key,
         ...meta,
-        isEnabled: template?.is_active ?? true,
+        isEnabled: template?.is_active ?? (meta.copyEditable === true ? false : true),
       }
       if (!acc[meta.category]) {
         acc[meta.category] = []
@@ -246,7 +246,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                   onChange={(e) =>
                     setPreview({ ...preview, subject: e.target.value, saved: false, error: null })
                   }
-                  disabled={preview.loading || preview.saving || TEMPLATE_METADATA[preview.templateKey]?.manualSend === false}
+                  disabled={preview.loading || preview.saving || (TEMPLATE_METADATA[preview.templateKey]?.manualSend === false && TEMPLATE_METADATA[preview.templateKey]?.copyEditable !== true)}
                 />
               </div>
 
@@ -308,7 +308,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                 disabled={
                   preview.loading ||
                   preview.saving ||
-                  TEMPLATE_METADATA[preview.templateKey]?.manualSend === false ||
+                  (TEMPLATE_METADATA[preview.templateKey]?.manualSend === false && TEMPLATE_METADATA[preview.templateKey]?.copyEditable !== true) ||
                   preview.subject.trim() === "" ||
                   (preview.subject === preview.initialSubject &&
                     (!preview.bodyEditable || preview.body === preview.initialBody))

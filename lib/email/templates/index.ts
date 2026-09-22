@@ -17,12 +17,13 @@ export { MaIntermediaryEmail } from "./ma-intermediary"
 
 import type { EmailTemplateKey } from "@/lib/types/email"
 
-export type EmailTemplateAudience = "rep" | "opp"
+export type EmailTemplateAudience = "rep" | "opp" | "staff"
 export type EmailTemplateCategory = "intake" | "offer" | "status" | "ma"
 
 export const TEMPLATE_AUDIENCE_LABELS: Record<EmailTemplateAudience, string> = {
   rep: "Rep",
   opp: "Opp",
+  staff: "Staff",
 }
 
 export const MA_TEMPLATE_DEFAULT_BODIES: Partial<Record<EmailTemplateKey, string>> = {
@@ -86,6 +87,24 @@ Merci beaucoup,
 L'équipe Re-New`,
 }
 
+export const INTEREST_TEMPLATE_DEFAULT_BODIES: Partial<Record<EmailTemplateKey, string>> = {
+  interest_outcome_validated: `Bonjour {firstName},
+
+Re-New a validé votre intérêt pour {opportunityTitle}. Notre équipe vous contactera pour la suite.
+
+L’équipe Re-New`,
+  interest_outcome_rejected: `Bonjour {firstName},
+
+Après examen, Re-New ne poursuivra pas cette opportunité avec vous pour le moment. Cela ne change pas votre accès aux autres opportunités.
+
+L’équipe Re-New`,
+  proposed_opportunity_response_staff: `Bonjour,
+
+{repreneurName} a répondu {responseLabel} à l’opportunité {opportunityTitle}. Consultez WAVE pour la suite.
+
+L’équipe Re-New`,
+}
+
 // Template metadata for UI display
 export const TEMPLATE_METADATA: Record<
   EmailTemplateKey,
@@ -95,6 +114,7 @@ export const TEMPLATE_METADATA: Record<
     category: EmailTemplateCategory
     audience: EmailTemplateAudience
     manualSend?: boolean
+    copyEditable?: boolean
   }
 > = {
   opportunity_recommendation_assignment: {
@@ -103,6 +123,30 @@ export const TEMPLATE_METADATA: Record<
     category: "status",
     audience: "rep",
     manualSend: false,
+  },
+  interest_outcome_validated: {
+    name: "Interest validated",
+    description: "Neutral notice after staff validates this exact interest. Inactive by default; no internal notes or source details.",
+    category: "status",
+    audience: "rep",
+    manualSend: false,
+    copyEditable: true,
+  },
+  interest_outcome_rejected: {
+    name: "Interest not selected",
+    description: "Neutral notice after staff rejects this exact interest, without rejecting the account or other deals. Inactive by default.",
+    category: "status",
+    audience: "rep",
+    manualSend: false,
+    copyEditable: true,
+  },
+  proposed_opportunity_response_staff: {
+    name: "Proposed opportunity response",
+    description: "One configured-staff alert for a new response to a staff proposal, not unassigned interest. Inactive by default.",
+    category: "status",
+    audience: "staff",
+    manualSend: false,
+    copyEditable: true,
   },
   welcome: {
     name: "Registration confirmation",

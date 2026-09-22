@@ -27,7 +27,7 @@ vi.mock("@/lib/observability/critical-operation", () => ({
   }),
 }))
 
-import { sendEmail } from "@/lib/email/send-email"
+import { sendEmail, sendEmailDirect } from "@/lib/email/send-email"
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -58,7 +58,14 @@ function emailParams() {
   }
 }
 
-function fakeEmailDatabase(options?: { initialLog?: LogState | null; loseFirstFinalizationResponse?: boolean }) {
+function fakeEmailDatabase(options?: {
+  initialLog?: LogState | null
+  loseFirstFinalizationResponse?: boolean
+  dailyCountError?: boolean
+  logReadError?: boolean
+  logCreateError?: boolean
+  attemptUpdateError?: boolean
+}) {
   let log = options?.initialLog ?? null
   let insertedRows = 0
   let countedDeliveries = log?.daily_counted_at ? 1 : 0
@@ -67,12 +74,15 @@ function fakeEmailDatabase(options?: { initialLog?: LogState | null; loseFirstFi
   const emailLogs = {
     select: vi.fn(() => ({
       eq: vi.fn(() => ({
-        maybeSingle: vi.fn(async () => ({ data: log, error: null })),
+        maybeSingle: vi.fn(async () => options?.logReadError
+          ? { data: null, error: { message: "synthetic log read failed" } }
+          : { data: log, error: null }),
       })),
     })),
     upsert: vi.fn((input: Record<string, unknown>) => ({
       select: vi.fn(() => ({
         maybeSingle: vi.fn(async () => {
+          if (options?.logCreateError) return { data: null, error: { message: "synthetic log write failed" } }
           if (!log) {
             insertedRows += 1
             log = {
@@ -94,6 +104,7 @@ function fakeEmailDatabase(options?: { initialLog?: LogState | null; loseFirstFi
         in: vi.fn((_field: string, statuses: string[]) => ({
           select: vi.fn(() => ({
             maybeSingle: vi.fn(async () => {
+              if (options?.attemptUpdateError) return { data: null, error: { message: "synthetic attempt update failed" } }
               if (!log || !statuses.includes(log.status)) return { data: null, error: null }
               log = { ...log, ...updates }
               return { data: { id: log.id }, error: null }
@@ -123,10 +134,9 @@ function fakeEmailDatabase(options?: { initialLog?: LogState | null; loseFirstFi
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              single: vi.fn(async () => ({
-                data: { count: countedDeliveries },
-                error: null,
-              })),
+              maybeSingle: vi.fn(async () => options?.dailyCountError
+                ? { data: null, error: { message: "synthetic daily cap read failed" } }
+                : { data: { count: countedDeliveries }, error: null }),
             })),
           })),
         }
@@ -182,12 +192,14 @@ describe("idempotent email logging and accounting", () => {
       },
     })
     mocks.createAdminClient.mockReturnValue(database.client)
+    const beforeProviderAttempt = vi.fn(async () => true)
 
-    await expect(sendEmail(emailParams())).resolves.toEqual({
+    await expect(sendEmail({ ...emailParams(), beforeProviderAttempt })).resolves.toEqual({
       success: true,
       emailLogId: "email-log-1",
       resendId: "provider-1",
     })
+    expect(beforeProviderAttempt).not.toHaveBeenCalled()
     expect(mocks.resendSend).not.toHaveBeenCalled()
     expect(database.finalizations()).toBe(0)
     expect(database.countedDeliveries()).toBe(1)
@@ -356,5 +368,47 @@ describe("idempotent email logging and accounting", () => {
       resend_id: "provider-1",
     })
     expect(database.countedDeliveries()).toBe(1)
+  })
+
+  it.each([
+    ["daily cap read", { dailyCountError: true }],
+    ["durable log read", { logReadError: true }],
+    ["durable log create", { logCreateError: true }],
+    ["provider-attempt persistence", { attemptUpdateError: true }],
+  ])("defers a %s failure before provider I/O", async (_name, options) => {
+    const database = fakeEmailDatabase(options)
+    mocks.createAdminClient.mockReturnValue(database.client)
+    const beforeProviderAttempt = vi.fn(async () => true)
+    await expect(sendEmail({ ...emailParams(), beforeProviderAttempt })).resolves.toMatchObject({
+      success: false,
+      providerOutcome: "deferred",
+    })
+    expect(mocks.resendSend).not.toHaveBeenCalled()
+    if ("dailyCountError" in options || "logReadError" in options || "logCreateError" in options) {
+      expect(beforeProviderAttempt).not.toHaveBeenCalled()
+    }
+  })
+
+  it("runs the event fence after policy preflights and before provider I/O", async () => {
+    const database = fakeEmailDatabase()
+    mocks.createAdminClient.mockReturnValue(database.client)
+    const beforeProviderAttempt = vi.fn(async () => false)
+    await expect(sendEmail({ ...emailParams(), beforeProviderAttempt })).resolves.toMatchObject({
+      success: false,
+      providerOutcome: "fenced",
+    })
+    expect(beforeProviderAttempt).toHaveBeenCalledTimes(1)
+    expect(mocks.resendSend).not.toHaveBeenCalled()
+  })
+
+  it("suppresses a blocked staff recipient before the event fence and provider", async () => {
+    mocks.isSuppressed.mockResolvedValue(true)
+    const beforeProviderAttempt = vi.fn(async () => true)
+    await expect(sendEmailDirect({
+      to: "staff@example.test", subject: "Synthetic", react: null as never,
+      idempotencyKey: "interest-event:synthetic", beforeProviderAttempt,
+    })).resolves.toMatchObject({ success: false, providerOutcome: "blocked" })
+    expect(beforeProviderAttempt).not.toHaveBeenCalled()
+    expect(mocks.resendSend).not.toHaveBeenCalled()
   })
 })

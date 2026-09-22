@@ -56,7 +56,10 @@ describe("repreneur opportunity interest matrix", () => {
   it("keeps accepted staff proposals recommended but never labels a self-signalled interest as selected by Re-New", () => {
     expect(isStaffRecommended({ is_staff_recommended: false } as never)).toBe(false)
     expect(isStaffRecommended({ is_staff_recommended: true } as never)).toBe(true)
-    expect(querySource).toContain("is_staff_recommended: !opportunity.interest_expressed_at")
+    expect(querySource).toContain("currentProposedResponse || !opportunity.interest_expressed_at")
+    expect(querySource).toContain("decisionState.proposed.has(opportunity.match_id)")
+    expect(listSource).toContain("!opportunity.interest_rejected")
+    expect(detailSource).toContain("isStaffRecommended(opportunity) && !opportunity.interest_rejected")
   })
 
   it("allows only the exact portal-visible match to express interest on a staff-only opportunity", () => {

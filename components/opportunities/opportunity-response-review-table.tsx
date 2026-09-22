@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
+import { StaffInterestRejectionControl } from "@/components/opportunities/staff-interest-rejection-control"
 import { markOpportunityMatchReviewed, validateOpportunityPursuit } from "@/lib/actions/opportunity-matches"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
@@ -87,7 +88,9 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
             <TableBody>
               {responses.map((response) => {
                 const reviewAction = markOpportunityMatchReviewed.bind(null, response.id, response.opportunity_id)
-                const validateAction = validateOpportunityPursuit.bind(null, response.id, response.opportunity_id)
+                const validateAction = validateOpportunityPursuit.bind(
+                  null, response.id, response.opportunity_id, response.interest_expressed_at ?? null, response.updated_at,
+                )
                 const activeLock = Boolean(response.active_pursuit_match_id)
                 return (
                   <TableRow key={response.id}>
@@ -146,12 +149,22 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                           </div>
                         )}
 
-                        {response.status === "interested" && !activeLock && (
+                        {response.status === "interested" && !activeLock && !response.interest_rejection && (
                           <form action={validateAction}>
                             <OpportunityReviewSubmitButton size="sm" label="Validate pursuit" pendingLabel="Validating...">
                               <ShieldCheck data-icon="inline-start" />
                             </OpportunityReviewSubmitButton>
                           </form>
+                        )}
+
+                        {response.status === "interested" && (
+                          <StaffInterestRejectionControl
+                            matchId={response.id}
+                            opportunityId={response.opportunity_id}
+                            interestAt={response.interest_expressed_at ?? null}
+                            updatedAt={response.updated_at}
+                            rejection={response.interest_rejection}
+                          />
                         )}
 
                         {response.reviewed_at ? (

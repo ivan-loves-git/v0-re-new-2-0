@@ -735,6 +735,8 @@ export interface OpportunityMatchRepreneur {
 }
 
 export interface OpportunityMatch extends OpportunityConfidentialityGate {
+  /** Staff-only private exact-interest decision, never a portal field. */
+  interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
   /** Staff-only readback; never projected into the repreneur portal. */
   assignment_email_status?: "pending" | "sent" | "failed" | "blocked" | "review_required" | "delivery_issue" | "unavailable" | null
   id: string
@@ -818,6 +820,8 @@ export interface OpportunityMatchResponse {
   decline_reason_text?: string | null
   reviewed_by?: string | null
   reviewed_at?: string | null
+  interest_expressed_at?: string | null
+  interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
   updated_at: string
   opportunity?: Pick<
     Opportunity,
@@ -915,6 +919,8 @@ export interface RepreneurOpportunityExposure {
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
+  /** Public outcome only; private reason and actor are never serialized. */
+  interest_rejected?: boolean
   interest_notification_sent_at?: string | null
   recommendation_expires_at?: string | null
   updated_at: string
@@ -961,6 +967,8 @@ export interface RepreneurDealFlowOpportunity {
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
+  /** Public outcome only; private reason and actor are never serialized. */
+  interest_rejected?: boolean
   interest_notification_sent_at?: string | null
   recommendation_expires_at?: string | null
   updated_at: string
