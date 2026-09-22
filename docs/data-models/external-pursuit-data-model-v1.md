@@ -43,6 +43,14 @@ External Pursuits are visible to their owner and authorised Re-New staff and
 never enter matching, source records, confidentiality gates, exports or Re-New
 KPIs. No acknowledgement is required.
 
+Decision #166 / Ticket #167 adds a staff-only macro-board v1.0 candidate under
+Product Change #120. The staff route defaults to the new Re-New view and retains
+this complete existing board, including its read-only Re-New context cards, in
+the External pursuits tab. Switching views retains local filter/editor state.
+The portal route, External stages/actions, ownership and confidentiality rules
+remain unchanged. The five-column mapping and evidence-led version evolution
+are defined in the canonical M&A contract's staff macro-board v1.0 section.
+
 This release creates no outbound notification, email, SMS, push automation,
 export or canonical M&A record. The initial `due_at` field is only an
 in-product due/overdue state; it sends nothing.

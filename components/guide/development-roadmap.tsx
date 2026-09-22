@@ -25,6 +25,25 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 20, 2026",
+    version: "0.9.69",
+    title: "Sort the staff pursuit board",
+    isCompleted: true,
+    events: [
+      { title: "Three useful ways to review pursuits", type: "feature", description: "Sort cards within each column by stage progression, repreneur A–Z or opportunity A–Z. Your choice stays selected while filtering or switching views, so you can review the same work from different angles." },
+    ],
+  },
+  {
+    period: "Sep 20, 2026",
+    version: "0.9.68",
+    title: "A compact staff pursuit board, v1.0",
+    isCompleted: true,
+    events: [
+      { title: "Five columns, precise stages", type: "feature", description: "The staff Re-New board groups active work into Matching, Proposed, Interest to validate, Active pursuit and LOI. Every card keeps its exact stage; completed, dropped and inactive cases have their own views." },
+      { title: "Start compact and learn from daily use", type: "decision", description: "We chose v1.0 for an overview that is easier to scan. It can expand to twelve stage columns if daily use exposes hidden bottlenecks or a recurring need for separate stage queues. Business history and document access remain separate." },
+    ],
+  },
+  {
     period: "Sep 12, 2026",
     version: "0.9.67",
     title: "A complete staff opportunity and pursuit export",

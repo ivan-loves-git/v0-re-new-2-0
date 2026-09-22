@@ -19,6 +19,7 @@ vi.mock("@/lib/actions/external-pursuit-attachments", () => ({
 }))
 
 import { ExternalPursuitBoard } from "@/components/pursuits/external-pursuit-board"
+import { StaffPursuitsWorkspace } from "@/components/pursuits/staff-pursuits-workspace"
 import type { ExternalPursuitBoardRecord } from "@/lib/types/external-pursuit"
 
 function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursuitBoardRecord {
@@ -48,6 +49,18 @@ function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursu
 }
 
 describe("ExternalPursuitBoard component", () => {
+  it("retains the External workspace and its canonical context alongside the default staff macro-board", () => {
+    const html = renderToStaticMarkup(createElement(StaffPursuitsWorkspace, {
+      external: [external({})], renew: [],
+      externalReNewContext: [{ id: "match-1", title: "Canonical context", stage: "identified", canonicalStage: null, canonicalJourney: "proposed", href: "/opportunities/opportunity-1", ownerName: "Owner One", updatedAt: "2026-08-16T09:00:00Z" }],
+    }))
+    expect(html).toContain("Re-New active pursuit board")
+    expect(html).toContain("Independent target")
+    expect(html).toContain("Canonical context")
+    expect(html).toContain("Open canonical journey")
+    expect(html).toContain('aria-label="Move Independent target stage"')
+    expect(html).toContain('data-state="inactive"')
+  })
   it("renders provenance, omission, availability and labelled stage controls", () => {
     const html = renderToStaticMarkup(createElement(ExternalPursuitBoard, {
       external: [external({})],

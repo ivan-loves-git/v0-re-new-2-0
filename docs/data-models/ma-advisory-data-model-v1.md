@@ -1061,11 +1061,66 @@ Decision #128's 16 September amendment records Ivan's explicit approval to apply
 5. Later normal document and access workflow remains independent. Its current checklist continues to require its own evidence and must not regress a staff-confirmed operating stage.
 6. A one-shot compensation may run only against the exact unchanged 18 after-images and no live grant. It retains the truthful mutual-interest evidence, restores only the mutable match fields changed by this operator, writes separate immutable compensation receipts, and leaves `updated_at` as the time of compensation rather than pretending it is the historical timestamp.
 
+## Staff pursuit macro-board v1.0 (Decision #166, Ticket #167)
+
+Ivan approved v1.0 on 20 September 2026 under Product Change #120: a compact
+staff overview with the exact business stage retained on every repreneur ×
+opportunity card. Five active columns avoid a twelve-column default before
+usage establishes the need. This changes presentation, not the business process.
+
+| Column | Current match facts represented |
+| --- | --- |
+| Matching | Draft or shortlisted pair |
+| Proposed | Proposed pair |
+| Interest to validate | Interested response, not yet an active pursuit |
+| Active pursuit | Active pursuit with null/interest, NDA signed, Info memo received, Q&A with M&A firm, Intermediary meeting or Seller meeting |
+| LOI | Active pursuit at LOI |
+
+The precise stage remains visible and filterable; search matches repreneur or
+opportunity names. The Sort by control (Ticket #169) orders cards within each
+column or outcome view by Stage progression (earliest to latest, default),
+Repreneur A–Z or Opportunity A–Z. Name comparisons ignore case/accents and use
+natural numeric order; missing names and unavailable stages sort last within
+their respective sort keys. Ties use the other identity/stage and finally record
+ID for repeatable ordering. Sort selection survives filter/view/source-tab
+changes on the mounted page; clearing filters retains it and reload restores
+the default. Sorting changes presentation only and never infers age from row
+timestamps. Cards link to the existing staff opportunity detail. They
+cannot be moved to write a stage. Completed and Dropped/declined have separate
+accessible outcome views, preserving Dropped versus Declined wording. Paused,
+archived and draft opportunity contexts are accessible in Inactive opportunities
+with the actual pair stage retained. For a closed opportunity, only a genuinely
+completed match or active-pursuit/closed stage enters Completed; dropped or
+declined pairs retain their outcome and other siblings enter Inactive with an
+explicit opportunity-closed, pursuit-not-completed explanation. Unknown stage
+data is labelled unavailable and retained outside the active board for review.
+Each REAL pair from the existing staff reader maps once. DEMO opportunities and
+DEMO repreneurs remain excluded under the existing staff board boundary.
+
+Historical-confirmation provenance remains visible and never establishes an
+NDA, document grant, source disclosure or historical date. Mutable `updated_at`
+is not projected as milestone timing. Repreneur portal projection/authorization
+and External Pursuits stages, data, editing, follow-up and permissions are
+unchanged; staff switches between the default Re-New view and the existing
+External board, including its original read-only Re-New context cards. View
+switches retain local filter/editor state. No schema, migration, event
+reconstruction or import replay is needed.
+
+**Version evolution:** v1.0 can become the full twelve-stage view if actual use
+shows repeated demand for stage-specific queues, hidden bottlenecks inside
+Active pursuit, or excessive filtering/opening to compare stages. Record those
+examples and decide the next version explicitly. Existing exact stages make a
+future display expansion possible without rewriting business facts. This is not
+approval for unsupported stages, reconstructed dates, new telemetry, the P2
+operating dashboard, #29/#31 analytics or #132 repreneur next actions. This entry
+records the approved v1.0 contract; GitHub Ticket #167 owns release evidence.
+
 ## Change log
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
-| 2026-09-20 | #157 candidate | Added prospective personal Viewed and reversible Reviewed, stable within-section review ordering, accessible section explanations and parent-owned deletion cascades. No business response, matching score, document access or historical event changes; production release held. | GitHub #157 / #168; migration 20260920140000 |
+| 2026-09-22 | #157 release candidate | Prospective personal Viewed and reversible Reviewed, stable within-section review ordering, accessible section explanations and parent-owned deletion cascades. No business response, matching score, document access or historical event changes; release approved but live proof pending. | GitHub #157 / #161 / #172; migration 20260920140000 |
+| 2026-09-20 | Staff pursuit macro-board v1.0 candidate | Five staff Re-New columns retain precise stages and provenance, with separate outcome/inactive views and search/stage filtering. Existing portal, External Pursuits, business facts and document access stay unchanged. Future twelve-stage expansion depends on observed usage limitations. | GitHub Decision #166, Ticket #167, Product Change #120 |
 | 2026-09-19 | Canonical geography-filter presentation candidate | Adds portal-safe geography level and parent-label metadata solely to order canonical options country, macro-zone, then region, disambiguate duplicate labels with available context and retain unknown metadata last without inventing a level. Canonical IDs, selections, matching, result membership, browser preference storage and OR-within/AND-between filtering remain unchanged. | GitHub Decision #161, Product Change #159 and Ticket #165 |
 | 2026-09-19 | Client-only manual-assignment candidate | Limits both new staff-assignment pickers and server insertion to canonical repreneurs whose `lifecycle_status` is exactly `client`, while retaining the existing usable-email and REAL/DEMO namespace rules. Invitation, payment, offer, score and thesis completeness are not new gates; existing non-client pairs, history and pursuits remain available without migration. | GitHub Decision #161 and Ticket #164 under Product Change #156 |
 | 2026-09-19 | Repreneur deal-label presentation candidate | Removes automatic Fit labels, the generic portal reference filler and decorative position numbers from shared repreneur deal surfaces and read-only staff preview. Preserves the neutral missing-title fallback, public content, stored ranking data, staff-only references/Fit, deal ordering and all operating gates. | GitHub Decision #161 and Ticket #163 under Product Change #155 |
@@ -1179,9 +1234,9 @@ A pending or unknown attempt retains its provider key, has a two-minute in-fligh
 Historical active pursuits without a frozen NDA-presence fact require an explicit staff revalidation before E4. The existing start service permits this narrow branch only for a same-namespace active pursuit without any non-revoked grant and without an already frozen Boolean (including `false`). It appends a new mutual-interest event with current NDA presence and the previous validation ID, leaves the prior events and pursuit status untouched, and creates no delivery. Existing current-format cycles cannot use this branch to reset their evidence.
 
 
-## #157 — personal Viewed and Reviewed (implementation candidate, 20 September 2026)
+## #157 — personal Viewed and Reviewed (approved release candidate, 22 September 2026)
 
-Authority: [Product Change #157](https://github.com/re-new-team/renew-governance/issues/157), [Decision #154](https://github.com/re-new-team/renew-governance/issues/154#issuecomment-5749474925), implementation Ticket #168. Ivan approved the combined automatic Viewed/manual Reviewed design and within-section placement in Codex on 20 September. This section describes the candidate, not a production release.
+Authority: [Product Change #157](https://github.com/re-new-team/renew-governance/issues/157), [Decision #154](https://github.com/re-new-team/renew-governance/issues/154#issuecomment-5749474925), [Decision #161](https://github.com/re-new-team/renew-governance/issues/161), implementation Ticket #168 and integration Ticket #172. Ivan approved the combined automatic Viewed/manual Reviewed design and within-section placement in Codex on 20 September, then accepted the existing presentation and approved its build and publication on 22 September. This section describes the approved candidate; production application and live proof are separate.
 
 - `repreneur_opportunity_review_state` holds one row per canonical repreneur, opportunity and explicit REAL/DEMO mode: the first successful recorded detail opening instant and the current `reviewed` Boolean. It is not the existing staff `opportunity_matches.reviewed_at` field, a business response, an event ledger, pursuit evidence or a document permission.
 - A client-mounted, visible, successfully authorized full detail invokes the authenticated portal server action. List rendering, server rendering/prefetch, denied/failed detail loads and staff previews perform no write. The server resolves the actual repreneur; the service-only database function rechecks active same-namespace visibility and serializes against parent changes. Clients cannot supply another owner, mode or timestamp.
@@ -1191,4 +1246,4 @@ Authority: [Product Change #157](https://github.com/re-new-team/renew-governance
 - Retention follows parent ownership: both foreign keys delete the state on canonical parent deletion, consistent with existing profile child cascades. Archive/closure is not deletion and preserves the marker; this adds no new parent deletion permission or operation, TTL, permanent audit obligation, reading-duration analytics, engagement export or notification. No historical backfill.
 - Overall list order remains Recommended, In Progress, Live Opportunities, Declined. Recommended and Live are stably partitioned into not-reviewed then reviewed; existing incoming order is retained inside each group. In Progress/Declined retain existing ordering. This changes presentation priority only, not matching scores, business membership, response clocks or entitlement. Reviewed items stay visible under a quiet divider; Undo is offered on the detail and reviewed list card.
 - Section headings, counts, neutral separators and accessible hover/focus/tap explanations explain rationale and order. Personal state is textual rather than color-only. Manual review does not navigate away from detail. Existing detail-before-interest and Decline/reconsider flows remain intact.
-- Rollout is additive schema first, then the verified application, after separate production authority. RLS is enabled/forced, browser roles have no table or function access, service role reads only and writes through the guarded function. No backfill or other table mutation. Application rollback leaves stored state intact; no destructive table rollback is needed. Candidate verification includes actual PostgreSQL migration/permission/concurrency/deletion behavior, authenticated-action tests and synthetic desktop/mobile browser checks. Production migration and verification are separate.
+- Rollout is additive schema first, then the verified application under Decision #161's production authority. RLS is enabled/forced, browser roles have no table or function access, service role reads only and writes through the guarded function. No backfill or other table mutation. Application rollback leaves stored state intact; no destructive table rollback is needed. Candidate verification includes actual PostgreSQL migration/permission/concurrency/deletion behavior, authenticated-action tests and synthetic desktop/mobile browser checks. Production migration and live verification remain separate proof gates.
