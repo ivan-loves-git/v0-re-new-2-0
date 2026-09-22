@@ -24,6 +24,9 @@ same change. Tests use temporary synthetic repositories, not live deployments.
 Skipped builds do not produce new application bundles, but Vercel still counts
 them toward build/deployment limits. This filter cannot reclaim old storage or
 remove usage already accrued. It leaves retention, aliases and recovery intact.
+Vercel records an intentional skip as `CANCELED`; the previous successful
+deployment remains available. Check the build log's `Skip:` reason before
+treating that status as an application failure.
 
 ## Measure before cleanup
 
