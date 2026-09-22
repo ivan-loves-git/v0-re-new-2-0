@@ -13,6 +13,7 @@ import {
   AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { rejectOpportunityInterest } from "@/lib/actions/opportunity-matches"
+import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
 export function StaffInterestRejectionControl({
   matchId, opportunityId, interestAt, updatedAt, rejection,
@@ -32,7 +33,7 @@ export function StaffInterestRejectionControl({
       <div className="flex max-w-sm flex-col gap-1 text-xs">
         <Badge variant="outline" className="w-fit">Interest not selected</Badge>
         <span className="text-muted-foreground">Staff-only reason: {rejection.reason}</span>
-        <span className="text-muted-foreground">Recorded {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(rejection.decided_at))}</span>
+        <span className="text-muted-foreground">Recorded {formatDisplayDateTime(rejection.decided_at, "fr-FR", { dateStyle: "medium", timeStyle: "short" })}</span>
         <span className={rejection.delivery_status === "review_required" ? "text-amber-700" : "text-muted-foreground"}>
           Client notice: {rejection.delivery_status === "sent" ? "sent"
             : rejection.delivery_status === "suppressed" ? "not dispatched (notification inactive or ineligible)"
