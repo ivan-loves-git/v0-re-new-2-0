@@ -171,3 +171,38 @@ jobs:
             --env TMPDIR=/tmp \
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-wave-pdr-screening-security.sh'
+
+  personal-review-database-rehearsal:
+    name: Personal review database rehearsal
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: review-rehearsal-only
+          POSTGRES_DB: review157
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d review157"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify private personal review persistence and deletion
+        run: node scripts/rehearsals/repreneur-personal-review.mjs
+        env:
+          REVIEW_TEST_PORT: 5432
+          REVIEW_TEST_USER: postgres
+          REVIEW_TEST_PASSWORD: review-rehearsal-only
+          REVIEW_TEST_DATABASE: review157

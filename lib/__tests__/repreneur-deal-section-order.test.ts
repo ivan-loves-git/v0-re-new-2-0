@@ -198,3 +198,59 @@ describe("repreneur Deal Flow section order", () => {
     expect(profileHtml).toContain("Public fallback description retained.")
   })
 })
+
+
+describe("#157 personal review presentation", () => {
+  it("moves reviewed items only within Recommended and Live, preserving other ordering", () => {
+    const items = [
+      { ...deal("r-reviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: true } },
+      { ...deal("r-unreviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: false } },
+      { ...deal("p-reviewed", "in_progress", "active_pursuit"), personal_review: { viewed: true, reviewed: true } },
+      { ...deal("p-unreviewed", "in_progress", "interested"), personal_review: { viewed: false, reviewed: false } },
+      { ...deal("l-reviewed", "live", null), personal_review: { viewed: true, reviewed: true } },
+      { ...deal("l-unreviewed", "live", null), personal_review: { viewed: false, reviewed: false } },
+      { ...deal("d-reviewed", "declined", "declined"), personal_review: { viewed: true, reviewed: true } },
+      { ...deal("d-unreviewed", "declined", "declined"), personal_review: { viewed: false, reviewed: false } },
+    ]
+    const html = renderList(items)
+    expect(sectionHeadings(html)).toEqual(["Recommended", "In Progress", "Live Opportunities", "Declined"])
+    for (const prefix of ["r", "l"]) expect(html.indexOf(`Deal ${prefix}-unreviewed`)).toBeLessThan(html.indexOf(`Deal ${prefix}-reviewed`))
+    for (const prefix of ["p", "d"]) expect(html.indexOf(`Deal ${prefix}-reviewed`)).toBeLessThan(html.indexOf(`Deal ${prefix}-unreviewed`))
+    expect(html).toContain("Not yet viewed")
+    expect(html).toContain("Viewed")
+    expect(html).toContain("Reviewed")
+  })
+
+  it.each([
+    ["mixed unavailable and reviewed", [
+      { ...deal("reviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: true } },
+      { ...deal("unknown", "recommended", "proposed"), personal_review: null },
+      { ...deal("unreviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: false } },
+    ]],
+    ["all unavailable", [
+      { ...deal("first", "recommended", "proposed"), personal_review: null },
+      { ...deal("second", "recommended", "proposed"), personal_review: null },
+    ]],
+  ])("keeps incoming order and avoids a Reviewed divider for %s evidence", (_case, items) => {
+    const section = sectionHtml(renderList(items), "recommended")
+    for (let i = 1; i < items.length; i++) {
+      expect(section.indexOf(`Deal ${items[i - 1].opportunity_id.replace("opportunity-", "")}`))
+        .toBeLessThan(section.indexOf(`Deal ${items[i].opportunity_id.replace("opportunity-", "")}`))
+    }
+    expect(section).not.toContain("Reviewed ·")
+    expect(section).toContain("Review status unavailable")
+  })
+
+  it("omits personal indicators and actions in staff preview even if supplied personal state", () => {
+    const reviewed = { ...deal("reviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: true } }
+    const unopened = { ...deal("unopened", "live", null), personal_review: { viewed: false, reviewed: false } }
+    const list = renderList([reviewed, unopened], true)
+    const detail = renderToStaticMarkup(createElement(RepreneurOpportunityDetail, { opportunity: reviewed, readOnly: true }))
+    for (const html of [list, detail]) {
+      expect(html).not.toContain("Undo reviewed")
+      expect(html).not.toContain("Mark as reviewed")
+      expect(html).not.toContain("Not yet viewed")
+      expect(html).not.toContain("Reviewed ·")
+    }
+  })
+})

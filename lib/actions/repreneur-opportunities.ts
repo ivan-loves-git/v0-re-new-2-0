@@ -1,5 +1,7 @@
 import "server-only"
 
+import { readPersonalOpportunityReviews } from "@/lib/data/repreneur-opportunity-review"
+
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
@@ -666,6 +668,10 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
 
   const result = await listRepreneurDealFlowForProfile(repreneur, sort)
+  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, result.deals.map((deal) => deal.opportunity_id))
+  for (const deal of result.deals) {
+    deal.personal_review = reviews ? reviews.get(deal.opportunity_id) ?? { viewed: false, reviewed: false } : null
+  }
   const access = await requirePortalAccess()
   queueM2RepreneurEvent({
     userId: access.user.id,
@@ -790,7 +796,8 @@ export async function getMyRepreneurOpportunity(
       action: "open",
       outcome: "success",
     })
-    return result
+    const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
+    return { ...result, personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null }
   }
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
@@ -819,5 +826,6 @@ export async function getMyRepreneurOpportunity(
     action: "open",
     outcome: "success",
   })
-  return result
+  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
+  return { ...result, personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null }
 }
