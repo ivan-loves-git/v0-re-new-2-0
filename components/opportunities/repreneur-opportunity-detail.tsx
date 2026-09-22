@@ -90,7 +90,9 @@ export function RepreneurOpportunityDetail({
           {opportunity.match_status === "active_pursuit" && <Badge variant="outline">Confidential journey</Badge>}
           {opportunity.match_status === "active_pursuit" && opportunity.pursuit_stage && <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge>}
           {opportunity.pursuit_stage_provenance === "staff_confirmed_history" && <Badge variant="outline">Stage confirmed by Re-New</Badge>}
-          {isStaffRecommended(opportunity) ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
+          {isStaffRecommended(opportunity) && !opportunity.interest_rejected
+            && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped"
+            ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
         </div>
         <div>

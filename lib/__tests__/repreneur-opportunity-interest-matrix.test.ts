@@ -59,6 +59,7 @@ describe("repreneur opportunity interest matrix", () => {
     expect(querySource).toContain("currentProposedResponse || !opportunity.interest_expressed_at")
     expect(querySource).toContain("decisionState.proposed.has(opportunity.match_id)")
     expect(listSource).toContain("!opportunity.interest_rejected")
+    expect(detailSource).toContain("isStaffRecommended(opportunity) && !opportunity.interest_rejected")
   })
 
   it("allows only the exact portal-visible match to express interest on a staff-only opportunity", () => {
