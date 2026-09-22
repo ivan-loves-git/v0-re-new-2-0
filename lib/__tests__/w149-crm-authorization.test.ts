@@ -130,6 +130,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   ]),
   "lib/actions/ma-relationships.ts": boundary("staff", ["getMaRelationshipWorkspace", "createMaRelationshipInteraction", "verifyMaRelationshipInteractionOwner"]),
   "lib/actions/ma-sources.ts": boundary("staff", ["listMaSourceDirectory", "listMaSourceContactsDirectory"]),
+  "lib/actions/memo-feedback.ts": boundary("staff", ["recordMemoFeedback"]),
   "lib/actions/offers.ts": boundary("staff", ["createOffer", "updateOffer", "toggleOfferActive", "assignOfferToRepreneur", "retryOfferReceivedNotification", "updateRepreneurOfferStatus", "deleteRepreneurOffer", "createMilestone", "toggleMilestoneComplete", "retryMilestoneCompletionNotification", "updateMilestone", "deleteMilestone", "getAllClientOffers"]),
   "lib/actions/opportunities.ts": boundary("staff", [
     "listOpportunities",

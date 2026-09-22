@@ -20,6 +20,7 @@ import {
 import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
+import { StaffMemoFeedbackControl } from "@/components/opportunities/staff-memo-feedback-control"
 import { removeUnusedRetainedOpportunityDocument } from "@/lib/actions/opportunity-documents"
 import { toast } from "sonner"
 import {
@@ -73,6 +74,7 @@ const EVENT_LABELS: Record<string, string> = {
   memo_approved: "Information memorandum approved",
   e8_memo_enabled_completed: "Memo access enabled",
   confidential_access_granted: "Confidential access granted",
+  memo_feedback_received: "Substantive memo feedback received",
   access_revoked: "Access revoked",
   continued: "Continue recorded",
   dropped: "Pursuit dropped",
@@ -186,6 +188,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
           </form>}
           {!hasLiveGrant && projection.confidentialGrant ? <Alert><LockKeyhole /><AlertTitle>Confidential access is no longer live</AlertTitle><AlertDescription>The prior grant is revoked, expired, or no longer bound to the current evidence. Select the IM and set a new expiry to grant access again.</AlertDescription></Alert> : null}
           {hasLiveGrant ? <div className="flex flex-col gap-3"><div className="flex flex-wrap gap-2"><Badge variant="secondary">Access granted</Badge>{canContinue ? <Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "continue"))}>Record Continue</Button> : null}<Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => runOpportunityPursuitJourneyAction({ matchId: activeMatch.id, action: "revoke_access", reason: outcomeReason || "staff_revocation" }))}>Revoke access</Button></div>{canComplete ? <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-complete-reason">Reason required to complete</Label><Input id="pursuit-complete-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "complete", outcomeReason.trim()))}>Complete pursuit</Button></div> : null}</div> : null}
+          {projection.memoFeedback ? <StaffMemoFeedbackControl matchId={activeMatch.id} feedback={projection.memoFeedback} canRecord={hasLiveGrant} /> : null}
         </CardContent>
       </Card> : null}
 
