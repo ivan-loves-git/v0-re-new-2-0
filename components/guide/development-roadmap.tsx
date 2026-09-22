@@ -25,6 +25,26 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 22, 2026",
+    version: "0.9.71",
+    title: "Clear decisions on each opportunity interest",
+    isCompleted: true,
+    events: [
+      { title: "Staff can decide on the exact interest", type: "feature", description: "Re-New can validate a repreneur's interest or record why this opportunity will not proceed. This staff decision does not reject their account or affect their other opportunities; the internal reason stays with staff." },
+      { title: "Notices are controlled by staff", type: "decision", description: "Neutral client outcomes and a staff alert for replies to proposed opportunities are available, but their new switches start inactive. Staff can edit the wording and choose when to activate them; older responses are not emailed retroactively." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.70",
+    title: "Viewed and Reviewed make Deal Flow easier to scan",
+    isCompleted: true,
+    events: [
+      { title: "Personal reading state", type: "feature", description: "Opening a deal detail records Viewed; repreneurs can mark it Reviewed or undo that choice. The personal marker helps organize their own Deal Flow without changing interest, matching or staff decisions." },
+      { title: "Unreviewed opportunities stay easy to find", type: "feature", description: "Recommended and Live Opportunities show items not yet reviewed first when the personal state is available, while reviewed deals remain visible. Older visits are not guessed from before tracking began." },
+    ],
+  },
+  {
     period: "Sep 20, 2026",
     version: "0.9.69",
     title: "Sort the staff pursuit board",

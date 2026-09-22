@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateBody: vi.fn(),
   deliverCronReminder: vi.fn(),
   cleanupExpiredPrivateUploads: vi.fn(),
+  runPendingInterestNotifications: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -31,6 +32,9 @@ vi.mock("@/lib/email/cron-reminder-delivery", async (importOriginal) => {
 })
 vi.mock("@/lib/private-upload-server", () => ({
   cleanupExpiredPrivateUploads: mocks.cleanupExpiredPrivateUploads,
+}))
+vi.mock("@/lib/email/interest-notification-delivery", () => ({
+  runPendingInterestNotifications: mocks.runPendingInterestNotifications,
 }))
 vi.mock("@/lib/env", () => ({
   env: {
@@ -121,6 +125,7 @@ describe("critical route traces", () => {
       examined: 0,
       cleaned: 0,
     })
+    mocks.runPendingInterestNotifications.mockResolvedValue({ sent: 0, failed: 0, reviewRequired: 0 })
   })
 
   it("traces an accepted Resend webhook without copying provider payload data", async () => {
@@ -198,6 +203,7 @@ describe("critical route traces", () => {
       .filter((event) => event.stage === "success")
       .map((event) => event.operation)
     expect(operations).toEqual([
+      "cron.interest_notifications",
       "cron.abandoned_reminders",
       "cron.interview_reminders",
       "cron.booking_reminders",

@@ -84,7 +84,7 @@ export function RepreneurOpportunityDetail({
         <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
           {opportunity.match_status ? (
-            <Badge variant="outline">{opportunity.match_status === "interested" ? "Interest sent, awaiting Re-New validation" : getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
+            <Badge variant="outline">{opportunity.match_status === "interested" ? opportunity.interest_rejected ? "Interest not selected by Re-New" : "Interest sent, awaiting Re-New validation" : getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
           ) : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "active_pursuit" && <Badge variant="outline">Confidential journey</Badge>}
@@ -127,11 +127,19 @@ export function RepreneurOpportunityDetail({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {opportunity.match_status === "interested" && !lockedForAnotherRepreneur && (
+          {opportunity.match_status === "interested" && !opportunity.interest_rejected && !lockedForAnotherRepreneur && (
             <Alert>
               <CheckCircle2 />
               <AlertTitle>Interest sent</AlertTitle>
               <AlertDescription>Re-New can now review this signal and decide the next step.</AlertDescription>
+            </Alert>
+          )}
+
+          {opportunity.match_status === "interested" && opportunity.interest_rejected && (
+            <Alert>
+              <XCircle />
+              <AlertTitle>Interest not selected</AlertTitle>
+              <AlertDescription>Re-New will not continue with this opportunity for now. Your account and access to other opportunities are unchanged. Contact Re-New if you would like to discuss next steps.</AlertDescription>
             </Alert>
           )}
 
@@ -190,7 +198,7 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {!readOnly && !lockedForAnotherRepreneur && interestAction && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && !opportunity.interest_rejected && interestAction && canRespond(opportunity.match_status) && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <form action={interestAction} data-wave-action="express_interest" data-wave-workflow="portal_deals">
                 <Button type="submit" disabled={opportunity.match_status === "interested" || responseExpired}>
@@ -201,7 +209,7 @@ export function RepreneurOpportunityDetail({
             </div>
           )}
 
-          {!readOnly && !lockedForAnotherRepreneur && opportunity.match_id && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped" && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && !opportunity.interest_rejected && opportunity.match_id && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped" && canRespond(opportunity.match_status) && (
             <RepreneurOpportunityDeclineAction
               matchId={opportunity.match_id}
               initialReasons={Array.from(selectedDeclineReasons)}

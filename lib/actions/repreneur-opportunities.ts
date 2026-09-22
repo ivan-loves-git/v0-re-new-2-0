@@ -6,6 +6,7 @@ import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
+import { readRepreneurInterestStates } from "@/lib/data/opportunity-interest-decisions"
 import {
   safeRepreneurOpportunityTitle,
   safeRepreneurTeaserSummary,
@@ -257,13 +258,14 @@ async function getRepreneurDealFlowProfileById(
 
 function withStaffRecommendation(
   opportunity: RepreneurOpportunityExposure,
+  currentProposedResponse: boolean,
 ): RepreneurDealFlowOpportunity {
   return {
     ...opportunity,
-    // A staff-proposed match remains a Re-New recommendation after the
-    // repreneur accepts it. Only the timestamp written by the self-interest
-    // RPC distinguishes an independently discovered signal from that path.
-    is_staff_recommended: !opportunity.interest_expressed_at,
+    // The exact immutable proposed-response event preserves recommendation
+    // provenance after acceptance. The null timestamp remains the historical
+    // fallback for as-yet-unanswered proposals; self-interest has no event.
+    is_staff_recommended: currentProposedResponse || !opportunity.interest_expressed_at,
     is_outside_current_criteria: false,
   }
 }
@@ -409,6 +411,7 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     decline_reason_text: opportunity.decline_reason_text,
     interest_expressed_at: opportunity.interest_expressed_at,
     interest_notification_sent_at: opportunity.interest_notification_sent_at,
+    interest_rejected: opportunity.interest_rejected,
     recommendation_expires_at: opportunity.recommendation_expires_at,
     updated_at: opportunity.updated_at,
     is_staff_recommended: opportunity.is_staff_recommended,
@@ -488,6 +491,11 @@ export async function listMyRepreneurOpportunities(): Promise<{
     supabase,
     opportunities.map((opportunity) => opportunity.match_id),
   )
+  const decisionState = await readRepreneurInterestStates(repreneur.id,
+    opportunities.map((opportunity) => ({
+      id: opportunity.match_id,
+      interest_expressed_at: interestStateByMatch.get(opportunity.match_id)?.interest_expressed_at ?? opportunity.interest_expressed_at,
+    })))
 
   return {
     repreneur,
@@ -495,6 +503,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       .map((exposure) => ({
         ...exposure,
         ...interestStateByMatch.get(exposure.match_id),
+        interest_rejected: decisionState.rejected.has(exposure.match_id),
         is_locked_for_other_repreneur: isLockedForOtherRepreneur(
           exposure.opportunity_id,
           repreneur.id,
@@ -610,11 +619,17 @@ async function listRepreneurDealFlowForProfile(
     supabase,
     matchedOpportunities.map((opportunity) => opportunity.match_id),
   )
+  const decisionState = await readRepreneurInterestStates(repreneur.id,
+    matchedOpportunities.map((opportunity) => ({
+      id: opportunity.match_id,
+      interest_expressed_at: interestStateByMatch.get(opportunity.match_id)?.interest_expressed_at ?? opportunity.interest_expressed_at,
+    })))
 
   const statefulDeals = matchedOpportunities
     .map((exposure) => ({
       ...exposure,
       ...interestStateByMatch.get(exposure.match_id),
+      interest_rejected: decisionState.rejected.has(exposure.match_id),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
         exposure.opportunity_id,
         repreneur.id,
@@ -623,7 +638,7 @@ async function listRepreneurDealFlowForProfile(
       visible_documents: [],
       memo_availability: undefined,
     }))
-    .map(withStaffRecommendation)
+    .map((opportunity) => withStaffRecommendation(opportunity, decisionState.proposed.has(opportunity.match_id)))
     .map((opportunity) => withMatchingGeography(opportunity, geography))
     .map((opportunity) => withDealBucket(opportunity, false))
     .filter(isDefined)
@@ -807,9 +822,14 @@ export async function getMyRepreneurOpportunity(
   )
 
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(supabase, [exposure.match_id])
+  const decisionState = await readRepreneurInterestStates(repreneur.id, [{
+    id: exposure.match_id,
+    interest_expressed_at: interestStateByMatch.get(exposure.match_id)?.interest_expressed_at ?? exposure.interest_expressed_at,
+  }])
   const result = {
     ...exposure,
     ...interestStateByMatch.get(exposure.match_id),
+    interest_rejected: decisionState.rejected.has(exposure.match_id),
     is_locked_for_other_repreneur: isLockedForOtherRepreneur(
       exposure.opportunity_id,
       repreneur.id,

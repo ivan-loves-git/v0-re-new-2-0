@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: mocks.from.mockImplementation((table: string) => {
       const response = mocks.responses.get(table)?.shift()
-      if (!response && !["geography_nodes", "repreneur_geography_targets"].includes(table)) {
+      if (!response && !["geography_nodes", "repreneur_geography_targets", "opportunity_interest_events"].includes(table)) {
         throw new Error(`Missing ${table} test response`)
       }
       const resolvedResponse = response ?? { data: [], error: null }
@@ -37,6 +37,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     }),
     rpc: mocks.rpc.mockImplementation((name: string) => {
       const response = mocks.responses.get(`rpc:${name}`)?.shift()
+      if (!response && name === "w173_repreneur_rejections") return Promise.resolve({ data: [], error: null })
       if (!response) throw new Error(`Missing ${name} RPC test response`)
       return Promise.resolve(response)
     }),

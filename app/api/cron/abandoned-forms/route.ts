@@ -16,6 +16,7 @@ import {
 } from "@/lib/observability/critical-operation"
 import { cleanupExpiredPrivateUploads } from "@/lib/private-upload-server"
 import { isBookingReminderDue } from "@/lib/booking-request-reminder"
+import { runPendingInterestNotifications } from "@/lib/email/interest-notification-delivery"
 
 export const maxDuration = 60
 
@@ -46,6 +47,19 @@ export async function GET(request: Request) {
     const supabase = createAdminClient()
     const now = new Date()
     const cutoffTime = new Date(now.getTime() - ABANDONMENT_HOURS * 60 * 60 * 1000)
+
+    // A committed exact-interest event must recover independently of the
+    // older abandonment query. New keys are inactive until staff enables them;
+    // events suppressed at creation are never replayed by this scan.
+    const interestTrace = startCriticalOperation("cron.interest_notifications")
+    try {
+      const interestDelivery = await runPendingInterestNotifications()
+      if (interestDelivery.reviewRequired > 0) interestTrace.failure("provider_pending")
+      else if (interestDelivery.failed > 0) interestTrace.failure("provider_unavailable")
+      else interestTrace.success()
+    } catch {
+      interestTrace.failure("persistence_failed")
+    }
 
     // Find abandoned forms:
     // - Not completed

@@ -19,6 +19,7 @@ export type CriticalOperationName =
   | "email.resend_webhook"
   | "cron.abandoned_forms"
   | "cron.abandoned_reminders"
+  | "cron.interest_notifications"
   | "cron.interview_reminders"
   | "cron.booking_reminders"
   | "cron.stale_leads"

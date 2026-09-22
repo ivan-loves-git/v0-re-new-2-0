@@ -9,6 +9,7 @@ import { queueM2StaffPursuitEvent } from "@/lib/telemetry/m2-repreneur"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
 import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
+import { deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
 
 export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string } | { success: false; message: string }
 
@@ -169,7 +170,7 @@ export async function startOpportunityPursuit(matchId: string, evidenceReference
   const staff = await requireStaffAccess()
   const trace = startCriticalOperation("pursuit.start")
   return trace.failOnThrow(async () => {
-    const { data, error } = await createAdminClient().rpc("journey_start_pursuit", { p_match_id: matchId, p_actor: staff.user.email, p_idempotency_key: idempotencyKey, p_evidence_reference: evidenceReference ?? null })
+    const { data, error } = await createAdminClient().rpc("w173_revalidate_historical_pursuit", { p_match_id: matchId, p_actor: staff.user.email, p_idempotency_key: idempotencyKey, p_evidence_reference: evidenceReference ?? null })
     queueM2StaffPursuitEvent({
       userId: staff.user.id,
       action: "confirm",
@@ -177,7 +178,10 @@ export async function startOpportunityPursuit(matchId: string, evidenceReference
       ...(error ? { errorCode: "persistence_failed" as const } : {}),
     })
     if (error) trace.failure("persistence_failed")
-    else trace.success()
+    else {
+      await deliverValidationNotification(String(data)).catch(() => "failed")
+      trace.success()
+    }
     return error ? { success: false, message: error.message } : { success: true, message: "Mutual interest validated.", eventId: data }
   }, "persistence_failed")
 }

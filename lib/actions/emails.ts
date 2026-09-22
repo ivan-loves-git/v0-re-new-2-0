@@ -8,7 +8,7 @@ import { resolveTemplateSubject } from "@/lib/email/template-default-subjects"
 import { revalidatePath } from "next/cache"
 import { render } from "@react-email/render"
 import type { EmailTemplateKey } from "@/lib/types/email"
-import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
+import { INTEREST_TEMPLATE_DEFAULT_BODIES, MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getSuppressedMaContactEmailAddresses } from "@/lib/email/ma-contact-email-authorization"
 
 // Import all email templates
@@ -26,6 +26,7 @@ import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
 import { MaIntermediaryEmail } from "@/lib/email/templates/ma-intermediary"
 import { RecommendationAssignmentEmailV1, RECOMMENDATION_ASSIGNMENT_SUBJECT_V1 } from "@/lib/email/templates/recommendation-assignment-v1"
+import { InterestNotificationEmail } from "@/lib/email/templates/interest-notification"
 
 const MA_SAMPLE_VARIABLES = {
   firstName: "Camille",
@@ -215,14 +216,13 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("email_templates")
     .update({ is_active: enabled })
     .eq("template_key", templateKey)
+    .select("template_key")
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error || !data?.length) throw new Error(error?.message ?? "This template is unavailable and remains inactive.")
 
   revalidatePath("/emails")
 }
@@ -236,19 +236,18 @@ export async function updateTemplateSettings(
   settings: { subject?: string; preview_text?: string; body_markdown?: string }
 ) {
   await requireStaffAccess()
-  if (TEMPLATE_METADATA[templateKey]?.manualSend === false) {
+  if (TEMPLATE_METADATA[templateKey]?.manualSend === false && TEMPLATE_METADATA[templateKey]?.copyEditable !== true) {
     throw new Error("This notification uses immutable versioned copy. Its content cannot be edited here.")
   }
   const supabase = createAdminClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("email_templates")
     .update(settings)
     .eq("template_key", templateKey)
+    .select("template_key")
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error || !data?.length) throw new Error(error?.message ?? "This template is unavailable and cannot be edited.")
 
   revalidatePath("/emails")
 }
@@ -275,7 +274,7 @@ export async function getRenderedTemplate(
     .single()
   const subject = resolveTemplateSubject(templateKey, row?.subject, TEMPLATE_METADATA[templateKey]?.name)
   const bodyEditable = !!row?.body_editable
-  const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
+  const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
   const bodyMarkdown: string | null = bodyEditable ? (row?.body_markdown?.trim() || fallbackBody) : null
   const bodyOverride = bodyMarkdown ?? undefined
 
@@ -348,6 +347,21 @@ export async function getRenderedTemplate(
     case "booking_reminder":
       element = BookingReminderEmail({ repreneur: sampleRepreneur, bodyOverride })
       break
+    case "interest_outcome_validated":
+    case "interest_outcome_rejected":
+    case "proposed_opportunity_response_staff": {
+      const variables = {
+        firstName: "Sophie", repreneurName: "Sophie Martin",
+        opportunityTitle: "Opportunité fictive", responseLabel: "avec intérêt",
+      }
+      element = InterestNotificationEmail({
+        subject: substituteTemplateVariables(subject, variables),
+        body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
+        variables,
+        staff: templateKey === "proposed_opportunity_response_staff",
+      })
+      break
+    }
     case "ma_opportunity_validity_check":
     case "ma_request_more_information":
     case "ma_repreneur_interest_feedback":
