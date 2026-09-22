@@ -21,6 +21,8 @@ import { getRenderedTemplate } from "@/lib/actions/emails"
 
 const notificationKeys = [
   "memo_feedback_reminder",
+  "recommendation_response_reminder",
+  "recommendation_unanswered_staff_alert",
   "interest_outcome_validated",
   "interest_outcome_rejected",
   "proposed_opportunity_response_staff",
@@ -70,6 +72,22 @@ describe("staff Templates preview renders real notification email HTML", () => {
     expect(preview.bodyMarkdown).toContain("Après votre accès au mémorandum")
     expect(preview.html).toContain("Un retour sur votre mémorandum — Opportunité fictive")
     expect(preview.html).toContain("Après votre accès au mémorandum de Opportunité fictive")
+    expect(preview.html).not.toContain("{opportunityTitle}")
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["recommendation_response_reminder", "Votre recommandation — {opportunityTitle}", "Vous pouvez encore consulter"],
+    ["recommendation_unanswered_staff_alert", "Recommandation sans réponse — {opportunityTitle}", "a atteint sa fin de réponse"],
+  ] as const)("previews default copy for %s without sending", async (key, subject, excerpt) => {
+    mocks.template.subject = ""
+    mocks.template.body_markdown = ""
+
+    const preview = await getRenderedTemplate(key)
+
+    expect(preview.subject).toBe(subject)
+    expect(preview.bodyMarkdown).toContain(excerpt)
+    expect(preview.html).toContain(subject.replace("{opportunityTitle}", "Opportunité fictive"))
     expect(preview.html).not.toContain("{opportunityTitle}")
     expect(mocks.sendEmail).not.toHaveBeenCalled()
   })

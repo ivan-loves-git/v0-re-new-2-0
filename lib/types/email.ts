@@ -28,6 +28,8 @@ export type EmailTemplateKey =
   | "interest_outcome_rejected"
   | "proposed_opportunity_response_staff"
   | "memo_feedback_reminder"
+  | "recommendation_response_reminder"
+  | "recommendation_unanswered_staff_alert"
   | "ma_opportunity_validity_check"
   | "ma_request_more_information"
   | "ma_repreneur_interest_feedback"

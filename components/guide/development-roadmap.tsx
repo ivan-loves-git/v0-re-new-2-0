@@ -26,6 +26,16 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 22, 2026",
+    version: "0.9.73",
+    title: "A clear follow-up window for recommended opportunities",
+    isCompleted: true,
+    events: [
+      { title: "One reminder while a recommendation is still open", type: "feature", description: "A recommendation with an actual portal response window can have one reminder after 48 hours, before its 72-hour deadline. A response, lost access or an expired window stops that client reminder. Old unclocked recommendations are not assigned a deadline." },
+      { title: "Unanswered expiry is visible to staff", type: "decision", description: "If the same cycle remains unanswered at 72 hours, one configured-staff alert can be sent without renewing the recommendation or changing its status. Both new email switches start inactive and can be edited by staff; enabling them later does not email old cycles." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
     version: "0.9.72",
     title: "A precise follow-up after confidential memo access",
     isCompleted: true,

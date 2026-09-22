@@ -21,6 +21,7 @@ export type CriticalOperationName =
   | "cron.abandoned_reminders"
   | "cron.interest_notifications"
   | "cron.memo_feedback_reminders"
+  | "cron.recommendation_cycles"
   | "cron.interview_reminders"
   | "cron.booking_reminders"
   | "cron.stale_leads"

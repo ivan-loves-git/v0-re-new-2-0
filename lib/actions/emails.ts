@@ -28,6 +28,7 @@ import { MaIntermediaryEmail } from "@/lib/email/templates/ma-intermediary"
 import { RecommendationAssignmentEmailV1, RECOMMENDATION_ASSIGNMENT_SUBJECT_V1 } from "@/lib/email/templates/recommendation-assignment-v1"
 import { InterestNotificationEmail } from "@/lib/email/templates/interest-notification"
 import { MemoFeedbackReminderEmail } from "@/lib/email/templates/memo-feedback-reminder"
+import { RecommendationCycleNotificationEmail } from "@/lib/email/templates/recommendation-cycle-notification"
 
 const MA_SAMPLE_VARIABLES = {
   firstName: "Camille",
@@ -372,6 +373,21 @@ export async function getRenderedTemplate(
         subject: substituteTemplateVariables(subject, variables),
         body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
         variables,
+      })
+      break
+    }
+    case "recommendation_response_reminder":
+    case "recommendation_unanswered_staff_alert": {
+      const variables = {
+        firstName: "Sophie",
+        repreneurName: "Sophie Martin",
+        opportunityTitle: "Opportunité fictive",
+      }
+      element = RecommendationCycleNotificationEmail({
+        subject: substituteTemplateVariables(subject, variables),
+        body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
+        variables,
+        staff: templateKey === "recommendation_unanswered_staff_alert",
       })
       break
     }
