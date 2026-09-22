@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   deliverCronReminder: vi.fn(),
   cleanupExpiredPrivateUploads: vi.fn(),
   runPendingInterestNotifications: vi.fn(),
+  runPendingMemoFeedbackReminders: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -36,6 +37,9 @@ vi.mock("@/lib/private-upload-server", () => ({
 vi.mock("@/lib/email/interest-notification-delivery", () => ({
   runPendingInterestNotifications: mocks.runPendingInterestNotifications,
 }))
+vi.mock("@/lib/email/memo-feedback-reminder-delivery", () => ({
+  runPendingMemoFeedbackReminders: mocks.runPendingMemoFeedbackReminders,
+}))
 vi.mock("@/lib/env", () => ({
   env: {
     CRON_SECRET: "test-cron-secret",
@@ -45,6 +49,8 @@ vi.mock("@/lib/env", () => ({
 }))
 
 import { GET as runDailyCron } from "@/app/api/cron/abandoned-forms/route"
+import { GET as runInterestCron } from "@/app/api/cron/interest-notifications/route"
+import { GET as runMemoFeedbackCron } from "@/app/api/cron/memo-feedback-reminders/route"
 import { POST as receiveResendWebhook } from "@/app/api/webhooks/resend/route"
 
 function emittedEvents() {
@@ -126,6 +132,9 @@ describe("critical route traces", () => {
       cleaned: 0,
     })
     mocks.runPendingInterestNotifications.mockResolvedValue({ sent: 0, failed: 0, reviewRequired: 0 })
+    mocks.runPendingMemoFeedbackReminders.mockResolvedValue({
+      sent: 0, failed: 0, reviewRequired: 0, processed: 0, budgetDeferred: 0,
+    })
   })
 
   it("traces an accepted Resend webhook without copying provider payload data", async () => {
@@ -203,7 +212,6 @@ describe("critical route traces", () => {
       .filter((event) => event.stage === "success")
       .map((event) => event.operation)
     expect(operations).toEqual([
-      "cron.interest_notifications",
       "cron.abandoned_reminders",
       "cron.interview_reminders",
       "cron.booking_reminders",
@@ -211,6 +219,22 @@ describe("critical route traces", () => {
       "cron.private_upload_cleanup",
       "cron.abandoned_forms",
     ])
+  })
+
+  it("isolates new notification families behind separate fail-closed daily routes", async () => {
+    const denied = await runMemoFeedbackCron(new Request("http://localhost/api/cron/memo-feedback-reminders"))
+    expect(denied.status).toBe(401)
+    expect(mocks.runPendingMemoFeedbackReminders).not.toHaveBeenCalled()
+
+    const headers = { authorization: "Bearer test-cron-secret" }
+    const interest = await runInterestCron(new Request("http://localhost/api/cron/interest-notifications", { headers }))
+    const memo = await runMemoFeedbackCron(new Request("http://localhost/api/cron/memo-feedback-reminders", { headers }))
+    expect(interest.status).toBe(200)
+    expect(memo.status).toBe(200)
+    expect(mocks.runPendingInterestNotifications).toHaveBeenCalledWith(4, 40_000)
+    expect(mocks.runPendingMemoFeedbackReminders).toHaveBeenCalledWith(4, 40_000)
+    expect(emittedEvents().filter((event) => event.stage === "success").map((event) => event.operation))
+      .toEqual(["cron.interest_notifications", "cron.memo_feedback_reminders"])
   })
 
   it("keeps a cron database failure generic in both HTTP and runtime logs", async () => {

@@ -204,21 +204,36 @@ export async function deliverValidationNotification(evidenceId: string) {
   return deliverInterestNotification(data.id)
 }
 
-/** The existing daily cron is a recovery path for a committed event whose
- * action process ended before delivery. It never scans historical matches. */
-export async function runPendingInterestNotifications(limit = 8) {
+/** Bounded daily recovery for committed exact events. Fresh and retry rows
+ * share the small batch; last-evaluated ordering rotates persistent failures.
+ * A running provider request is always awaited before the time budget stops
+ * the next item. Historical matches are never scanned. */
+export async function runPendingInterestNotifications(limit = 4, budgetMs = 40_000) {
   const db = createAdminClient()
-  const { data, error } = await db
-    .from("opportunity_interest_notification_deliveries")
-    .select("event_id")
-    .in("status", ["pending", "failed"])
-    .order("created_at", { ascending: true })
-    .limit(limit)
-  if (error) throw new Error("Could not read interest notification queue.")
+  const [fresh, retry] = await Promise.all([
+    db.from("opportunity_interest_notification_deliveries")
+      .select("event_id").eq("status", "pending")
+      .order("updated_at", { ascending: true }).limit(limit),
+    db.from("opportunity_interest_notification_deliveries")
+      .select("event_id").eq("status", "failed")
+      .order("updated_at", { ascending: true }).limit(limit),
+  ])
+  if (fresh.error || retry.error) throw new Error("Could not read interest notification queue.")
+  const pending = [...(fresh.data ?? [])]
+  const failedRows = [...(retry.data ?? [])]
+  const selected: string[] = []
+  while (selected.length < limit && (pending.length || failedRows.length)) {
+    if (pending.length) selected.push(pending.shift()!.event_id)
+    if (selected.length < limit && failedRows.length) selected.push(failedRows.shift()!.event_id)
+  }
   let sent = 0
   let failed = 0
-  for (const row of data ?? []) {
-    const status = await deliverInterestNotification(row.event_id)
+  let processed = 0
+  const started = Date.now()
+  for (const eventId of selected) {
+    if (Date.now() - started >= budgetMs) break
+    const status = await deliverInterestNotification(eventId)
+    processed++
     if (status === "sent") sent++
     if (status === "failed") failed++
   }
@@ -227,5 +242,6 @@ export async function runPendingInterestNotifications(limit = 8) {
     .select("event_id", { count: "exact", head: true })
     .eq("status", "review_required")
   if (reviewError) throw new Error("Could not read interest notification review status.")
-  return { sent, failed, reviewRequired: reviewRequired ?? 0 }
+  return { sent, failed, reviewRequired: reviewRequired ?? 0,
+    processed, budgetDeferred: selected.length - processed }
 }

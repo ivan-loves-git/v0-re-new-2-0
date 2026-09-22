@@ -14,6 +14,7 @@ export { RejectionEmail } from "./rejection"
 export { InterviewReminderEmail } from "./interview-reminder"
 export { BookingReminderEmail } from "./booking-reminder"
 export { MaIntermediaryEmail } from "./ma-intermediary"
+export { MemoFeedbackReminderEmail } from "./memo-feedback-reminder"
 
 import type { EmailTemplateKey } from "@/lib/types/email"
 
@@ -88,6 +89,11 @@ L'équipe Re-New`,
 }
 
 export const INTEREST_TEMPLATE_DEFAULT_BODIES: Partial<Record<EmailTemplateKey, string>> = {
+  memo_feedback_reminder: `Bonjour {firstName},
+
+Après votre accès au mémorandum de {opportunityTitle}, nous serions heureux de recueillir votre retour. Si vous nous l’avez déjà transmis, aucune action supplémentaire n’est nécessaire.
+
+L’équipe Re-New`,
   interest_outcome_validated: `Bonjour {firstName},
 
 Re-New a validé votre intérêt pour {opportunityTitle}. Notre équipe vous contactera pour la suite.
@@ -117,6 +123,14 @@ export const TEMPLATE_METADATA: Record<
     copyEditable?: boolean
   }
 > = {
+  memo_feedback_reminder: {
+    name: "Memo feedback reminder",
+    description: "One client reminder five Paris weekdays after the exact memo grant, cancelled by recorded feedback or lost access. Inactive by default.",
+    category: "status",
+    audience: "rep",
+    manualSend: false,
+    copyEditable: true,
+  },
   opportunity_recommendation_assignment: {
     name: "Opportunity assignment",
     description: "Versioned title-and-teaser email for a new staff recommendation. No portal access. Sent only from the recommendation, not the generic sender.",

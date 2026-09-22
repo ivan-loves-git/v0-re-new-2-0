@@ -26,6 +26,16 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 22, 2026",
+    version: "0.9.72",
+    title: "A precise follow-up after confidential memo access",
+    isCompleted: true,
+    events: [
+      { title: "Record the feedback actually received", type: "feature", description: "Staff can record substantive feedback by email or phone against the exact memo access grant. A later regrant is kept separate; opening the memo or adding a note never counts as feedback." },
+      { title: "A controlled five-weekday reminder", type: "decision", description: "One client reminder can become due five Monday–Friday days after that grant at the same Paris time, only while access is valid and no feedback is recorded. Its new email switch starts inactive; enabling it later does not send reminders for old grants." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
     version: "0.9.71",
     title: "Clear decisions on each opportunity interest",
     isCompleted: true,

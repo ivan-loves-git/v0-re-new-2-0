@@ -13,7 +13,7 @@ vi.mock("@/lib/email/send-email", () => ({
 }))
 vi.mock("@/lib/env", () => ({ env: { RENEW_STAFF_NOTIFICATION_EMAIL: "configured-staff@example.test" } }))
 
-import { deliverInterestNotification, renderInterestNotificationCopy } from "@/lib/email/interest-notification-delivery"
+import { deliverInterestNotification, renderInterestNotificationCopy, runPendingInterestNotifications } from "@/lib/email/interest-notification-delivery"
 
 const eventId = "76000000-0000-4000-8000-000000000091"
 const leaseToken = "76000000-0000-4000-8000-000000000092"
@@ -122,5 +122,32 @@ describe("exact-interest notification adapter", () => {
     expect(copy.body).toContain("{sourceOffice}")
     expect(JSON.stringify(copy.variables)).not.toContain("internalReason")
     expect(JSON.stringify(copy.variables)).not.toContain("sourceOffice")
+  })
+
+  it("shares the isolated recovery batch fairly between fresh and failed events", async () => {
+    const queue = (ids: string[]) => {
+      const query = {
+        select: vi.fn(() => query), eq: vi.fn(() => query), order: vi.fn(() => query),
+        limit: vi.fn(async () => ({ data: ids.map((event_id) => ({ event_id })), error: null })),
+      }
+      return query
+    }
+    const review = { select: vi.fn(() => review), eq: vi.fn(async () => ({ count: 0, error: null })) }
+    const from = vi.fn().mockReturnValueOnce(queue(["fresh-a", "fresh-b"]))
+      .mockReturnValueOnce(queue(["retry-a", "retry-b"]))
+      .mockReturnValueOnce(review)
+    const seen: string[] = []
+    const rpc = vi.fn(async (name: string, args: { p_event_id: string }) => {
+      expect(name).toBe("w173_claim_interest_delivery")
+      seen.push(args.p_event_id)
+      return { data: { status: "suppressed" }, error: null }
+    })
+    mocks.createAdminClient.mockReturnValue({ from, rpc })
+    await expect(runPendingInterestNotifications(4)).resolves.toEqual({
+      sent: 0, failed: 0, reviewRequired: 0, processed: 4, budgetDeferred: 0,
+    })
+    expect(seen).toEqual(["fresh-a", "retry-a", "fresh-b", "retry-b"])
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+    expect(mocks.sendEmailDirect).not.toHaveBeenCalled()
   })
 })

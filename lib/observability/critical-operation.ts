@@ -20,6 +20,7 @@ export type CriticalOperationName =
   | "cron.abandoned_forms"
   | "cron.abandoned_reminders"
   | "cron.interest_notifications"
+  | "cron.memo_feedback_reminders"
   | "cron.interview_reminders"
   | "cron.booking_reminders"
   | "cron.stale_leads"
