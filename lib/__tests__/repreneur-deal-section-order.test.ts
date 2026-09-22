@@ -221,6 +221,26 @@ describe("#157 personal review presentation", () => {
     expect(html).toContain("Reviewed")
   })
 
+  it.each([
+    ["mixed unavailable and reviewed", [
+      { ...deal("reviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: true } },
+      { ...deal("unknown", "recommended", "proposed"), personal_review: null },
+      { ...deal("unreviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: false } },
+    ]],
+    ["all unavailable", [
+      { ...deal("first", "recommended", "proposed"), personal_review: null },
+      { ...deal("second", "recommended", "proposed"), personal_review: null },
+    ]],
+  ])("keeps incoming order and avoids a Reviewed divider for %s evidence", (_case, items) => {
+    const section = sectionHtml(renderList(items), "recommended")
+    for (let i = 1; i < items.length; i++) {
+      expect(section.indexOf(`Deal ${items[i - 1].opportunity_id.replace("opportunity-", "")}`))
+        .toBeLessThan(section.indexOf(`Deal ${items[i].opportunity_id.replace("opportunity-", "")}`))
+    }
+    expect(section).not.toContain("Reviewed ·")
+    expect(section).toContain("Review status unavailable")
+  })
+
   it("omits personal indicators and actions in staff preview even if supplied personal state", () => {
     const reviewed = { ...deal("reviewed", "recommended", "proposed"), personal_review: { viewed: true, reviewed: true } }
     const unopened = { ...deal("unopened", "live", null), personal_review: { viewed: false, reviewed: false } }

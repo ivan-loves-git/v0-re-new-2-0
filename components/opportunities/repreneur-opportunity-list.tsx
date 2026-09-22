@@ -345,8 +345,9 @@ export function DealSection({
   if (opportunities.length === 0) return null
 
   const headingId = `deal-section-${sectionKey}`
-  const reviewOrdering = !readOnly && (sectionKey === "recommended" || sectionKey === "live-opportunities")
   const groups = partitionPersonalReviews(opportunities)
+  const reviewEligible = !readOnly && (sectionKey === "recommended" || sectionKey === "live-opportunities")
+  const reviewOrdering = reviewEligible && groups.available
   const ordered = reviewOrdering ? [...groups.unreviewed, ...groups.reviewed] : opportunities
   const rationale = sectionKey === "recommended" ? "Re-New selections come first so you can respond to the team."
     : sectionKey === "in-progress" ? "Your existing interest and active pursuits stay together; personal review marks do not change their priority."
@@ -362,6 +363,7 @@ export function DealSection({
           <DealOrderInfo label={`About ${title} ordering`}>
             <p>{rationale}</p>
             {reviewOrdering ? <p className="mt-2">Not reviewed first, reviewed below. Your existing order is kept inside each group.</p> : null}
+            {reviewEligible && !groups.available ? <p className="mt-2">Review order is unavailable right now. Your existing deal order is shown.</p> : null}
             <p className="mt-2">Overall order: {DEAL_SECTION_ORDER}</p>
           </DealOrderInfo>
         </div>
@@ -490,6 +492,8 @@ export function RepreneurOpportunityList({
   const detailHref = (opportunity: RepreneurOpportunityListItem) =>
     detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id] ??
     `/portal/deals/${opportunity.match_id ?? opportunity.opportunity_id}`
+  const reviewOrderUnavailable = !readOnly && [...sections.recommended, ...sections.live]
+    .some((opportunity) => opportunity.personal_review == null)
 
   return (
     <div className="flex flex-col gap-6">
@@ -527,7 +531,9 @@ export function RepreneurOpportunityList({
             <p>Recommended → In Progress → Live Opportunities → Declined</p>
             <DealOrderInfo label="How your deal list is ordered">
               <p>Re-New selections first, then ongoing discussions, other live deals and declined deals.</p>
-              {!readOnly ? <><p className="mt-2">Reviewed deals move down within Recommended and Live Opportunities. Opening a detail only marks it Viewed and does not move it.</p>
+              {!readOnly ? <><p className="mt-2">{reviewOrderUnavailable
+                ? "Where review status is available, Reviewed deals move down within Recommended and Live Opportunities. Sections with unavailable review status keep their existing order."
+                : "Reviewed deals move down within Recommended and Live Opportunities."} Opening a detail only marks it Viewed and does not move it.</p>
               <p className="mt-2">Not yet viewed means no opening recorded since tracking began. It does not mean newly published. Reviewed means finished for now, not a response or confirmation that you read later updates.</p></> : null}
             </DealOrderInfo>
           </div>

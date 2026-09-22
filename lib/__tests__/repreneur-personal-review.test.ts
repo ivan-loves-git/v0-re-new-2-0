@@ -93,4 +93,21 @@ describe("review ordering", () => {
     items[0].personal_review.reviewed = false
     expect(partitionPersonalReviews(items).unreviewed.map((item) => item.id)).toEqual(["reviewed-a", "unopened", "viewed"])
   })
+
+  it.each([
+    ["mixed known and unavailable", [
+      { id: "reviewed", personal_review: { viewed: true, reviewed: true } },
+      { id: "unavailable", personal_review: null },
+      { id: "unreviewed", personal_review: { viewed: true, reviewed: false } },
+    ]],
+    ["all unavailable", [
+      { id: "first", personal_review: null },
+      { id: "second", personal_review: null },
+    ]],
+  ])("does not classify %s review evidence as unreviewed", (_case, items) => {
+    const result = partitionPersonalReviews(items)
+    expect(result.available).toBe(false)
+    expect(result.unreviewed).toEqual([])
+    expect(result.reviewed).toEqual([])
+  })
 })
