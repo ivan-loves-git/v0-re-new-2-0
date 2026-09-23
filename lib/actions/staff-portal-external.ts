@@ -1,74 +1,85 @@
 "use server"
 
 import { requireStaffAccess } from "@/lib/access-control"
-import {
-  createExternalPursuit, moveExternalPursuitStage, saveExternalPursuitContact,
-  updateExternalPursuit, updateExternalPursuitFollowUp,
-} from "@/lib/actions/external-pursuits"
-import { deleteExternalPursuitAttachment } from "@/lib/actions/external-pursuit-attachments"
-import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
+import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
+import { deleteExternalPursuitAttachment } from "@/lib/actions/external-pursuit-attachments"
 import type {
-  ExternalPursuitContactInput, ExternalPursuitFollowUpInput, ExternalPursuitInput,
-  ExternalPursuitStage, ExternalPursuitUpdateInput,
+  ExternalPursuitActionResult, ExternalPursuitContactInput, ExternalPursuitFollowUpInput,
+  ExternalPursuitInput, ExternalPursuitStage, ExternalPursuitUpdateInput,
 } from "@/lib/types/external-pursuit"
 
-async function selectedOwner(ownerId: string, token: string) {
+async function selectedOperation(
+  ownerId: string, token: string, action: string, pursuitId: string | null,
+  args: object, key: string,
+): Promise<ExternalPursuitActionResult> {
   const access = await requireStaffAccess()
-  if (!isUuid(ownerId) || !verifyStaffPortalSelection(token, ownerId, access.user.id)) {
-    throw new Error("The selected repreneur changed. Refresh this portal view.")
+  if (!isUuid(ownerId) || (pursuitId !== null && !isUuid(pursuitId)) || !key.trim()) {
+    throw new Error("Invalid selected External Pursuit.")
   }
-  const { data, error } = await createAdminClient().from("repreneurs")
-    .select("id").eq("id", ownerId).maybeSingle()
-  if (error || !data) throw new Error("The selected repreneur is unavailable.")
-}
-
-async function selectedDossier(ownerId: string, token: string, pursuitId: string) {
-  // Keep a local staff boundary before this helper's service-role query as
-  // well as the actor-bound selected-owner check it delegates to.
-  await requireStaffAccess()
-  await selectedOwner(ownerId, token)
-  if (!isUuid(pursuitId)) throw new Error("Invalid External Pursuit selection.")
-  const { data, error } = await createAdminClient().from("external_pursuits")
-    .select("id,owner_repreneur_id,deletion_status")
-    .eq("id", pursuitId).eq("owner_repreneur_id", ownerId).maybeSingle()
-  if (error || !data || data.owner_repreneur_id !== ownerId || data.deletion_status !== "active") {
-    throw new Error("This External Pursuit is not active for the selected repreneur.")
+  const selected = await verifyStaffPortalSelection(token, ownerId, access.user.id)
+  if (!selected) throw new Error("The selected staff workspace changed. Refresh before acting.")
+  if ("staffInternalNotes" in args) throw new Error("Staff-only notes are outside this portal view.")
+  const { data, error, status } = await createAdminClient().rpc("w196_selected_external_operation", {
+    p_workspace_id: selected.workspaceId,
+    p_generation: selected.generation,
+    p_owner_id: ownerId,
+    p_staff_user_id: access.user.id,
+    p_staff_email: access.user.email,
+    p_action: action,
+    p_dossier_id: pursuitId,
+    p_args: args,
+    p_idempotency_key: key,
+  })
+  if (error || !data) return {
+    success: false,
+    message: "The selected owner or dossier changed. Refresh this portal view and try again.",
+    retryExact: status === 0,
   }
+  return { success: true, pursuitId: data.pursuitId ?? pursuitId ?? undefined,
+    message: action === "create" ? "External Pursuit created." : "External Pursuit updated." }
 }
 
 export async function createSelectedExternalPursuit(ownerId: string, token: string, input: ExternalPursuitInput, key: string) {
-  await selectedOwner(ownerId, token)
-  if (input.ownerRepreneurId !== ownerId || input.staffInternalNotes !== undefined) {
-    throw new Error("This dossier must belong to the selected repreneur and cannot include staff-only notes here.")
-  }
-  return createExternalPursuit(input, key)
+  if (input.ownerRepreneurId !== ownerId) throw new Error("This dossier must belong to the selected repreneur.")
+  return selectedOperation(ownerId, token, "create", null, input, key)
 }
 
 export async function updateSelectedExternalPursuit(ownerId: string, token: string, pursuitId: string, input: ExternalPursuitUpdateInput, key: string) {
-  await selectedDossier(ownerId, token, pursuitId)
-  if (input.staffInternalNotes !== undefined) throw new Error("Staff-only notes are outside this portal view.")
-  return updateExternalPursuit(pursuitId, input, key)
+  return selectedOperation(ownerId, token, "update", pursuitId, input, key)
 }
 
 export async function moveSelectedExternalPursuitStage(ownerId: string, token: string, pursuitId: string, stage: ExternalPursuitStage, key: string) {
-  await selectedDossier(ownerId, token, pursuitId)
-  return moveExternalPursuitStage(pursuitId, stage, key)
+  return selectedOperation(ownerId, token, "stage", pursuitId, { stage }, key)
 }
 
 export async function saveSelectedExternalPursuitContact(ownerId: string, token: string, pursuitId: string, input: ExternalPursuitContactInput, key: string) {
-  await selectedDossier(ownerId, token, pursuitId)
-  return saveExternalPursuitContact(pursuitId, input, key)
+  return selectedOperation(ownerId, token, "contact", pursuitId, input, key)
 }
 
 export async function updateSelectedExternalPursuitFollowUp(ownerId: string, token: string, pursuitId: string, input: ExternalPursuitFollowUpInput, key: string) {
-  await selectedDossier(ownerId, token, pursuitId)
-  if (input.staffInternalNotes !== undefined) throw new Error("Staff-only notes are outside this portal view.")
-  return updateExternalPursuitFollowUp(pursuitId, input, key)
+  return selectedOperation(ownerId, token, "followup", pursuitId, input, key)
+}
+
+export async function confirmSelectedExternalPursuitCurrent(ownerId: string, token: string, pursuitId: string, key: string) {
+  try {
+    const result = await selectedOperation(ownerId, token, "confirm", pursuitId, {}, key)
+    return result.success
+      ? { success: true, outcome: "confirmed" as const, message: "Current status confirmed." }
+      : { success: false, outcome: result.retryExact ? "ambiguous" as const : "rejected" as const, message: result.message }
+  } catch {
+    return { success: false, outcome: "rejected" as const, message: "The selected staff workspace changed. Refresh before confirming." }
+  }
 }
 
 export async function deleteSelectedExternalPursuitAttachment(ownerId: string, token: string, pursuitId: string, attachmentId: string, key: string) {
-  await selectedDossier(ownerId, token, pursuitId)
-  return deleteExternalPursuitAttachment(pursuitId, attachmentId, key)
+  const access = await requireStaffAccess()
+  const selected = await verifyStaffPortalSelection(token, ownerId, access.user.id)
+  if (!selected || !isUuid(pursuitId) || !isUuid(attachmentId)) {
+    throw new Error("The selected staff workspace changed. Refresh before removing a file.")
+  }
+  return deleteExternalPursuitAttachment(pursuitId, attachmentId, key, {
+    ownerId, workspaceId: selected.workspaceId, generation: selected.generation,
+  })
 }

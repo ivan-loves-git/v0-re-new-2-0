@@ -38,6 +38,12 @@ describe("portal preview deal routes", () => {
     expect(createPortalPreviewSectionHref("other & person", "external-pursuits")).toBe(
       "/portal-preview?repreneurId=other+%26+person&view=external-pursuits",
     )
+    expect(createPortalPreviewSelectionHref("other & person", "workspace-1")).toBe(
+      "/portal-preview?repreneurId=other+%26+person&workspaceId=workspace-1",
+    )
+    expect(createPortalPreviewSectionHref("other & person", "profile", "workspace-1")).toBe(
+      "/portal-preview?repreneurId=other+%26+person&view=profile&workspaceId=workspace-1",
+    )
   })
 
   it("builds staff-selected-person document links instead of owner-session URLs", () => {

@@ -26,35 +26,38 @@ export function resolvePortalPreviewRepreneur<T extends PortalPreviewRepreneurOp
   return options.find((option) => option.email === "myworkmail4@gmail.com") ?? options[0] ?? null
 }
 
-function portalPreviewHref(repreneurId: string, dealId?: string) {
+function portalPreviewHref(repreneurId: string, dealId?: string, workspaceId?: string | null) {
   const params = new URLSearchParams({ repreneurId })
   if (dealId) params.set("dealId", dealId)
+  if (workspaceId) params.set("workspaceId", workspaceId)
   return `/portal-preview?${params.toString()}`
 }
 
 export function createPortalPreviewDealHrefMap(
   repreneurId: string,
   opportunities: PortalPreviewOpportunityRoute[],
+  workspaceId?: string | null,
 ): Record<string, string> {
   return Object.fromEntries(
     opportunities.map((opportunity) => [
       opportunity.matchId ?? opportunity.opportunityId,
-      portalPreviewHref(repreneurId, opportunity.matchId ?? opportunity.opportunityId),
+      portalPreviewHref(repreneurId, opportunity.matchId ?? opportunity.opportunityId, workspaceId),
     ]),
   )
 }
 
-export function createPortalPreviewHref(repreneurId: string, dealId?: string) {
-  return portalPreviewHref(repreneurId, dealId)
+export function createPortalPreviewHref(repreneurId: string, dealId?: string, workspaceId?: string | null) {
+  return portalPreviewHref(repreneurId, dealId, workspaceId)
 }
 
 /** Switching the represented person deliberately keeps no prior selection or action state. */
-export function createPortalPreviewSelectionHref(repreneurId: string) {
-  return portalPreviewHref(repreneurId)
+export function createPortalPreviewSelectionHref(repreneurId: string, workspaceId?: string | null) {
+  return portalPreviewHref(repreneurId, undefined, workspaceId)
 }
 
-export function createPortalPreviewSectionHref(repreneurId: string, section: PortalPreviewSection) {
+export function createPortalPreviewSectionHref(repreneurId: string, section: PortalPreviewSection, workspaceId?: string | null) {
   const params = new URLSearchParams({ repreneurId, view: section })
+  if (workspaceId) params.set("workspaceId", workspaceId)
   return `/portal-preview?${params.toString()}`
 }
 

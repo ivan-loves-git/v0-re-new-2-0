@@ -717,8 +717,35 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect.poll(async () => (await one<{ count: number }>(client,
       "SELECT count(*)::int AS count FROM public.external_pursuit_attachments WHERE external_pursuit_id=$1 AND created_by=$2",
       [selectedDossier.id, fixture.authIds.staffUser])).count).toBe(1);
+    await page.getByRole("button", { name: "Confirm current", exact: true }).click();
+    await expect.poll(async () => (await one<{ actor: string; stage: string }>(client,
+      "SELECT last_confirmed_by AS actor,stage FROM public.external_pursuits WHERE id=$1", [selectedDossier.id])))
+      .toEqual({ actor: fixture.authIds.staffUser, stage: "contact_qualification" });
     await record({ step: "selected-owner External dossier, contact and follow-up retain staff actor", surface: "database",
-      result: "exact owner, private file actor and staff-only notes absent from portal" });
+      result: "exact owner, private file actor, current-status confirmation, and staff-only notes absent from portal" });
+
+    const workspaceId = new URL(page.url()).searchParams.get("workspaceId");
+    expect(workspaceId).toMatch(/^[0-9a-f-]{36}$/);
+    const staleTab = await page.context().newPage();
+    await staleTab.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur
+      + "&view=profile&workspaceId=" + workspaceId);
+    await staleTab.getByRole("button", { name: "Edit thesis as staff" }).click();
+    await staleTab.locator("#target-revenue-min").fill("12");
+    await staleTab.getByText("I am acting as Re-New staff on behalf of", { exact: false }).click();
+    await page.getByRole("combobox").filter({ hasText: fixture.repreneurs.realNonOwner.email }).click();
+    await page.getByPlaceholder("Search by name or email...").fill(fixture.repreneurs.real.email);
+    await page.getByRole("option").filter({ hasText: fixture.repreneurs.real.email }).click();
+    await expect(page).toHaveURL(new RegExp("repreneurId=" + fixture.ids.realRepreneur));
+    await staleTab.getByRole("button", { name: "Save attributed staff edit" }).click();
+    await expect(staleTab.getByText(/selected staff workspace changed/i)).toBeVisible();
+    expect((await one<{ revenue: string; changes: number }>(client,
+      `SELECT target_revenue_min_meur::text AS revenue,
+        (SELECT count(*)::int FROM public.staff_assisted_profile_changes WHERE repreneur_id=$1) AS changes
+       FROM public.repreneurs WHERE id=$1`, [fixture.ids.realNonOwnerRepreneur])))
+      .toEqual({ revenue: "11", changes: 1 });
+    await staleTab.close();
+    await record({ step: "switching selected repreneur revokes an old browser form", surface: "desktop",
+      result: "A to B selection rejected the still-open A thesis form without a second write" });
 
     await page.goto(
       "/opportunities/" + desktopOpportunityId + "?tab=recommendations",

@@ -16,12 +16,14 @@ BEGIN
     v_match.repreneur_id, v_match.opportunity_id, v_match.id,
     v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
     'interested', '{}', NULL, 'w173-staff', 'w173-staff@example.test',
-    '76000000-0000-4000-8000-000000000091');
+    '76000000-0000-4000-8000-000000000091',
+    '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');
   v_again := public.w196_record_staff_opportunity_response(
     v_match.repreneur_id, v_match.opportunity_id, v_match.id,
     v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
     'interested', '{}', NULL, 'w173-staff', 'w173-staff@example.test',
-    '76000000-0000-4000-8000-000000000091');
+    '76000000-0000-4000-8000-000000000091',
+    '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');
   IF v_receipt->>'eventId' IS NULL
     OR v_again->>'eventId' IS DISTINCT FROM v_receipt->>'eventId'
     OR v_again->>'reusedExisting' <> 'true'
@@ -37,7 +39,8 @@ BEGIN
       v_match.repreneur_id, v_match.opportunity_id, v_match.id,
       v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
       'declined', ARRAY['sector'], 'Changed intent', 'w173-staff', 'w173-staff@example.test',
-      '76000000-0000-4000-8000-000000000091');
+      '76000000-0000-4000-8000-000000000091',
+      '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');
     RAISE EXCEPTION 'w196_conflicting_retry_accepted';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM <> 'staff_assistance_retry_conflict' THEN RAISE; END IF;
@@ -47,7 +50,8 @@ BEGIN
       v_match.repreneur_id, v_match.opportunity_id, v_match.id,
       v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
       'interested', '{}', NULL, 'w173-staff', 'forged@example.test',
-      '76000000-0000-4000-8000-000000000099');
+      '76000000-0000-4000-8000-000000000099',
+      '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');
     RAISE EXCEPTION 'w196_forged_actor_email_accepted';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM <> 'staff_assistance_denied' THEN RAISE; END IF;
@@ -57,7 +61,8 @@ BEGIN
       v_match.repreneur_id, v_match.opportunity_id, v_match.id,
       v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
       'declined', ARRAY['sector'], 'Changed intent', 'w173-staff', 'w173-staff@example.test',
-      '76000000-0000-4000-8000-000000000092');
+      '76000000-0000-4000-8000-000000000092',
+      '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');
     RAISE EXCEPTION 'w196_stale_match_accepted';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM <> 'staff_assistance_stale_response' THEN RAISE; END IF;
@@ -67,7 +72,8 @@ BEGIN
       v_match.repreneur_id, v_match.opportunity_id, v_match.id,
       v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
       'interested', '{}', NULL, 'not-staff', 'not-staff@example.test',
-      '76000000-0000-4000-8000-000000000093');
+      '76000000-0000-4000-8000-000000000093',
+      '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');
     RAISE EXCEPTION 'w196_nonstaff_accepted';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM <> 'staff_assistance_denied' THEN RAISE; END IF;
@@ -77,10 +83,11 @@ BEGIN
       '76000000-0000-4000-8000-000000000005', v_match.opportunity_id, v_match.id,
       v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
       'interested', '{}', NULL, 'w173-staff', 'w173-staff@example.test',
-      '76000000-0000-4000-8000-000000000094');
+      '76000000-0000-4000-8000-000000000094',
+      '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');
     RAISE EXCEPTION 'w196_other_owner_accepted';
   EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM <> 'staff_assistance_stale_response' THEN RAISE; END IF;
+    IF SQLERRM <> 'staff_portal_selection_changed' THEN RAISE; END IF;
   END;
 END $$;
 DO $$
@@ -109,7 +116,8 @@ BEGIN
     v_match.repreneur_id, v_match.opportunity_id, v_match.id,
     v_opportunity.updated_at, v_match.updated_at, v_match.interest_expressed_at,
     'declined', ARRAY['geography'], 'Outside target area', 'w173-staff', 'w173-staff@example.test',
-    '76000000-0000-4000-8000-000000000095');
+    '76000000-0000-4000-8000-000000000095',
+    '76000000-0000-4000-8000-000000000088','76000000-0000-4000-8000-000000000087');
   IF (SELECT status FROM public.opportunity_matches WHERE id = v_match.id) <> 'declined'
     OR (SELECT staff_user_id FROM public.staff_assisted_match_responses WHERE match_id = v_match.id) <> 'w173-staff'
     OR EXISTS (SELECT 1 FROM public.opportunity_interest_events WHERE match_id = v_match.id)
@@ -122,7 +130,7 @@ DO $$ BEGIN
     OR has_table_privilege('authenticated', 'public.staff_assisted_match_responses', 'SELECT')
     OR has_table_privilege('service_role', 'public.staff_assisted_match_responses', 'INSERT')
     OR has_function_privilege('anon',
-      'public.w196_record_staff_opportunity_response(uuid,uuid,uuid,timestamptz,timestamptz,timestamptz,text,text[],text,text,text,uuid)', 'EXECUTE')
+      'public.w196_record_staff_opportunity_response(uuid,uuid,uuid,timestamptz,timestamptz,timestamptz,text,text[],text,text,text,uuid,uuid,uuid)', 'EXECUTE')
   THEN RAISE EXCEPTION 'w196_response_acl'; END IF;
 END $$;
 ROLLBACK;

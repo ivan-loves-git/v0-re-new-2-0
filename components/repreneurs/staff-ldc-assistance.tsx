@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { uploadPrivateDocument } from "@/lib/private-upload"
 
-export function StaffLdcAssistance({ repreneurId, repreneurName }: { repreneurId: string; repreneurName: string }) {
+export function StaffLdcAssistance({ repreneurId, repreneurName, selectionToken }: { repreneurId: string; repreneurName: string; selectionToken: string }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [confirmed, setConfirmed] = useState(false)
@@ -22,7 +22,7 @@ export function StaffLdcAssistance({ repreneurId, repreneurName }: { repreneurId
       try {
         await uploadPrivateDocument(file, {
           kind: "repreneur_document", resourceId: repreneurId,
-          metadata: { document_type: "ldc" },
+          metadata: { document_type: "ldc", staff_portal_selection_token: selectionToken, selected_owner_id: repreneurId },
         })
         toast.success(`Lettre de cadrage uploaded by staff for ${repreneurName}.`)
         form.reset()

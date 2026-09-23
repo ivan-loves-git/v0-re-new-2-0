@@ -31,6 +31,13 @@ GRANT SELECT ON public.staff_assisted_match_responses TO service_role;
 CREATE FUNCTION public.w196_guard_staff_match_response_history()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
+  -- FK cascades run after the exact parent has been removed. A direct child
+  -- delete still has its parent and remains forbidden.
+  IF TG_OP = 'DELETE' AND (
+    NOT EXISTS (SELECT 1 FROM public.opportunity_matches WHERE id = OLD.match_id)
+    OR NOT EXISTS (SELECT 1 FROM public.opportunities WHERE id = OLD.opportunity_id)
+    OR NOT EXISTS (SELECT 1 FROM public.repreneurs WHERE id = OLD.repreneur_id)
+  ) THEN RETURN OLD; END IF;
   RAISE EXCEPTION 'staff_assisted_response_immutable' USING ERRCODE = 'P0001';
 END $$;
 CREATE TRIGGER w196_staff_match_response_immutable
@@ -59,13 +66,78 @@ $$;
 REVOKE ALL ON FUNCTION public.w196_staff_role_matches(text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.w196_staff_role_matches(text, text) TO service_role;
 
+-- A workspace is one selected-owner browser context, not a global staff
+-- preference. A switch rotates its generation, invalidating every old form
+-- and upload capability; write RPCs hold a row lock through their commit.
+CREATE TABLE public.staff_portal_workspaces (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_user_id text NOT NULL,
+  staff_email text NOT NULL,
+  selected_repreneur_id uuid NOT NULL REFERENCES public.repreneurs(id) ON DELETE CASCADE,
+  generation uuid NOT NULL DEFAULT gen_random_uuid(),
+  updated_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX staff_portal_workspaces_staff ON public.staff_portal_workspaces(staff_user_id, updated_at DESC);
+ALTER TABLE public.staff_portal_workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.staff_portal_workspaces FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON public.staff_portal_workspaces FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON public.staff_portal_workspaces TO service_role;
+
+CREATE FUNCTION public.w196_select_staff_portal_workspace(
+  p_workspace_id uuid, p_repreneur_id uuid, p_staff_user_id text, p_staff_email text
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v public.staff_portal_workspaces%ROWTYPE;
+BEGIN
+  IF p_repreneur_id IS NULL OR NOT public.w196_staff_role_matches(p_staff_user_id,p_staff_email)
+    OR NOT EXISTS (SELECT 1 FROM public.repreneurs WHERE id=p_repreneur_id)
+  THEN RAISE EXCEPTION 'staff_portal_selection_denied'; END IF;
+  IF p_workspace_id IS NULL THEN
+    INSERT INTO public.staff_portal_workspaces(staff_user_id,staff_email,selected_repreneur_id)
+    VALUES (p_staff_user_id,LOWER(BTRIM(p_staff_email)),p_repreneur_id) RETURNING * INTO v;
+  ELSE
+    SELECT * INTO v FROM public.staff_portal_workspaces WHERE id=p_workspace_id FOR UPDATE;
+    IF v.id IS NULL OR v.staff_user_id IS DISTINCT FROM p_staff_user_id
+      OR LOWER(v.staff_email) IS DISTINCT FROM LOWER(BTRIM(p_staff_email))
+    THEN RAISE EXCEPTION 'staff_portal_selection_denied'; END IF;
+    IF v.selected_repreneur_id IS DISTINCT FROM p_repreneur_id THEN
+      UPDATE public.staff_portal_workspaces
+      SET selected_repreneur_id=p_repreneur_id,generation=gen_random_uuid(),updated_at=clock_timestamp()
+      WHERE id=v.id RETURNING * INTO v;
+    END IF;
+  END IF;
+  RETURN JSONB_BUILD_OBJECT('workspaceId',v.id,'ownerId',v.selected_repreneur_id,
+    'generation',v.generation);
+END $$;
+REVOKE ALL ON FUNCTION public.w196_select_staff_portal_workspace(uuid,uuid,text,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.w196_select_staff_portal_workspace(uuid,uuid,text,text) TO service_role;
+
+CREATE FUNCTION public.w196_assert_staff_portal_workspace(
+  p_workspace_id uuid, p_generation uuid, p_repreneur_id uuid,
+  p_staff_user_id text, p_staff_email text
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v public.staff_portal_workspaces%ROWTYPE;
+BEGIN
+  IF p_workspace_id IS NULL OR p_generation IS NULL OR p_repreneur_id IS NULL
+    OR NOT public.w196_staff_role_matches(p_staff_user_id,p_staff_email)
+  THEN RAISE EXCEPTION 'staff_portal_selection_changed'; END IF;
+  SELECT * INTO v FROM public.staff_portal_workspaces WHERE id=p_workspace_id FOR SHARE;
+  IF v.id IS NULL OR v.generation IS DISTINCT FROM p_generation
+    OR v.selected_repreneur_id IS DISTINCT FROM p_repreneur_id
+    OR v.staff_user_id IS DISTINCT FROM p_staff_user_id
+    OR LOWER(v.staff_email) IS DISTINCT FROM LOWER(BTRIM(p_staff_email))
+  THEN RAISE EXCEPTION 'staff_portal_selection_changed'; END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.w196_assert_staff_portal_workspace(uuid,uuid,uuid,text,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.w196_assert_staff_portal_workspace(uuid,uuid,uuid,text,text) TO service_role;
+
 CREATE FUNCTION public.w196_record_staff_opportunity_response(
   p_repreneur_id uuid, p_opportunity_id uuid, p_match_id uuid,
   p_expected_opportunity_updated_at timestamptz,
   p_expected_match_updated_at timestamptz,
   p_expected_interest_at timestamptz,
   p_response text, p_decline_reason_categories text[], p_decline_reason_text text,
-  p_staff_user_id text, p_staff_email text, p_operation_key uuid
+  p_staff_user_id text, p_staff_email text, p_operation_key uuid,
+  p_workspace_id uuid, p_workspace_generation uuid
 )
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
@@ -92,6 +164,8 @@ BEGIN
   ) THEN RAISE EXCEPTION 'staff_assistance_decline_reason_required' USING ERRCODE = 'P0001'; END IF;
   IF p_response = 'interested' AND (CARDINALITY(v_categories) <> 0 OR v_reason IS NOT NULL)
   THEN RAISE EXCEPTION 'staff_assistance_invalid_response' USING ERRCODE = 'P0001'; END IF;
+  PERFORM public.w196_assert_staff_portal_workspace(p_workspace_id,p_workspace_generation,
+    p_repreneur_id,p_staff_user_id,p_staff_email);
 
   v_fingerprint := MD5(JSONB_BUILD_OBJECT(
     'repreneur', p_repreneur_id, 'opportunity', p_opportunity_id,
@@ -176,11 +250,11 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.w196_record_staff_opportunity_response(
   uuid, uuid, uuid, timestamptz, timestamptz, timestamptz,
-  text, text[], text, text, text, uuid
+  text, text[], text, text, text, uuid, uuid, uuid
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.w196_record_staff_opportunity_response(
   uuid, uuid, uuid, timestamptz, timestamptz, timestamptz,
-  text, text[], text, text, text, uuid
+  text, text[], text, text, text, uuid, uuid, uuid
 ) TO service_role;
 
 -- The profile is the retention parent. This records who changed which thesis
@@ -207,6 +281,9 @@ GRANT SELECT ON public.staff_assisted_profile_changes TO service_role;
 CREATE FUNCTION public.w196_guard_staff_profile_history()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
+  IF TG_OP = 'DELETE' AND NOT EXISTS (
+    SELECT 1 FROM public.repreneurs WHERE id = OLD.repreneur_id
+  ) THEN RETURN OLD; END IF;
   RAISE EXCEPTION 'staff_assisted_profile_history_immutable' USING ERRCODE = 'P0001';
 END $$;
 CREATE TRIGGER w196_staff_profile_history_immutable
@@ -218,7 +295,8 @@ CREATE TRIGGER w196_staff_profile_history_no_truncate
 
 CREATE FUNCTION public.w196_update_staff_target_thesis(
   p_repreneur_id uuid, p_expected_updated_at timestamptz, p_values jsonb,
-  p_staff_user_id text, p_staff_email text, p_operation_key uuid
+  p_staff_user_id text, p_staff_email text, p_operation_key uuid,
+  p_workspace_id uuid, p_workspace_generation uuid
 )
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
@@ -240,6 +318,8 @@ BEGIN
   IF p_operation_key IS NULL OR p_repreneur_id IS NULL OR p_expected_updated_at IS NULL
     OR NOT public.w196_staff_role_matches(p_staff_user_id, p_staff_email)
   THEN RAISE EXCEPTION 'staff_assistance_denied' USING ERRCODE = 'P0001'; END IF;
+  PERFORM public.w196_assert_staff_portal_workspace(p_workspace_id,p_workspace_generation,
+    p_repreneur_id,p_staff_user_id,p_staff_email);
   IF JSONB_TYPEOF(p_values) IS DISTINCT FROM 'object'
     OR NOT p_values ?& v_fields
     OR (p_values - v_fields) <> '{}'::jsonb
@@ -369,10 +449,10 @@ BEGIN
     'changedFields', v_changed, 'reusedExisting', false);
 END $$;
 REVOKE ALL ON FUNCTION public.w196_update_staff_target_thesis(
-  uuid, timestamptz, jsonb, text, text, uuid
+  uuid, timestamptz, jsonb, text, text, uuid, uuid, uuid
 ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.w196_update_staff_target_thesis(
-  uuid, timestamptz, jsonb, text, text, uuid
+  uuid, timestamptz, jsonb, text, text, uuid, uuid, uuid
 ) TO service_role;
 
 -- Receipt of an already-signed copy is evidence, not a portal signature or
@@ -406,6 +486,17 @@ GRANT SELECT ON public.staff_received_nda_receipts TO service_role;
 CREATE FUNCTION public.w196_guard_staff_nda_receipts()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
+  -- W170 may remove only unused latest versions. A received signed copy is
+  -- used evidence even before validation, so that correction must fail.
+  IF TG_OP = 'DELETE' AND current_setting('app.allow_unused_retained_document_removal',true) = 'on'
+  THEN RAISE EXCEPTION 'staff_received_nda_receipt_is_used_evidence'; END IF;
+  IF TG_OP = 'DELETE' AND (
+    NOT EXISTS (SELECT 1 FROM public.opportunity_nda_artifacts WHERE id=OLD.artifact_id)
+    OR NOT EXISTS (SELECT 1 FROM public.opportunity_documents WHERE id=OLD.document_id)
+    OR NOT EXISTS (SELECT 1 FROM public.opportunity_matches WHERE id=OLD.match_id)
+    OR NOT EXISTS (SELECT 1 FROM public.opportunities WHERE id=OLD.opportunity_id)
+    OR NOT EXISTS (SELECT 1 FROM public.repreneurs WHERE id=OLD.repreneur_id)
+  ) THEN RETURN OLD; END IF;
   RAISE EXCEPTION 'staff_received_nda_receipt_immutable' USING ERRCODE = 'P0001';
 END $$;
 CREATE TRIGGER w196_staff_nda_receipts_immutable
@@ -432,6 +523,7 @@ RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_tem
 DECLARE
   v public.private_upload_intents%ROWTYPE;
   v_match public.opportunity_matches%ROWTYPE;
+  v_opportunity public.opportunities%ROWTYPE;
   v_gate uuid;
   v_artifact uuid;
   v_document uuid;
@@ -450,6 +542,10 @@ BEGIN
     OR v.finalize_secret_hash IS DISTINCT FROM p_finalize_secret_hash
     OR NOT public.w196_staff_role_matches(v.actor_user_id, v.actor_email)
   THEN RAISE EXCEPTION 'w196_staff_nda_authority_denied'; END IF;
+  PERFORM public.w196_assert_staff_portal_workspace(
+    (v.metadata->>'staff_portal_workspace_id')::uuid,
+    (v.metadata->>'staff_portal_generation')::uuid,
+    v.related_id,v.actor_user_id,v.actor_email);
   IF v.status = 'finalized' THEN
     IF v.content_sha256 IS DISTINCT FROM p_content_sha256 THEN RAISE EXCEPTION 'w196_digest_conflict'; END IF;
     RETURN v.result;
@@ -467,12 +563,18 @@ BEGIN
     OR COALESCE(v.metadata->>'title', '') = ''
   THEN RAISE EXCEPTION 'w196_staff_nda_intent_invalid'; END IF;
   IF NOT public.wave_journey_is_enabled() THEN RAISE EXCEPTION 'wave_journey_disabled'; END IF;
+  -- Match before opportunity is the existing signed-copy/journey lock order.
+  -- Both rows are held before eligibility is read so Pause or a replacement
+  -- blank template cannot win after the final gate check.
   SELECT * INTO v_match FROM public.opportunity_matches WHERE id = v.resource_id FOR UPDATE;
   IF v_match.id IS NULL OR v_match.repreneur_id IS DISTINCT FROM v.related_id
     OR v_match.opportunity_id::text IS DISTINCT FROM v.metadata->>'opportunity_id'
     OR v_match.status <> 'active_pursuit'
     OR NOT public.w164_match_has_same_namespace(v_match.id)
-    OR NOT EXISTS (SELECT 1 FROM public.opportunities o WHERE o.id = v_match.opportunity_id AND o.status = 'active')
+  THEN RAISE EXCEPTION 'w196_staff_nda_pursuit_stale'; END IF;
+  SELECT * INTO v_opportunity FROM public.opportunities
+    WHERE id=v_match.opportunity_id FOR UPDATE;
+  IF v_opportunity.id IS NULL OR v_opportunity.status <> 'active'
   THEN RAISE EXCEPTION 'w196_staff_nda_pursuit_stale'; END IF;
   v_gate := public.journey_current_gate_1_event(v_match.id);
   IF v_gate IS NULL OR NOT EXISTS (
@@ -530,3 +632,116 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.w196_finalize_staff_received_nda(uuid, text, text, text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.w196_finalize_staff_received_nda(uuid, text, text, text) TO service_role;
+
+-- The selected workspace row stays locked through the canonical W165 or
+-- received-NDA finalizer, so a switch cannot cross a completed file write.
+CREATE FUNCTION public.w196_finalize_staff_portal_upload(
+  p_intent_id uuid, p_actor_key text, p_finalize_secret_hash text, p_content_sha256 text
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v public.private_upload_intents%ROWTYPE; v_owner uuid;
+BEGIN
+  SELECT * INTO v FROM public.private_upload_intents WHERE id=p_intent_id FOR UPDATE;
+  IF v.id IS NULL OR v.actor_kind <> 'staff' OR v.actor_user_id IS NULL OR v.actor_email IS NULL
+    OR v.actor_key IS DISTINCT FROM p_actor_key
+    OR v.finalize_secret_hash IS DISTINCT FROM p_finalize_secret_hash
+  THEN RAISE EXCEPTION 'staff_portal_upload_denied'; END IF;
+  v_owner := (v.metadata->>'selected_owner_id')::uuid;
+  PERFORM public.w196_assert_staff_portal_workspace(
+    (v.metadata->>'staff_portal_workspace_id')::uuid,
+    (v.metadata->>'staff_portal_generation')::uuid,
+    v_owner,v.actor_user_id,v.actor_email);
+  IF v.upload_kind='repreneur_document' THEN
+    IF v.resource_id IS DISTINCT FROM v_owner OR v.metadata->>'document_type'<>'ldc'
+    THEN RAISE EXCEPTION 'staff_portal_upload_denied'; END IF;
+    RETURN public.finalize_w165_private_upload(p_intent_id,p_actor_key,p_finalize_secret_hash,p_content_sha256);
+  ELSIF v.upload_kind='external_pursuit_attachment' THEN
+    IF NOT EXISTS (SELECT 1 FROM public.external_pursuits p
+      WHERE p.id=v.resource_id AND p.owner_repreneur_id=v_owner AND p.deletion_status='active')
+    THEN RAISE EXCEPTION 'staff_portal_upload_denied'; END IF;
+    RETURN public.finalize_w165_private_upload(p_intent_id,p_actor_key,p_finalize_secret_hash,p_content_sha256);
+  ELSIF v.upload_kind='staff_received_signed_nda' THEN
+    IF v.related_id IS DISTINCT FROM v_owner THEN RAISE EXCEPTION 'staff_portal_upload_denied'; END IF;
+    RETURN public.w196_finalize_staff_received_nda(p_intent_id,p_actor_key,p_finalize_secret_hash,p_content_sha256);
+  END IF;
+  RAISE EXCEPTION 'staff_portal_upload_denied';
+END $$;
+REVOKE ALL ON FUNCTION public.w196_finalize_staff_portal_upload(uuid,text,text,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.w196_finalize_staff_portal_upload(uuid,text,text,text) TO service_role;
+
+-- One transaction holds the selected workspace while delegating to the
+-- released External Pursuit RPCs, preserving their validation and audit.
+CREATE FUNCTION public.w196_selected_external_operation(
+  p_workspace_id uuid, p_generation uuid, p_owner_id uuid,
+  p_staff_user_id text, p_staff_email text, p_action text,
+  p_dossier_id uuid, p_args jsonb, p_idempotency_key text
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE v_dossier public.external_pursuits%ROWTYPE; v_id uuid; v_path text;
+BEGIN
+  PERFORM public.w196_assert_staff_portal_workspace(p_workspace_id,p_generation,
+    p_owner_id,p_staff_user_id,p_staff_email);
+  IF p_args ? 'staffInternalNotes' THEN RAISE EXCEPTION 'staff_portal_staff_notes_denied'; END IF;
+  IF p_action='create' THEN
+    IF p_dossier_id IS NOT NULL OR (p_args->>'ownerRepreneurId')::uuid IS DISTINCT FROM p_owner_id
+    THEN RAISE EXCEPTION 'staff_portal_external_target_changed'; END IF;
+    v_id := public.create_external_pursuit_v2(
+      p_owner_id,p_args->>'title',COALESCE(p_args->>'stage','identified'),
+      COALESCE(p_args->>'availability','unknown'),(p_args->>'dueAt')::date,
+      p_args->>'sharedNotes',NULL,p_args->>'externalUrl',p_args->>'targetCompany',
+      p_args->>'sourceChannel',(p_args->>'revenueMeur')::numeric,
+      (p_args->>'ebitdaKeur')::numeric,(p_args->>'headcount')::integer,
+      p_staff_user_id,p_idempotency_key);
+    RETURN JSONB_BUILD_OBJECT('pursuitId',v_id);
+  END IF;
+  -- Match every released dossier mutation's advisory-before-row lock order.
+  -- Taking a row SHARE lock first could deadlock with a generic staff edit.
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_dossier_id::text, 0));
+  SELECT * INTO v_dossier FROM public.external_pursuits
+    WHERE id=p_dossier_id AND owner_repreneur_id=p_owner_id FOR SHARE;
+  IF v_dossier.id IS NULL OR v_dossier.deletion_status<>'active'
+  THEN RAISE EXCEPTION 'staff_portal_external_target_changed'; END IF;
+  IF p_action='update' THEN
+    PERFORM public.update_external_pursuit_v2(
+      p_dossier_id,p_args->>'title',p_args->>'stage',p_args ? 'stage',
+      p_args->>'availability',p_args ? 'availability',
+      (p_args->>'dueAt')::date,p_args ? 'dueAt',
+      p_args->>'sharedNotes',p_args ? 'sharedNotes',NULL,false,
+      p_args->>'externalUrl',p_args ? 'externalUrl',
+      p_args->>'targetCompany',p_args ? 'targetCompany',
+      p_args->>'sourceChannel',p_args ? 'sourceChannel',
+      (p_args->>'revenueMeur')::numeric,p_args ? 'revenueMeur',
+      (p_args->>'ebitdaKeur')::numeric,p_args ? 'ebitdaKeur',
+      (p_args->>'headcount')::integer,p_args ? 'headcount',
+      p_staff_user_id,p_idempotency_key);
+  ELSIF p_action='stage' THEN
+    PERFORM public.move_external_pursuit_stage(p_dossier_id,p_args->>'stage',p_staff_user_id,p_idempotency_key);
+  ELSIF p_action='contact' THEN
+    v_id := public.save_external_pursuit_contact(
+      p_dossier_id,(p_args->>'id')::uuid,p_args->>'name',p_args->>'organisation',
+      p_args->>'roleTitle',p_args->>'email',p_args->>'phone',p_staff_user_id,p_idempotency_key);
+    RETURN JSONB_BUILD_OBJECT('pursuitId',p_dossier_id,'contactId',v_id);
+  ELSIF p_action='followup' THEN
+    PERFORM public.update_external_pursuit_follow_up(
+      p_dossier_id,p_args->>'nextAction',p_args ? 'nextAction',
+      p_args->>'responsibleParty',p_args ? 'responsibleParty',
+      p_args->>'availability',p_args ? 'availability',
+      (p_args->>'dueAt')::date,p_args ? 'dueAt',
+      p_args->>'sharedNotes',p_args ? 'sharedNotes',NULL,false,
+      p_staff_user_id,p_idempotency_key);
+  ELSIF p_action='confirm' THEN
+    PERFORM public.confirm_external_pursuit_current(p_dossier_id,p_staff_user_id,p_idempotency_key);
+  ELSIF p_action='delete_attachment_preflight' THEN
+    v_path := public.delete_external_pursuit_attachment_record(
+      p_dossier_id,(p_args->>'attachmentId')::uuid,p_staff_user_id,p_idempotency_key);
+    RETURN JSONB_BUILD_OBJECT('storagePath',v_path);
+  ELSIF p_action='delete_attachment_finalize' THEN
+    PERFORM public.finalize_external_pursuit_attachment_deletion(
+      p_dossier_id,(p_args->>'attachmentId')::uuid,p_staff_user_id,p_idempotency_key);
+  ELSE
+    RAISE EXCEPTION 'staff_portal_external_action_denied';
+  END IF;
+  RETURN JSONB_BUILD_OBJECT('pursuitId',p_dossier_id);
+END $$;
+REVOKE ALL ON FUNCTION public.w196_selected_external_operation(uuid,uuid,uuid,text,text,text,uuid,jsonb,text)
+  FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.w196_selected_external_operation(uuid,uuid,uuid,text,text,text,uuid,jsonb,text)
+  TO service_role;

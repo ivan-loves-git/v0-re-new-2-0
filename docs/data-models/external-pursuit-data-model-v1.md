@@ -159,9 +159,12 @@ exported or treated as dossier content; a different fulfillment key is rejected.
 3. `shared_notes` are owner-visible. `staff_internal_notes` are physically
    separate and staff-only. No action serializes staff notes to an owner.
    The #196 selected-owner Tools Portal reuses the existing actor-audited
-   staff create/edit, stage, contact, follow-up and private-file paths, but
-   binds every portal mutation to a short-lived staff-and-owner selection and
-   rechecks the exact dossier owner server-side. It never projects or writes
+   staff create/edit, stage, contact, follow-up, current-status confirmation
+   and private-file paths, but binds every portal mutation to the selected
+   browser-workspace generation and exact dossier owner in one guarded write
+   transaction. A switch invalidates old forms; private-file finalization and
+   both phases of a file removal recheck the selection. Confirmation updates
+   freshness evidence only, never a canonical Re-New stage. It never projects or writes
    staff-only notes in the selected-owner portal and never exposes the owner's
    deletion request or staff fulfillment action there. The existing staff
    operating board retains its own broader staff authority.

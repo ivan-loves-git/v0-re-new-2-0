@@ -241,6 +241,24 @@ describe("External Pursuit attachment actions", () => {
     expect(mocks.rpc).not.toHaveBeenCalledWith("finalize_external_pursuit_attachment_deletion", expect.anything())
   })
 
+  it("checks the selected workspace again after storage deletion before finalizing", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValue({ role: "staff", user: { id: "staff-user", email: "staff@example.test" } })
+    mocks.rpc.mockResolvedValueOnce({ data: { storagePath: "dossier-1/object.pdf" }, error: null })
+      .mockResolvedValueOnce({ data: null, error: new Error("staff_portal_selection_changed"), status: 409 })
+    const selected = { ownerId: "owner-1", workspaceId: "workspace-1", generation: "generation-a" }
+    await expect(deleteExternalPursuitAttachment("dossier-1", "attachment-1", key(11), selected))
+      .resolves.toMatchObject({ success: false })
+    expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual([
+      "w196_selected_external_operation", "w196_selected_external_operation",
+    ])
+    expect(mocks.rpc.mock.calls[0][1]).toMatchObject({
+      p_action: "delete_attachment_preflight", p_owner_id: "owner-1",
+      p_workspace_id: "workspace-1", p_generation: "generation-a",
+    })
+    expect(mocks.rpc.mock.calls[1][1]).toMatchObject({ p_action: "delete_attachment_finalize" })
+    expect(mocks.remove).toHaveBeenCalledWith(["dossier-1/object.pdf"])
+  })
+
   it("marks a lost initial replay response for the same upload key", async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: new Error("fetch failed"), status: 0 })
     await expect(uploadExternalPursuitAttachment("dossier-1", uploadForm(), key(8))).resolves.toMatchObject({

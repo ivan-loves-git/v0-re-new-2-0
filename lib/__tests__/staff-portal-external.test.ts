@@ -3,101 +3,82 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => ({
   requireStaffAccess: vi.fn(),
   verifySelection: vi.fn(),
-  from: vi.fn(),
-  create: vi.fn(),
-  update: vi.fn(),
-  move: vi.fn(),
-  contact: vi.fn(),
-  followUp: vi.fn(),
+  rpc: vi.fn(),
   deleteAttachment: vi.fn(),
 }))
 vi.mock("server-only", () => ({}))
 vi.mock("@/lib/access-control", () => ({ requireStaffAccess: mocks.requireStaffAccess }))
 vi.mock("@/lib/staff-portal-selection", () => ({ verifyStaffPortalSelection: mocks.verifySelection }))
-vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: mocks.from }) }))
-vi.mock("@/lib/actions/external-pursuits", () => ({
-  createExternalPursuit: mocks.create,
-  updateExternalPursuit: mocks.update,
-  updateExternalPursuitFollowUp: mocks.followUp,
-  moveExternalPursuitStage: mocks.move,
-  saveExternalPursuitContact: mocks.contact,
-}))
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc: mocks.rpc }) }))
 vi.mock("@/lib/actions/external-pursuit-attachments", () => ({ deleteExternalPursuitAttachment: mocks.deleteAttachment }))
 
 import {
+  confirmSelectedExternalPursuitCurrent,
   createSelectedExternalPursuit,
-  moveSelectedExternalPursuitStage,
-  saveSelectedExternalPursuitContact,
-  updateSelectedExternalPursuit,
-  updateSelectedExternalPursuitFollowUp,
   deleteSelectedExternalPursuitAttachment,
+  moveSelectedExternalPursuitStage,
+  updateSelectedExternalPursuit,
 } from "@/lib/actions/staff-portal-external"
 
 const ownerId = "10000000-0000-4000-8000-000000000001"
 const otherOwnerId = "10000000-0000-4000-8000-000000000002"
 const pursuitId = "10000000-0000-4000-8000-000000000003"
-
-function query(row: Record<string, unknown> | null) {
-  const chain = {
-    select: vi.fn(), eq: vi.fn(), maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
-  }
-  chain.select.mockReturnValue(chain)
-  chain.eq.mockReturnValue(chain)
-  return chain
-}
+const attachmentId = "10000000-0000-4000-8000-000000000004"
+const workspaceId = "10000000-0000-4000-8000-000000000005"
+const generation = "10000000-0000-4000-8000-000000000006"
 
 describe("selected-owner staff External assistance", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-1" } })
-    mocks.verifySelection.mockReturnValue(true)
-    mocks.from.mockImplementation((table: string) => table === "repreneurs"
-      ? query({ id: ownerId })
-      : query({ id: pursuitId, owner_repreneur_id: ownerId, deletion_status: "active" }))
-    mocks.create.mockResolvedValue({ success: true, pursuitId })
-    mocks.update.mockResolvedValue({ success: true, pursuitId })
-    mocks.move.mockResolvedValue({ success: true, pursuitId })
-    mocks.contact.mockResolvedValue({ success: true, pursuitId })
-    mocks.followUp.mockResolvedValue({ success: true, pursuitId })
+    mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-1", email: "staff@example.test" } })
+    mocks.verifySelection.mockResolvedValue({ ownerId, workspaceId, generation })
+    mocks.rpc.mockResolvedValue({ data: { pursuitId }, error: null })
   })
 
-  it("requires the actor-bound token and exact selected owner before create", async () => {
-    mocks.verifySelection.mockReturnValue(false)
-    await expect(createSelectedExternalPursuit(ownerId, "wrong-token", { title: "One", ownerRepreneurId: ownerId }, "key"))
-      .rejects.toThrow("selected repreneur changed")
-    expect(mocks.create).not.toHaveBeenCalled()
-    mocks.verifySelection.mockReturnValue(true)
+  it("binds create to the selected owner and actual staff actor", async () => {
     await expect(createSelectedExternalPursuit(ownerId, "token", { title: "Other", ownerRepreneurId: otherOwnerId }, "key"))
       .rejects.toThrow("selected repreneur")
-    expect(mocks.create).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
     await createSelectedExternalPursuit(ownerId, "token", { title: "One", ownerRepreneurId: ownerId }, "key")
-    expect(mocks.create).toHaveBeenCalledWith({ title: "One", ownerRepreneurId: ownerId }, "key")
+    expect(mocks.rpc).toHaveBeenCalledWith("w196_selected_external_operation", expect.objectContaining({
+      p_workspace_id: workspaceId,
+      p_generation: generation,
+      p_owner_id: ownerId,
+      p_staff_user_id: "staff-1",
+      p_staff_email: "staff@example.test",
+      p_action: "create",
+      p_args: { title: "One", ownerRepreneurId: ownerId },
+    }))
   })
 
-  it("denies another owner and staff-only note injection before update", async () => {
-    mocks.from.mockImplementation((table: string) => table === "repreneurs"
-      ? query({ id: ownerId })
-      : query({ id: pursuitId, owner_repreneur_id: otherOwnerId, deletion_status: "active" }))
-    await expect(updateSelectedExternalPursuit(ownerId, "token", pursuitId, { title: "Changed" }, "key"))
-      .rejects.toThrow("selected repreneur")
-    expect(mocks.update).not.toHaveBeenCalled()
-    mocks.from.mockImplementation((table: string) => table === "repreneurs"
-      ? query({ id: ownerId })
-      : query({ id: pursuitId, owner_repreneur_id: ownerId, deletion_status: "active" }))
+  it("rejects stale A actions after A to B and staff-only note injection", async () => {
+    mocks.verifySelection.mockResolvedValue(null)
+    await expect(updateSelectedExternalPursuit(ownerId, "old-token", pursuitId, { title: "Changed" }, "key"))
+      .rejects.toThrow("workspace changed")
+    expect(mocks.rpc).not.toHaveBeenCalled()
+    mocks.verifySelection.mockResolvedValue({ ownerId, workspaceId, generation })
     await expect(updateSelectedExternalPursuit(ownerId, "token", pursuitId,
       { title: "Changed", staffInternalNotes: "private" }, "key"))
       .rejects.toThrow("Staff-only notes")
-    expect(mocks.update).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
-  it("binds shared follow-up and file removal to the selected dossier", async () => {
-    await moveSelectedExternalPursuitStage(ownerId, "token", pursuitId, "contact_qualification", "key-stage")
-    expect(mocks.move).toHaveBeenCalledWith(pursuitId, "contact_qualification", "key-stage")
-    await saveSelectedExternalPursuitContact(ownerId, "token", pursuitId, { name: "Synthetic contact" }, "key-contact")
-    expect(mocks.contact).toHaveBeenCalledWith(pursuitId, { name: "Synthetic contact" }, "key-contact")
-    await updateSelectedExternalPursuitFollowUp(ownerId, "token", pursuitId, { sharedNotes: "Call back" }, "key")
-    expect(mocks.followUp).toHaveBeenCalledWith(pursuitId, { sharedNotes: "Call back" }, "key")
-    await deleteSelectedExternalPursuitAttachment(ownerId, "token", pursuitId, "file-id", "key")
-    expect(mocks.deleteAttachment).toHaveBeenCalledWith(pursuitId, "file-id", "key")
+  it("routes stage and current-status confirmation through the same selected transaction", async () => {
+    await moveSelectedExternalPursuitStage(ownerId, "token", pursuitId, "contact_qualification", "stage-key")
+    expect(mocks.rpc).toHaveBeenCalledWith("w196_selected_external_operation", expect.objectContaining({
+      p_action: "stage", p_dossier_id: pursuitId, p_args: { stage: "contact_qualification" },
+    }))
+    const confirmed = await confirmSelectedExternalPursuitCurrent(ownerId, "token", pursuitId, "confirm-key")
+    expect(confirmed).toMatchObject({ success: true, outcome: "confirmed" })
+    expect(mocks.rpc).toHaveBeenCalledWith("w196_selected_external_operation", expect.objectContaining({
+      p_action: "confirm", p_dossier_id: pursuitId, p_idempotency_key: "confirm-key",
+    }))
+  })
+
+  it("passes the selected context to both phases of attachment removal", async () => {
+    await deleteSelectedExternalPursuitAttachment(ownerId, "token", pursuitId, attachmentId, "remove-key")
+    expect(mocks.deleteAttachment).toHaveBeenCalledWith(pursuitId, attachmentId, "remove-key", {
+      ownerId, workspaceId, generation,
+    })
   })
 })

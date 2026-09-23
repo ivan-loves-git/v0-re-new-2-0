@@ -11,6 +11,7 @@ import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-w
 import { OPPORTUNITY_DECLINE_REASON_OPTIONS, type OpportunityDeclineReasonCategory } from "@/lib/types/opportunity"
 
 type Props = Omit<StaffOpportunityResponseInput, "response" | "declineReasonCategories" | "declineReasonText" | "operationKey"> & {
+  selectionToken: string
   repreneurName: string
   opportunityTitle: string
   matchStatus: string | null
@@ -36,6 +37,7 @@ export function StaffOpportunityResponseControls(props: Props) {
   function submit(response: "interested" | "declined") {
     const draft = {
       repreneurId: props.repreneurId,
+      selectionToken: props.selectionToken,
       opportunityId: props.opportunityId,
       matchId: props.matchId,
       expectedOpportunityUpdatedAt: props.expectedOpportunityUpdatedAt,

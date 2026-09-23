@@ -65,7 +65,7 @@ psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U "$database
   ALTER TABLE public.repreneurs ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE;
   CREATE SCHEMA storage;
   CREATE TABLE storage.buckets (
-    id text PRIMARY KEY, public boolean NOT NULL DEFAULT false,
+    id text PRIMARY KEY, name text, public boolean NOT NULL DEFAULT false,
     file_size_limit bigint, allowed_mime_types text[]
   );
   INSERT INTO storage.buckets(id) VALUES
@@ -75,6 +75,7 @@ psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U "$database
 predecessors=(
   20260827103000_w164_lifecycle_namespace_visibility.sql
   20260827113000_w165_private_direct_uploads.sql
+  20260829123000_w170_unused_retained_document_correction.sql
   20260829130000_w161_repreneur_target_ebitda_range.sql
   20260829180000_w169_lifecycle_outcome_separation.sql
   20260829203000_w169_pause_guard_scope.sql
@@ -89,14 +90,20 @@ predecessors=(
 for migration in "${predecessors[@]}"; do
   "${psql[@]}" --file "$repo_root/supabase/migrations/$migration" >/dev/null
 done
+for external_migration in 093 094 095 096 097 098 099; do
+  external_script=("$repo_root"/scripts/"${external_migration}"_external_pursuit_*.sql)
+  "${psql[@]}" --file "${external_script[0]}" >/dev/null
+done
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w173-interest-decisions-before.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260922111134_w173_interest_decisions_notifications.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w173-interest-decisions-after.sql"
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260922142227_w175_recommendation_cycle_notifications.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260923173503_w196_attributed_staff_assistance.sql" >/dev/null
+"${psql[@]}" -c "INSERT INTO public.staff_portal_workspaces(id,staff_user_id,staff_email,selected_repreneur_id,generation) VALUES ('76000000-0000-4000-8000-000000000090','w173-staff','w173-staff@example.test','76000000-0000-4000-8000-000000000004','76000000-0000-4000-8000-000000000089')" >/dev/null
+"${psql[@]}" -c "INSERT INTO public.staff_portal_workspaces(id,staff_user_id,staff_email,selected_repreneur_id,generation) VALUES ('76000000-0000-4000-8000-000000000088','w173-staff','w173-staff@example.test','76000000-0000-4000-8000-000000000007','76000000-0000-4000-8000-000000000087')" >/dev/null
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-responses.sql"
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-thesis.sql"
-"${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-received-nda.sql"
+"${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-selection-cleanup.sql"
 
 # Two actual sessions: an owner response commits while a staff form still
 # carries the old exact-match timestamp. The staff call must wait, then reject.
@@ -116,12 +123,65 @@ race_result="$("${psql[@]}" -At -c "SELECT public.w196_record_staff_opportunity_
   '$race_owner','$race_opp','$race_ids',
   '$race_opp_updated','$race_match_updated',NULL,
   'declined',ARRAY['sector'],'Synthetic concurrent decline',
-  'w173-staff','w173-staff@example.test','76000000-0000-4000-8000-000000000098');" 2>&1)"
+  'w173-staff','w173-staff@example.test','76000000-0000-4000-8000-000000000098',
+  '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089');" 2>&1)"
 race_status=$?
 set -e
 wait "$owner_race_pid"
 if [[ "$race_status" -eq 0 || "$race_result" != *staff_assistance_stale_response* ]]; then
   echo "W196 concurrent owner/staff stale-form guard failed: $race_result" >&2
+  exit 1
+fi
+# A write holds a SHARE lock on this one browser workspace until commit. A
+# concurrent selector cannot rotate A to B midway through its transaction.
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.w196_assert_staff_portal_workspace(
+    '76000000-0000-4000-8000-000000000090','76000000-0000-4000-8000-000000000089',
+    '76000000-0000-4000-8000-000000000004','w173-staff','w173-staff@example.test');
+  SELECT pg_sleep(1);
+  COMMIT;" >/dev/null &
+selection_guard_pid=$!
+sleep 0.2
+set +e
+switch_race_result="$("${psql[@]}" -At -c "BEGIN; SET LOCAL lock_timeout='100ms';
+  SELECT public.w196_select_staff_portal_workspace(
+    '76000000-0000-4000-8000-000000000090',
+    '76000000-0000-4000-8000-000000000007','w173-staff','w173-staff@example.test');
+  ROLLBACK;" 2>&1)"
+switch_race_status=$?
+set -e
+wait "$selection_guard_pid"
+if [[ "$switch_race_status" -eq 0 || "$switch_race_result" != *lock\ timeout* ]]; then
+  echo "W196 in-flight workspace switch was not serialized: $switch_race_result" >&2
+  exit 1
+fi
+"${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-received-nda.sql"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT id FROM public.opportunities WHERE id='76000000-0000-4000-8000-000000000003' FOR UPDATE;
+  SELECT pg_sleep(1);
+  SET session_replication_role=replica;
+  SELECT public.pause_opportunity_with_reason('76000000-0000-4000-8000-000000000003','paused_cabinet','w173-staff');
+  RESET session_replication_role;
+  COMMIT;" >/dev/null &
+pause_race_pid=$!
+sleep 0.2
+set +e
+nda_race_result="$("${psql[@]}" -At -c "SELECT public.w196_finalize_staff_portal_upload(
+  '76000000-0000-4000-8000-000000000079','staff:w173-staff:',repeat('b',64),repeat('d',64));" 2>&1)"
+nda_race_status=$?
+set -e
+wait "$pause_race_pid"
+if [[ "$nda_race_status" -eq 0 || "$nda_race_result" != *w196_staff_nda_pursuit_stale* ]]; then
+  echo "W196 concurrent Pause/received-NDA guard failed: $nda_race_result" >&2
+  exit 1
+fi
+nda_race_state="$("${psql[@]}" -At -c "SELECT CASE WHEN
+  (SELECT status FROM public.private_upload_intents WHERE id='76000000-0000-4000-8000-000000000079')='pending'
+  AND NOT EXISTS (SELECT 1 FROM public.staff_received_nda_receipts
+    WHERE intent_id='76000000-0000-4000-8000-000000000079')
+  THEN 'safe' ELSE 'unsafe' END")"
+if [[ "$nda_race_state" != "safe" ]]; then
+  echo "W196 concurrent Pause left a committed received NDA: $nda_race_state" >&2
   exit 1
 fi
 echo "W173/W196 exact-interest, attributed assistance and two-session race rehearsal passed"

@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto"
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
+import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { revalidatePath } from "next/cache"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import {
@@ -206,9 +207,19 @@ export async function updateRepreneurTargetThesis(
   input: TargetThesisInput,
   expectedUpdatedAt?: string,
   operationKey?: string,
+  selectionToken?: string,
 ) {
   const access = await requireStaffAccess()
   if (!repreneurId.trim()) throw new Error("Repreneur profile is required.")
+  // Preserve the pre-existing staff profile editor outside Tools Portal.
+  // Only the selected-owner Portal assistance path carries a workspace token.
+  if (!selectionToken) {
+    await updateTargetThesisForRepreneur(repreneurId, input)
+    revalidatePath(`/repreneurs/${repreneurId}`)
+    return
+  }
+  const selection = await verifyStaffPortalSelection(selectionToken, repreneurId, access.user.id)
+  if (!selection) throw new Error("The selected staff workspace changed. Refresh and try again.")
   const supabase = createAdminClient()
   const values = await prepareTargetThesisForRepreneur(repreneurId, input)
   let expected = expectedUpdatedAt
@@ -224,6 +235,8 @@ export async function updateRepreneurTargetThesis(
     p_staff_user_id: access.user.id,
     p_staff_email: access.user.email,
     p_operation_key: operationKey ?? randomUUID(),
+    p_workspace_id: selection.workspaceId,
+    p_workspace_generation: selection.generation,
   })
   if (error) throw new Error("The selected profile changed or this staff edit could not be saved. Refresh and try again.")
   await recalculateRepreneurScoresAndMatches(repreneurId)

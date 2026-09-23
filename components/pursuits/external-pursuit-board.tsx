@@ -183,7 +183,7 @@ export function ExternalPursuitBoard({
     && conversionPursuitIds.includes(managing.id),
   )
   const managerCanConfirm = Boolean(
-    !isStaff
+    (!isStaff || (selectedOwnerId && selectedOwnerToken))
     && !readOnly
     && managing
     && managing.isOpenCapacity,
@@ -665,6 +665,8 @@ export function ExternalPursuitBoard({
                   <CardContent>
                     <ExternalPursuitConfirmCurrentButton
                       pursuitId={managing.id}
+                      staffPortalSelection={selectedOwnerId && selectedOwnerToken
+                        ? { ownerId: selectedOwnerId, token: selectedOwnerToken } : undefined}
                       onOperationLockChange={handleManagerOperationLockChange}
                       onConfirmed={() => window.location.reload()}
                     />

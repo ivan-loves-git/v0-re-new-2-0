@@ -7,10 +7,12 @@ import { createPortalPreviewSectionHref, type PortalPreviewSection } from "@/lib
 
 export function StaffPortalPreviewTabs({
   repreneurId,
+  workspaceId,
   section,
   children,
 }: {
   repreneurId: string
+  workspaceId?: string | null
   section: PortalPreviewSection
   children: ReactNode
 }) {
@@ -18,7 +20,7 @@ export function StaffPortalPreviewTabs({
   return (
     <Tabs
       value={section}
-      onValueChange={(value) => router.push(createPortalPreviewSectionHref(repreneurId, value as PortalPreviewSection))}
+      onValueChange={(value) => router.push(createPortalPreviewSectionHref(repreneurId, value as PortalPreviewSection, workspaceId))}
       className="flex min-w-0 flex-col gap-5"
     >
       {children}

@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { uploadPrivateDocument } from "@/lib/private-upload"
 
-export function StaffReceivedNdaUpload({ matchId, repreneurId, repreneurName }: {
+export function StaffReceivedNdaUpload({ matchId, repreneurId, repreneurName, selectionToken }: {
   matchId: string
   repreneurId: string
   repreneurName: string
+  selectionToken: string
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -31,6 +32,8 @@ export function StaffReceivedNdaUpload({ matchId, repreneurId, repreneurName }: 
             title: String(data.get("title") ?? "Signed NDA received by staff"),
             source_kind: String(data.get("source_kind") ?? ""),
             source_reference: String(data.get("source_reference") ?? ""),
+            staff_portal_selection_token: selectionToken,
+            selected_owner_id: repreneurId,
           },
         })
         toast.success("Received NDA recorded as staff evidence; staff validation is still required.")

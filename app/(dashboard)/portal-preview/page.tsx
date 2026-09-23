@@ -34,7 +34,7 @@ import {
 import { projectSelectedReNewPursuits } from "@/lib/portal-preview-pursuits"
 import { isUuid } from "@/lib/uuid"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { issueStaffPortalSelection } from "@/lib/staff-portal-selection"
+import { currentStaffPortalSelectionToken } from "@/lib/staff-portal-selection"
 
 interface StaffPortalPreviewPageProps {
   searchParams: Promise<{
@@ -42,6 +42,7 @@ interface StaffPortalPreviewPageProps {
     dealId?: string
     matchId?: string
     view?: string
+    workspaceId?: string
   }>
 }
 
@@ -52,6 +53,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   const requestedRepreneurId = params.repreneurId
   const selectedOption = resolvePortalPreviewRepreneur(options, requestedRepreneurId)
   const selectedRepreneurId = selectedOption?.id ?? null
+  const workspaceId = isUuid(params.workspaceId ?? "") ? params.workspaceId! : null
   const hasUnknownRepreneur = requestedRepreneurId !== undefined && !selectedOption
   const requestedDealId = params.dealId ?? params.matchId
   const invalidDealSelection = requestedDealId !== undefined && (
@@ -84,6 +86,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
           opportunityId: opportunity.opportunity_id,
           matchId: opportunity.match_id,
         })),
+        workspaceId,
       )
     : {}
   const previewJourney = selectedRepreneurId && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
@@ -103,8 +106,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     ? await getExternalPursuitAttachmentMap(externalPursuits.map((pursuit) => pursuit.id))
     : {}
   const staffName = access.user.name?.trim() || access.user.email
-  const selectedOwnerToken = selectedRepreneurId && section === "external-pursuits"
-    ? issueStaffPortalSelection(selectedRepreneurId, access.user.id) : null
+  const selectedOwnerToken = selectedRepreneurId
+    ? await currentStaffPortalSelectionToken(workspaceId ?? undefined, selectedRepreneurId, access.user.id) : null
 
   return (
     <div className="space-y-6">
@@ -135,7 +138,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             <p className="text-sm text-muted-foreground">Signed in as staff: {staffName}. A role link does not verify sign-in or grant portal access; you are not signed in as this repreneur.</p>
           </div>
         </div>
-        <StaffPortalPreviewSelector options={options} selectedRepreneurId={selectedRepreneurId} />
+        <StaffPortalPreviewSelector options={options} selectedRepreneurId={selectedRepreneurId}
+          workspaceId={workspaceId} selectionToken={selectedOwnerToken} />
       </section>
 
       {options.length === 0 && (
@@ -162,10 +166,16 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         </Alert>
       )}
 
+      {selectedRepreneurId && workspaceId && !selectedOwnerToken && (
+        <Alert><Eye /><AlertTitle>Staff workspace changed</AlertTitle>
+          <AlertDescription>This browser workspace now belongs to another selected repreneur. Choose a repreneur again before acting.</AlertDescription>
+        </Alert>
+      )}
+
       {selectedRepreneurId && selectedDealId && selectedOpportunity && (
         <div className="flex flex-col gap-6">
           <Button asChild variant="ghost" className="w-fit">
-            <Link href={createPortalPreviewHref(selectedRepreneurId)}>
+            <Link href={createPortalPreviewHref(selectedRepreneurId, undefined, workspaceId)}>
               <ArrowLeft data-icon="inline-start" />
               Back to preview
             </Link>
@@ -174,7 +184,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             opportunity={selectedOpportunity}
             readOnly
             journey={previewJourney}
-            staffAssistanceControls={opportunityUpdatedAt && selectedOption ? <StaffOpportunityResponseControls
+            staffAssistanceControls={opportunityUpdatedAt && selectedOption && selectedOwnerToken ? <StaffOpportunityResponseControls
+              selectionToken={selectedOwnerToken}
               repreneurId={selectedOption.id}
               repreneurName={selectedOption.name}
               opportunityId={selectedOpportunity.opportunity_id}
@@ -187,10 +198,10 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               interestRejected={Boolean(selectedOpportunity.interest_rejected)}
               recommendationExpiresAt={selectedOpportunity.recommendation_expires_at}
             /> : null}
-            staffDocumentAssistanceControls={selectedOption && selectedOpportunity.match_id
+            staffDocumentAssistanceControls={selectedOption && selectedOwnerToken && selectedOpportunity.match_id
               && previewJourney?.enabled && previewJourney.gate1Passed && previewJourney.ndaReadyNotified
               && !previewJourney.revoked && !previewJourney.gate2Passed
-              ? <StaffReceivedNdaUpload matchId={selectedOpportunity.match_id}
+              ? <StaffReceivedNdaUpload matchId={selectedOpportunity.match_id} selectionToken={selectedOwnerToken}
                   repreneurId={selectedOption.id} repreneurName={selectedOption.name} /> : null}
             documentHrefs={selectedOpportunity.match_id ? {
               ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }),
@@ -214,7 +225,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
       )}
 
       {selectedRepreneurId && !selectedDealId && !invalidDealSelection && (
-        <StaffPortalPreviewTabs key={selectedRepreneurId} repreneurId={selectedRepreneurId} section={section}>
+        <StaffPortalPreviewTabs key={selectedRepreneurId} repreneurId={selectedRepreneurId} workspaceId={workspaceId} section={section}>
           <div className="overflow-x-auto">
             <TabsList aria-label="Selected repreneur portal areas">
               <TabsTrigger value="deals">Deals</TabsTrigger>
@@ -236,12 +247,12 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             <RepreneurProfileSummary
               repreneur={profileData.repreneur}
               opportunities={opportunityData.opportunities}
-              dealsHref={createPortalPreviewHref(selectedRepreneurId)}
+              dealsHref={createPortalPreviewHref(selectedRepreneurId, undefined, workspaceId)}
               detailHrefByOpportunityId={detailHrefByOpportunityId}
               mode="staff-preview"
-              staffTargetThesisAction={profileData.repreneur ? <StaffTargetThesisAction repreneur={profileData.repreneur} /> : null}
-              staffDocumentAssistanceAction={profileData.repreneur && selectedOption
-                ? <StaffLdcAssistance repreneurId={selectedOption.id} repreneurName={selectedOption.name} /> : null}
+              staffTargetThesisAction={profileData.repreneur && selectedOwnerToken ? <StaffTargetThesisAction repreneur={profileData.repreneur} selectionToken={selectedOwnerToken} /> : null}
+              staffDocumentAssistanceAction={profileData.repreneur && selectedOption && selectedOwnerToken
+                ? <StaffLdcAssistance repreneurId={selectedOption.id} repreneurName={selectedOption.name} selectionToken={selectedOwnerToken} /> : null}
             />
           </TabsContent>
           <TabsContent value="renew-pursuits">

@@ -350,6 +350,11 @@ async function authorizeIntent(
     if (input.contentType !== "application/pdf") throw new PrivateUploadError("The received NDA must be a PDF.")
     const matchId = uuidValue(input.resourceId, true)!
     const repreneurId = uuidValue(input.relatedId, true)!
+    const selectedOwnerId = uuidValue(input.metadata.selected_owner_id, true)!
+    const selectionToken = requireMetadataText(input.metadata, "staff_portal_selection_token", "Staff selection", 1024)
+    const selection = selectedOwnerId === repreneurId
+      ? await verifyStaffPortalSelection(selectionToken, repreneurId, actor.actorUserId ?? "") : null
+    if (!selection) throw new PrivateUploadError("The selected staff workspace changed.", 403)
     const sourceKind = requireMetadataText(input.metadata, "source_kind", "Source channel")
     const sourceReference = requireMetadataText(input.metadata, "source_reference", "Source reference", 500)
     const title = requireMetadataText(input.metadata, "title", "Document title")
@@ -373,7 +378,9 @@ async function authorizeIntent(
     }
     return {
       ...actor, resourceId: matchId, relatedId: repreneurId,
-      metadata: { opportunity_id: match.opportunity_id, source_kind: sourceKind, source_reference: sourceReference, title },
+      metadata: { opportunity_id: match.opportunity_id, source_kind: sourceKind, source_reference: sourceReference, title,
+        staff_portal_workspace_id: selection.workspaceId, staff_portal_generation: selection.generation,
+        selected_owner_id: repreneurId },
       bucket: "opportunity-documents",
       path: `${match.opportunity_id}/nda-artifacts/repreneur_signed_copy/${intentId}-${safePathFilename(input.fileName)}`,
     }
@@ -406,8 +413,19 @@ async function authorizeIntent(
     if (actor.actorKind==="portal" && documentType==="ldc" && profile.ms_ldc_validated) {
       throw new PrivateUploadError("This Lettre de cadrage is already validated by Re-New and cannot be replaced here.",409)
     }
+    let workspaceMetadata: Record<string, string> = {}
+    if (input.metadata.staff_portal_selection_token !== undefined) {
+      if (actor.actorKind !== "staff") throw new PrivateUploadError("Staff selection is required.", 403)
+      const ownerId = uuidValue(input.metadata.selected_owner_id, true)!
+      const token = requireMetadataText(input.metadata, "staff_portal_selection_token", "Staff selection", 1024)
+      const selection = ownerId === repreneurId
+        ? await verifyStaffPortalSelection(token, repreneurId, actor.actorUserId ?? "") : null
+      if (!selection) throw new PrivateUploadError("The selected staff workspace changed.", 403)
+      workspaceMetadata = { staff_portal_workspace_id: selection.workspaceId,
+        staff_portal_generation: selection.generation, selected_owner_id: repreneurId }
+    }
     return {
-      ...actor,resourceId:repreneurId,relatedId:null,metadata:{document_type:documentType},bucket:"cvs",
+      ...actor,resourceId:repreneurId,relatedId:null,metadata:{document_type:documentType,...workspaceMetadata},bucket:"cvs",
       path:`cvs/${repreneurId}/${documentType}/${intentId}.${extension}`,
     }
   }
@@ -418,11 +436,13 @@ async function authorizeIntent(
     throw new PrivateUploadError("Choose a permitted document or image file.")
   }
   const pursuitId=uuidValue(input.resourceId,true)!
+  let selectedWorkspace: Awaited<ReturnType<typeof verifyStaffPortalSelection>> = null
   if (input.metadata.staff_portal_selection_token !== undefined) {
     if (actor.actorKind !== "staff") throw new PrivateUploadError("Staff selection is required.",403)
     const ownerId = uuidValue(input.metadata.selected_owner_id,true)!
-    const token = requireMetadataText(input.metadata,"staff_portal_selection_token","Staff selection")
-    if (!verifyStaffPortalSelection(token,ownerId,actor.actorUserId ?? "")) {
+    const token = requireMetadataText(input.metadata,"staff_portal_selection_token","Staff selection",1024)
+    selectedWorkspace = await verifyStaffPortalSelection(token,ownerId,actor.actorUserId ?? "")
+    if (!selectedWorkspace) {
       throw new PrivateUploadError("The selected repreneur changed. Refresh this portal view.",403)
     }
     const {data:dossier,error:dossierError}=await supabase.from("external_pursuits")
@@ -433,7 +453,10 @@ async function authorizeIntent(
   if (accessError) throw new PrivateUploadError("External Pursuit access denied.",403)
   const digest=createHash("sha256").update(intentId).update(finalizeSecret).digest("hex")
   return {
-    ...actor,resourceId:pursuitId,relatedId:null,metadata:{},bucket:"external-pursuit-attachments",
+    ...actor,resourceId:pursuitId,relatedId:null,
+    metadata: selectedWorkspace ? { staff_portal_workspace_id: selectedWorkspace.workspaceId,
+      staff_portal_generation: selectedWorkspace.generation, selected_owner_id: selectedWorkspace.ownerId } : {},
+    bucket:"external-pursuit-attachments",
     path:`${pursuitId}/${digest}.${extension}`,
   }
 }
@@ -493,6 +516,36 @@ export async function loadAuthorizedPrivateUploadIntent(request: Request,payload
     throw new PrivateUploadError("Upload authorization is invalid.",403)
   }
   return intent
+}
+
+/** Early rejection avoids reading private bytes for an obsolete browser selection.
+ * The SQL finalizer repeats this check under a workspace row lock. */
+async function assertCurrentStaffUploadWorkspace(intent: PrivateUploadIntentRow) {
+  const workspaceId = intent.metadata.staff_portal_workspace_id
+  if (workspaceId === undefined) {
+    if (intent.upload_kind === "staff_received_signed_nda") {
+      throw new PrivateUploadError("The selected staff workspace changed.", 403)
+    }
+    return
+  }
+  const generation = intent.metadata.staff_portal_generation
+  const ownerId = intent.metadata.selected_owner_id
+  if (intent.actor_kind !== "staff" || !intent.actor_user_id
+    || typeof workspaceId !== "string" || !UUID_PATTERN.test(workspaceId)
+    || typeof generation !== "string" || !UUID_PATTERN.test(generation)
+    || typeof ownerId !== "string" || !UUID_PATTERN.test(ownerId)
+    || (intent.upload_kind === "repreneur_document" && (intent.resource_id !== ownerId || intent.metadata.document_type !== "ldc"))
+    || (intent.upload_kind === "staff_received_signed_nda" && intent.related_id !== ownerId)
+    || !new Set(["repreneur_document", "external_pursuit_attachment", "staff_received_signed_nda"]).has(intent.upload_kind)) {
+    throw new PrivateUploadError("The selected staff workspace changed.", 403)
+  }
+  const { data, error } = await createAdminClient().from("staff_portal_workspaces")
+    .select("staff_user_id,selected_repreneur_id,generation")
+    .eq("id", workspaceId).maybeSingle()
+  if (error || !data || data.staff_user_id !== intent.actor_user_id
+    || data.selected_repreneur_id !== ownerId || data.generation !== generation) {
+    throw new PrivateUploadError("The selected staff workspace changed.", 403)
+  }
 }
 
 async function processCleanupQueue(queueIds?:string[]) {
@@ -659,6 +712,7 @@ export async function claimPrivateIntakeUploads(
 
 export async function finalizePrivateUpload(request:Request,payload:unknown) {
   const intent=await loadAuthorizedPrivateUploadIntent(request,payload)
+  await assertCurrentStaffUploadWorkspace(intent)
   const suppliedSecret=isRecord(payload) && typeof payload.finalizeSecret==="string"
     ? payload.finalizeSecret
     : null
@@ -684,8 +738,9 @@ export async function finalizePrivateUpload(request:Request,payload:unknown) {
   }
   const digest=createHash("sha256").update(bytes).digest("hex")
   if (!SHA256_PATTERN.test(digest)) throw new PrivateUploadError("Upload digest failed.",500)
-  const {data,error,status}=await supabase.rpc(intent.upload_kind === "staff_received_signed_nda"
-    ? "w196_finalize_staff_received_nda" : "finalize_w165_private_upload",{
+  const {data,error,status}=await supabase.rpc(intent.metadata.staff_portal_workspace_id
+    ? "w196_finalize_staff_portal_upload"
+    : intent.upload_kind === "staff_received_signed_nda" ? "w196_finalize_staff_received_nda" : "finalize_w165_private_upload",{
     p_intent_id:intent.id,p_actor_key:intent.actor_key,
     p_finalize_secret_hash:intent.finalize_secret_hash,p_content_sha256:digest,
   })

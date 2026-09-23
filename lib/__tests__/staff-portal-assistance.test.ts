@@ -4,14 +4,17 @@ const mocks = vi.hoisted(() => ({
   requireStaffAccess: vi.fn(),
   rpc: vi.fn(),
   revalidatePath: vi.fn(),
+  verifySelection: vi.fn(),
 }))
 vi.mock("@/lib/access-control", () => ({ requireStaffAccess: mocks.requireStaffAccess }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc: mocks.rpc }) }))
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }))
+vi.mock("@/lib/staff-portal-selection", () => ({ verifyStaffPortalSelection: mocks.verifySelection }))
 
 import { recordStaffPortalOpportunityResponse } from "@/lib/actions/staff-portal-assistance"
 
 const input = {
+  selectionToken: "selection-token",
   repreneurId: "10000000-0000-4000-8000-000000000001",
   opportunityId: "10000000-0000-4000-8000-000000000002",
   matchId: "10000000-0000-4000-8000-000000000003",
@@ -28,6 +31,7 @@ describe("staff Portal opportunity action", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.requireStaffAccess.mockResolvedValue({ user: { id: "actual-staff", email: "staff@example.test" } })
+    mocks.verifySelection.mockResolvedValue({ workspaceId: "10000000-0000-4000-8000-000000000005", generation: "10000000-0000-4000-8000-000000000006" })
     mocks.rpc.mockResolvedValue({ data: { eventId: "event-1" }, error: null })
   })
 
@@ -41,12 +45,20 @@ describe("staff Portal opportunity action", () => {
       p_staff_user_id: "actual-staff",
       p_staff_email: "staff@example.test",
       p_operation_key: input.operationKey,
+      p_workspace_id: "10000000-0000-4000-8000-000000000005",
+      p_workspace_generation: "10000000-0000-4000-8000-000000000006",
     }))
   })
 
   it("rejects malformed/stale submissions before the database write", async () => {
     await expect(recordStaffPortalOpportunityResponse({ ...input, opportunityId: "other" })).rejects.toThrow("invalid")
     await expect(recordStaffPortalOpportunityResponse({ ...input, response: "declined", declineReasonCategories: [], declineReasonText: null })).rejects.toThrow("reason")
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it("rejects the old A form after the browser workspace switches to B", async () => {
+    mocks.verifySelection.mockResolvedValue(null)
+    await expect(recordStaffPortalOpportunityResponse(input)).rejects.toThrow("workspace changed")
     expect(mocks.rpc).not.toHaveBeenCalled()
   })
 })

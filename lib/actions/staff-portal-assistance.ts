@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
+import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import type { OpportunityDeclineReasonCategory } from "@/lib/types/opportunity"
 
 const DECLINE_REASONS = new Set<OpportunityDeclineReasonCategory>([
@@ -11,6 +12,7 @@ const DECLINE_REASONS = new Set<OpportunityDeclineReasonCategory>([
 ])
 
 export type StaffOpportunityResponseInput = {
+  selectionToken: string
   repreneurId: string
   opportunityId: string
   matchId: string | null
@@ -25,6 +27,8 @@ export type StaffOpportunityResponseInput = {
 
 export async function recordStaffPortalOpportunityResponse(input: StaffOpportunityResponseInput) {
   const access = await requireStaffAccess()
+  const selection = await verifyStaffPortalSelection(input.selectionToken, input.repreneurId, access.user.id)
+  if (!selection) throw new Error("The selected staff workspace changed. Refresh and try again.")
   if (!isUuid(input.repreneurId) || !isUuid(input.opportunityId)
     || (input.matchId !== null && !isUuid(input.matchId)) || !isUuid(input.operationKey)
     || !Number.isFinite(Date.parse(input.expectedOpportunityUpdatedAt))
@@ -54,6 +58,8 @@ export async function recordStaffPortalOpportunityResponse(input: StaffOpportuni
     p_staff_user_id: access.user.id,
     p_staff_email: access.user.email,
     p_operation_key: input.operationKey,
+    p_workspace_id: selection.workspaceId,
+    p_workspace_generation: selection.generation,
   })
   if (error) throw new Error("The selection or response changed. Refresh this repreneur's preview and try again.")
   // No owner-response notification or owner-click email is delivered here.

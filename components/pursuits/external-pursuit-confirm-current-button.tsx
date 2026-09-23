@@ -5,6 +5,7 @@ import { CheckCircle2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { confirmExternalPursuitCurrent } from "@/lib/actions/external-pursuit-capacity"
+import { confirmSelectedExternalPursuitCurrent } from "@/lib/actions/staff-portal-external"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import {
   beginExternalPursuitConfirmation,
@@ -17,8 +18,10 @@ export function ExternalPursuitConfirmCurrentButton({
   pursuitId,
   onOperationLockChange,
   onConfirmed,
+  staffPortalSelection,
 }: {
   pursuitId: string
+  staffPortalSelection?: { ownerId: string; token: string }
   onOperationLockChange?: ExternalPursuitOperationLockHandler
   onConfirmed?: () => void
 }) {
@@ -45,10 +48,14 @@ export function ExternalPursuitConfirmCurrentButton({
     stateRef.current = start.state
     setPending(true)
     try {
-      const result = await confirmExternalPursuitCurrent(
-        start.attempt.pursuitId,
-        start.attempt.idempotencyKey,
-      )
+      const result = staffPortalSelection
+        ? await confirmSelectedExternalPursuitCurrent(
+            staffPortalSelection.ownerId, staffPortalSelection.token,
+            start.attempt.pursuitId, start.attempt.idempotencyKey,
+          )
+        : await confirmExternalPursuitCurrent(
+            start.attempt.pursuitId, start.attempt.idempotencyKey,
+          )
       stateRef.current = settleExternalPursuitConfirmation(stateRef.current, result.outcome)
       setRetryPending(stateRef.current.pending !== null)
       if (!result.success) {

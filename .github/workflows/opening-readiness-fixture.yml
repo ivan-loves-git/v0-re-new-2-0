@@ -65,6 +65,9 @@ jobs:
           echo "OPENING_FIXTURE_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Start disposable local Supabase
+        env:
+          # Let the pinned CLI use its native ECR → GHCR → source fallback.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ""
         run: >-
           supabase start
           --exclude realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor

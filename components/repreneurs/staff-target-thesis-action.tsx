@@ -5,13 +5,13 @@ import { RepreneurTargetThesisEditor } from "@/components/portal/repreneur-targe
 import { updateRepreneurTargetThesis, type TargetThesisInput } from "@/lib/actions/repreneur-profile"
 import type { PortalRepreneurProfile } from "@/lib/data/portal-profile"
 
-export function StaffTargetThesisAction({ repreneur }: { repreneur: PortalRepreneurProfile }) {
+export function StaffTargetThesisAction({ repreneur, selectionToken }: { repreneur: PortalRepreneurProfile; selectionToken: string }) {
   const retry = useRef<{ fingerprint: string; key: string } | null>(null)
   const name = [repreneur.first_name, repreneur.last_name].filter(Boolean).join(" ") || "this repreneur"
   async function save(input: TargetThesisInput) {
     const fingerprint = JSON.stringify(input)
     if (retry.current?.fingerprint !== fingerprint) retry.current = { fingerprint, key: crypto.randomUUID() }
-    await updateRepreneurTargetThesis(repreneur.id, input, repreneur.updated_at, retry.current.key)
+    await updateRepreneurTargetThesis(repreneur.id, input, repreneur.updated_at, retry.current.key, selectionToken)
     retry.current = null
   }
   return <RepreneurTargetThesisEditor
