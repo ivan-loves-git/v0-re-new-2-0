@@ -59,11 +59,15 @@ export function FloatingNav() {
     /^[0-9a-f-]{36}$/i.test(segments[3] ?? "")
       ? segments[2]
       : null
+  const opportunityDetail =
+    segments.length === 2 &&
+    segments[0] === "opportunities" &&
+    /^[0-9a-f-]{36}$/i.test(segments[1])
 
   const breadcrumbItems = maDetailKind
     ? [
         {
-          href: "/opportunities",
+          href: "/opportunities/groups",
           name: "Opportunities",
           isLast: false,
         },
@@ -79,25 +83,33 @@ export function FloatingNav() {
           isLast: true,
         },
       ]
-    : segments
-        .filter((segment) => !/^[0-9a-f-]{36}$/i.test(segment))
-        .map((segment, index, filtered) => {
-          const originalIndex = segments.findIndex(
-            (s, i) =>
-              s === segment &&
-              segments
-                .slice(0, i)
-                .filter((seg) => !/^[0-9a-f-]{36}$/i.test(seg)).length ===
-                index,
-          )
-          const href = "/" + segments.slice(0, originalIndex + 1).join("/")
-          const name =
-            pathNames[segment] ||
-            segment.charAt(0).toUpperCase() + segment.slice(1)
-          const isLast = index === filtered.length - 1
+    : [
+        ...segments
+          .filter((segment) => !/^[0-9a-f-]{36}$/i.test(segment))
+          .map((segment, index, filtered) => {
+            const originalIndex = segments.findIndex(
+              (s, i) =>
+                s === segment &&
+                segments
+                  .slice(0, i)
+                  .filter((seg) => !/^[0-9a-f-]{36}$/i.test(seg)).length ===
+                  index,
+            )
+            const href =
+              index === 0 && segment === "opportunities"
+                ? "/opportunities/groups"
+                : "/" + segments.slice(0, originalIndex + 1).join("/")
+            const name =
+              pathNames[segment] ||
+              segment.charAt(0).toUpperCase() + segment.slice(1)
+            const isLast = index === filtered.length - 1 && !opportunityDetail
 
-          return { href, name, isLast }
-        })
+            return { href, name, isLast }
+          }),
+        ...(opportunityDetail
+          ? [{ href: pathname, name: "Opportunity detail", isLast: true }]
+          : []),
+      ]
   const contextualRoot =
     segments.length === 1 ? topLevelContexts[segments[0]] : undefined
   const visibleBreadcrumbItems = contextualRoot

@@ -26,6 +26,15 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 23, 2026",
+    version: "0.9.75",
+    title: "Groups is the opportunity home",
+    isCompleted: true,
+    events: [
+      { title: "One place for opportunity work and downloads", type: "feature", description: "Staff can use both internal CSV exports beside New opportunity in Groups. Old Opportunities bookmarks open Groups; the same records, filters and Full export confirmation remain." },
+    ],
+  },
+  {
+    period: "Sep 23, 2026",
     version: "0.9.74",
     title: "Activity is easier to find and read",
     isCompleted: true,
