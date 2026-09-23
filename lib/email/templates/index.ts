@@ -89,6 +89,8 @@ L'équipe Re-New`,
 }
 
 export const INTEREST_TEMPLATE_DEFAULT_BODIES: Partial<Record<EmailTemplateKey, string>> = {
+  recommendation_response_reminder: "Bonjour {firstName},\n\nVous pouvez encore consulter la recommandation {opportunityTitle} et nous indiquer votre intérêt avant la fin de sa période de réponse.\n\nL’équipe Re-New",
+  recommendation_unanswered_staff_alert: "La recommandation {opportunityTitle} proposée à {repreneurName} a atteint sa fin de réponse sans intérêt enregistré. Vérifiez la suite appropriée dans Re-New.",
   memo_feedback_reminder: `Bonjour {firstName},
 
 Après votre accès au mémorandum de {opportunityTitle}, nous serions heureux de recueillir votre retour. Si vous nous l’avez déjà transmis, aucune action supplémentaire n’est nécessaire.
@@ -123,6 +125,22 @@ export const TEMPLATE_METADATA: Record<
     copyEditable?: boolean
   }
 > = {
+  recommendation_response_reminder: {
+    name: "Recommendation response reminder",
+    description: "One client reminder after 48 elapsed hours in the exact open 72-hour cycle. Inactive by default.",
+    category: "status",
+    audience: "rep",
+    manualSend: false,
+    copyEditable: true,
+  },
+  recommendation_unanswered_staff_alert: {
+    name: "Unanswered recommendation expiry",
+    description: "One configured-staff alert at the exact unanswered cycle expiry. Inactive by default.",
+    category: "status",
+    audience: "staff",
+    manualSend: false,
+    copyEditable: true,
+  },
   memo_feedback_reminder: {
     name: "Memo feedback reminder",
     description: "One client reminder five Paris weekdays after the exact memo grant, cancelled by recorded feedback or lost access. Inactive by default.",

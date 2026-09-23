@@ -234,7 +234,15 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setPendingActionId(matchId)
     setFeedback(null)
     try {
-      await removeOpportunityMatch(matchId, opportunityId)
+      const result = await removeOpportunityMatch(matchId, opportunityId)
+      if (!result.ok) {
+        showFeedback({
+          type: "error",
+          title: "Recommendation not removed",
+          description: result.message,
+        })
+        return
+      }
       showFeedback({
         type: "success",
         title: "Recommendation removed",

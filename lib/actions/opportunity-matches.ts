@@ -663,7 +663,9 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
   }
 }
 
-export async function removeOpportunityMatch(matchId: string, opportunityId: string) {
+export async function removeOpportunityMatch(
+  matchId: string, opportunityId: string,
+): Promise<OpportunityMatchActionResult> {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
@@ -674,10 +676,10 @@ export async function removeOpportunityMatch(matchId: string, opportunityId: str
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
 
-  if (matchError) throw new Error(matchError.message)
-  if (!match) throw new Error("Opportunity match not found")
+  if (matchError) return { ok: false, message: "Could not check this recommendation. Try again." }
+  if (!match) return { ok: false, message: "This recommendation no longer exists. Refresh the page." }
   if (match.status === "active_pursuit") {
-    throw new Error("Drop the active pursuit before removing this recommendation.")
+    return { ok: false, message: "Drop the active pursuit before removing this recommendation." }
   }
 
   const { error } = await supabase
@@ -686,8 +688,15 @@ export async function removeOpportunityMatch(matchId: string, opportunityId: str
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
 
-  if (error) throw new Error(error.message)
+  if (error?.code === "P0001" && error.message.includes("recommendation_cycle_delivery_in_flight")) {
+    return { ok: false, message: "A recommendation email is being delivered. Wait for it to finish, then try again." }
+  }
+  if (error?.code === "P0001" && error.message.includes("recommendation_cycle_delivery_review_required")) {
+    return { ok: false, message: "A recommendation email has an unresolved delivery outcome. Ask operations to review it before removing this match." }
+  }
+  if (error) return { ok: false, message: "Recommendation removal failed. Try again." }
   revalidatePath(`/opportunities/${opportunityId}`)
+  return { ok: true }
 }
 
 export async function markOpportunityMatchReviewed(matchId: string, opportunityId: string) {
