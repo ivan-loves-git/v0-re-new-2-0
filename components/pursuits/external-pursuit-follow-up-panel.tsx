@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { updateExternalPursuitFollowUp } from "@/lib/actions/external-pursuits"
+import { updateSelectedExternalPursuitFollowUp } from "@/lib/actions/staff-portal-external"
 import {
   EXTERNAL_PURSUIT_AVAILABILITY,
   type ExternalPursuitAvailability,
@@ -31,6 +32,7 @@ export type ExternalPursuitFollowUpPanelProps = {
   followUp: ExternalPursuitFollowUpSnapshot
   onSaved?: () => void
   onOperationLockChange?: ExternalPursuitOperationLockHandler
+  staffPortalSelection?: { ownerId: string; token: string }
 }
 
 const availabilityLabels: Record<ExternalPursuitAvailability, string> = {
@@ -57,6 +59,7 @@ export function ExternalPursuitFollowUpPanel({
   followUp,
   onSaved,
   onOperationLockChange,
+  staffPortalSelection,
 }: ExternalPursuitFollowUpPanelProps) {
   const prefix = useId()
   const operationLockToken = `external-pursuit-follow-up:${pursuitId}:${prefix}`
@@ -99,7 +102,7 @@ export function ExternalPursuitFollowUpPanel({
       availability,
       dueAt: dueAt || null,
       sharedNotes,
-      ...(role === "staff" ? { staffInternalNotes } : {}),
+      ...(role === "staff" && !staffPortalSelection ? { staffInternalNotes } : {}),
     }
     const attempt = externalPursuitFollowUpSubmission({
       recovery: recoveryAttempt,
@@ -119,7 +122,10 @@ export function ExternalPursuitFollowUpPanel({
     startTransition(async () => {
       let result
       try {
-        result = await updateExternalPursuitFollowUp(pursuitId, attempt.patch, attempt.idempotencyKey)
+        result = staffPortalSelection
+          ? await updateSelectedExternalPursuitFollowUp(staffPortalSelection.ownerId, staffPortalSelection.token,
+              pursuitId, attempt.patch, attempt.idempotencyKey)
+          : await updateExternalPursuitFollowUp(pursuitId, attempt.patch, attempt.idempotencyKey)
       } catch {
         const retryMessage = "The save result is unclear. Fields are locked until you retry this exact save."
         setRecoveryAttempt(attempt)
@@ -201,7 +207,7 @@ export function ExternalPursuitFollowUpPanel({
           <Label htmlFor={`${prefix}-shared-notes`}>Shared notes</Label>
           <Textarea id={`${prefix}-shared-notes`} value={sharedNotes} onChange={(event) => setSharedNotes(event.target.value)} disabled={controlsLocked} />
         </div>
-        {role === "staff" ? <div className="space-y-2 rounded-md border bg-muted/30 p-4">
+        {role === "staff" && !staffPortalSelection ? <div className="space-y-2 rounded-md border bg-muted/30 p-4">
           <Label htmlFor={`${prefix}-staff-notes`}>Staff-only notes</Label>
           <p className="text-sm text-muted-foreground">Visible to Re-New staff only; never shown in the owner portal.</p>
           <Textarea id={`${prefix}-staff-notes`} value={staffInternalNotes} onChange={(event) => setStaffInternalNotes(event.target.value)} disabled={controlsLocked} />

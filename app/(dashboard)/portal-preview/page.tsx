@@ -10,6 +10,10 @@ import { RepreneurOpportunityList } from "@/components/opportunities/repreneur-o
 import { RepreneurProfileSummary } from "@/components/portal/repreneur-profile-summary"
 import { StaffPortalPreviewSelector } from "@/components/repreneurs/staff-portal-preview-selector"
 import { StaffPortalPreviewTabs } from "@/components/repreneurs/staff-portal-preview-tabs"
+import { StaffOpportunityResponseControls } from "@/components/repreneurs/staff-opportunity-response-controls"
+import { StaffTargetThesisAction } from "@/components/repreneurs/staff-target-thesis-action"
+import { StaffLdcAssistance } from "@/components/repreneurs/staff-ldc-assistance"
+import { StaffReceivedNdaUpload } from "@/components/repreneurs/staff-received-nda-upload"
 import { ExternalPursuitBoard } from "@/components/pursuits/external-pursuit-board"
 import { getExternalPursuitAttachmentMap } from "@/lib/actions/external-pursuit-attachments"
 import {
@@ -29,6 +33,8 @@ import {
 } from "@/lib/portal-preview-routes"
 import { projectSelectedReNewPursuits } from "@/lib/portal-preview-pursuits"
 import { isUuid } from "@/lib/uuid"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { issueStaffPortalSelection } from "@/lib/staff-portal-selection"
 
 interface StaffPortalPreviewPageProps {
   searchParams: Promise<{
@@ -86,6 +92,10 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId },
       })
     : null
+  const opportunityUpdatedAt = selectedOpportunity
+    ? (await createAdminClient().from("opportunities").select("updated_at")
+      .eq("id", selectedOpportunity.opportunity_id).maybeSingle()).data?.updated_at ?? null
+    : null
   const renewPursuits = selectedRepreneurId
     ? projectSelectedReNewPursuits(selectedRepreneurId, opportunityData.opportunities)
     : []
@@ -93,6 +103,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     ? await getExternalPursuitAttachmentMap(externalPursuits.map((pursuit) => pursuit.id))
     : {}
   const staffName = access.user.name?.trim() || access.user.email
+  const selectedOwnerToken = selectedRepreneurId && section === "external-pursuits"
+    ? issueStaffPortalSelection(selectedRepreneurId, access.user.id) : null
 
   return (
     <div className="space-y-6">
@@ -162,6 +174,24 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             opportunity={selectedOpportunity}
             readOnly
             journey={previewJourney}
+            staffAssistanceControls={opportunityUpdatedAt && selectedOption ? <StaffOpportunityResponseControls
+              repreneurId={selectedOption.id}
+              repreneurName={selectedOption.name}
+              opportunityId={selectedOpportunity.opportunity_id}
+              opportunityTitle={selectedOpportunity.public_title || "Confidential acquisition opportunity"}
+              matchId={selectedOpportunity.match_id}
+              matchStatus={selectedOpportunity.match_status}
+              expectedOpportunityUpdatedAt={opportunityUpdatedAt}
+              expectedMatchUpdatedAt={selectedOpportunity.match_id ? selectedOpportunity.updated_at : null}
+              expectedInterestAt={selectedOpportunity.match_id ? selectedOpportunity.interest_expressed_at ?? null : null}
+              interestRejected={Boolean(selectedOpportunity.interest_rejected)}
+              recommendationExpiresAt={selectedOpportunity.recommendation_expires_at}
+            /> : null}
+            staffDocumentAssistanceControls={selectedOption && selectedOpportunity.match_id
+              && previewJourney?.enabled && previewJourney.gate1Passed && previewJourney.ndaReadyNotified
+              && !previewJourney.revoked && !previewJourney.gate2Passed
+              ? <StaffReceivedNdaUpload matchId={selectedOpportunity.match_id}
+                  repreneurId={selectedOption.id} repreneurName={selectedOption.name} /> : null}
             documentHrefs={selectedOpportunity.match_id ? {
               ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }),
               ...(previewJourney?.confidentialGrant ? {
@@ -209,10 +239,13 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               dealsHref={createPortalPreviewHref(selectedRepreneurId)}
               detailHrefByOpportunityId={detailHrefByOpportunityId}
               mode="staff-preview"
+              staffTargetThesisAction={profileData.repreneur ? <StaffTargetThesisAction repreneur={profileData.repreneur} /> : null}
+              staffDocumentAssistanceAction={profileData.repreneur && selectedOption
+                ? <StaffLdcAssistance repreneurId={selectedOption.id} repreneurName={selectedOption.name} /> : null}
             />
           </TabsContent>
           <TabsContent value="renew-pursuits">
-            <ExternalPursuitBoard key={`${selectedRepreneurId}:renew`} external={[]} renew={renewPursuits} isStaff readOnly selectedOwnerId={selectedRepreneurId} />
+            <ExternalPursuitBoard key={`${selectedRepreneurId}:renew`} external={[]} renew={renewPursuits} isStaff readOnly selectedOwnerId={selectedRepreneurId} showExternalBanner={false} />
           </TabsContent>
           <TabsContent value="external-pursuits">
             <ExternalPursuitBoard
@@ -221,8 +254,10 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               renew={[]}
               attachmentsByPursuit={attachmentsByPursuit}
               isStaff
-              readOnly
+              readOnly={!selectedOwnerToken}
               selectedOwnerId={selectedRepreneurId}
+              selectedOwnerToken={selectedOwnerToken ?? undefined}
+              selectedOwnerName={selectedOption?.name}
             />
           </TabsContent>
         </StaffPortalPreviewTabs>

@@ -158,6 +158,13 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    are denied.
 3. `shared_notes` are owner-visible. `staff_internal_notes` are physically
    separate and staff-only. No action serializes staff notes to an owner.
+   The #196 selected-owner Tools Portal reuses the existing actor-audited
+   staff create/edit, stage, contact, follow-up and private-file paths, but
+   binds every portal mutation to a short-lived staff-and-owner selection and
+   rechecks the exact dossier owner server-side. It never projects or writes
+   staff-only notes in the selected-owner portal and never exposes the owner's
+   deletion request or staff fulfillment action there. The existing staff
+   operating board retains its own broader staff authority.
 4. Contacts are repeatable records; they do not create or link canonical M&A
    contacts, firms, offices, opportunity source records, matches or pursuits.
 5. Create, update, contact changes and deletion requests append immutable audit

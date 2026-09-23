@@ -26,6 +26,16 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 23, 2026",
+    version: "0.9.76",
+    title: "Staff can assist from the selected repreneur's portal",
+    isCompleted: false,
+    events: [
+      { title: "Act for the right person without signing in as them", type: "feature", description: "Re-New staff can select a repreneur in Tools, update their acquisition thesis, upload their Lettre de cadrage, and record an independent interest or decline with the staff actor clearly recorded. Personal reading marks, certifications and account choices remain the repreneur's own." },
+      { title: "Keep documents and pursuits in their own lanes", type: "feature", description: "Staff can record an already-received signed NDA for later validation and manage the selected person's separate External Pursuits. Upload alone never approves confidential access, and External files never become Re-New opportunity evidence." },
+    ],
+  },
+  {
+    period: "Sep 23, 2026",
     version: "0.9.75",
     title: "Groups is the opportunity home",
     isCompleted: true,

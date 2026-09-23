@@ -34,6 +34,10 @@ import {
   saveExternalPursuitContact,
   updateExternalPursuit,
 } from "@/lib/actions/external-pursuits"
+import {
+  createSelectedExternalPursuit, moveSelectedExternalPursuitStage,
+  saveSelectedExternalPursuitContact, updateSelectedExternalPursuit,
+} from "@/lib/actions/staff-portal-external"
 import type { ReNewPursuitBoardRecord } from "@/lib/actions/external-pursuit-board"
 import type { ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 import {
@@ -126,6 +130,9 @@ export function ExternalPursuitBoard({
   isStaff,
   readOnly = false,
   selectedOwnerId,
+  selectedOwnerToken,
+  selectedOwnerName,
+  showExternalBanner = true,
   owners = [],
   conversionPursuitIds = [],
   conversionOfficeOptions = [],
@@ -135,9 +142,12 @@ export function ExternalPursuitBoard({
   renew: ReNewPursuitBoardRecord[]
   attachmentsByPursuit?: Record<string, ExternalPursuitAttachment[]>
   isStaff: boolean
-  /** A selected-owner staff preview has no action bindings until #190. */
+  /** The selected-owner portal uses an actor-bound token for every mutation. */
   readOnly?: boolean
   selectedOwnerId?: string
+  selectedOwnerToken?: string
+  selectedOwnerName?: string
+  showExternalBanner?: boolean
   owners?: { id: string; name: string }[]
   /** Server-derived, unconverted IDs only; the client also checks active state. */
   conversionPursuitIds?: string[]
@@ -166,6 +176,7 @@ export function ExternalPursuitBoard({
   const managerCanConvert = Boolean(
     isStaff
     && !readOnly
+    && !selectedOwnerId
     && managing
     && managing.deletionStatus === "active"
     && !["completed", "dropped_archived"].includes(managing.stage)
@@ -262,7 +273,7 @@ export function ExternalPursuitBoard({
   }
 
   function submit() {
-    if (readOnly || (selectedOwnerId && ownerId !== selectedOwnerId)) return
+    if (readOnly || (selectedOwnerId && (ownerId !== selectedOwnerId || !selectedOwnerToken))) return
     let snapshot = submissionSnapshotRef.current
     if (!snapshot) {
       if (!draft.title.trim()) {
@@ -299,9 +310,13 @@ export function ExternalPursuitBoard({
     const exactSnapshot = snapshot
     startTransition(async () => {
       try {
-        const result = exactSnapshot.pursuitId
-          ? await updateExternalPursuit(exactSnapshot.pursuitId, exactSnapshot.input, exactSnapshot.idempotencyKey)
-          : await createExternalPursuit(
+        const result = selectedOwnerId && selectedOwnerToken
+          ? exactSnapshot.pursuitId
+            ? await updateSelectedExternalPursuit(selectedOwnerId, selectedOwnerToken, exactSnapshot.pursuitId, exactSnapshot.input, exactSnapshot.idempotencyKey)
+            : await createSelectedExternalPursuit(selectedOwnerId, selectedOwnerToken, exactSnapshot.input, exactSnapshot.idempotencyKey)
+          : exactSnapshot.pursuitId
+            ? await updateExternalPursuit(exactSnapshot.pursuitId, exactSnapshot.input, exactSnapshot.idempotencyKey)
+            : await createExternalPursuit(
             exactSnapshot.input,
             exactSnapshot.idempotencyKey,
           )
@@ -319,7 +334,10 @@ export function ExternalPursuitBoard({
         }
 
         for (const contact of exactSnapshot.contacts) {
-          const contactResult = await saveExternalPursuitContact(
+          const contactResult = selectedOwnerId && selectedOwnerToken
+            ? await saveSelectedExternalPursuitContact(selectedOwnerId, selectedOwnerToken,
+              result.pursuitId, contact, contactIdempotencyKey(exactSnapshot.idempotencyKey, contact.clientId))
+            : await saveExternalPursuitContact(
             result.pursuitId,
             contact,
             contactIdempotencyKey(exactSnapshot.idempotencyKey, contact.clientId),
@@ -352,7 +370,7 @@ export function ExternalPursuitBoard({
   }
 
   function move(record: ExternalPursuitBoardRecord, stage: ExternalPursuitStage) {
-    if (readOnly || (selectedOwnerId && record.ownerRepreneurId !== selectedOwnerId)) return
+    if (readOnly || (selectedOwnerId && (record.ownerRepreneurId !== selectedOwnerId || !selectedOwnerToken))) return
     const idempotencyKey = retryKeyFor(
       operationKeys.current,
       `stage:${record.id}:${stage}`,
@@ -360,7 +378,9 @@ export function ExternalPursuitBoard({
     )
     startTransition(async () => {
       try {
-        const result = await moveExternalPursuitStage(record.id, stage, idempotencyKey)
+        const result = selectedOwnerId && selectedOwnerToken
+          ? await moveSelectedExternalPursuitStage(selectedOwnerId, selectedOwnerToken, record.id, stage, idempotencyKey)
+          : await moveExternalPursuitStage(record.id, stage, idempotencyKey)
         if (!result.success) {
           toast.error(result.message)
           return
@@ -375,7 +395,7 @@ export function ExternalPursuitBoard({
   }
 
   function confirmDeletion() {
-    if (readOnly) return
+    if (readOnly || selectedOwnerId) return
     if (!confirmation) return
     const { kind, record } = confirmation
     const operation = kind === "request" ? `delete-request:${record.id}` : `delete-fulfill:${record.id}`
@@ -401,14 +421,15 @@ export function ExternalPursuitBoard({
 
   return (
     <div className="space-y-5">
-      <Alert>
+      {showExternalBanner && <Alert>
         <AlertTitle>External pursuits are private dossiers</AlertTitle>
         <AlertDescription>
           {isStaff
             ? "External pursuits are private dossiers for their owner and authorised Re-New staff. They are separate from Re-New Deal Flow."
             : "External pursuits are private dossiers for you and authorised Re-New staff. They are separate from Re-New Deal Flow."}
         </AlertDescription>
-      </Alert>
+      </Alert>}
+      {selectedOwnerId && !readOnly ? <p className="text-sm font-medium">Acting as Re-New staff for {selectedOwnerName ?? "the selected repreneur"}. Changes are attributed to your staff account, not to the owner.</p> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
@@ -452,6 +473,7 @@ export function ExternalPursuitBoard({
                         key={record.id}
                         record={record}
                         isStaff={isStaff}
+                        allowStaffFulfillDeletion={!selectedOwnerId}
                         readOnly={readOnly}
                         pending={pending}
                         onEdit={openEdit}
@@ -609,10 +631,12 @@ export function ExternalPursuitBoard({
                     availability: managing.availability,
                     dueAt: managing.dueAt,
                     sharedNotes: managing.sharedNotes,
-                    ...(isStaff ? { staffInternalNotes: managing.staffInternalNotes ?? null } : {}),
+                    ...(isStaff && !selectedOwnerId ? { staffInternalNotes: managing.staffInternalNotes ?? null } : {}),
                   }}
                   onOperationLockChange={handleManagerOperationLockChange}
                   onSaved={() => window.location.reload()}
+                  staffPortalSelection={selectedOwnerId && selectedOwnerToken
+                    ? { ownerId: selectedOwnerId, token: selectedOwnerToken } : undefined}
                 />
               ) : (
                 <Card className="shadow-none">
@@ -628,7 +652,7 @@ export function ExternalPursuitBoard({
                     <p><span className="font-medium">Due:</span> {externalPursuitDueStateLabel(externalPursuitDueState(managing.dueAt))}</p>
                     <p><span className="font-medium">Shared notes:</span> {managing.sharedNotes || "Not recorded"}</p>
                     {readOnly ? <PendingContacts contacts={managing.contacts} /> : null}
-                    {isStaff && !readOnly ? <p><span className="font-medium">Staff-only notes:</span> {managing.staffInternalNotes || "Not recorded"}</p> : null}
+                    {isStaff && !readOnly && !selectedOwnerId ? <p><span className="font-medium">Staff-only notes:</span> {managing.staffInternalNotes || "Not recorded"}</p> : null}
                   </CardContent>
                 </Card>
               )}
@@ -666,6 +690,8 @@ export function ExternalPursuitBoard({
                 readOnly={readOnly || managing.deletionStatus !== "active"}
                 onOperationLockChange={handleManagerOperationLockChange}
                 onAttachmentRemoved={handleAttachmentRemoved}
+                staffPortalSelection={selectedOwnerId && selectedOwnerToken
+                  ? { ownerId: selectedOwnerId, token: selectedOwnerToken } : undefined}
               />
             </div>
           ) : null}
@@ -783,6 +809,7 @@ function PendingContacts({ contacts }: { contacts: ExternalPursuitContactInput[]
 function ExternalCard({
   record,
   isStaff,
+  allowStaffFulfillDeletion,
   readOnly,
   pending,
   onEdit,
@@ -793,6 +820,7 @@ function ExternalCard({
 }: {
   record: ExternalPursuitBoardRecord
   isStaff: boolean
+  allowStaffFulfillDeletion: boolean
   readOnly: boolean
   pending: boolean
   onEdit: (record: ExternalPursuitBoardRecord) => void
@@ -838,7 +866,9 @@ function ExternalCard({
         <Button size="sm" variant="outline" onClick={() => onManage(record)}>View dossier and files</Button>
       ) : deleteRequested ? (
         <>
-          <p className="text-sm text-warning">Deletion requested. Staff can review the dossier and fulfil the purge.</p>
+          <p className="text-sm text-warning">{allowStaffFulfillDeletion
+            ? "Deletion requested. Staff can review the dossier and fulfil the purge."
+            : "Deletion requested. This dossier is locked in the selected-owner portal view."}</p>
           {isStaff ? <PendingContacts contacts={record.contacts} /> : null}
         </>
       ) : (
@@ -868,10 +898,10 @@ function ExternalCard({
       {isStaff && !readOnly && deleteRequested ? (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" disabled={pending} onClick={() => onManage(record)}>Review follow-up &amp; files</Button>
-          <Button size="sm" variant="destructive" disabled={pending} onClick={() => onFulfill(record)}>
+          {allowStaffFulfillDeletion ? <Button size="sm" variant="destructive" disabled={pending} onClick={() => onFulfill(record)}>
             <Trash2 data-icon="inline-start" />
             Permanently delete
-          </Button>
+          </Button> : null}
         </div>
       ) : null}
     </article>

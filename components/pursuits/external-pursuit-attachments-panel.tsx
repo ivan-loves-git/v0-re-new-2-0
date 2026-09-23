@@ -9,6 +9,7 @@ import {
   deleteExternalPursuitAttachment,
 } from "@/lib/actions/external-pursuit-attachments"
 import { uploadPrivateDocument } from "@/lib/private-upload"
+import { deleteSelectedExternalPursuitAttachment } from "@/lib/actions/staff-portal-external"
 import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES, type ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { toast } from "sonner"
@@ -26,6 +27,7 @@ export interface ExternalPursuitAttachmentsPanelProps {
   readOnly?: boolean
   onOperationLockChange?: ExternalPursuitOperationLockHandler
   onAttachmentRemoved?: (pursuitId: string, attachmentId: string) => void
+  staffPortalSelection?: { ownerId: string; token: string }
 }
 
 export function ExternalPursuitAttachmentsPanel({
@@ -35,6 +37,7 @@ export function ExternalPursuitAttachmentsPanel({
   readOnly = false,
   onOperationLockChange,
   onAttachmentRemoved,
+  staffPortalSelection,
 }: ExternalPursuitAttachmentsPanelProps) {
   const generatedId = useId()
   const fileInputId = `external-pursuit-attachment-${pursuitId}-${generatedId}`
@@ -70,6 +73,10 @@ export function ExternalPursuitAttachmentsPanel({
         const result = await uploadPrivateDocument(file, {
           kind: "external_pursuit_attachment",
           resourceId: pursuitId,
+          metadata: staffPortalSelection ? {
+            selected_owner_id: staffPortalSelection.ownerId,
+            staff_portal_selection_token: staffPortalSelection.token,
+          } : {},
         })
         releaseOperationLock()
         captureExternalPursuitCompleted(role, "upload")
@@ -94,7 +101,10 @@ export function ExternalPursuitAttachmentsPanel({
     startTransition(async () => {
       let result
       try {
-        result = await deleteExternalPursuitAttachment(pursuitId, attempt.attachmentId, attempt.idempotencyKey)
+        result = staffPortalSelection
+          ? await deleteSelectedExternalPursuitAttachment(staffPortalSelection.ownerId, staffPortalSelection.token,
+              pursuitId, attempt.attachmentId, attempt.idempotencyKey)
+          : await deleteExternalPursuitAttachment(pursuitId, attempt.attachmentId, attempt.idempotencyKey)
       } catch {
         setRecovery({ attachmentId })
         toast.error("The removal result is unclear. Retry this exact removal.")

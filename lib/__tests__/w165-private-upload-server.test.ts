@@ -353,6 +353,26 @@ describe("W-165 server upload authority", () => {
     })
   })
 
+  it("routes a staff-received signed PDF through its distinct guarded finalizer", async () => {
+    const bytes = new TextEncoder().encode("%PDF-1.4\n%%EOF\n")
+    const intent = {
+      ...pendingPdfIntent(bytes),
+      upload_kind: "staff_received_signed_nda",
+      metadata: { opportunity_id: opportunityId, title: "Received NDA", source_kind: "email", source_reference: "Synthetic inbox" },
+    }
+    const finalizeRpc = vi.fn().mockResolvedValue({ data: { artifactId: "artifact-1", message: "Received signed NDA recorded for staff validation." }, error: null, status: 200 })
+    const cleanupQuery = { select: () => ({ eq: () => ({ is: async () => ({ data: [], error: null }) }) }) }
+    mocks.createAdminClient.mockReturnValue({
+      from: (table: string) => table === "private_upload_intents"
+        ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: intent, error: null }) }) }) }
+        : table === "private_upload_cleanup_queue" ? cleanupQuery : null,
+      storage: { from: () => ({ download: async () => ({ data: new Blob([bytes], { type: "application/pdf" }), error: null }) }) },
+      rpc: finalizeRpc,
+    })
+    await finalizePrivateUpload(request({ intentId, finalizeSecret: secret }), { intentId, finalizeSecret: secret })
+    expect(finalizeRpc).toHaveBeenCalledWith("w196_finalize_staff_received_nda", expect.objectContaining({ p_intent_id: intentId }))
+  })
+
   it("returns a clear client rejection for an invalid PDF and records the content failure", async () => {
     const bytes = new TextEncoder().encode("%PDF-1.4\n%%EOF\n")
     const closeRpc = vi.fn().mockResolvedValue({ data: null, error: null, status: 200 })

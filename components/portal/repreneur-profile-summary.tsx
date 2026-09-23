@@ -29,6 +29,7 @@ interface RepreneurProfileSummaryProps {
   mode?: "owner" | "staff-preview"
   /** #190 binds an attributed staff action here; never fall back to a my-profile action. */
   staffTargetThesisAction?: ReactNode
+  staffDocumentAssistanceAction?: ReactNode
 }
 
 type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
@@ -220,6 +221,7 @@ export function RepreneurProfileSummary({
   detailHrefByOpportunityId,
   mode = "owner",
   staffTargetThesisAction,
+  staffDocumentAssistanceAction,
 }: RepreneurProfileSummaryProps) {
   if (!repreneur) {
     return (
@@ -286,6 +288,7 @@ export function RepreneurProfileSummary({
               : "Add or certify information for Re-New to review. These declarations never change readiness milestones."}
           </CardDescription>
         </CardHeader>
+        {staffPreview && staffDocumentAssistanceAction ? <CardContent>{staffDocumentAssistanceAction}</CardContent> : null}
         <CardContent>
           <RepreneurProfileContributions repreneur={repreneur} readOnly={staffPreview} />
         </CardContent>

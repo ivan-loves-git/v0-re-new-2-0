@@ -9,6 +9,7 @@ export type PrivateUploadKind =
   | "opportunity_document"
   | "staff_nda_artifact"
   | "portal_signed_nda"
+  | "staff_received_signed_nda"
   | "repreneur_document"
   | "external_pursuit_attachment"
 

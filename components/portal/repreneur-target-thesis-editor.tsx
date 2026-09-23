@@ -181,6 +181,7 @@ export function RepreneurTargetThesisEditor({
   description = "Keep the criteria Re-New uses to surface relevant opportunities current. Your readiness milestones remain managed by Re-New.",
   saveLabel = "Save target thesis",
   errorMessage = "Could not update your target thesis.",
+  staffAssistanceName,
 }: {
   repreneur: TargetThesisProfile
   onSave?: (input: TargetThesisInput) => Promise<void>
@@ -190,10 +191,12 @@ export function RepreneurTargetThesisEditor({
   description?: string
   saveLabel?: string
   errorMessage?: string
+  staffAssistanceName?: string
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => initialDraft(repreneur))
+  const [staffConfirmed, setStaffConfirmed] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const reset = () => setDraft(initialDraft(repreneur))
@@ -235,6 +238,7 @@ export function RepreneurTargetThesisEditor({
       open={open}
       onOpenChange={(nextOpen) => {
         if (nextOpen) reset()
+        if (nextOpen) setStaffConfirmed(false)
         setOpen(nextOpen)
       }}
     >
@@ -365,11 +369,15 @@ export function RepreneurTargetThesisEditor({
             </div>
           </div>
         </div>
+        {staffAssistanceName ? <label className="flex items-start gap-2 text-sm">
+          <Checkbox checked={staffConfirmed} onCheckedChange={(value) => setStaffConfirmed(value === true)} />
+          I am acting as Re-New staff on behalf of {staffAssistanceName}. My edit will be attributed to me, not to the repreneur.
+        </label> : null}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={save} disabled={isPending}>
+          <Button type="button" onClick={save} disabled={isPending || Boolean(staffAssistanceName && !staffConfirmed)}>
             {isPending && <Loader2 data-icon="inline-start" className="animate-spin" />}
             {saveLabel}
           </Button>

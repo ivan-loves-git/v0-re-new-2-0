@@ -26,6 +26,7 @@ const repreneur = {
 
 const portalProfile: PortalRepreneurProfile = {
   id: "repreneur-1",
+  updated_at: "2026-09-23T00:00:00.000Z",
   first_name: "Alex",
   last_name: "Martin",
   q13_target_sectors_v2: [],

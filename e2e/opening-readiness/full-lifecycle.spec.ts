@@ -50,6 +50,7 @@ type InputManifest = {
     | "blankNda"
     | "renewSignedNda"
     | "repreneurSignedNda"
+    | "staffReceivedNda"
     | "informationMemorandum",
     { path: string; sha256: string; bytes: number }
   >;
@@ -175,7 +176,7 @@ async function expectPreview(
     await expect(
       page
         .locator("#main-content")
-        .getByText("Responses are disabled while previewing.", {
+        .getByText("Current repreneur-facing status for this opportunity.", {
           exact: true,
         }),
     ).toBeVisible();
@@ -648,6 +649,77 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       result: "manual response recorded; no automated deadline asserted",
     });
 
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&view=profile");
+    await page.getByRole("button", { name: "Edit thesis as staff" }).click();
+    await page.locator("#target-revenue-min").fill("11");
+    await page.getByText("I am acting as Re-New staff on behalf of", { exact: false }).click();
+    await page.getByRole("button", { name: "Save attributed staff edit" }).click();
+    await expect(page.getByText(/Target thesis updated for/)).toBeVisible();
+    const thesisAudit = await one<{ staff_user_id: string; changed_fields: string[]; revenue: string }>(client,
+      `SELECT h.staff_user_id,h.changed_fields,r.target_revenue_min_meur::text AS revenue
+       FROM public.staff_assisted_profile_changes h JOIN public.repreneurs r ON r.id=h.repreneur_id
+       WHERE h.repreneur_id=$1 ORDER BY h.recorded_at DESC LIMIT 1`, [fixture.ids.realNonOwnerRepreneur]);
+    expect(thesisAudit.staff_user_id).toBe(fixture.authIds.staffUser);
+    expect(thesisAudit.changed_fields).toContain("target_revenue_min_meur");
+    expect(Number(thesisAudit.revenue)).toBe(11);
+
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&dealId=" + desktopOpportunityId);
+    await page.getByText("I am acting as Re-New staff on behalf of", { exact: false }).click();
+    await page.getByRole("button", { name: "Record interest" }).click();
+    await expect(page.getByText(/Recorded by Re-New staff for/)).toBeVisible();
+    const staffInterest = await one<{ match_id: string; staff_user_id: string; owner_events: number; click_alerts: number }>(client,
+      `SELECT h.match_id,h.staff_user_id,
+        (SELECT count(*)::int FROM public.opportunity_interest_events e WHERE e.match_id=h.match_id) AS owner_events,
+        (SELECT count(*)::int FROM public.opportunity_matches m WHERE m.id=h.match_id AND m.interest_notification_sent_at IS NOT NULL) AS click_alerts
+       FROM public.staff_assisted_match_responses h WHERE h.repreneur_id=$1 AND h.opportunity_id=$2
+       ORDER BY h.recorded_at DESC LIMIT 1`, [fixture.ids.realNonOwnerRepreneur, desktopOpportunityId]);
+    expect(staffInterest.staff_user_id).toBe(fixture.authIds.staffUser);
+    expect(staffInterest.owner_events).toBe(0);
+    expect(staffInterest.click_alerts).toBe(0);
+    await record({ step: "staff thesis and independent interest stay attributed without owner-response alerts", surface: "database",
+      result: "profile field audit and exact-match response audit record the staff actor" });
+
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&view=external-pursuits");
+    await page.getByRole("button", { name: "New external pursuit" }).click();
+    await page.locator("#external-pursuit-title").fill("QA STAFF EXTERNAL DOSSIER — SYNTHETIC");
+    await page.getByRole("button", { name: "Add contact" }).click();
+    await page.getByRole("textbox", { name: "Contact 1 name" }).fill("Synthetic external contact");
+    await page.getByRole("button", { name: "Create pursuit" }).click();
+    await expect(page.getByRole("dialog", { name: "New external pursuit" })).toHaveCount(0);
+    const selectedDossier = await one<{ id: string; owner_repreneur_id: string; creator: string; contacts: number }>(client,
+      `SELECT p.id,p.owner_repreneur_id,
+        (SELECT actor_user_id FROM public.external_pursuit_audit_events a WHERE a.external_pursuit_id=p.id AND a.event_type='created' ORDER BY a.occurred_at LIMIT 1) AS creator,
+        (SELECT count(*)::int FROM public.external_pursuit_contacts c WHERE c.external_pursuit_id=p.id) AS contacts
+       FROM public.external_pursuits p WHERE p.title='QA STAFF EXTERNAL DOSSIER — SYNTHETIC' LIMIT 1`);
+    expect(selectedDossier.owner_repreneur_id).toBe(fixture.ids.realNonOwnerRepreneur);
+    expect(selectedDossier.creator).toBe(fixture.authIds.staffUser);
+    expect(selectedDossier.contacts).toBe(1);
+    const dossierCard = page.locator("article").filter({ hasText: "QA STAFF EXTERNAL DOSSIER — SYNTHETIC" });
+    await dossierCard.getByRole("combobox", { name: "Move QA STAFF EXTERNAL DOSSIER — SYNTHETIC stage" }).click();
+    await page.getByRole("option", { name: "Contact / qualification" }).click();
+    await expect.poll(async () => (await one<{ stage: string }>(client,
+      "SELECT stage FROM public.external_pursuits WHERE id=$1", [selectedDossier.id])).stage)
+      .toBe("contact_qualification");
+    await dossierCard.getByRole("button", { name: "Follow-up & files" }).click();
+    await expect(page.getByText("Staff-only notes", { exact: true })).toHaveCount(0);
+    await page.getByRole("textbox", { name: "Next action" }).fill("Call synthetic intermediary");
+    await page.getByRole("combobox", { name: "Responsible" }).click();
+    await page.getByRole("option", { name: "Re-New staff" }).click();
+    await page.getByRole("button", { name: "Save follow-up" }).click();
+    await expect.poll(async () => (await one<{ next_action: string }>(client,
+      "SELECT next_action FROM public.external_pursuits WHERE id=$1", [selectedDossier.id])).next_action)
+      .toBe("Call synthetic intermediary");
+    const refreshedDossierCard = page.locator("article").filter({ hasText: "QA STAFF EXTERNAL DOSSIER — SYNTHETIC" });
+    await expect(refreshedDossierCard.getByRole("button", { name: "Follow-up & files" })).toBeVisible();
+    await refreshedDossierCard.getByRole("button", { name: "Follow-up & files" }).click();
+    await page.getByLabel("Choose a private attachment").setInputFiles(manifest.files.staffReceivedNda.path);
+    await page.getByRole("button", { name: "Add attachment" }).click();
+    await expect.poll(async () => (await one<{ count: number }>(client,
+      "SELECT count(*)::int AS count FROM public.external_pursuit_attachments WHERE external_pursuit_id=$1 AND created_by=$2",
+      [selectedDossier.id, fixture.authIds.staffUser])).count).toBe(1);
+    await record({ step: "selected-owner External dossier, contact and follow-up retain staff actor", surface: "database",
+      result: "exact owner, private file actor and staff-only notes absent from portal" });
+
     await page.goto(
       "/opportunities/" + desktopOpportunityId + "?tab=recommendations",
     );
@@ -806,6 +878,27 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       "SELECT d.delivery_status,d.provider_message_id,(e.id IS NOT NULL AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text) AS evidence FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.match_id=$1 AND d.handoff_type='e6'", [savedMatch.id]);
     expect(e6).toEqual({ delivery_status: "sent", provider_message_id: "qa-allowlist-accepted", evidence: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
+
+    // The attributed staff receipt is distinct from the owner's later upload.
+    // It leaves signer validation, Gate 2 and disclosure untouched.
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur + "&dealId=" + savedMatch.id);
+    await page.locator("#staff-nda-title").fill("QA STAFF-RECEIVED NDA — SYNTHETIC");
+    await page.locator("#staff-nda-file").setInputFiles(manifest.files.staffReceivedNda.path);
+    await page.locator("#staff-nda-reference").fill("Synthetic received-email reference");
+    await page.getByText("I am Re-New staff recording a copy already signed by", { exact: false }).click();
+    await page.getByRole("button", { name: "Record received PDF" }).click();
+    await expect(page.getByText("Received NDA recorded as staff evidence; staff validation is still required.")).toBeVisible();
+    const receipt = await one<{ digest: string; staff_user_id: string; source_kind: string; validated: number; gate2: number }>(client,
+      `SELECT a.content_sha256 AS digest,r.staff_user_id,r.source_kind,
+        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='repreneur_signed_copy_validated') AS validated,
+        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='gate_2_passed') AS gate2
+       FROM public.staff_received_nda_receipts r JOIN public.opportunity_nda_artifacts a ON a.id=r.artifact_id
+       WHERE r.match_id=$1 ORDER BY r.recorded_at DESC LIMIT 1`, [savedMatch.id]);
+    expect(receipt).toEqual({ digest: manifest.files.staffReceivedNda.sha256, staff_user_id: fixture.authIds.staffUser,
+      source_kind: "email", validated: 0, gate2: 0 });
+    await record({ step: "staff received an already-signed NDA without claiming signature or validation", surface: "database",
+      result: "distinct PDF hash, actual staff actor, source provenance, no Gate 2" });
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
 
     const renewSection = page
       .getByRole("heading", { name: "Re-New-signed copy" })

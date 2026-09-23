@@ -196,7 +196,7 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {lockedForAnotherRepreneur || canExpressUnassignedInterest ? (
+          {(lockedForAnotherRepreneur || canExpressUnassignedInterest) && (!readOnly || !staffAssistanceControls) ? (
             <LockedOpportunityInterestAction
               opportunityId={opportunity.opportunity_id}
               interestRecorded={Boolean(opportunity.interest_expressed_at)}

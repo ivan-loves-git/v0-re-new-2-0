@@ -21,6 +21,7 @@ import {
   verifyAndConsumeIntakeUploadToken,
 } from "@/lib/security/intake-upload"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 
 export const W165_MAX_BYTES = 20 * 1024 * 1024
 // Supabase signed upload capabilities expire after two hours. Keep the intent
@@ -47,6 +48,7 @@ type UploadKind =
   | "opportunity_document"
   | "staff_nda_artifact"
   | "portal_signed_nda"
+  | "staff_received_signed_nda"
   | "repreneur_document"
   | "external_pursuit_attachment"
 
@@ -173,7 +175,7 @@ function expectedMime(filename: string, supplied: unknown) {
 function parseIntentInput(value: unknown): IntentInput {
   if (!isRecord(value)) throw new PrivateUploadError("Invalid upload request.")
   const kinds = new Set<UploadKind>([
-    "opportunity_document","staff_nda_artifact","portal_signed_nda",
+    "opportunity_document","staff_nda_artifact","portal_signed_nda","staff_received_signed_nda",
     "repreneur_document","external_pursuit_attachment",
   ])
   if (typeof value.kind !== "string" || !kinds.has(value.kind as UploadKind)) {
@@ -216,8 +218,8 @@ function accessActorKey(access: NonNullable<Awaited<ReturnType<typeof getCurrent
   return `${access.role}:${access.user.id}:${access.repreneurId ?? ""}`
 }
 
-function requireMetadataText(metadata: Record<string, unknown>, key: string, label: string) {
-  const value = stringValue(metadata[key])
+function requireMetadataText(metadata: Record<string, unknown>, key: string, label: string, max = 255) {
+  const value = stringValue(metadata[key], max)
   if (!value) throw new PrivateUploadError(`${label} is required.`)
   return value
 }
@@ -341,6 +343,42 @@ async function authorizeIntent(
     }
   }
 
+  if (input.kind === "staff_received_signed_nda") {
+    if (!actor || actor.actorKind !== "staff" || !actor.actorEmail) {
+      throw new PrivateUploadError("Staff access is required.", 403)
+    }
+    if (input.contentType !== "application/pdf") throw new PrivateUploadError("The received NDA must be a PDF.")
+    const matchId = uuidValue(input.resourceId, true)!
+    const repreneurId = uuidValue(input.relatedId, true)!
+    const sourceKind = requireMetadataText(input.metadata, "source_kind", "Source channel")
+    const sourceReference = requireMetadataText(input.metadata, "source_reference", "Source reference", 500)
+    const title = requireMetadataText(input.metadata, "title", "Document title")
+    if (!new Set(["email", "in_person", "other"]).has(sourceKind) || sourceReference.length > 500) {
+      throw new PrivateUploadError("Choose a valid source and reference.")
+    }
+    const { data: match, error } = await supabase.from("opportunity_matches")
+      .select("id,opportunity_id,status,opportunity:opportunities!inner(status,is_demo),repreneur:repreneurs!inner(is_demo)")
+      .eq("id", matchId).eq("repreneur_id", repreneurId).maybeSingle()
+    const opportunity = Array.isArray(match?.opportunity) ? match.opportunity[0] : match?.opportunity
+    const repreneur = Array.isArray(match?.repreneur) ? match.repreneur[0] : match?.repreneur
+    if (error || !match || match.status !== "active_pursuit" || opportunity?.status !== "active"
+      || !isOpportunityInRepreneurNamespace(opportunity, repreneur)) {
+      throw new PrivateUploadError("The selected active pursuit is unavailable.", 403)
+    }
+    const { data: authorized, error: gateError } = await supabase.rpc(
+      "journey_repreneur_authorized_template", { p_match_id: matchId, p_repreneur_id: repreneurId },
+    )
+    if (gateError || !Array.isArray(authorized) || authorized.length !== 1) {
+      throw new PrivateUploadError("Current Gate 1 and its sent NDA notice are required.", 409)
+    }
+    return {
+      ...actor, resourceId: matchId, relatedId: repreneurId,
+      metadata: { opportunity_id: match.opportunity_id, source_kind: sourceKind, source_reference: sourceReference, title },
+      bucket: "opportunity-documents",
+      path: `${match.opportunity_id}/nda-artifacts/repreneur_signed_copy/${intentId}-${safePathFilename(input.fileName)}`,
+    }
+  }
+
   if (input.kind === "repreneur_document") {
     const documentType = requireMetadataText(input.metadata,"document_type","Document type")
     if (!new Set(["cv","ldc"]).has(documentType)) throw new PrivateUploadError("Choose CV or Lettre de cadrage.")
@@ -380,6 +418,17 @@ async function authorizeIntent(
     throw new PrivateUploadError("Choose a permitted document or image file.")
   }
   const pursuitId=uuidValue(input.resourceId,true)!
+  if (input.metadata.staff_portal_selection_token !== undefined) {
+    if (actor.actorKind !== "staff") throw new PrivateUploadError("Staff selection is required.",403)
+    const ownerId = uuidValue(input.metadata.selected_owner_id,true)!
+    const token = requireMetadataText(input.metadata,"staff_portal_selection_token","Staff selection")
+    if (!verifyStaffPortalSelection(token,ownerId,actor.actorUserId ?? "")) {
+      throw new PrivateUploadError("The selected repreneur changed. Refresh this portal view.",403)
+    }
+    const {data:dossier,error:dossierError}=await supabase.from("external_pursuits")
+      .select("id").eq("id",pursuitId).eq("owner_repreneur_id",ownerId).eq("deletion_status","active").maybeSingle()
+    if (dossierError || !dossier) throw new PrivateUploadError("The selected dossier is unavailable.",403)
+  }
   const { error: accessError }=await supabase.rpc("external_pursuit_attachments_for_actor",{p_dossier_id:pursuitId,p_actor_user_id:actor.actorUserId})
   if (accessError) throw new PrivateUploadError("External Pursuit access denied.",403)
   const digest=createHash("sha256").update(intentId).update(finalizeSecret).digest("hex")
@@ -545,6 +594,10 @@ async function afterSuccessfulFinalize(intent:PrivateUploadIntentRow) {
     revalidatePath("/portal/deals")
     revalidatePath(`/portal/deals/${intent.resource_id}`)
   }
+  if (intent.upload_kind === "staff_received_signed_nda") {
+    revalidatePath("/portal-preview")
+    revalidatePath(`/opportunities/${intent.metadata.opportunity_id}`)
+  }
   if (intent.upload_kind==="repreneur_document" && intent.resource_id) {
     revalidatePath("/repreneurs")
     revalidatePath(`/repreneurs/${intent.resource_id}`)
@@ -631,7 +684,8 @@ export async function finalizePrivateUpload(request:Request,payload:unknown) {
   }
   const digest=createHash("sha256").update(bytes).digest("hex")
   if (!SHA256_PATTERN.test(digest)) throw new PrivateUploadError("Upload digest failed.",500)
-  const {data,error,status}=await supabase.rpc("finalize_w165_private_upload",{
+  const {data,error,status}=await supabase.rpc(intent.upload_kind === "staff_received_signed_nda"
+    ? "w196_finalize_staff_received_nda" : "finalize_w165_private_upload",{
     p_intent_id:intent.id,p_actor_key:intent.actor_key,
     p_finalize_secret_hash:intent.finalize_secret_hash,p_content_sha256:digest,
   })
