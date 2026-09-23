@@ -744,11 +744,11 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(page).toHaveURL(new RegExp("repreneurId=" + fixture.ids.realRepreneur));
     await staleTab.getByRole("button", { name: "Save attributed staff edit" }).click();
     await expect(staleTab.getByText(/selected staff workspace changed/i)).toBeVisible();
-    expect((await one<{ revenue: string; changes: number }>(client,
-      `SELECT target_revenue_min_meur::text AS revenue,
+    expect((await one<{ revenue: number; changes: number }>(client,
+      `SELECT target_revenue_min_meur::double precision AS revenue,
         (SELECT count(*)::int FROM public.staff_assisted_profile_changes WHERE repreneur_id=$1) AS changes
        FROM public.repreneurs WHERE id=$1`, [fixture.ids.realNonOwnerRepreneur])))
-      .toEqual({ revenue: "11", changes: 1 });
+      .toEqual({ revenue: 11, changes: 1 });
     await staleTab.close();
     await record({ step: "switching selected repreneur revokes an old browser form", surface: "desktop",
       result: "A to B selection rejected the still-open A thesis form without a second write" });
