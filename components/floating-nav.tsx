@@ -112,9 +112,15 @@ export function FloatingNav() {
       ]
   const contextualRoot =
     segments.length === 1 ? topLevelContexts[segments[0]] : undefined
-  const visibleBreadcrumbItems = contextualRoot
-    ? [{ ...contextualRoot, isLast: false }, ...breadcrumbItems]
-    : breadcrumbItems
+  const isGroupsHome =
+    segments.length === 2 &&
+    segments[0] === "opportunities" &&
+    segments[1] === "groups"
+  const visibleBreadcrumbItems = isGroupsHome
+    ? breadcrumbItems.slice(1)
+    : contextualRoot
+      ? [{ ...contextualRoot, isLast: false }, ...breadcrumbItems]
+      : breadcrumbItems
 
   return (
     <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-3 border-b bg-card/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-card/90 md:px-5">

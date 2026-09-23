@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   pathname: "/opportunities/groups",
-  redirect: vi.fn((_destination: string): never => {
+  redirect: vi.fn((): never => {
     throw new Error("NEXT_REDIRECT")
   }),
   listOpportunities: vi.fn(async () => []),
@@ -74,6 +74,14 @@ describe("staff opportunity home", () => {
     expect(header).toContain('href="/opportunities/new"')
     expect(header).toContain("New opportunity")
     expect(html).toContain("Live inventory")
+  })
+
+  it("shows Groups only once as the current breadcrumb on its own home", () => {
+    const breadcrumb = breadcrumbFor("/opportunities/groups")
+
+    expect(breadcrumb.match(/<li\b/g)).toHaveLength(1)
+    expect(breadcrumb).toContain(">Groups</span>")
+    expect(breadcrumb).not.toContain('href="/opportunities/groups"')
   })
 
   it("links the opportunity root of Find, creation and pursuit breadcrumbs to Groups", () => {
