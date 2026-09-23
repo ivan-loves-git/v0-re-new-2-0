@@ -51,6 +51,28 @@ describe("selected-owner staff External assistance", () => {
     }))
   })
 
+  it("rejects unsafe External URLs on both selected create and update before an RPC", async () => {
+    const unsafe = { title: "Unsafe", externalUrl: "javascript:alert(1)" }
+    await expect(createSelectedExternalPursuit(ownerId, "token", { ...unsafe, ownerRepreneurId: ownerId }, "create-key"))
+      .resolves.toMatchObject({ success: false, message: "External URL must start with http:// or https://." })
+    await expect(updateSelectedExternalPursuit(ownerId, "token", pursuitId, unsafe, "update-key"))
+      .resolves.toMatchObject({ success: false, message: "External URL must start with http:// or https://." })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it("retains the ordinary External due-date and metric limits for selected writes", async () => {
+    await expect(createSelectedExternalPursuit(ownerId, "token", {
+      title: "Invalid date", ownerRepreneurId: ownerId, dueAt: "2026-02-30",
+    }, "date-key")).resolves.toMatchObject({ success: false, message: "Due date must use a valid YYYY-MM-DD date." })
+    await expect(updateSelectedExternalPursuit(ownerId, "token", pursuitId, {
+      title: "Invalid metric", revenueMeur: -1,
+    }, "metric-key")).resolves.toMatchObject({ success: false, message: "External metrics must be zero or greater." })
+    await expect(updateSelectedExternalPursuit(ownerId, "token", pursuitId, {
+      title: "Invalid headcount", headcount: 1.5,
+    }, "headcount-key")).resolves.toMatchObject({ success: false, message: "Headcount must be a whole number." })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
   it("rejects stale A actions after A to B and staff-only note injection", async () => {
     mocks.verifySelection.mockResolvedValue(null)
     await expect(updateSelectedExternalPursuit(ownerId, "old-token", pursuitId, { title: "Changed" }, "key"))
@@ -75,10 +97,18 @@ describe("selected-owner staff External assistance", () => {
     }))
   })
 
-  it("passes the selected context to both phases of attachment removal", async () => {
+  it("passes the selected context to attachment-removal preflight", async () => {
     await deleteSelectedExternalPursuitAttachment(ownerId, "token", pursuitId, attachmentId, "remove-key")
     expect(mocks.deleteAttachment).toHaveBeenCalledWith(pursuitId, attachmentId, "remove-key", {
       ownerId, workspaceId, generation,
     })
+  })
+
+  it("rejects a new stale attachment deletion before touching storage", async () => {
+    mocks.verifySelection.mockResolvedValue(null)
+    await expect(deleteSelectedExternalPursuitAttachment(ownerId, "old-token", pursuitId, attachmentId, "remove-key"))
+      .rejects.toThrow("workspace changed")
+    expect(mocks.deleteAttachment).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 })

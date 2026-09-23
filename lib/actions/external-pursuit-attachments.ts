@@ -420,11 +420,14 @@ export async function deleteExternalPursuitAttachment(
         retryExact: ambiguous,
       }
     }
-    const { error: finalizeError, status: finalizeStatus } = selectedArgs
-      ? await supabase.rpc("w196_selected_external_operation", { ...selectedArgs, p_action: "delete_attachment_finalize" })
-      : await supabase.rpc("finalize_external_pursuit_attachment_deletion", {
-          p_dossier_id: pursuitId, p_attachment_id: attachmentId, p_actor_user_id: access.user.id, p_idempotency_key: idempotencyKey,
-        })
+    // The selected-owner preflight above authorizes this exact server invocation
+    // before storage removal. A later A→B switch must not strand a deleted object
+    // behind live metadata. The canonical finalizer still enforces actor, active
+    // dossier, attachment identity and idempotency; no new client call can skip
+    // the selected preflight.
+    const { error: finalizeError, status: finalizeStatus } = await supabase.rpc("finalize_external_pursuit_attachment_deletion", {
+      p_dossier_id: pursuitId, p_attachment_id: attachmentId, p_actor_user_id: access.user.id, p_idempotency_key: idempotencyKey,
+    })
     return finalizeError
       ? {
           success: false,

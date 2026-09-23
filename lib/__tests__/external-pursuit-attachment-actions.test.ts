@@ -241,21 +241,35 @@ describe("External Pursuit attachment actions", () => {
     expect(mocks.rpc).not.toHaveBeenCalledWith("finalize_external_pursuit_attachment_deletion", expect.anything())
   })
 
-  it("checks the selected workspace again after storage deletion before finalizing", async () => {
+  it("finishes an authorized selected deletion after a workspace switch between storage and metadata phases", async () => {
     mocks.getCurrentUserAccess.mockResolvedValue({ role: "staff", user: { id: "staff-user", email: "staff@example.test" } })
-    mocks.rpc.mockResolvedValueOnce({ data: { storagePath: "dossier-1/object.pdf" }, error: null })
-      .mockResolvedValueOnce({ data: null, error: new Error("staff_portal_selection_changed"), status: 409 })
+    let selectionChanged = false
+    mocks.rpc.mockImplementation(async (name: string, args: { p_action?: string }) => {
+      if (name === "w196_selected_external_operation") {
+        if (selectionChanged) return { data: null, error: new Error("staff_portal_selection_changed"), status: 409 }
+        expect(args.p_action).toBe("delete_attachment_preflight")
+        return { data: { storagePath: "dossier-1/object.pdf" }, error: null }
+      }
+      if (name === "finalize_external_pursuit_attachment_deletion") return { data: null, error: null }
+      throw new Error(`Unexpected RPC ${name}`)
+    })
+    mocks.remove.mockImplementation(async () => {
+      selectionChanged = true
+      return { data: null, error: null }
+    })
     const selected = { ownerId: "owner-1", workspaceId: "workspace-1", generation: "generation-a" }
     await expect(deleteExternalPursuitAttachment("dossier-1", "attachment-1", key(11), selected))
-      .resolves.toMatchObject({ success: false })
+      .resolves.toMatchObject({ success: true })
     expect(mocks.rpc.mock.calls.map(([name]) => name)).toEqual([
-      "w196_selected_external_operation", "w196_selected_external_operation",
+      "w196_selected_external_operation", "finalize_external_pursuit_attachment_deletion",
     ])
     expect(mocks.rpc.mock.calls[0][1]).toMatchObject({
       p_action: "delete_attachment_preflight", p_owner_id: "owner-1",
       p_workspace_id: "workspace-1", p_generation: "generation-a",
     })
-    expect(mocks.rpc.mock.calls[1][1]).toMatchObject({ p_action: "delete_attachment_finalize" })
+    expect(mocks.rpc.mock.calls[1][1]).toMatchObject({
+      p_dossier_id: "dossier-1", p_attachment_id: "attachment-1", p_actor_user_id: "staff-user", p_idempotency_key: key(11),
+    })
     expect(mocks.remove).toHaveBeenCalledWith(["dossier-1/object.pdf"])
   })
 

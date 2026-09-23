@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { deleteExternalPursuitAttachment } from "@/lib/actions/external-pursuit-attachments"
+import { validateExternalPursuitFields } from "@/lib/external-pursuit-validation"
 import type {
   ExternalPursuitActionResult, ExternalPursuitContactInput, ExternalPursuitFollowUpInput,
   ExternalPursuitInput, ExternalPursuitStage, ExternalPursuitUpdateInput,
@@ -21,6 +22,10 @@ async function selectedOperation(
   const selected = await verifyStaffPortalSelection(token, ownerId, access.user.id)
   if (!selected) throw new Error("The selected staff workspace changed. Refresh before acting.")
   if ("staffInternalNotes" in args) throw new Error("Staff-only notes are outside this portal view.")
+  if (action === "create" || action === "update") {
+    const validationError = validateExternalPursuitFields(args as ExternalPursuitInput)
+    if (validationError) return { success: false, message: validationError }
+  }
   const { data, error, status } = await createAdminClient().rpc("w196_selected_external_operation", {
     p_workspace_id: selected.workspaceId,
     p_generation: selected.generation,

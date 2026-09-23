@@ -111,7 +111,7 @@ describe("W-104/W-105 External Pursuit foundation", () => {
     expect(actions).toContain("p_shared_notes_provided: input.sharedNotes !== undefined")
     expect(actions).toContain("input.staffInternalNotes !== undefined")
     expect(actions).not.toContain("Object.hasOwn(input")
-    expect(actions).toContain("Due date must use a valid YYYY-MM-DD date.")
+    expect(source("lib/external-pursuit-validation.ts")).toContain("Due date must use a valid YYYY-MM-DD date.")
     expect(migration).toContain("CASE WHEN p_stage_provided")
     expect(migration).toContain("CASE WHEN p_due_at_provided")
     expect(source("lib/types/external-pursuit.ts")).toContain("retain a generated idempotency key across a network retry")

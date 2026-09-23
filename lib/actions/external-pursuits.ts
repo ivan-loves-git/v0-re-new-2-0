@@ -4,6 +4,7 @@ import { randomUUID } from "crypto"
 import { getCurrentUserAccess, requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { fulfillExternalPursuitDeletionWithAttachments } from "@/lib/actions/external-pursuit-attachments"
+import { validateExternalPursuitFields } from "@/lib/external-pursuit-validation"
 import type {
   ExternalPursuitActionResult,
   ExternalPursuitBoardRecord,
@@ -27,29 +28,8 @@ function dateOrNull(value: string | null | undefined) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null
 }
 
-function validOptionalDate(value: string | null | undefined) {
-  if (value === undefined || value === null) return true
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const parsed = new Date(`${value}T00:00:00.000Z`)
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
-}
-
 function numberOrNull(value: number | null | undefined) {
   return value === undefined || value === null ? null : value
-}
-
-function validOptionalMetric(value: number | null | undefined) {
-  return value === undefined || value === null || (Number.isFinite(value) && value >= 0)
-}
-
-function validOptionalExternalUrl(value: string | null | undefined) {
-  if (value === undefined || value === null || value.trim() === "") return true
-  try {
-    const url = new URL(value)
-    return url.protocol === "http:" || url.protocol === "https:"
-  } catch {
-    return false
-  }
 }
 
 async function currentActor() {
@@ -79,10 +59,8 @@ export async function createExternalPursuit(
   let rpcStarted = false
   try {
     const access = await currentActor()
-    if (!validOptionalDate(input.dueAt)) return { success: false, message: "Due date must use a valid YYYY-MM-DD date." }
-    if (![input.revenueMeur, input.ebitdaKeur, input.headcount].every(validOptionalMetric)) return { success: false, message: "External metrics must be zero or greater." }
-    if (input.headcount !== undefined && input.headcount !== null && !Number.isInteger(input.headcount)) return { success: false, message: "Headcount must be a whole number." }
-    if (!validOptionalExternalUrl(input.externalUrl)) return { success: false, message: "External URL must start with http:// or https://." }
+    const validationError = validateExternalPursuitFields(input)
+    if (validationError) return { success: false, message: validationError }
     const ownerRepreneurId =
       access.role === "staff" ? input.ownerRepreneurId : access.repreneurId
     if (!ownerRepreneurId) return { success: false, message: "Choose the dossier owner." }
@@ -123,10 +101,8 @@ export async function updateExternalPursuit(
   let rpcStarted = false
   try {
     const access = await currentActor()
-    if (!validOptionalDate(input.dueAt)) return { success: false, message: "Due date must use a valid YYYY-MM-DD date." }
-    if (![input.revenueMeur, input.ebitdaKeur, input.headcount].every(validOptionalMetric)) return { success: false, message: "External metrics must be zero or greater." }
-    if (input.headcount !== undefined && input.headcount !== null && !Number.isInteger(input.headcount)) return { success: false, message: "Headcount must be a whole number." }
-    if (!validOptionalExternalUrl(input.externalUrl)) return { success: false, message: "External URL must start with http:// or https://." }
+    const validationError = validateExternalPursuitFields(input)
+    if (validationError) return { success: false, message: validationError }
     rpcStarted = true
     const { error, status } = await createAdminClient().rpc("update_external_pursuit_v2", {
       p_dossier_id: pursuitId,
@@ -252,9 +228,8 @@ export async function updateExternalPursuitFollowUp(
   let rpcStarted = false
   try {
     const access = await currentActor()
-    if (!validOptionalDate(input.dueAt)) {
-      return { success: false, message: "Due date must use a valid YYYY-MM-DD date." }
-    }
+    const validationError = validateExternalPursuitFields({ dueAt: input.dueAt })
+    if (validationError) return { success: false, message: validationError }
     const nextActionProvided = input.nextAction !== undefined
     const responsiblePartyProvided = input.responsibleParty !== undefined
     if (nextActionProvided !== responsiblePartyProvided) {

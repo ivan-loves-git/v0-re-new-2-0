@@ -652,7 +652,8 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&view=profile");
     await page.getByRole("button", { name: "Edit thesis as staff" }).click();
     await page.locator("#target-revenue-min").fill("11");
-    await page.getByText("I am acting as Re-New staff on behalf of", { exact: false }).click();
+    await page.getByRole("dialog", { name: /target thesis/i })
+      .getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
     await page.getByRole("button", { name: "Save attributed staff edit" }).click();
     await expect(page.getByText(/Target thesis updated for/)).toBeVisible();
     const thesisAudit = await one<{ staff_user_id: string; changed_fields: string[]; revenue: string }>(client,
@@ -664,7 +665,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(Number(thesisAudit.revenue)).toBe(11);
 
     await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&dealId=" + desktopOpportunityId);
-    await page.getByText("I am acting as Re-New staff on behalf of", { exact: false }).click();
+    await page.getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
     await page.getByRole("button", { name: "Record interest" }).click();
     await expect(page.getByText(/Recorded by Re-New staff for/)).toBeVisible();
     const staffInterest = await one<{ match_id: string; staff_user_id: string; owner_events: number; click_alerts: number }>(client,
@@ -731,7 +732,8 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       + "&view=profile&workspaceId=" + workspaceId);
     await staleTab.getByRole("button", { name: "Edit thesis as staff" }).click();
     await staleTab.locator("#target-revenue-min").fill("12");
-    await staleTab.getByText("I am acting as Re-New staff on behalf of", { exact: false }).click();
+    await staleTab.getByRole("dialog", { name: /target thesis/i })
+      .getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
     await page.getByRole("combobox").filter({ hasText: fixture.repreneurs.realNonOwner.email }).click();
     await page.getByPlaceholder("Search by name or email...").fill(fixture.repreneurs.real.email);
     await page.getByRole("option").filter({ hasText: fixture.repreneurs.real.email }).click();
