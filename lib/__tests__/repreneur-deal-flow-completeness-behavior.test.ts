@@ -193,6 +193,13 @@ describe("incomplete-thesis portal behavior", () => {
       geography_node_level: "region",
       geography_parent_label: "Île-de-France",
     })
+    expect(result.staffRecommended[0]?.geography_filter_nodes).toEqual([
+      { id: "idf-macro", label: "Île-de-France", nodeLevel: "macro_zone", parentLabel: "France", equivalentNodeIds: ["idf-region"] },
+      { id: "fr", label: "France", nodeLevel: "country", parentLabel: null },
+    ])
+    expect(result.dealFlow[0]?.geography_filter_nodes).toEqual(result.staffRecommended[0]?.geography_filter_nodes)
+    expect(result.staffRecommended[0]).not.toHaveProperty("geography_path_stable_keys")
+    expect(result.dealFlow[0]).not.toHaveProperty("geography_path_stable_keys")
     expect(mocks.rpc).toHaveBeenCalled()
   })
 

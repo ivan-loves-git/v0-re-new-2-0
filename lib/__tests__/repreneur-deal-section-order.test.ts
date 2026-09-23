@@ -134,7 +134,8 @@ describe("repreneur Deal Flow section order", () => {
       expect(renderedList.match(/Respond by:/g)).toHaveLength(2)
     }
 
-    expect(html).toContain("Region and sector choices are saved in this browser only.")
+    expect(html).toContain("Geography and sector choices are saved in this browser only.")
+    expect(html).toContain("Geography")
     expect(staffPreviewHtml).toContain("Staff preview does not read or save repreneur preferences.")
   })
 

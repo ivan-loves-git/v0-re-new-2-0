@@ -879,6 +879,16 @@ export interface RepreneurPersonalReview {
   reviewed: boolean
 }
 
+/** Public canonical taxonomy only; no staff matching target or stable-key path. */
+export interface RepreneurGeographyFilterNode {
+  id: string
+  label: string
+  nodeLevel: OpportunityGeographyOption["node_level"] | null
+  parentLabel: string | null
+  /** A second stored canonical ID represented by this one selectable area. */
+  equivalentNodeIds?: string[]
+}
+
 export interface RepreneurOpportunityExposure {
   /** Own navigation state only; null means unavailable, absent means no personal projection. */
   personal_review?: RepreneurPersonalReview | null
@@ -904,6 +914,8 @@ export interface RepreneurOpportunityExposure {
   geography_node_level?: OpportunityGeographyOption["node_level"] | null
   /** Display-only canonical parent label used when geography labels collide. */
   geography_parent_label?: string | null
+  /** This opportunity's selectable canonical geography ancestors, self first. */
+  geography_filter_nodes?: RepreneurGeographyFilterNode[]
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null
@@ -952,6 +964,8 @@ export interface RepreneurDealFlowOpportunity {
   geography_node_level?: OpportunityGeographyOption["node_level"] | null
   /** Display-only canonical parent label used when geography labels collide. */
   geography_parent_label?: string | null
+  /** This opportunity's selectable canonical geography ancestors, self first. */
+  geography_filter_nodes?: RepreneurGeographyFilterNode[]
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null

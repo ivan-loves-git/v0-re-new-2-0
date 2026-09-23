@@ -70,7 +70,12 @@ describe("Staff Portal Preview DEMO counts", () => {
         data: [],
         error: null,
       })
-      if (["geography_nodes", "repreneur_geography_targets"].includes(table)) return query({ data: [], error: null })
+      if (table === "geography_nodes") return query({ data: [
+        { id: "fr", stable_key: "france", label: "France", node_level: "country", parent_id: null },
+        { id: "idf-macro", stable_key: "fr-macro-idf", label: "Île-de-France", node_level: "macro_zone", parent_id: "fr" },
+        { id: "idf-region", stable_key: "fr-region-idf", label: "Île-de-France", node_level: "region", parent_id: "idf-macro" },
+      ], error: null })
+      if (table === "repreneur_geography_targets") return query({ data: [], error: null })
       throw new Error(`Unexpected table: ${table}`)
     })
     mocks.rpc.mockImplementation((name: string) => {
@@ -88,7 +93,7 @@ describe("Staff Portal Preview DEMO counts", () => {
           revenue_meur: 2,
           ebitda_keur: 200,
           headcount: 20,
-          geography_node_id: null,
+          geography_node_id: "idf-region",
           headcount_range: "10-49",
           date_added: "2026-09-01",
           date_added_precision: "day",
@@ -118,7 +123,12 @@ describe("Staff Portal Preview DEMO counts", () => {
       opportunity_id: opportunityId,
       match_id: null,
       deal_bucket: "live",
+      geography_filter_nodes: [
+        { id: "idf-macro", equivalentNodeIds: ["idf-region"] },
+        { id: "fr" },
+      ],
     })
+    expect(result.opportunities[0]).not.toHaveProperty("geography_path_stable_keys")
     expect(mocks.rpc).toHaveBeenCalledWith("w164_repreneur_live_inventory", {
       p_repreneur_id: repreneurId,
       p_opportunity_id: null,

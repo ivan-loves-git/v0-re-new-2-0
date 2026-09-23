@@ -6,6 +6,7 @@ import {
   canonicalGeographyFilterOptions,
   canonicalSectorFilterOptions,
   DealRangeFilters,
+  normalizeSavedGeographySelection,
 } from "@/components/opportunities/repreneur-opportunity-list"
 import {
   EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
@@ -62,6 +63,37 @@ describe("repreneur Deal Flow discovery controls", () => {
     ])).toEqual([
       { value: "geo-idf", label: "Île-de-France" },
     ])
+  })
+
+  it("offers canonical ancestors and only one Île-de-France area from portal-safe taxonomy nodes", () => {
+    const country = { id: "fr", label: "France", nodeLevel: "country" as const, parentLabel: null }
+    const idf = { id: "idf-macro", label: "Île-de-France", nodeLevel: "macro_zone" as const, parentLabel: "France", equivalentNodeIds: ["idf-region"] }
+    const west = { id: "west", label: "Grand Ouest", nodeLevel: "macro_zone" as const, parentLabel: "France" }
+    const bretagne = { id: "bretagne", label: "Bretagne", nodeLevel: "region" as const, parentLabel: "Grand Ouest" }
+    const options = canonicalGeographyFilterOptions([
+      { ...deal(), opportunity_id: "idf-macro-deal", geography_node_id: "idf-macro", geography_filter_nodes: [idf, country] },
+      { ...deal(), opportunity_id: "idf-region-deal", geography_node_id: "idf-region", geography_filter_nodes: [idf, country] },
+      { ...deal(), opportunity_id: "bretagne-deal", geography_node_id: "bretagne", geography_filter_nodes: [bretagne, west, country] },
+    ])
+
+    expect(options).toEqual([
+      { value: "fr", label: "France" },
+      { value: "west", label: "Grand Ouest" },
+      { value: "idf-macro", label: "Île-de-France", equivalentValues: ["idf-region"] },
+      { value: "bretagne", label: "Bretagne" },
+    ])
+  })
+
+  it("restores either old IDF selection as the one current option and drops stale IDs", () => {
+    const options = [
+      { value: "fr", label: "France" },
+      { value: "idf-macro", label: "Île-de-France", equivalentValues: ["idf-region"] },
+    ]
+
+    expect(normalizeSavedGeographySelection(["idf-region"], options)).toEqual(["idf-macro"])
+    expect(normalizeSavedGeographySelection(["idf-macro", "idf-region", "stale"], options)).toEqual(["idf-macro"])
+    expect(normalizeSavedGeographySelection(["fr", "idf-region"], options)).toEqual(["fr", "idf-macro"])
+    expect(normalizeSavedGeographySelection("idf-region", options)).toEqual([])
   })
 
   it("orders canonical geographies by level and disambiguates duplicate labels", () => {

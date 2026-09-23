@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
+import type { RepreneurGeographyFilterNode } from "@/lib/types/opportunity"
 
 type GeographyNodeRow = {
   id: string
@@ -18,6 +19,7 @@ export type MatchingGeographyContext = {
   labelByNodeId: Map<string, string>
   nodeLevelByNodeId: Map<string, "country" | "macro_zone" | "region">
   parentLabelByNodeId: Map<string, string>
+  portalFilterNodesByNodeId: Map<string, RepreneurGeographyFilterNode[]>
   targetPathsByRepreneurId: Map<string, string[][]>
 }
 
@@ -60,6 +62,52 @@ function buildGeographyPaths(nodes: GeographyNodeRow[]) {
   return pathByNodeId
 }
 
+function buildPortalFilterNodes(nodes: GeographyNodeRow[]) {
+  const nodeById = new Map(nodes.map((node) => [node.id, node]))
+  const idfMacro = nodes.find((node) => node.stable_key === "fr-macro-idf" && node.node_level === "macro_zone")
+  const idfRegion = nodes.find((node) => node.stable_key === "fr-region-idf" && node.node_level === "region")
+  // These two approved canonical identities currently describe the same area.
+  // Require the actual parent edge and sole child, not an equal label or IDF code.
+  const equivalentIdf = Boolean(idfMacro && idfRegion
+    && idfRegion.parent_id === idfMacro.id
+    && nodes.filter((node) => node.parent_id === idfMacro.id).length === 1)
+  const portalFilterNodesByNodeId = new Map<string, RepreneurGeographyFilterNode[]>()
+
+  for (const node of nodes) {
+    const path: RepreneurGeographyFilterNode[] = []
+    const visited = new Set<string>()
+    let current: GeographyNodeRow | undefined = node
+    let complete = true
+
+    while (current) {
+      if (visited.has(current.id)) {
+        complete = false
+        break
+      }
+      visited.add(current.id)
+      if (!equivalentIdf || current.id !== idfRegion?.id) {
+        const parent = current.parent_id ? nodeById.get(current.parent_id) : null
+        path.push({
+          id: current.id,
+          label: current.label,
+          nodeLevel: isGeographyNodeLevel(current.node_level) ? current.node_level : null,
+          parentLabel: parent?.label ?? null,
+          ...(equivalentIdf && current.id === idfMacro?.id
+            ? { equivalentNodeIds: [idfRegion!.id] }
+            : {}),
+        })
+      }
+      if (!current.parent_id) break
+      current = nodeById.get(current.parent_id)
+      if (!current) complete = false
+    }
+
+    if (complete) portalFilterNodesByNodeId.set(node.id, path)
+  }
+
+  return portalFilterNodesByNodeId
+}
+
 /**
  * Loads only the staff-only France hierarchy identities used by deterministic
  * matching. Literal opportunity locations remain unchanged for display.
@@ -85,6 +133,7 @@ export async function loadMatchingGeographyContext(
   const nodes = (nodesResult.data ?? []) as GeographyNodeRow[]
   const nodeById = new Map(nodes.map((node) => [node.id, node]))
   const pathByNodeId = buildGeographyPaths(nodes)
+  const portalFilterNodesByNodeId = buildPortalFilterNodes(nodes)
   const labelByNodeId = new Map(
     nodes.map((node) => [node.id, node.label]),
   )
@@ -117,6 +166,7 @@ export async function loadMatchingGeographyContext(
     labelByNodeId,
     nodeLevelByNodeId,
     parentLabelByNodeId,
+    portalFilterNodesByNodeId,
     targetPathsByRepreneurId,
   }
 }
@@ -150,6 +200,9 @@ export function withRepreneurGeographyLabel<
     geography_parent_label: opportunity.geography_node_id
       ? context.parentLabelByNodeId.get(opportunity.geography_node_id) ?? null
       : null,
+    geography_filter_nodes: opportunity.geography_node_id
+      ? context.portalFilterNodesByNodeId.get(opportunity.geography_node_id) ?? []
+      : [],
   }
 }
 
