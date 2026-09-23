@@ -20,60 +20,33 @@ Two lanes are independent only when neither touches the same route, component, s
 
 Credentials are secrets. Load them only from the approved local source, GitHub environment, or provider project settings without printing them. Never put a secret value or bearer URL in a tracked file, commit, pull request, log, screenshot, agent packet, or chat. Do not stop at a login wall before checking the approved secret source, but do not improvise access or ask Ivan to expose credentials in conversation.
 
-## Project Context
+## Start from the intended revision
 
-- **What:** Internal CRM replacing Flatchr ATS for managing repreneurs
-- **Timeline:** 8-10 FTE working days
-- **Client:** Re-New (Bertrand + 2 part-time team members)
-- **Ivan's role:** Product owner, non-technical
+At the start of a task, run `pnpm agent:context` (or `node scripts/agent-context.mjs`
+before installing dependencies). Use `--json` for structured output and `--offline`
+for local inspection. It reports repository identity, local changes, the current
+GitHub default-branch revision and differences in the designated instruction files.
+A difference is evidence to review, not permission to overwrite local work or a
+claim that local instructions are wrong. If GitHub is unavailable, remote facts
+remain unknown; follow the authority-outage rule below.
 
-## Tech Stack
+Use the checkout whose baseline and Ticket are recorded for the task. A directory
+named `platform/`, a saved worktree or a cached `origin/main` is not proof of freshness.
+Preserve unrelated changes; reconcile any instruction conflict before the affected work.
 
-- **Frontend:** Next.js 16 + Tailwind + shadcn/ui
-- **Backend/Database:** Supabase (PostgreSQL + API) - uses service role key (bypasses RLS)
-- **Hosting:** Vercel (Hobby plan)
-- **Auth:** Better Auth (email/password) - NOT Supabase Auth
+For technical configuration, inspect `package.json`, routes under `app/`, shared
+components under `components/`, and domain/auth code under `lib/`. Product orientation
+is in `docs/project-status.md`; current delivery state is in GitHub. Authentication
+uses Better Auth, not Supabase Auth. The Supabase service role bypasses RLS, so the
+server's authorization checks remain essential.
 
-## Project Structure (Cleaned Jan 2026)
-
-```
-emba--renew-platform/
-├── app/                 # Next.js App Router (routes only)
-│   ├── (dashboard)/     # Dashboard routes (repreneurs, pipeline, offers, emails, guide, etc.)
-│   ├── api/             # API routes
-│   ├── auth/            # Login/error pages
-│   ├── intake/          # Public intake form
-│   ├── layout.tsx
-│   └── page.tsx
-├── components/          # React components (single source of truth)
-├── lib/                 # Utilities, actions, email templates
-├── public/              # Static assets
-├── scripts/             # SQL migrations
-├── supabase/            # Supabase config
-├── package.json
-├── tsconfig.json
-├── vercel.json          # Cron jobs config
-└── .env.local           # Secrets (not in git)
-```
-
-## Deployment (Vercel)
-
-- **GitHub Repo:** `ivan-loves-git/v0-re-new-2-0`
-- **Production URL:** `app.re-new.team`
-- **Production path:** merge to `main`, then the Git-connected production project deploys that main SHA.
-- **Cron Jobs:** Daily at 9 AM (Hobby plan limits to once/day)
-
-## Environment Variables (Quick Reference)
-
-| Variable                         | Purpose                                                         | Default       |
-| -------------------------------- | --------------------------------------------------------------- | ------------- |
-| `NEXT_PUBLIC_SHOW_TEST_AUTOFILL` | Show autofill/test buttons on public intake form (`/intake-v2`) | `false` (off) |
-
-To enable test mode on the intake form: add `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` to `.env.local` and restart dev server. This shows yellow "Autofill" buttons on each form step for quick testing with dummy data. **Must be off in production** (it is off by default since build 335).
+The application repository is `ivan-loves-git/v0-re-new-2-0`; production is
+`app.re-new.team`. An authorized merge to `main` triggers the Git-connected Vercel
+production deployment. Inspect provider settings when deployment behavior matters.
 
 ## Current implementation authority
 
-The binding governance decisions are [D-GOV-002](https://github.com/re-new-team/renew-governance/issues/27) and [D-GOV-003](https://github.com/re-new-team/renew-governance/issues/36). GitHub is the canonical product-development authority; WAVE's Strategic PDR is an authenticated intake, history, and read-only presentation surface. It does not own delivery status or current specifications.
+The binding governance decisions are [D-GOV-002](https://github.com/re-new-team/renew-governance/issues/27), [D-GOV-003](https://github.com/re-new-team/renew-governance/issues/36), and [D-GOV-004](https://github.com/re-new-team/renew-governance/issues/70). GitHub is the canonical product-development authority; WAVE's Strategic PDR is an authenticated intake, history, and read-only presentation surface. It does not own delivery status or current specifications.
 
 Before changing a Product Change, Decision, Ticket, Bug, strategy mapping, data contract, or implementation, read in this order:
 
@@ -101,19 +74,17 @@ A Strategy Registry with status `proposed` is review-only: it must not authorise
 
 ## shadcn UI
 
-Use shadcn/ui for new feature surfaces and dashboard sections. Check installed `components/ui` components first, then use the shadcn MCP for search/examples before adding anything new. Follow the local shadcn config: Next.js App Router, RSC, Tailwind v4, `new-york` style, Radix base, Lucide icons, and imports from `@/components/ui`.
-
-For dashboards and operational pages, prefer shadcn `Card`, `Table`, `Badge`, `Tabs`, `Sheet`, `Dialog`, `Select`, `Input`, `Button`, `Skeleton`, `Tooltip`, `DropdownMenu`, and `Chart` over custom markup.
+Use shadcn/ui for new feature surfaces and dashboard sections. Check installed
+`components/ui` components first, then use the available shadcn skill, CLI,
+documentation or MCP for relevant examples before adding anything new. Follow
+the local configuration and component-composition guidance in `DESIGN.md`.
 
 ## Design quality
 
-`pnpm design:check` is available and worth running when you finish a batch of UI work. It is a helper, not a gate: use judgement on what it reports, and do not loop on it or block a change because it has findings.
-
-- Approved defaults are encoded in `DESIGN.md`, `app/globals.css`, and `components/wave/visual-foundations.tsx`: neutral full borders, quiet persistent panels, restrained semantic tints, segmented metric summaries, flat page/header surfaces, semantic product colors, and state-only motion.
-- Ivan explicitly retained compact uppercase labels. `.wave-micro-label` and `WaveMicroLabel` are approved for KPI labels, table-style labels, short categories, and compact navigation. Do not flag them, and do not improvise local uppercase/tracking variants.
-- Preserve valid product semantics. Standard tab underlines, navigation selection markers, status meaning, and the WAVE tide marker are not decorative accents merely because they use a border.
-- Design tooling does not change product logic, KPIs, workflows, hierarchy, information architecture, filters, or strategy.
-- Look at the changed screens in a browser at desktop and mobile widths. That matters more than the detector.
+Follow `DESIGN.md`, `app/globals.css`, and `components/wave/visual-foundations.tsx`
+for WAVE defaults, approved micro-label semantics, preserved product markers and
+design-tool scope. `pnpm design:check` is advisory, not a gate; use judgement
+on its findings and inspect changed screens at desktop and mobile widths.
 
 ## External decisions
 
@@ -136,13 +107,13 @@ Slack, email, meeting notes, and supplied documents are evidence inputs, not can
 
 ## Verification
 
-Run `pnpm verify`. It covers lint, typecheck, tests and build. For UI work, also look at the changed screens in a browser. Fix root causes; do not suppress failures.
+Run `pnpm verify`. It covers lint, typecheck, tests and build. For sandbox restrictions, follow [Local environment limitations](docs/TESTING_RELEASE_PROTOCOL.md#local-environment-limitations); the exact candidate still needs full CI verification. For UI work, also look at the changed screens in a browser. Fix root causes; do not suppress failures.
 
 Documentation-only changes need review, not a test run.
 
 ## Git workflow
 
-GitHub is the project's memory. Commit format, types and the push-immediately rule → `docs/commit-style.md`.
+GitHub is the project's memory. Commit format and authorized branch publication → `docs/commit-style.md`.
 
 ## Roadmap updates
 

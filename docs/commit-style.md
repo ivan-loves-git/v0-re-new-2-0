@@ -34,8 +34,7 @@ not restate them.
 - First line under 72 characters.
 - Include enough context that someone reading later understands WHY, not just WHAT.
 - NO "Generated with Claude Code" attribution.
-- Use `/commit` command for the guided process.
-- Push the current development branch promptly after committing.
+- Publish the development branch under the governing Ticket’s authority. A branch or review candidate is not permission to merge or release.
 - Do not merge to `main` before `Verify` is green.
 - The displayed build number lives in `lib/release-build.mjs`. Nothing validates it; bump it by hand if you want the number in the UI to move.
 
