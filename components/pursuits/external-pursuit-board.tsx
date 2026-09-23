@@ -124,6 +124,8 @@ export function ExternalPursuitBoard({
   renew,
   attachmentsByPursuit = {},
   isStaff,
+  readOnly = false,
+  selectedOwnerId,
   owners = [],
   conversionPursuitIds = [],
   conversionOfficeOptions = [],
@@ -133,6 +135,9 @@ export function ExternalPursuitBoard({
   renew: ReNewPursuitBoardRecord[]
   attachmentsByPursuit?: Record<string, ExternalPursuitAttachment[]>
   isStaff: boolean
+  /** A selected-owner staff preview has no action bindings until #190. */
+  readOnly?: boolean
+  selectedOwnerId?: string
   owners?: { id: string; name: string }[]
   /** Server-derived, unconverted IDs only; the client also checks active state. */
   conversionPursuitIds?: string[]
@@ -144,7 +149,7 @@ export function ExternalPursuitBoard({
   const [draft, setDraft] = useState<Draft>(blankDraft)
   const [contacts, setContacts] = useState<ExternalPursuitContactDraft[]>([])
   const [contactErrors, setContactErrors] = useState<Record<string, string>>({})
-  const [ownerId, setOwnerId] = useState("")
+  const [ownerId, setOwnerId] = useState(selectedOwnerId ?? "")
   const [advanced, setAdvanced] = useState(false)
   const [query, setQuery] = useState("")
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
@@ -160,6 +165,7 @@ export function ExternalPursuitBoard({
   const managerLocked = hasExternalPursuitOperationLocks(managerOperationLocks)
   const managerCanConvert = Boolean(
     isStaff
+    && !readOnly
     && managing
     && managing.deletionStatus === "active"
     && !["completed", "dropped_archived"].includes(managing.stage)
@@ -167,6 +173,7 @@ export function ExternalPursuitBoard({
   )
   const managerCanConfirm = Boolean(
     !isStaff
+    && !readOnly
     && managing
     && managing.isOpenCapacity,
   )
@@ -193,17 +200,19 @@ export function ExternalPursuitBoard({
   }
 
   function openCreate() {
+    if (readOnly) return
     setEditing(null)
     setDraft(blankDraft())
     setContacts([])
     setContactErrors({})
-    setOwnerId("")
+    setOwnerId(selectedOwnerId ?? "")
     setAdvanced(false)
     resetSubmissionRecovery()
     setOpen(true)
   }
 
   function openEdit(record: ExternalPursuitBoardRecord) {
+    if (readOnly || (selectedOwnerId && record.ownerRepreneurId !== selectedOwnerId)) return
     setEditing(record)
     setDraft({
       title: record.title,
@@ -253,6 +262,7 @@ export function ExternalPursuitBoard({
   }
 
   function submit() {
+    if (readOnly || (selectedOwnerId && ownerId !== selectedOwnerId)) return
     let snapshot = submissionSnapshotRef.current
     if (!snapshot) {
       if (!draft.title.trim()) {
@@ -342,6 +352,7 @@ export function ExternalPursuitBoard({
   }
 
   function move(record: ExternalPursuitBoardRecord, stage: ExternalPursuitStage) {
+    if (readOnly || (selectedOwnerId && record.ownerRepreneurId !== selectedOwnerId)) return
     const idempotencyKey = retryKeyFor(
       operationKeys.current,
       `stage:${record.id}:${stage}`,
@@ -364,6 +375,7 @@ export function ExternalPursuitBoard({
   }
 
   function confirmDeletion() {
+    if (readOnly) return
     if (!confirmation) return
     const { kind, record } = confirmation
     const operation = kind === "request" ? `delete-request:${record.id}` : `delete-fulfill:${record.id}`
@@ -392,18 +404,22 @@ export function ExternalPursuitBoard({
       <Alert>
         <AlertTitle>External pursuits are private dossiers</AlertTitle>
         <AlertDescription>
-          External pursuits are private dossiers for you and authorised Re-New staff. They are separate from Re-New Deal Flow.
+          {isStaff
+            ? "External pursuits are private dossiers for their owner and authorised Re-New staff. They are separate from Re-New Deal Flow."
+            : "External pursuits are private dossiers for you and authorised Re-New staff. They are separate from Re-New Deal Flow."}
         </AlertDescription>
       </Alert>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Re-New cards are a read-only view of the canonical journey. External cards remain independent dossiers.
+          {readOnly
+            ? "Selected-owner pursuits retain their separate Re-New journey and external dossier rules."
+            : "Re-New cards are a read-only view of the canonical journey. External cards remain independent dossiers."}
         </p>
-        <Button className="w-full sm:w-auto" onClick={openCreate}>
+        {!readOnly ? <Button className="w-full sm:w-auto" onClick={openCreate}>
           <Plus data-icon="inline-start" />
           New external pursuit
-        </Button>
+        </Button> : null}
       </div>
 
       <Input
@@ -436,6 +452,7 @@ export function ExternalPursuitBoard({
                         key={record.id}
                         record={record}
                         isStaff={isStaff}
+                        readOnly={readOnly}
                         pending={pending}
                         onEdit={openEdit}
                         onManage={openManager}
@@ -468,7 +485,7 @@ export function ExternalPursuitBoard({
             </Alert>
           ) : null}
           <fieldset disabled={editorLocked} className="grid gap-4 py-2">
-            {isStaff && !editing ? (
+            {isStaff && !editing && !selectedOwnerId ? (
               <Field id="external-pursuit-owner" label="Owner">
                 <Select value={ownerId} onValueChange={setOwnerId}>
                   <SelectTrigger id="external-pursuit-owner" aria-label="Owner">
@@ -582,7 +599,7 @@ export function ExternalPursuitBoard({
           </DialogHeader>
           {managing ? (
             <div className="space-y-5">
-              {managing.deletionStatus === "active" ? (
+              {managing.deletionStatus === "active" && !readOnly ? (
                 <ExternalPursuitFollowUpPanel
                   pursuitId={managing.id}
                   role={isStaff ? "staff" : "repreneur"}
@@ -601,14 +618,17 @@ export function ExternalPursuitBoard({
                 <Card className="shadow-none">
                   <CardHeader>
                     <CardTitle className="text-base">Follow-up review</CardTitle>
-                    <CardDescription>This deletion request is locked. Staff can review the last saved state before fulfilment.</CardDescription>
+                    <CardDescription>{readOnly
+                      ? "Selected-owner context is visible here; staff assistance actions require their own attributed controls."
+                      : "This deletion request is locked. Staff can review the last saved state before fulfilment."}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <p><span className="font-medium">Next action:</span> {managing.nextAction || "Not recorded"}</p>
                     <p><span className="font-medium">Responsible:</span> {managing.responsibleParty === "staff" ? "Re-New staff" : managing.responsibleParty === "owner" ? "Owner" : "Not recorded"}</p>
                     <p><span className="font-medium">Due:</span> {externalPursuitDueStateLabel(externalPursuitDueState(managing.dueAt))}</p>
                     <p><span className="font-medium">Shared notes:</span> {managing.sharedNotes || "Not recorded"}</p>
-                    {isStaff ? <p><span className="font-medium">Staff-only notes:</span> {managing.staffInternalNotes || "Not recorded"}</p> : null}
+                    {readOnly ? <PendingContacts contacts={managing.contacts} /> : null}
+                    {isStaff && !readOnly ? <p><span className="font-medium">Staff-only notes:</span> {managing.staffInternalNotes || "Not recorded"}</p> : null}
                   </CardContent>
                 </Card>
               )}
@@ -643,7 +663,7 @@ export function ExternalPursuitBoard({
                 pursuitId={managing.id}
                 role={isStaff ? "staff" : "repreneur"}
                 attachments={managedAttachmentsByPursuit[managing.id] ?? []}
-                readOnly={managing.deletionStatus !== "active"}
+                readOnly={readOnly || managing.deletionStatus !== "active"}
                 onOperationLockChange={handleManagerOperationLockChange}
                 onAttachmentRemoved={handleAttachmentRemoved}
               />
@@ -763,6 +783,7 @@ function PendingContacts({ contacts }: { contacts: ExternalPursuitContactInput[]
 function ExternalCard({
   record,
   isStaff,
+  readOnly,
   pending,
   onEdit,
   onManage,
@@ -772,6 +793,7 @@ function ExternalCard({
 }: {
   record: ExternalPursuitBoardRecord
   isStaff: boolean
+  readOnly: boolean
   pending: boolean
   onEdit: (record: ExternalPursuitBoardRecord) => void
   onManage: (record: ExternalPursuitBoardRecord) => void
@@ -812,7 +834,9 @@ function ExternalCard({
         {record.contacts.length === 0 ? "Contacts not added" : `${record.contacts.length} contact${record.contacts.length === 1 ? "" : "s"}`}
       </p>
 
-      {deleteRequested ? (
+      {readOnly ? (
+        <Button size="sm" variant="outline" onClick={() => onManage(record)}>View dossier and files</Button>
+      ) : deleteRequested ? (
         <>
           <p className="text-sm text-warning">Deletion requested. Staff can review the dossier and fulfil the purge.</p>
           {isStaff ? <PendingContacts contacts={record.contacts} /> : null}
@@ -841,7 +865,7 @@ function ExternalCard({
         </>
       )}
 
-      {isStaff && deleteRequested ? (
+      {isStaff && !readOnly && deleteRequested ? (
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" disabled={pending} onClick={() => onManage(record)}>Review follow-up &amp; files</Button>
           <Button size="sm" variant="destructive" disabled={pending} onClick={() => onFulfill(record)}>

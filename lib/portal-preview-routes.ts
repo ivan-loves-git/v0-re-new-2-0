@@ -8,6 +8,8 @@ export interface PortalPreviewRepreneurOption {
   email: string | null
 }
 
+export type PortalPreviewSection = "deals" | "profile" | "renew-pursuits" | "external-pursuits"
+
 /**
  * A preview may choose a helpful default only on the empty route. Once a URL
  * names a repreneur, an invalid or stale value must never become another
@@ -44,4 +46,26 @@ export function createPortalPreviewDealHrefMap(
 
 export function createPortalPreviewHref(repreneurId: string, dealId?: string) {
   return portalPreviewHref(repreneurId, dealId)
+}
+
+/** Switching the represented person deliberately keeps no prior selection or action state. */
+export function createPortalPreviewSelectionHref(repreneurId: string) {
+  return portalPreviewHref(repreneurId)
+}
+
+export function createPortalPreviewSectionHref(repreneurId: string, section: PortalPreviewSection) {
+  const params = new URLSearchParams({ repreneurId, view: section })
+  return `/portal-preview?${params.toString()}`
+}
+
+export function createPortalPreviewDocumentHref(
+  repreneurId: string,
+  matchId: string,
+  resource: { kind: "nda-template" } | { kind: "information-memorandum"; documentId: string },
+) {
+  const base = `/portal-preview/deals/${encodeURIComponent(matchId)}`
+  const path = resource.kind === "nda-template"
+    ? `${base}/nda-template`
+    : `${base}/documents/${encodeURIComponent(resource.documentId)}`
+  return `${path}?${new URLSearchParams({ repreneurId }).toString()}`
 }

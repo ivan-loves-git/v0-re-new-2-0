@@ -384,7 +384,7 @@ function dateLabel(value: string | null | undefined) {
   return formatDisplayDate(value, "en-GB")
 }
 
-export function RepreneurProfileContributions({ repreneur }: { repreneur: ProfileContributionsProfile }) {
+export function RepreneurProfileContributions({ repreneur, readOnly = false }: { repreneur: ProfileContributionsProfile; readOnly?: boolean }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -437,7 +437,7 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
 
   return (
     <div className="space-y-3">
-      <input
+      {!readOnly ? <input
         ref={fileInputRef}
         type="file"
         accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -446,7 +446,7 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
           const file = event.target.files?.[0]
           if (file) void uploadLdc(file)
         }}
-      />
+      /> : null}
       <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -473,13 +473,13 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
               </a>
             </Button>
           )}
-          {!ldcStaffValidated && !repreneur.ldc_url && (
+          {!readOnly && !ldcStaffValidated && !repreneur.ldc_url && (
             <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
               {isUploading ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Upload data-icon="inline-start" />}
               Add document
             </Button>
           )}
-          {!ldcStaffValidated && repreneur.ldc_url && !ldcCertificationDate && (
+          {!readOnly && !ldcStaffValidated && repreneur.ldc_url && !ldcCertificationDate && (
             <Button size="sm" onClick={() => void certify("ldc")} disabled={pendingContribution !== null}>
               {pendingContribution === "ldc" && <Loader2 data-icon="inline-start" className="animate-spin" />}
               Certify as current
@@ -504,7 +504,7 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {advisoryStaffValidated && <Badge variant="outline">Validated by Re-New</Badge>}
-          {!advisoryCertificationDate && !advisoryStaffValidated && (
+          {!readOnly && !advisoryCertificationDate && !advisoryStaffValidated && (
             <Button size="sm" onClick={() => void certify("advisory_team")} disabled={pendingContribution !== null}>
               {pendingContribution === "advisory_team" ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <CheckCircle2 data-icon="inline-start" />}
               My advisory team is in place

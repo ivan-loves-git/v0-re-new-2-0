@@ -273,6 +273,7 @@ describe("repreneur portal profile scope", () => {
 
   it("keeps Staff Portal Preview aligned with exact staff-only and dropped portal history", () => {
     const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
+    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const opportunityList = source("components/opportunities/repreneur-opportunity-list.tsx")
     const normalizePreview = staffPreview.slice(
       staffPreview.indexOf("function normalizeExposure"),
@@ -282,7 +283,7 @@ describe("repreneur portal profile scope", () => {
     expect(staffPreview).toContain('"active_pursuit", "dropped"')
     expect(normalizePreview).not.toContain('opportunity.repreneur_exposure === "staff_only"')
     expect(staffPreview).toContain("listStaffPreviewRepreneurDealFlow(repreneurId)")
-    expect(staffPreview).toContain('supabase.rpc("w164_repreneur_live_inventory"')
+    expect(portalOpportunities).toContain('supabase.rpc("w164_repreneur_live_inventory"')
     expect(opportunityList).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped"')
   })
 

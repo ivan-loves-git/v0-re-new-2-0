@@ -1,8 +1,9 @@
 "use client"
 
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { StaffRepreneurCombobox } from "@/components/repreneurs/staff-repreneur-combobox"
 import type { StaffPortalPreviewOption } from "@/lib/actions/repreneur-portal-preview"
+import { createPortalPreviewSelectionHref } from "@/lib/portal-preview-routes"
 
 interface StaffPortalPreviewSelectorProps {
   options: StaffPortalPreviewOption[]
@@ -14,13 +15,9 @@ export function StaffPortalPreviewSelector({
   selectedRepreneurId,
 }: StaffPortalPreviewSelectorProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
 
   function handleValueChange(repreneurId: string) {
-    const nextParams = new URLSearchParams(searchParams.toString())
-    nextParams.set("repreneurId", repreneurId)
-    nextParams.delete("matchId")
-    router.push(`/portal-preview?${nextParams.toString()}`)
+    router.push(createPortalPreviewSelectionHref(repreneurId))
   }
 
   return (
