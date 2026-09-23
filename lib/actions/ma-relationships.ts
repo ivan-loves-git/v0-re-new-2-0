@@ -137,6 +137,7 @@ export interface MaRelationshipWorkspace {
   contacts: MaRelationshipContactFilterOption[]
   opportunities: MaRelationshipOpportunityOption[]
   interactions: MaRelationshipTimelineItem[]
+  globalActivityWindowSaturated: boolean
 }
 
 export interface CreateMaRelationshipInteractionInput {
@@ -432,6 +433,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     contacts,
     opportunities,
     interactions: ledger.activities,
+    globalActivityWindowSaturated: ledger.globalActivityWindowSaturated,
   }
 }
 

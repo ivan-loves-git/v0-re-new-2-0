@@ -81,6 +81,7 @@ export interface MaRelationshipLedger {
   affiliations: MaRelationshipLedgerAffiliation[]
   opportunities: MaRelationshipLedgerOpportunity[]
   activities: MaRelationshipLedgerActivity[]
+  globalActivityWindowSaturated: boolean
   affiliationsByOffice: Map<string, MaRelationshipLedgerAffiliation[]>
   opportunitiesByOffice: Map<string, MaRelationshipLedgerOpportunity[]>
   activitiesByOffice: Map<string, MaRelationshipLedgerActivity[]>
@@ -264,6 +265,7 @@ function emptyMaRelationshipLedger(
     affiliations: [],
     opportunities: [],
     activities,
+    globalActivityWindowSaturated: false,
     affiliationsByOffice: new Map(),
     opportunitiesByOffice: new Map(),
     activitiesByOffice,
@@ -468,6 +470,10 @@ export async function readMaRelationshipLedger(
     affiliations,
     opportunities,
     activities,
+    // The query cap is reached before DEMO-linked activity is excluded.
+    globalActivityWindowSaturated:
+      purpose === "global" &&
+      (interactionsResult.data?.length ?? 0) >= MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT,
     affiliationsByOffice,
     opportunitiesByOffice,
     activitiesByOffice,

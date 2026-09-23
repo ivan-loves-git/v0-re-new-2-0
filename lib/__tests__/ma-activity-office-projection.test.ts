@@ -13,7 +13,7 @@ describe("staff Activity office projection (#150)", () => {
   beforeEach(() => {
     vi.resetAllMocks()
     mocks.staff.mockResolvedValue({ user: { id: "staff" } })
-    mocks.ledger.mockResolvedValue({ affiliations: [], opportunities: [], activities: [], activePursuitOpportunityIds: new Set() })
+    mocks.ledger.mockResolvedValue({ affiliations: [], opportunities: [], activities: [], globalActivityWindowSaturated: false, activePursuitOpportunityIds: new Set() })
     mocks.sourceReview.mockResolvedValue([])
   })
 
@@ -45,6 +45,16 @@ describe("staff Activity office projection (#150)", () => {
   it("does not silently treat missing canonical context as ordinary source identity", async () => {
     client({ data: null, error: null })
     await expect(getMaRelationshipWorkspace()).rejects.toThrow("provisional source review context is unavailable")
+  })
+
+  it("carries a saturated Activity query window even when no staff-visible rows remain", async () => {
+    client({ data: { office_id: "canonical-provisional" }, error: null })
+    mocks.ledger.mockResolvedValue({ affiliations: [], opportunities: [], activities: [], globalActivityWindowSaturated: true, activePursuitOpportunityIds: new Set() })
+
+    const workspace = await getMaRelationshipWorkspace()
+
+    expect(workspace.interactions).toEqual([])
+    expect(workspace.globalActivityWindowSaturated).toBe(true)
   })
 
   it("retains staff access enforcement before reading source context", async () => {

@@ -53,12 +53,13 @@ describe("Activity presentation contract (#148 / Decision #149)", () => {
   })
 
   it("discloses the capped loaded window even when the filtered result is empty", () => {
-    expect(maRelationshipResultSummary(0, 250)).toEqual({
+    expect(maRelationshipResultSummary(0, 250, true)).toEqual({
       count: "0 of 250 loaded activities",
-      windowNotice: "Filters apply only to the latest 250 loaded activities. Older activity is not included.",
+      windowNotice: "Filters apply only to the latest 250 queried activities. Older activity is not included.",
+      emptyMessage: "No loaded activity matches these filters.",
     })
-    expect(maRelationshipResultSummary(1, 1)).toEqual({ count: "1 of 1 loaded activity", windowNotice: null })
-    expect(maRelationshipResultSummary(0, 0)).toEqual({ count: "0 of 0 loaded activities", windowNotice: null })
+    expect(maRelationshipResultSummary(1, 1, false)).toEqual({ count: "1 of 1 loaded activity", windowNotice: null, emptyMessage: null })
+    expect(maRelationshipResultSummary(0, 0, false)).toEqual({ count: "0 of 0 loaded activities", windowNotice: null, emptyMessage: "No staff-visible activity in the loaded window." })
   })
 
   it("keeps office, historical person and opportunity as independent AND constraints", () => {

@@ -260,6 +260,7 @@ export function MaRelationshipWorkspace({
   ].filter((filter) => filter !== "all").length
   const resultSummary = maRelationshipResultSummary(
     filteredInteractions.length, workspace.interactions.length,
+    workspace.globalActivityWindowSaturated,
   )
   const officeDisplay = useMemo(
     () => new Map(presentMaOfficeOptions(workspace.offices).map((office) => [office.id, office])),
@@ -337,9 +338,7 @@ export function MaRelationshipWorkspace({
               <CardContent>
                 {filteredInteractions.length === 0 ? (
                   <div className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
-                    <p>{workspace.interactions.length === 0
-                      ? "No activity recorded yet."
-                      : "No loaded activity matches these filters."}</p>
+                    <p>{resultSummary.emptyMessage}</p>
                     {activeFilterCount > 0 ? (
                       <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button>
                     ) : null}
