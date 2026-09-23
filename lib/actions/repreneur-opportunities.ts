@@ -18,6 +18,7 @@ import {
   loadMatchingGeographyContext,
   withMatchingGeography,
   withMatchingGeographyTargets,
+  withRepreneurGeographyLabel,
 } from "@/lib/repreneur-opportunity-geography"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
@@ -89,6 +90,7 @@ type RepreneurDealFlowOpportunityRow = {
   geography_label?: string | null
   geography_node_level?: "country" | "macro_zone" | "region" | null
   geography_parent_label?: string | null
+  geography_filter_nodes?: RepreneurDealFlowOpportunity["geography_filter_nodes"]
   headcount_range: string | null
   date_added: string | null
   date_added_precision: "day" | "month" | null
@@ -141,6 +143,7 @@ function normalizeExposure(
     geography_label: opportunity.geography_label,
     geography_node_level: opportunity.geography_node_level,
     geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -318,6 +321,7 @@ function toDealFlowOpportunity(
     geography_label: opportunity.geography_label,
     geography_node_level: opportunity.geography_node_level,
     geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -358,6 +362,7 @@ function toNeutralDealFlowOpportunity(
     geography_label: opportunity.geography_label,
     geography_node_level: opportunity.geography_node_level,
     geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -397,6 +402,7 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     geography_label: opportunity.geography_label,
     geography_node_level: opportunity.geography_node_level,
     geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: opportunity.canonical_sector,
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -639,7 +645,7 @@ async function listRepreneurDealFlowForProfile(
       memo_availability: undefined,
     }))
     .map((opportunity) => withStaffRecommendation(opportunity, decisionState.proposed.has(opportunity.match_id)))
-    .map((opportunity) => withMatchingGeography(opportunity, geography))
+    .map((opportunity) => withRepreneurGeographyLabel(opportunity, geography))
     .map((opportunity) => withDealBucket(opportunity, false))
     .filter(isDefined)
   const statefulOpportunityIds = new Set(statefulDeals.map((opportunity) => opportunity.opportunity_id))

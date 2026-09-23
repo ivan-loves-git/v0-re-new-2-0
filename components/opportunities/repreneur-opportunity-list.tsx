@@ -90,8 +90,22 @@ export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportun
     label: string
     nodeLevel: "country" | "macro_zone" | "region" | null
     parentLabel: string | null
+    equivalentValues?: string[]
   }>()
   for (const opportunity of opportunities) {
+    if (opportunity.geography_filter_nodes !== undefined) {
+      for (const node of opportunity.geography_filter_nodes) {
+        optionsByNodeId.set(node.id, {
+          value: node.id,
+          label: node.label,
+          nodeLevel: node.nodeLevel,
+          parentLabel: node.parentLabel,
+          ...(node.equivalentNodeIds?.length ? { equivalentValues: node.equivalentNodeIds } : {}),
+        })
+      }
+      continue
+    }
+    // Older callers without a server taxonomy projection retain exact-ID filtering.
     if (!opportunity.geography_node_id || !opportunity.geography_label) continue
     optionsByNodeId.set(opportunity.geography_node_id, {
       value: opportunity.geography_node_id,
@@ -120,15 +134,33 @@ export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportun
       if (labelOrder !== 0) return labelOrder
       return first.value < second.value ? -1 : first.value > second.value ? 1 : 0
     })
-    .map(({ value, label, nodeLevel, parentLabel }) => {
+    .map(({ value, label, nodeLevel, parentLabel, equivalentValues }) => {
       const isDuplicate = duplicateLabels.has(label.trim().toLocaleLowerCase("fr-FR"))
-      if (!isDuplicate) return { value, label }
+      const aliases = equivalentValues?.length ? { equivalentValues } : {}
+      if (!isDuplicate) return { value, label, ...aliases }
       const context = nodeLevel
         ? parentLabel ? `${levelLabel[nodeLevel]} · ${parentLabel}` : levelLabel[nodeLevel]
         : parentLabel ? `Parent · ${parentLabel}` : null
-      if (!context) return { value, label }
-      return { value, label: `${label} — ${context}` }
+      if (!context) return { value, label, ...aliases }
+      return { value, label: `${label} — ${context}`, ...aliases }
     })
+}
+
+export function normalizeSavedGeographySelection(
+  saved: unknown,
+  options: { value: string; equivalentValues?: readonly string[] }[],
+) {
+  if (!Array.isArray(saved)) return []
+  const canonicalBySavedId = new Map(options.map((option) => [option.value, option.value]))
+  for (const option of options) {
+    for (const equivalentId of option.equivalentValues ?? []) {
+      if (!canonicalBySavedId.has(equivalentId)) canonicalBySavedId.set(equivalentId, option.value)
+    }
+  }
+  return [...new Set(saved.flatMap((value) =>
+    typeof value === "string" && canonicalBySavedId.has(value)
+      ? [canonicalBySavedId.get(value)!]
+      : []))]
 }
 
 function toggleValue(values: string[], value: string) {
@@ -164,7 +196,7 @@ function DealDiscoveryToolbar({
       </PopoverContent>
     </Popover>
   )
-  return <section className="rounded-lg border bg-card p-3" aria-label="Deal flow filters"><div className="flex flex-col gap-3 lg:flex-row lg:items-center"><Input aria-label="Search deal flow" value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search title, teaser, reference, geography or sector" className="lg:max-w-sm" /><div className="flex flex-wrap gap-2">{picker("geography", "Regions", geographyOptions)}{picker("sector", "Sectors", sectorOptions)}<Button type="button" variant="ghost" size="sm" onClick={onClear}>Clear filters</Button></div></div><p className="mt-3 border-t pt-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{resultCount}</span> deals filtered from {totalCount}. {preferencesEnabled ? "Region and sector choices are saved in this browser only." : "Staff preview does not read or save repreneur preferences."}</p></section>
+  return <section className="rounded-lg border bg-card p-3" aria-label="Deal flow filters"><div className="flex flex-col gap-3 lg:flex-row lg:items-center"><Input aria-label="Search deal flow" value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search title, teaser, reference, geography or sector" className="lg:max-w-sm" /><div className="flex flex-wrap gap-2">{picker("geography", "Geography", geographyOptions)}{picker("sector", "Sectors", sectorOptions)}<Button type="button" variant="ghost" size="sm" onClick={onClear}>Clear filters</Button></div></div><p className="mt-3 border-t pt-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{resultCount}</span> deals filtered from {totalCount}. {preferencesEnabled ? "Geography and sector choices are saved in this browser only." : "Staff preview does not read or save repreneur preferences."}</p></section>
 }
 
 export function DealRangeFilters({
@@ -414,7 +446,6 @@ export function RepreneurOpportunityList({
     : null
   useEffect(() => {
     if (!preferenceKey) return
-    const allowedGeography = new Set(geographyOptions.map((option) => option.value))
     const allowedSector = new Set(sectorOptions.map((option) => option.value))
     try {
       const parsed: unknown = JSON.parse(window.localStorage.getItem(preferenceKey) ?? "{}")
@@ -422,7 +453,7 @@ export function RepreneurOpportunityList({
       const values = (value: unknown, allowed: Set<string>) => Array.isArray(value)
         ? value.filter((candidate): candidate is string => typeof candidate === "string" && allowed.has(candidate))
         : []
-      setFilters((current) => ({ ...current, geography: values(record.geography, allowedGeography), sector: values(record.sector, allowedSector) }))
+      setFilters((current) => ({ ...current, geography: normalizeSavedGeographySelection(record.geography, geographyOptions), sector: values(record.sector, allowedSector) }))
     } catch {
       setFilters((current) => ({ ...current, geography: [], sector: [] }))
     }
