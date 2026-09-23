@@ -20,6 +20,7 @@ import {
 import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
+import { StaffMemoFeedbackControl } from "@/components/opportunities/staff-memo-feedback-control"
 import { removeUnusedRetainedOpportunityDocument } from "@/lib/actions/opportunity-documents"
 import { toast } from "sonner"
 import {
@@ -41,6 +42,7 @@ import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
 import {
   getOpportunityPursuitDropReasonLabel,
+  getOpportunityPursuitStageLabel,
   isOpportunityPursuitDropReason,
   OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS,
   type OpportunityDocument,
@@ -72,6 +74,7 @@ const EVENT_LABELS: Record<string, string> = {
   memo_approved: "Information memorandum approved",
   e8_memo_enabled_completed: "Memo access enabled",
   confidential_access_granted: "Confidential access granted",
+  memo_feedback_received: "Substantive memo feedback received",
   access_revoked: "Access revoked",
   continued: "Continue recorded",
   dropped: "Pursuit dropped",
@@ -91,6 +94,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
   const [outcomeReason, setOutcomeReason] = useState("")
   const [dropReason, setDropReason] = useState<OpportunityPursuitDropReason | "">("")
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
+  const historyConfirmedStage = activeMatch?.pursuit_stage_provenance === "staff_confirmed_history"
   const visibleMatch = activeMatch ?? matches.find((match) => match.status === "dropped") ?? null
   const currentTemplate = projection?.currentTemplate ?? ndaArtifacts.find((artifact) => artifact.artifact_role === "blank_template" && !artifact.match_id) ?? null
   const currentRenew = projection?.currentRenewSignedCopy ?? ndaArtifacts.find((artifact) => artifact.artifact_role === "renew_signed_copy" && artifact.match_id === activeMatch?.id) ?? null
@@ -130,15 +134,16 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><LockKeyhole data-icon="inline-start" />Canonical pursuit</CardTitle>
-          <CardDescription>The checklist below is derived from immutable evidence. Legacy stage and NDA fields are history only.</CardDescription>
+          <CardDescription>{historyConfirmedStage ? "The displayed business progress was confirmed by staff. The checklist below separately tracks WAVE document and access requirements." : "The checklist below is derived from immutable evidence. Legacy stage and NDA fields are history only."}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           {!visibleMatch ? <Alert><FileText /><AlertTitle>No active pursuit</AlertTitle><AlertDescription>Validate an interested repreneur before beginning the confidential journey.</AlertDescription></Alert> : null}
           {visibleMatch ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-4">
             <div><p className="font-medium">{repreneurName(visibleMatch)}</p><p className="text-sm text-muted-foreground">{visibleMatch.repreneur?.email ?? "-"}</p></div>
-            <Badge variant={activeMatch ? "secondary" : "outline"}>{activeMatch ? "Active pursuit" : "Dropped pursuit"}</Badge>
+            <div className="flex flex-wrap items-center gap-2"><Badge variant={activeMatch ? "secondary" : "outline"}>{activeMatch ? "Active pursuit" : "Dropped pursuit"}</Badge>{activeMatch?.pursuit_stage ? <Badge variant="outline">{getOpportunityPursuitStageLabel(activeMatch.pursuit_stage)}</Badge> : null}{historyConfirmedStage ? <Badge variant="outline">Stage confirmed by Re-New</Badge> : null}</div>
           </div> : null}
           {projection?.evidenceRequired ? <Alert><ShieldCheck /><AlertTitle>Evidence required</AlertTitle><AlertDescription>Legacy pursuit fields do not establish Gate 1, Gate 2, document validation, or confidential access. Record the missing evidence in order.</AlertDescription></Alert> : null}
+          {historyConfirmedStage ? <Alert><History /><AlertTitle>Staff-confirmed business progress</AlertTitle><AlertDescription>The displayed pursuit stage reflects staff-confirmed historical progress. Importing it does not send emails or unlock documents; the checklist below tracks the separate WAVE document process.</AlertDescription></Alert> : null}
           {projection?.blockers.length ? <Alert><LockKeyhole /><AlertTitle>Current blockers</AlertTitle><AlertDescription><ul className="list-disc space-y-1 pl-5">{projection.blockers.map((blocker) => <li key={blocker}>{blocker}</li>)}</ul></AlertDescription></Alert> : null}
           {message ? <p role={message.tone === "error" ? "alert" : "status"} className={message.tone === "error" ? "text-sm text-destructive" : "text-sm text-emerald-700 dark:text-emerald-400"}>{message.text}</p> : null}
           {activeMatch && projection ? <div className="flex flex-wrap gap-2">
@@ -183,6 +188,7 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
           </form>}
           {!hasLiveGrant && projection.confidentialGrant ? <Alert><LockKeyhole /><AlertTitle>Confidential access is no longer live</AlertTitle><AlertDescription>The prior grant is revoked, expired, or no longer bound to the current evidence. Select the IM and set a new expiry to grant access again.</AlertDescription></Alert> : null}
           {hasLiveGrant ? <div className="flex flex-col gap-3"><div className="flex flex-wrap gap-2"><Badge variant="secondary">Access granted</Badge>{canContinue ? <Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "continue"))}>Record Continue</Button> : null}<Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => runOpportunityPursuitJourneyAction({ matchId: activeMatch.id, action: "revoke_access", reason: outcomeReason || "staff_revocation" }))}>Revoke access</Button></div>{canComplete ? <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-complete-reason">Reason required to complete</Label><Input id="pursuit-complete-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "complete", outcomeReason.trim()))}>Complete pursuit</Button></div> : null}</div> : null}
+          {projection.memoFeedback ? <StaffMemoFeedbackControl matchId={activeMatch.id} feedback={projection.memoFeedback} canRecord={hasLiveGrant} /> : null}
         </CardContent>
       </Card> : null}
 

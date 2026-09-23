@@ -35,6 +35,14 @@ export interface PursuitConfidentialGrantProjection {
   revoked_reason?: string | null
 }
 
+export interface StaffMemoFeedbackProjection {
+  grantEvidenceId: string
+  grantedAt: string
+  reminderDueAt: string | null
+  reminderStatus: "pending" | "failed" | "sent" | "suppressed" | "review_required" | "not_scheduled"
+  receipt: { evidenceId: string; channel: "email" | "phone"; receivedAt: string; recordedAt: string; actor: string } | null
+}
+
 export interface StaffCurrentPursuit {
   matchId: string
   opportunityId: string
@@ -53,6 +61,7 @@ export interface StaffCurrentPursuit {
   currentCycleId: string | null
   steps: ReturnType<typeof projectOpportunityPursuitEvidence>["steps"]
   confidentialGrant: PursuitConfidentialGrantProjection | null
+  memoFeedback: StaffMemoFeedbackProjection | null
   revoked: boolean
   hasLiveConfidentialGrant: boolean
   evidenceRequired: boolean
@@ -127,6 +136,7 @@ interface MatchRow {
 async function loadCurrentPursuit(
   matchId: string,
   expectedRepreneurId?: string,
+  includeStaffFeedback = false,
 ): Promise<StaffCurrentPursuit | null> {
   const supabase = createAdminClient()
   const [matchResult, settingsResult] = await Promise.all([
@@ -170,7 +180,8 @@ async function loadCurrentPursuit(
       .from("opportunity_pursuit_evidence")
       .select("*")
       .eq("match_id", matchId)
-      .order("recorded_at", { ascending: true }),
+      .order("recorded_at", { ascending: true })
+      .order("id", { ascending: true }),
     supabase
       .from("opportunity_nda_artifacts")
       .select("id, artifact_role, version_number, document_id, recorded_at")
@@ -195,6 +206,31 @@ async function loadCurrentPursuit(
   ])
 
   const entries = (evidenceResult.data ?? []) as OpportunityPursuitEvidence[]
+  let memoFeedback: StaffMemoFeedbackProjection | null = null
+  if (includeStaffFeedback) {
+    const latestGrant = [...entries].reverse().find((entry) => entry.event_type === "confidential_access_granted")
+    if (latestGrant) {
+      const { data: reminder, error: reminderError } = await supabase
+        .from("opportunity_memo_feedback_reminders")
+        .select("due_at,status")
+        .eq("grant_evidence_id", latestGrant.id)
+        .maybeSingle()
+      if (reminderError) throw new Error("Could not read exact memo feedback reminder status.")
+      const receipt = entries.find((entry) => entry.event_type === "memo_feedback_received"
+        && entry.metadata?.grant_evidence_id === latestGrant.id)
+      const channel = receipt?.metadata?.channel
+      const receivedAt = receipt?.metadata?.received_at
+      memoFeedback = {
+        grantEvidenceId: latestGrant.id,
+        grantedAt: latestGrant.recorded_at,
+        reminderDueAt: reminder?.due_at ?? null,
+        reminderStatus: (reminder?.status as StaffMemoFeedbackProjection["reminderStatus"] | undefined) ?? "not_scheduled",
+        receipt: receipt && (channel === "email" || channel === "phone") && typeof receivedAt === "string"
+          ? { evidenceId: receipt.id, channel, receivedAt, recordedAt: receipt.recorded_at, actor: receipt.actor }
+          : null,
+      }
+    }
+  }
   const artifacts = (artifactResult.data ?? []) as PursuitArtifactProjection[]
   const byRole = (role: string) => (
     artifacts.find((artifact) => artifact.artifact_role === role) ?? null
@@ -297,6 +333,7 @@ async function loadCurrentPursuit(
     currentCycleId: projection.currentCycleId,
     steps: projection.steps,
     confidentialGrant: currentGrant,
+    memoFeedback,
     revoked,
     hasLiveConfidentialGrant,
     evidenceRequired: !projection.gate2Passed,
@@ -309,7 +346,7 @@ async function loadCurrentPursuit(
 
 export async function readStaffCurrentPursuit(matchId: string) {
   await requireStaffAccess()
-  return loadCurrentPursuit(matchId)
+  return loadCurrentPursuit(matchId, undefined, true)
 }
 
 function toPortalCurrentPursuit(

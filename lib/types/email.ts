@@ -24,6 +24,12 @@ export type EmailTemplateKey =
   | "interview_reminder"
   | "booking_reminder"
   | "opportunity_recommendation_assignment"
+  | "interest_outcome_validated"
+  | "interest_outcome_rejected"
+  | "proposed_opportunity_response_staff"
+  | "memo_feedback_reminder"
+  | "recommendation_response_reminder"
+  | "recommendation_unanswered_staff_alert"
   | "ma_opportunity_validity_check"
   | "ma_request_more_information"
   | "ma_repreneur_interest_feedback"
@@ -114,7 +120,10 @@ export interface EmailTemplateProps {
 }
 
 // Specific template props
-export interface WelcomeEmailProps extends EmailTemplateProps {}
+export interface WelcomeEmailProps extends EmailTemplateProps {
+  /** False only for the legacy first-contact step, before form completion. */
+  registrationComplete?: boolean
+}
 
 export interface FormStepCompleteEmailProps extends EmailTemplateProps {
   metadata?: Record<string, unknown> & {
@@ -211,6 +220,7 @@ export interface EmailSendResult {
   emailLogId?: string
   resendId?: string
   error?: string
+  providerOutcome?: "accepted" | "rejected" | "blocked" | "deferred" | "fenced" | "uncertain"
 }
 
 // Analytics types

@@ -43,7 +43,9 @@ export type OpportunityMatchStatus =
 
 export type OpportunityPursuitStage =
   | "interest"
+  | "nda_signed"
   | "info_memo_received"
+  | "qa_with_ma_firm"
   | "intermediary_meeting"
   | "seller_meeting"
   | "loi"
@@ -200,7 +202,9 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
 
 export const OPPORTUNITY_PURSUIT_STAGE_OPTIONS = [
   { value: "interest", label: "Interest" },
+  { value: "nda_signed", label: "NDA signed" },
   { value: "info_memo_received", label: "Info memo received" },
+  { value: "qa_with_ma_firm", label: "Q&A with M&A firm" },
   { value: "intermediary_meeting", label: "Intermediary meeting" },
   { value: "seller_meeting", label: "Seller meeting" },
   { value: "loi", label: "LOI" },
@@ -591,6 +595,7 @@ export interface OpportunityWorkSurfaceMatch {
   opportunity_id: string
   status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   updated_at: string
   repreneur?: OpportunityMatchRepreneur | null
 }
@@ -730,6 +735,8 @@ export interface OpportunityMatchRepreneur {
 }
 
 export interface OpportunityMatch extends OpportunityConfidentialityGate {
+  /** Staff-only private exact-interest decision, never a portal field. */
+  interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
   /** Staff-only readback; never projected into the repreneur portal. */
   assignment_email_status?: "pending" | "sent" | "failed" | "blocked" | "review_required" | "delivery_issue" | "unavailable" | null
   id: string
@@ -737,6 +744,7 @@ export interface OpportunityMatch extends OpportunityConfidentialityGate {
   repreneur_id: string
   status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   pursuit_stage_notes?: string | null
   pursuit_stage_updated_by?: string | null
   pursuit_stage_updated_at?: string | null
@@ -812,6 +820,8 @@ export interface OpportunityMatchResponse {
   decline_reason_text?: string | null
   reviewed_by?: string | null
   reviewed_at?: string | null
+  interest_expressed_at?: string | null
+  interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
   updated_at: string
   opportunity?: Pick<
     Opportunity,
@@ -864,11 +874,20 @@ export type RepreneurMemoAvailability =
   | "awaiting_confidentiality"
   | "awaiting_document_approval"
 
+export interface RepreneurPersonalReview {
+  viewed: boolean
+  reviewed: boolean
+}
+
 export interface RepreneurOpportunityExposure {
+  /** Own navigation state only; null means unavailable, absent means no personal projection. */
+  personal_review?: RepreneurPersonalReview | null
   match_id: string
   match_status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
   pursuit_stage_updated_at?: string | null
+  /** Safe explanation only; it never grants document access or establishes a gate. */
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
@@ -881,6 +900,10 @@ export interface RepreneurOpportunityExposure {
   geography_node_id?: string | null
   /** Canonical geography label paired with the portal-safe node identity. */
   geography_label?: string | null
+  /** Display-only taxonomy level used to order the portal geography filter. */
+  geography_node_level?: OpportunityGeographyOption["node_level"] | null
+  /** Display-only canonical parent label used when geography labels collide. */
+  geography_parent_label?: string | null
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null
@@ -896,6 +919,8 @@ export interface RepreneurOpportunityExposure {
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
+  /** Public outcome only; private reason and actor are never serialized. */
+  interest_rejected?: boolean
   interest_notification_sent_at?: string | null
   recommendation_expires_at?: string | null
   updated_at: string
@@ -905,10 +930,12 @@ export interface RepreneurOpportunityExposure {
 }
 
 export interface RepreneurDealFlowOpportunity {
+  personal_review?: RepreneurPersonalReview | null
   match_id: string | null
   match_status: OpportunityMatchStatus | null
   pursuit_stage?: OpportunityPursuitStage | null
   pursuit_stage_updated_at?: string | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
@@ -921,6 +948,10 @@ export interface RepreneurDealFlowOpportunity {
   geography_node_id?: string | null
   /** Canonical geography label paired with the portal-safe node identity. */
   geography_label?: string | null
+  /** Display-only taxonomy level used to order the portal geography filter. */
+  geography_node_level?: OpportunityGeographyOption["node_level"] | null
+  /** Display-only canonical parent label used when geography labels collide. */
+  geography_parent_label?: string | null
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null
@@ -936,6 +967,8 @@ export interface RepreneurDealFlowOpportunity {
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
+  /** Public outcome only; private reason and actor are never serialized. */
+  interest_rejected?: boolean
   interest_notification_sent_at?: string | null
   recommendation_expires_at?: string | null
   updated_at: string

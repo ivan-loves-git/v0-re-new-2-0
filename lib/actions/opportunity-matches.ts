@@ -5,6 +5,8 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { deliverRecommendationAssignment, withAssignmentEmailStatus } from "@/lib/email/recommendation-assignment-delivery"
+import { deliverInterestNotification, deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
+import { interestRejectionFeedback } from "@/lib/interest-rejection-feedback"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
 import {
   loadMatchingGeographyContext,
@@ -15,6 +17,7 @@ import {
   manualRecommendationEmail,
 } from "@/lib/repreneur-matching-eligibility"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
+import { withStaffInterestRejections } from "@/lib/data/opportunity-interest-decisions"
 import type {
   OpportunityMatch,
   OpportunityMatchCandidate,
@@ -229,7 +232,11 @@ async function ensureExistingMatchCanBeSaved(opportunityId: string, repreneurId:
   return data as { id: string; status: OpportunityMatchStatus; updated_at: string } | null
 }
 
-async function ensureMatchNamespaceAndEmail(opportunityId: string, repreneurId: string) {
+async function ensureMatchNamespaceAndEmail(
+  opportunityId: string,
+  repreneurId: string,
+  requireClient: boolean,
+) {
   const supabase = createAdminClient()
   const [
     { data: opportunity, error: opportunityError },
@@ -242,7 +249,7 @@ async function ensureMatchNamespaceAndEmail(opportunityId: string, repreneurId: 
       .maybeSingle(),
     supabase
       .from("repreneurs")
-      .select("id, is_demo, email")
+      .select("id, is_demo, email, lifecycle_status")
       .eq("id", repreneurId)
       .maybeSingle(),
   ])
@@ -260,6 +267,9 @@ async function ensureMatchNamespaceAndEmail(opportunityId: string, repreneurId: 
   }
   if (!manualRecommendationEmail(repreneur.email)) {
     throw formError("Add a valid email to this repreneur before creating a staff recommendation.", "repreneur_id")
+  }
+  if (requireClient && repreneur.lifecycle_status !== "client") {
+    throw formError("Only client repreneurs can receive a new staff recommendation.", "repreneur_id")
   }
 }
 
@@ -313,12 +323,13 @@ export async function listOpportunityMatches(opportunityId: string): Promise<Opp
     .order("updated_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return withAssignmentEmailStatus((data ?? [])
+  const matches = (data ?? [])
     .filter((row) => isOpportunityInRepreneurNamespace(
       Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity,
       Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
     ))
-    .map(normalizeMatch), access.user.id)
+    .map(normalizeMatch)
+  return withStaffInterestRejections(await withAssignmentEmailStatus(matches, access.user.id), access.user.id)
 }
 
 export async function listOpportunityMatchesForRepreneur(repreneurId: string): Promise<RepreneurOpportunityMatch[]> {
@@ -393,7 +404,7 @@ export async function listOpportunityPursuitEvents(opportunityId: string): Promi
 }
 
 export async function listOpportunityMatchResponses(): Promise<OpportunityMatchResponse[]> {
-  await requireStaffAccess()
+  const access = await requireStaffAccess()
   const supabase = createAdminClient()
 
   const { data, error } = await supabase
@@ -411,6 +422,7 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
       decline_reason_text,
       reviewed_by,
       reviewed_at,
+      interest_expressed_at,
       updated_at,
       opportunity:opportunities!inner(id, reference, public_title, sector, location, is_demo),
       repreneur:repreneurs!inner(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score, is_demo)
@@ -453,10 +465,11 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
     } as OpportunityMatchResponse)
   }
 
-  return responses.map((response) => ({
+  const withLocks = responses.map((response) => ({
     ...response,
     ...(activeByOpportunity.get(response.opportunity_id) ?? {}),
   }))
+  return withStaffInterestRejections(withLocks, access.user.id)
 }
 
 export async function listOpportunityMatchCandidates(opportunityId: string): Promise<OpportunityMatchCandidate[]> {
@@ -479,6 +492,7 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
       .select(`id, first_name, last_name, email, lifecycle_status, is_demo,
         journey_stage, recommendation, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
       .eq("is_demo", opportunity.is_demo)
+      .eq("lifecycle_status", "client")
       .order("id", { ascending: true })
       .limit(100)
     if (afterId) query = query.gt("id", afterId)
@@ -486,7 +500,9 @@ export async function listOpportunityMatchCandidates(opportunityId: string): Pro
     if (pageError) throw new Error(pageError.message)
     if (!page?.length) break
     const eligible = page.filter(candidate =>
-      candidate.is_demo === opportunity.is_demo && manualRecommendationEmail(candidate.email),
+      candidate.lifecycle_status === "client"
+      && candidate.is_demo === opportunity.is_demo
+      && manualRecommendationEmail(candidate.email),
     )
     const geography = await loadMatchingGeographyContext(supabase, eligible.map(candidate => candidate.id))
     for (const candidate of eligible) {
@@ -514,10 +530,15 @@ export async function listOpportunityCandidatesForRepreneur(repreneurId: string)
   await requireStaffAccess()
   const supabase = createAdminClient()
   const { data: repreneur, error } = await supabase.from("repreneurs")
-    .select(`id, first_name, last_name, email, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
+    .select(`id, first_name, last_name, email, lifecycle_status, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
     .eq("id", repreneurId).maybeSingle()
   if (error) throw new Error(error.message)
-  if (!repreneur || typeof repreneur.is_demo !== "boolean" || !manualRecommendationEmail(repreneur.email)) return []
+  if (
+    !repreneur
+    || repreneur.lifecycle_status !== "client"
+    || typeof repreneur.is_demo !== "boolean"
+    || !manualRecommendationEmail(repreneur.email)
+  ) return []
 
   const existingOpportunityIds = new Set<string>()
   let afterMatchId: string | null = null
@@ -585,7 +606,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     if (existingMatch && existingMatch.updated_at !== expectedUpdatedAt) {
       throw formError("This recommendation changed while you were editing it. Refresh to see the latest staff notes.")
     }
-    await ensureMatchNamespaceAndEmail(opportunityId, repreneurId)
+    await ensureMatchNamespaceAndEmail(opportunityId, repreneurId, !existingMatch)
     await ensureOpportunityReadyForExternalMatch(opportunityId, status)
     await ensureOpportunityCanExposeMoreMatches(opportunityId, status)
 
@@ -642,7 +663,9 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
   }
 }
 
-export async function removeOpportunityMatch(matchId: string, opportunityId: string) {
+export async function removeOpportunityMatch(
+  matchId: string, opportunityId: string,
+): Promise<OpportunityMatchActionResult> {
   await requireStaffAccess()
   const supabase = createAdminClient()
 
@@ -653,10 +676,10 @@ export async function removeOpportunityMatch(matchId: string, opportunityId: str
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
 
-  if (matchError) throw new Error(matchError.message)
-  if (!match) throw new Error("Opportunity match not found")
+  if (matchError) return { ok: false, message: "Could not check this recommendation. Try again." }
+  if (!match) return { ok: false, message: "This recommendation no longer exists. Refresh the page." }
   if (match.status === "active_pursuit") {
-    throw new Error("Drop the active pursuit before removing this recommendation.")
+    return { ok: false, message: "Drop the active pursuit before removing this recommendation." }
   }
 
   const { error } = await supabase
@@ -665,8 +688,15 @@ export async function removeOpportunityMatch(matchId: string, opportunityId: str
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
 
-  if (error) throw new Error(error.message)
+  if (error?.code === "P0001" && error.message.includes("recommendation_cycle_delivery_in_flight")) {
+    return { ok: false, message: "A recommendation email is being delivered. Wait for it to finish, then try again." }
+  }
+  if (error?.code === "P0001" && error.message.includes("recommendation_cycle_delivery_review_required")) {
+    return { ok: false, message: "A recommendation email has an unresolved delivery outcome. Ask operations to review it before removing this match." }
+  }
+  if (error) return { ok: false, message: "Recommendation removal failed. Try again." }
   revalidatePath(`/opportunities/${opportunityId}`)
+  return { ok: true }
 }
 
 export async function markOpportunityMatchReviewed(matchId: string, opportunityId: string) {
@@ -703,25 +733,68 @@ async function pursuitTransitionAlreadyStored(
   return data?.status === expected.status && data.pursuit_stage === expected.pursuitStage
 }
 
-export async function validateOpportunityPursuit(matchId: string, opportunityId: string) {
+export async function validateOpportunityPursuit(
+  matchId: string,
+  opportunityId: string,
+  expectedInterestAt: string | null,
+  expectedUpdatedAt: string,
+) {
   const access = await requireStaffAccess()
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.rpc("journey_start_pursuit", {
-    p_match_id: matchId, p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_evidence_reference: "staff validation",
-  })
-  if (error || !data) {
-    const alreadyStored = await pursuitTransitionAlreadyStored(
-      supabase,
-      matchId,
-      opportunityId,
-      { status: "active_pursuit", pursuitStage: "interest" },
-    )
-    if (!alreadyStored) {
-      throw new Error(error?.message ?? "Only an interested response can be validated into an active pursuit.")
-    }
+  if (!expectedUpdatedAt || Number.isNaN(Date.parse(expectedUpdatedAt))
+    || (expectedInterestAt !== null && Number.isNaN(Date.parse(expectedInterestAt)))) {
+    throw new Error("This exact interest is no longer awaiting validation. Refresh and review its current decision.")
   }
+  const supabase = createAdminClient()
+  const args = {
+    p_match_id: matchId, p_opportunity_id: opportunityId, p_actor: access.user.email,
+    p_expected_interest_at: expectedInterestAt,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_idempotency_key: `w173-validate:${matchId}:${expectedInterestAt ?? "legacy"}:${expectedUpdatedAt}`,
+  }
+  const attempt = () => supabase.rpc("w173_validate_exact_interest", args)
+  let result: Awaited<ReturnType<typeof attempt>> | undefined
+  try { result = await attempt() } catch { /* Exact-key retry resolves lost response after commit. */ }
+  if (!result?.data) {
+    try { result = await attempt() } catch { /* Report unconfirmed outcome below. */ }
+  }
+  if (!result?.data) throw new Error(result?.error?.message ?? "This exact interest is no longer awaiting validation. Refresh and review its current decision.")
 
+  await deliverValidationNotification(String(result.data)).catch(() => "failed")
   revalidateMatchPaths(opportunityId, matchId)
+}
+
+export async function rejectOpportunityInterest(
+  matchId: string,
+  opportunityId: string,
+  expectedInterestAt: string | null,
+  expectedUpdatedAt: string,
+  reason: string,
+): Promise<OpportunityMatchActionResult> {
+  const access = await requireStaffAccess()
+  const trimmed = reason.trim()
+  if (!trimmed || trimmed.length > 500) {
+    return { ok: false, message: "Write a short internal reason (maximum 500 characters)." }
+  }
+  const supabase = createAdminClient()
+  const { data: match, error: matchError } = await supabase.from("opportunity_matches")
+    .select("opportunity_id")
+    .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .maybeSingle()
+  if (matchError || !match) return { ok: false, message: "This interest is no longer available. Refresh and try again." }
+  const { data: eventId, error } = await supabase.rpc("w173_reject_exact_interest", {
+    p_match_id: matchId,
+    p_expected_interest_at: expectedInterestAt,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_actor: access.user.id,
+    p_reason: trimmed,
+  })
+  if (error || !eventId) {
+    return { ok: false, message: "This exact interest changed or was already decided. Refresh before taking action." }
+  }
+  const delivery = await deliverInterestNotification(String(eventId)).catch(() => "failed" as const)
+  revalidateMatchPaths(opportunityId, matchId)
+  return { ok: true, message: interestRejectionFeedback(delivery) }
 }
 
 export async function dropOpportunityPursuit(

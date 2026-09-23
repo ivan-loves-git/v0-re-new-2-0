@@ -4,6 +4,7 @@ type GeographyNodeRow = {
   id: string
   stable_key: string
   label: string
+  node_level: string | null
   parent_id: string | null
 }
 
@@ -15,7 +16,15 @@ type GeographyTargetRow = {
 export type MatchingGeographyContext = {
   pathByNodeId: Map<string, string[]>
   labelByNodeId: Map<string, string>
+  nodeLevelByNodeId: Map<string, "country" | "macro_zone" | "region">
+  parentLabelByNodeId: Map<string, string>
   targetPathsByRepreneurId: Map<string, string[][]>
+}
+
+function isGeographyNodeLevel(
+  value: string | null,
+): value is "country" | "macro_zone" | "region" {
+  return value === "country" || value === "macro_zone" || value === "region"
 }
 
 function buildGeographyPaths(nodes: GeographyNodeRow[]) {
@@ -61,7 +70,7 @@ export async function loadMatchingGeographyContext(
 ): Promise<MatchingGeographyContext> {
   const uniqueRepreneurIds = [...new Set(repreneurIds.filter(Boolean))]
   const [nodesResult, targetsResult] = await Promise.all([
-    supabase.from("geography_nodes").select("id, stable_key, label, parent_id"),
+    supabase.from("geography_nodes").select("id, stable_key, label, node_level, parent_id"),
     uniqueRepreneurIds.length > 0
       ? supabase
           .from("repreneur_geography_targets")
@@ -73,11 +82,22 @@ export async function loadMatchingGeographyContext(
   if (nodesResult.error) throw new Error(nodesResult.error.message)
   if (targetsResult.error) throw new Error(targetsResult.error.message)
 
-  const pathByNodeId = buildGeographyPaths(
-    (nodesResult.data ?? []) as GeographyNodeRow[],
-  )
+  const nodes = (nodesResult.data ?? []) as GeographyNodeRow[]
+  const nodeById = new Map(nodes.map((node) => [node.id, node]))
+  const pathByNodeId = buildGeographyPaths(nodes)
   const labelByNodeId = new Map(
-    ((nodesResult.data ?? []) as GeographyNodeRow[]).map((node) => [node.id, node.label]),
+    nodes.map((node) => [node.id, node.label]),
+  )
+  const nodeLevelByNodeId = new Map(
+    nodes.flatMap((node) => isGeographyNodeLevel(node.node_level)
+      ? [[node.id, node.node_level] as const]
+      : []),
+  )
+  const parentLabelByNodeId = new Map(
+    nodes.flatMap((node) => {
+      const parentLabel = node.parent_id ? nodeById.get(node.parent_id)?.label : null
+      return parentLabel ? [[node.id, parentLabel] as const] : []
+    }),
   )
   const targetPathsByRepreneurId = new Map<string, string[][]>()
 
@@ -92,7 +112,13 @@ export async function loadMatchingGeographyContext(
     }
   }
 
-  return { pathByNodeId, labelByNodeId, targetPathsByRepreneurId }
+  return {
+    pathByNodeId,
+    labelByNodeId,
+    nodeLevelByNodeId,
+    parentLabelByNodeId,
+    targetPathsByRepreneurId,
+  }
 }
 
 export function withMatchingGeography<
@@ -117,6 +143,12 @@ export function withRepreneurGeographyLabel<
     ...opportunity,
     geography_label: opportunity.geography_node_id
       ? context.labelByNodeId.get(opportunity.geography_node_id) ?? null
+      : null,
+    geography_node_level: opportunity.geography_node_id
+      ? context.nodeLevelByNodeId.get(opportunity.geography_node_id) ?? null
+      : null,
+    geography_parent_label: opportunity.geography_node_id
+      ? context.parentLabelByNodeId.get(opportunity.geography_node_id) ?? null
       : null,
   }
 }

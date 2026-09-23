@@ -736,6 +736,7 @@ function ReNewCard({ record, isStaff }: { record: ReNewPursuitBoardRecord; isSta
       <Badge variant="outline">Re-New · read-only</Badge>
       <h3 className="font-medium leading-snug">{record.title}</h3>
       <p className="text-xs text-muted-foreground">Canonical journey: {record.canonicalJourney.replaceAll("_", " ")}</p>
+      {record.stageProvenance === "staff_confirmed_history" ? <p className="text-xs text-muted-foreground">Progress confirmed by Re-New. Document access remains separately verified.</p> : null}
       <Button asChild variant="link" size="sm" className="h-auto p-0">
         <Link href={record.href}>{isStaff ? "Open canonical journey" : "See opportunity"} <ExternalLink data-icon="inline-end" /></Link>
       </Button>

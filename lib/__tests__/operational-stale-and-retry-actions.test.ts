@@ -40,7 +40,7 @@ import { assignOfferToRepreneur, retryOfferReceivedNotification, toggleMilestone
 describe("operational stale tabs and retried staff actions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-1" } })
+    mocks.requireStaffAccess.mockResolvedValue({ user: { id: "staff-1", email: "staff@example.test" } })
     mocks.sendEmail.mockResolvedValue({
       success: true,
       resendId: "provider-1",
@@ -132,11 +132,6 @@ describe("operational stale tabs and retried staff actions", () => {
 
   it.each([
     {
-      label: "validation",
-      current: { id: "match-1", status: "active_pursuit", pursuit_stage: "interest" },
-      invoke: () => validateOpportunityPursuit("match-1", "opportunity-1"),
-    },
-    {
       label: "drop",
       current: { id: "match-1", status: "dropped", pursuit_stage: "dropped" },
       invoke: () => dropOpportunityPursuit(
@@ -167,6 +162,27 @@ describe("operational stale tabs and retried staff actions", () => {
     expect(opportunityFilter).toHaveBeenCalledWith("opportunity_id", "opportunity-1")
   })
 
+  it("resolves a lost exact-validation response only through the same durable event key", async () => {
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: { message: "The original response was lost." } })
+      .mockResolvedValueOnce({ data: "exact-validation-event-1", error: null })
+    mocks.createAdminClient.mockReturnValue({ rpc })
+
+    await expect(validateOpportunityPursuit(
+      "match-1", "opportunity-1", "2026-09-22T09:00:00.000Z", "2026-09-22T09:01:00.000Z",
+    )).resolves.toBeUndefined()
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(rpc).toHaveBeenNthCalledWith(1, "w173_validate_exact_interest", {
+      p_match_id: "match-1",
+      p_opportunity_id: "opportunity-1",
+      p_actor: "staff@example.test",
+      p_expected_interest_at: "2026-09-22T09:00:00.000Z",
+      p_expected_updated_at: "2026-09-22T09:01:00.000Z",
+      p_idempotency_key: "w173-validate:match-1:2026-09-22T09:00:00.000Z:2026-09-22T09:01:00.000Z",
+    })
+    expect(rpc).toHaveBeenNthCalledWith(2, "w173_validate_exact_interest", expect.any(Object))
+  })
+
   it("does not hide a genuinely failed pursuit transition behind another stored state", async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: null,
@@ -181,7 +197,9 @@ describe("operational stale tabs and retried staff actions", () => {
     const select = vi.fn(() => ({ eq: matchFilter }))
     mocks.createAdminClient.mockReturnValue({ rpc, from: vi.fn(() => ({ select })) })
 
-    await expect(validateOpportunityPursuit("match-1", "opportunity-1")).rejects.toThrow(
+    await expect(validateOpportunityPursuit(
+      "match-1", "opportunity-1", null, "2026-09-22T09:01:00.000Z",
+    )).rejects.toThrow(
       "Only an interested match can start a pursuit.",
     )
   })

@@ -1,6 +1,6 @@
 import { Text, Link } from "@react-email/components"
 import * as React from "react"
-import { BaseLayout, heading, paragraph } from "./base-layout"
+import { BaseLayout, heading, paragraph, button } from "./base-layout"
 import { renderMarkdownBody } from "./markdown-body"
 import type { EmailTemplateProps } from "@/lib/types/email"
 
@@ -31,7 +31,7 @@ export function BookingReminderEmail({ repreneur, bodyOverride }: EmailTemplateP
           <Text style={paragraph}>Pourriez-vous prendre quelques minutes pour choisir un horaire qui vous convient ?</Text>
 
           <Text style={paragraph}>
-            <Link href={CALENDLY_URL}>{CALENDLY_URL}</Link>
+            <Link href={CALENDLY_URL} style={button}>Réserver mon entretien</Link>
           </Text>
 
           <Text style={paragraph}>

@@ -25,6 +25,75 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 23, 2026",
+    version: "0.9.74",
+    title: "Activity is easier to find and read",
+    isCompleted: true,
+    events: [
+      { title: "Find the right operating office", type: "feature", description: "Staff can search by firm or office when filtering Activity or adding a record. Offices with repeated or missing names remain separate choices with their stable identity and a review cue." },
+      { title: "Understand the history on screen", type: "style", description: "Office, contact and opportunity filters are compact and can be cleared together. The timeline keeps ownership and delivery evidence visible, and makes clear when results cover only the latest 250 loaded activities." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.73",
+    title: "A clear follow-up window for recommended opportunities",
+    isCompleted: true,
+    events: [
+      { title: "One reminder while a recommendation is still open", type: "feature", description: "A recommendation with an actual portal response window can have one reminder after 48 hours, before its 72-hour deadline. A response, lost access or an expired window stops that client reminder. Old unclocked recommendations are not assigned a deadline." },
+      { title: "Unanswered expiry is visible to staff", type: "decision", description: "If the same cycle remains unanswered at 72 hours, one configured-staff alert can be sent without renewing the recommendation or changing its status. Both new email switches start inactive and can be edited by staff; enabling them later does not email old cycles." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.72",
+    title: "A precise follow-up after confidential memo access",
+    isCompleted: true,
+    events: [
+      { title: "Record the feedback actually received", type: "feature", description: "Staff can record substantive feedback by email or phone against the exact memo access grant. A later regrant is kept separate; opening the memo or adding a note never counts as feedback." },
+      { title: "A controlled five-weekday reminder", type: "decision", description: "One client reminder can become due five Monday–Friday days after that grant at the same Paris time, only while access is valid and no feedback is recorded. Its new email switch starts inactive; enabling it later does not send reminders for old grants." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.71",
+    title: "Clear decisions on each opportunity interest",
+    isCompleted: true,
+    events: [
+      { title: "Staff can decide on the exact interest", type: "feature", description: "Re-New can validate a repreneur's interest or record why this opportunity will not proceed. This staff decision does not reject their account or affect their other opportunities; the internal reason stays with staff." },
+      { title: "Notices are controlled by staff", type: "decision", description: "Neutral client outcomes and a staff alert for replies to proposed opportunities are available, but their new switches start inactive. Staff can edit the wording and choose when to activate them; older responses are not emailed retroactively." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.70",
+    title: "Viewed and Reviewed make Deal Flow easier to scan",
+    isCompleted: true,
+    events: [
+      { title: "Personal reading state", type: "feature", description: "Opening a deal detail records Viewed; repreneurs can mark it Reviewed or undo that choice. The personal marker helps organize their own Deal Flow without changing interest, matching or staff decisions." },
+      { title: "Unreviewed opportunities stay easy to find", type: "feature", description: "Recommended and Live Opportunities show items not yet reviewed first when the personal state is available, while reviewed deals remain visible. Older visits are not guessed from before tracking began." },
+    ],
+  },
+  {
+    period: "Sep 20, 2026",
+    version: "0.9.69",
+    title: "Sort the staff pursuit board",
+    isCompleted: true,
+    events: [
+      { title: "Three useful ways to review pursuits", type: "feature", description: "Sort cards within each column by stage progression, repreneur A–Z or opportunity A–Z. Your choice stays selected while filtering or switching views, so you can review the same work from different angles." },
+    ],
+  },
+  {
+    period: "Sep 20, 2026",
+    version: "0.9.68",
+    title: "A compact staff pursuit board, v1.0",
+    isCompleted: true,
+    events: [
+      { title: "Five columns, precise stages", type: "feature", description: "The staff Re-New board groups active work into Matching, Proposed, Interest to validate, Active pursuit and LOI. Every card keeps its exact stage; completed, dropped and inactive cases have their own views." },
+      { title: "Start compact and learn from daily use", type: "decision", description: "We chose v1.0 for an overview that is easier to scan. It can expand to twelve stage columns if daily use exposes hidden bottlenecks or a recurring need for separate stage queues. Business history and document access remain separate." },
+    ],
+  },
+  {
     period: "Sep 12, 2026",
     version: "0.9.67",
     title: "A complete staff opportunity and pursuit export",

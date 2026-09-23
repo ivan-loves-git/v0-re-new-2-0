@@ -1,6 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { partitionPersonalReviews } from "@/lib/utils/repreneur-personal-review"
+import { PersonalReviewHint, RepreneurPersonalReviewControl } from "@/components/opportunities/repreneur-personal-review"
+import { DealOrderInfo, DEAL_SECTION_ORDER } from "@/components/opportunities/deal-order-info"
 import Link from "next/link"
 import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -13,7 +16,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  getOpportunityMatchRecommendationLabel,
   getOpportunityMatchStatusLabel,
   type RepreneurDealFlowOpportunity,
   type RepreneurOpportunityExposure,
@@ -42,7 +44,7 @@ interface RepreneurOpportunityListProps {
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityListItem) {
-  return opportunity.public_title || opportunity.sector || "Opportunity"
+  return opportunity.public_title || "Confidential acquisition opportunity"
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
@@ -61,12 +63,6 @@ function formatRecommendationDeadline(expiresAt: string | null | undefined) {
   const value = new Date(expiresAt)
   if (Number.isNaN(value.getTime())) return null
   return new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris", timeZoneName: "short" }).format(value)
-}
-
-function relevanceGrade(opportunity: RepreneurOpportunityListItem) {
-  return "relevance_grade" in opportunity
-    ? opportunity.relevance_grade
-    : null
 }
 
 function filterOptions(
@@ -89,15 +85,50 @@ export function canonicalSectorFilterOptions(opportunities: RepreneurOpportunity
 }
 
 export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportunityListItem[]) {
-  const optionsByNodeId = new Map<string, string>()
+  const optionsByNodeId = new Map<string, {
+    value: string
+    label: string
+    nodeLevel: "country" | "macro_zone" | "region" | null
+    parentLabel: string | null
+  }>()
   for (const opportunity of opportunities) {
     if (!opportunity.geography_node_id || !opportunity.geography_label) continue
-    optionsByNodeId.set(opportunity.geography_node_id, opportunity.geography_label)
+    optionsByNodeId.set(opportunity.geography_node_id, {
+      value: opportunity.geography_node_id,
+      label: opportunity.geography_label,
+      nodeLevel: opportunity.geography_node_level ?? null,
+      parentLabel: opportunity.geography_parent_label ?? null,
+    })
   }
 
-  return Array.from(optionsByNodeId, ([value, label]) => ({ value, label })).sort((first, second) =>
-    first.label.localeCompare(second.label, "fr"),
+  const options = Array.from(optionsByNodeId.values())
+  const duplicateLabels = new Set(
+    options
+      .map((option) => option.label.trim().toLocaleLowerCase("fr-FR"))
+      .filter((label, index, labels) => labels.indexOf(label) !== index),
   )
+  const levelRank = { country: 0, macro_zone: 1, region: 2 } as const
+  const levelLabel = { country: "Country", macro_zone: "Macro-zone", region: "Region" } as const
+  const collator = new Intl.Collator("fr-FR", { sensitivity: "base" })
+
+  return options
+    .sort((first, second) => {
+      const firstRank = first.nodeLevel ? levelRank[first.nodeLevel] : 3
+      const secondRank = second.nodeLevel ? levelRank[second.nodeLevel] : 3
+      if (firstRank !== secondRank) return firstRank - secondRank
+      const labelOrder = collator.compare(first.label, second.label)
+      if (labelOrder !== 0) return labelOrder
+      return first.value < second.value ? -1 : first.value > second.value ? 1 : 0
+    })
+    .map(({ value, label, nodeLevel, parentLabel }) => {
+      const isDuplicate = duplicateLabels.has(label.trim().toLocaleLowerCase("fr-FR"))
+      if (!isDuplicate) return { value, label }
+      const context = nodeLevel
+        ? parentLabel ? `${levelLabel[nodeLevel]} · ${parentLabel}` : levelLabel[nodeLevel]
+        : parentLabel ? `Parent · ${parentLabel}` : null
+      if (!context) return { value, label }
+      return { value, label: `${label} — ${context}` }
+    })
 }
 
 function toggleValue(values: string[], value: string) {
@@ -192,19 +223,24 @@ function DealCard({
   detailHref,
   detailLabel,
   readOnly,
-  position,
   compact = false,
 }: {
   opportunity: RepreneurOpportunityListItem
   detailHref: string | null
   detailLabel: string
   readOnly: boolean
-  position: number
   compact?: boolean
 }) {
+  const detailLink = useRef<HTMLAnchorElement>(null)
+  const restoreFocus = useRef(false)
+  useEffect(() => {
+    if (restoreFocus.current && !opportunity.personal_review?.reviewed) {
+      detailLink.current?.focus()
+      restoreFocus.current = false
+    }
+  }, [opportunity.personal_review?.reviewed])
   const staffRecommended = isStaffRecommended(opportunity)
   const isDeclined = opportunity.match_status === "declined" || opportunity.match_status === "dropped"
-  const publicRelevance = relevanceGrade(opportunity)
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
   const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && !opportunity.interest_expressed_at
   const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
@@ -221,12 +257,9 @@ function DealCard({
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-xs tabular-nums text-muted-foreground" aria-label={`Position ${position}`}>
-              {String(position).padStart(2, "0")}
-            </span>
-          {staffRecommended && !isDeclined ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
+          {staffRecommended && !isDeclined && !opportunity.interest_rejected ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
-          {opportunity.match_status === "interested" ? <Badge variant="outline">Interest sent, awaiting Re-New validation</Badge> : null}
+          {opportunity.match_status === "interested" ? <Badge variant="outline">{opportunity.interest_rejected ? "Interest not selected by Re-New" : "Interest sent, awaiting Re-New validation"}</Badge> : null}
           {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">Active pursuit</Badge> : null}
           {opportunity.match_status && opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" ? <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge> : null}
           {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
@@ -264,18 +297,21 @@ function DealCard({
             </div>
           </dl> : null}
           <p className="mt-2 text-xs text-muted-foreground">
-            <span className="font-mono text-foreground">{opportunity.reference}</span>
-            <span aria-hidden="true"> · </span>
             {opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}
-            {publicRelevance ? <span className="ml-2">Fit: {getOpportunityMatchRecommendationLabel(publicRelevance)}</span> : null}
           </p>
           {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</p> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3 lg:items-end">
+          {!readOnly ? <PersonalReviewHint state={opportunity.personal_review} /> : null}
+          {!readOnly && opportunity.personal_review?.reviewed ? <RepreneurPersonalReviewControl
+            key={`${opportunity.opportunity_id}-${opportunity.personal_review.reviewed}`}
+            opportunityId={opportunity.opportunity_id} initialState={opportunity.personal_review}
+            onUndo={() => { restoreFocus.current = true }}
+          /> : null}
           {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
           {detailHref ? (
             <Button asChild variant="outline" className="w-full lg:w-auto">
-              <Link href={detailHref}>
+              <Link ref={detailLink} href={detailHref}>
                 {isDeclined ? "Review and reconsider" : detailLabel}
                 <ArrowRight data-icon="inline-end" />
               </Link>
@@ -309,24 +345,46 @@ export function DealSection({
   if (opportunities.length === 0) return null
 
   const headingId = `deal-section-${sectionKey}`
+  const groups = partitionPersonalReviews(opportunities)
+  const reviewEligible = !readOnly && (sectionKey === "recommended" || sectionKey === "live-opportunities")
+  const reviewOrdering = reviewEligible && groups.available
+  const ordered = reviewOrdering ? [...groups.unreviewed, ...groups.reviewed] : opportunities
+  const rationale = sectionKey === "recommended" ? "Re-New selections come first so you can respond to the team."
+    : sectionKey === "in-progress" ? "Your existing interest and active pursuits stay together; personal review marks do not change their priority."
+    : sectionKey === "live-opportunities" ? "Explore other available opportunities after your selections and ongoing discussions."
+    : "Declined deals stay last and remain available to reconsider."
 
   return (
-    <section className="flex flex-col gap-3" aria-labelledby={headingId}>
+    <section className="flex flex-col gap-3 border-t pt-5" aria-labelledby={headingId}>
       <div className="flex flex-col gap-1">
-        <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
+          <span className="text-xs tabular-nums text-muted-foreground" aria-label={`${opportunities.length} ${opportunities.length === 1 ? "deal" : "deals"}`}>{opportunities.length}</span>
+          <DealOrderInfo label={`About ${title} ordering`}>
+            <p>{rationale}</p>
+            {reviewOrdering ? <p className="mt-2">Not reviewed first, reviewed below. Your existing order is kept inside each group.</p> : null}
+            {reviewEligible && !groups.available ? <p className="mt-2">Review order is unavailable right now. Your existing deal order is shown.</p> : null}
+            <p className="mt-2">Overall order: {DEAL_SECTION_ORDER}</p>
+          </DealOrderInfo>
+        </div>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="grid gap-3">
-        {opportunities.map((opportunity, index) => (
+        {ordered.map((opportunity, index) => (
+          <Fragment key={opportunity.match_id ?? opportunity.opportunity_id}>
+          {reviewOrdering && groups.reviewed.length > 0 && index === groups.unreviewed.length ? <div className="flex items-center gap-3 pt-2">
+            <h3 className="shrink-0 text-xs font-medium text-muted-foreground">Reviewed · {groups.reviewed.length}</h3>
+            <span className="h-px flex-1 bg-border" aria-hidden="true" />
+          </div> : null}
           <DealCard
             key={opportunity.match_id ?? opportunity.opportunity_id}
             opportunity={opportunity}
             detailHref={detailHrefForOpportunity(opportunity)}
             detailLabel={detailLabel}
             readOnly={readOnly}
-            position={index + 1}
             compact={compact}
           />
+          </Fragment>
         ))}
       </div>
     </section>
@@ -434,6 +492,8 @@ export function RepreneurOpportunityList({
   const detailHref = (opportunity: RepreneurOpportunityListItem) =>
     detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id] ??
     `/portal/deals/${opportunity.match_id ?? opportunity.opportunity_id}`
+  const reviewOrderUnavailable = !readOnly && [...sections.recommended, ...sections.live]
+    .some((opportunity) => opportunity.personal_review == null)
 
   return (
     <div className="flex flex-col gap-6">
@@ -467,10 +527,20 @@ export function RepreneurOpportunityList({
         </Alert>
       ) : (
         <div className="flex flex-col gap-6">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <p>Recommended → In Progress → Live Opportunities → Declined</p>
+            <DealOrderInfo label="How your deal list is ordered">
+              <p>Re-New selections first, then ongoing discussions, other live deals and declined deals.</p>
+              {!readOnly ? <><p className="mt-2">{reviewOrderUnavailable
+                ? "Where review status is available, Reviewed deals move down within Recommended and Live Opportunities. Sections with unavailable review status keep their existing order."
+                : "Reviewed deals move down within Recommended and Live Opportunities."} Opening a detail only marks it Viewed and does not move it.</p>
+              <p className="mt-2">Not yet viewed means no opening recorded since tracking began. It does not mean newly published. Reviewed means finished for now, not a response or confirmation that you read later updates.</p></> : null}
+            </DealOrderInfo>
+          </div>
           <DealSection sectionKey="recommended" title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
-          <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
           <DealSection sectionKey="in-progress" title="In Progress" description="Interest sent to Re-New or a validated active pursuit." opportunities={sections.inProgress} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
           <DealSection sectionKey="live-opportunities" title="Live Opportunities" description="Other live opportunities available for you to review." opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
+          <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
         </div>
       )}
     </div>

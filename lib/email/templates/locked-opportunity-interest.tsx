@@ -53,7 +53,7 @@ export function LockedOpportunityInterestEmail({
       footerText="Notification interne Re-New depuis WAVE."
     >
       <Text style={heading}>{copy.heading}</Text>
-      <Text style={paragraph}>{copy.introduction}</Text>
+      <Text style={paragraph}>{repreneurName} vient de manifester son intérêt pour {opportunityTitle} sur la plateforme.</Text>
 
       <Section style={highlight}>
         <Text style={detailLabel}>Repreneur</Text>

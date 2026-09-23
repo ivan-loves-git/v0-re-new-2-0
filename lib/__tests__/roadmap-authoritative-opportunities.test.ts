@@ -1,12 +1,9 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { LAST_ROADMAP_UPDATE } from "@/lib/data/roadmap-status"
 
 const roadmap = readFileSync(
   `${process.cwd()}/components/guide/development-roadmap.tsx`,
-  "utf8",
-)
-const roadmapStatus = readFileSync(
-  `${process.cwd()}/lib/data/roadmap-status.ts`,
   "utf8",
 )
 
@@ -229,8 +226,8 @@ describe("authoritative opportunity roadmap entry", () => {
     )
   })
 
-  it("marks the release date as the latest roadmap update", () => {
-    expect(roadmapStatus).toContain('new Date("2026-09-12")')
+  it("retains the released milestones while allowing later roadmap updates", () => {
+    expect(LAST_ROADMAP_UPDATE.getTime()).toBeGreaterThanOrEqual(new Date("2026-09-12").getTime())
     expect(roadmap).toContain('version: "0.9.63"')
     expect(roadmap).toContain("Deal Flow is easier and safer to explore")
     expect(roadmap).toContain("current production build")

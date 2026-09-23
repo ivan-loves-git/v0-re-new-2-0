@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { RepreneurPersonalReviewControl } from "@/components/opportunities/repreneur-personal-review"
 import { CalendarDays, CheckCircle2, Download, FileText, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -13,6 +14,7 @@ import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity
 import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 import {
   getOpportunityMatchStatusLabel,
+  getOpportunityPursuitStageLabel,
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type RepreneurDealFlowOpportunity,
   type RepreneurOpportunityExposure,
@@ -30,7 +32,7 @@ interface RepreneurOpportunityDetailProps {
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityDetailItem) {
-  return opportunity.public_title || opportunity.sector || "Opportunity"
+  return opportunity.public_title || "Confidential acquisition opportunity"
 }
 
 function formatNumber(value: number | null | undefined, suffix: string) {
@@ -82,11 +84,15 @@ export function RepreneurOpportunityDetail({
         <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
           {opportunity.match_status ? (
-            <Badge variant="outline">{opportunity.match_status === "interested" ? "Interest sent, awaiting Re-New validation" : getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
+            <Badge variant="outline">{opportunity.match_status === "interested" ? opportunity.interest_rejected ? "Interest not selected by Re-New" : "Interest sent, awaiting Re-New validation" : getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge>
           ) : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "active_pursuit" && <Badge variant="outline">Confidential journey</Badge>}
-          {isStaffRecommended(opportunity) ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
+          {opportunity.match_status === "active_pursuit" && opportunity.pursuit_stage && <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge>}
+          {opportunity.pursuit_stage_provenance === "staff_confirmed_history" && <Badge variant="outline">Stage confirmed by Re-New</Badge>}
+          {isStaffRecommended(opportunity) && !opportunity.interest_rejected
+            && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped"
+            ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
         </div>
         <div>
@@ -106,10 +112,10 @@ export function RepreneurOpportunityDetail({
             </span>
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>Re-New ref <span className="font-mono text-foreground">{opportunity.reference}</span></span>
             <span>{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</span>
             {responsePending && responseDeadline ? <span>{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</span> : null}
           </div>
+          {opportunity.pursuit_stage_provenance === "staff_confirmed_history" ? <p className="mt-2 text-xs text-muted-foreground">This progress was confirmed by Re-New from the existing process. Document checks and access remain separate.</p> : null}
         </div>
       </header>
 
@@ -123,11 +129,19 @@ export function RepreneurOpportunityDetail({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {opportunity.match_status === "interested" && !lockedForAnotherRepreneur && (
+          {opportunity.match_status === "interested" && !opportunity.interest_rejected && !lockedForAnotherRepreneur && (
             <Alert>
               <CheckCircle2 />
               <AlertTitle>Interest sent</AlertTitle>
               <AlertDescription>Re-New can now review this signal and decide the next step.</AlertDescription>
+            </Alert>
+          )}
+
+          {opportunity.match_status === "interested" && opportunity.interest_rejected && (
+            <Alert>
+              <XCircle />
+              <AlertTitle>Interest not selected</AlertTitle>
+              <AlertDescription>Re-New will not continue with this opportunity for now. Your account and access to other opportunities are unchanged. Contact Re-New if you would like to discuss next steps.</AlertDescription>
             </Alert>
           )}
 
@@ -186,7 +200,7 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {!readOnly && !lockedForAnotherRepreneur && interestAction && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && !opportunity.interest_rejected && interestAction && canRespond(opportunity.match_status) && (
             <div className="flex flex-col gap-2 sm:flex-row">
               <form action={interestAction} data-wave-action="express_interest" data-wave-workflow="portal_deals">
                 <Button type="submit" disabled={opportunity.match_status === "interested" || responseExpired}>
@@ -197,13 +211,20 @@ export function RepreneurOpportunityDetail({
             </div>
           )}
 
-          {!readOnly && !lockedForAnotherRepreneur && opportunity.match_id && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped" && canRespond(opportunity.match_status) && (
+          {!readOnly && !lockedForAnotherRepreneur && !opportunity.interest_rejected && opportunity.match_id && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped" && canRespond(opportunity.match_status) && (
             <RepreneurOpportunityDeclineAction
               matchId={opportunity.match_id}
               initialReasons={Array.from(selectedDeclineReasons)}
               initialDetails={opportunity.decline_reason_text ?? ""}
             />
           )}
+          {!readOnly ? <RepreneurPersonalReviewControl
+            key={opportunity.opportunity_id}
+            opportunityId={opportunity.opportunity_id}
+            initialState={opportunity.personal_review}
+            detail
+            affectsOrder={opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped"}
+          /> : null}
         </CardContent>
       </Card> : null}
 

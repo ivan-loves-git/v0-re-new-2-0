@@ -22,7 +22,7 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: mocks.from.mockImplementation((table: string) => {
       const response = mocks.responses.get(table)?.shift()
-      if (!response && !["geography_nodes", "repreneur_geography_targets"].includes(table)) {
+      if (!response && !["geography_nodes", "repreneur_geography_targets", "opportunity_interest_events"].includes(table)) {
         throw new Error(`Missing ${table} test response`)
       }
       const resolvedResponse = response ?? { data: [], error: null }
@@ -37,6 +37,7 @@ vi.mock("@/lib/supabase/admin", () => ({
     }),
     rpc: mocks.rpc.mockImplementation((name: string) => {
       const response = mocks.responses.get(`rpc:${name}`)?.shift()
+      if (!response && name === "w173_repreneur_rejections") return Promise.resolve({ data: [], error: null })
       if (!response) throw new Error(`Missing ${name} RPC test response`)
       return Promise.resolve(response)
     }),
@@ -162,12 +163,16 @@ describe("incomplete-thesis portal behavior", () => {
     setResponses({
       repreneurs: [{ data: completeProfile, error: null }],
       opportunity_matches: [
-        { data: [staffMatch], error: null },
+        { data: [{ ...staffMatch, opportunity: { ...staffMatch.opportunity, geography_node_id: "idf-region" } }], error: null },
         { data: [], error: null },
         { data: [], error: null },
       ],
-      "rpc:w164_repreneur_live_inventory": [{ data: [opportunity], error: null }],
-      geography_nodes: [{ data: [], error: null }],
+      "rpc:w164_repreneur_live_inventory": [{ data: [{ ...opportunity, geography_node_id: "idf-region" }], error: null }],
+      geography_nodes: [{ data: [
+        { id: "fr", stable_key: "france", label: "France", node_level: "country", parent_id: null },
+        { id: "idf-macro", stable_key: "fr-macro-idf", label: "Île-de-France", node_level: "macro_zone", parent_id: "fr" },
+        { id: "idf-region", stable_key: "fr-region-idf", label: "Île-de-France", node_level: "region", parent_id: "idf-macro" },
+      ], error: null }],
       repreneur_geography_targets: [{ data: [], error: null }],
     })
 
@@ -176,6 +181,18 @@ describe("incomplete-thesis portal behavior", () => {
     expect(result.automaticMatching.complete).toBe(true)
     expect(result.staffRecommended.map((item) => item.opportunity_id)).toEqual(["opportunity-staff"])
     expect(result.dealFlow.map((item) => item.opportunity_id)).toEqual(["opportunity-auto"])
+    expect(result.staffRecommended[0]).toMatchObject({
+      geography_node_id: "idf-region",
+      geography_label: "Île-de-France",
+      geography_node_level: "region",
+      geography_parent_label: "Île-de-France",
+    })
+    expect(result.dealFlow[0]).toMatchObject({
+      geography_node_id: "idf-region",
+      geography_label: "Île-de-France",
+      geography_node_level: "region",
+      geography_parent_label: "Île-de-France",
+    })
     expect(mocks.rpc).toHaveBeenCalled()
   })
 
