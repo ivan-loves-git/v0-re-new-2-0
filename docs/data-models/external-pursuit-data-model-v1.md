@@ -161,9 +161,15 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    The #196 selected-owner Tools Portal reuses the existing actor-audited
    staff create/edit, stage, contact, follow-up, current-status confirmation
    and private-file paths, but binds every portal mutation to the selected
-   browser-workspace generation and exact dossier owner in one guarded write
-   transaction. A switch invalidates old forms; private-file finalization and
-   both phases of a file removal recheck the selection. Confirmation updates
+   browser-workspace generation and exact dossier owner at its guarded write
+   boundary. A switch invalidates old forms and private-file upload capabilities.
+   File removal checks the selection before touching Storage; once authorized,
+   that same server invocation may finish the exact attachment's database cleanup
+   after a switch, using the original actor, dossier, attachment and retry key with
+   the canonical finalizer's normal authorization checks. This prevents a retained
+   row from pointing to a removed file; it grants no reusable stale capability,
+   and a newly submitted stale removal is rejected before Storage changes.
+   Confirmation updates
    freshness evidence only, never a canonical Re-New stage. It never projects or writes
    staff-only notes in the selected-owner portal and never exposes the owner's
    deletion request or staff fulfillment action there. The existing staff
