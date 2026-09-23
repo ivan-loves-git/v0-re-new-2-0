@@ -30,6 +30,6 @@ describe("W-103 Relationship Ledger seam", () => {
     expect(ledger).toContain('purpose === "timeline"')
     expect(ledger).toContain('purpose === "detail"')
     expect(ledger).toContain('purpose === "global"')
-    expect(ledger).toMatch(/purpose === "global"\s*\? 250/)
+    expect(ledger).toMatch(/purpose === "global"\s*\? MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT/)
   })
 })

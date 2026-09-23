@@ -6,6 +6,7 @@ import { withStaffSourceReviewState } from "@/lib/data/provisional-source-review
 import { readMaRelationshipLedger } from "@/lib/data/ma-relationship-ledger"
 import type { MaRelationshipActivityProvenance } from "@/lib/ma-relationship-activity-provenance"
 import { isValidMaRelationshipEmail } from "@/lib/ma-relationship-validation"
+import { presentMaOffice } from "@/lib/ma-office-presentation"
 import { buildMaRelationshipIndicators } from "@/lib/ma-relationship-statistics"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { OpportunityWithSource } from "@/lib/types/opportunity"
@@ -62,6 +63,7 @@ export interface MaRelationshipOfficeOption {
   firmStatus: "prospect" | "active" | "archived"
   status: "active" | "archived"
   officeName: string
+  isProvisionalSource?: boolean
   label: string
   contacts: MaRelationshipOfficeContactOption[]
   indicators: {
@@ -135,6 +137,7 @@ export interface MaRelationshipWorkspace {
   contacts: MaRelationshipContactFilterOption[]
   opportunities: MaRelationshipOpportunityOption[]
   interactions: MaRelationshipTimelineItem[]
+  globalActivityWindowSaturated: boolean
 }
 
 export interface CreateMaRelationshipInteractionInput {
@@ -212,6 +215,16 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
 
   if (officeResult.error) throw new Error(officeResult.error.message)
   const officeRows = (officeResult.data ?? []) as unknown as OfficeRow[]
+  // This is a staff-only display flag, never a substitute for source-review guards.
+  const { data: provisionalContext, error: provisionalContextError } = await supabase
+    .from("ma_provisional_source_contexts")
+    .select("office_id")
+    .eq("context_key", "acme_co_paris")
+    .maybeSingle()
+  if (provisionalContextError) throw new Error(provisionalContextError.message)
+  if (!provisionalContext?.office_id) {
+    throw new Error("The provisional source review context is unavailable.")
+  }
   const ledger = await readMaRelationshipLedger({
     purpose: "global",
     officeIds: officeRows.map((office) => office.id),
@@ -338,7 +351,8 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
         firmStatus: firm?.status ?? "archived",
         status: office.status,
         officeName: office.name,
-        label: [firm?.name, office.name].filter(Boolean).join(" · "),
+        isProvisionalSource: office.id === provisionalContext.office_id,
+        label: presentMaOffice({ id: office.id, firmName: firm?.name, officeName: office.name }).label,
         contacts: (contactsByOffice.get(office.id) ?? []).sort((left, right) =>
           left.label.localeCompare(right.label),
         ),
@@ -419,6 +433,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     contacts,
     opportunities,
     interactions: ledger.activities,
+    globalActivityWindowSaturated: ledger.globalActivityWindowSaturated,
   }
 }
 

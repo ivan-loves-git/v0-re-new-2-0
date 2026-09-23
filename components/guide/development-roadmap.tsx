@@ -25,6 +25,16 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 23, 2026",
+    version: "0.9.74",
+    title: "Activity is easier to find and read",
+    isCompleted: true,
+    events: [
+      { title: "Find the right operating office", type: "feature", description: "Staff can search by firm or office when filtering Activity or adding a record. Offices with repeated or missing names remain separate choices with their stable identity and a review cue." },
+      { title: "Understand the history on screen", type: "style", description: "Office, contact and opportunity filters are compact and can be cleared together. The timeline keeps ownership and delivery evidence visible, and makes clear when results cover only the latest 250 loaded activities." },
+    ],
+  },
+  {
     period: "Sep 22, 2026",
     version: "0.9.73",
     title: "A clear follow-up window for recommended opportunities",
