@@ -1,5 +1,7 @@
 import Link from "next/link"
 import { FolderKanban, Plus } from "lucide-react"
+import { OpportunityExportButton } from "@/components/opportunities/opportunity-export-button"
+import { OpportunityFullExportButton } from "@/components/opportunities/opportunity-full-export-button"
 import { OpportunityWorkSurfaceTable } from "@/components/opportunities/opportunity-work-surface-table"
 import { Button } from "@/components/ui/button"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
@@ -17,7 +19,9 @@ export default async function OpportunityGroupsPage() {
         icon={FolderKanban}
         tone="opportunity"
         actions={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <OpportunityExportButton />
+            <OpportunityFullExportButton />
             <Button asChild size="sm">
               <Link href="/opportunities/new">
                 <Plus data-icon="inline-start" />
