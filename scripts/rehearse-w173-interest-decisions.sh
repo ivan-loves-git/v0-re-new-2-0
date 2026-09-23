@@ -63,10 +63,19 @@ psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U "$database
 "${psql[@]}" -c "
   ALTER TABLE public.opportunities ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE;
   ALTER TABLE public.repreneurs ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE;
+  CREATE SCHEMA storage;
+  CREATE TABLE storage.buckets (
+    id text PRIMARY KEY, public boolean NOT NULL DEFAULT false,
+    file_size_limit bigint, allowed_mime_types text[]
+  );
+  INSERT INTO storage.buckets(id) VALUES
+    ('opportunity-documents'), ('cvs'), ('external-pursuit-attachments');
 " >/dev/null
 
 predecessors=(
   20260827103000_w164_lifecycle_namespace_visibility.sql
+  20260827113000_w165_private_direct_uploads.sql
+  20260829130000_w161_repreneur_target_ebitda_range.sql
   20260829180000_w169_lifecycle_outcome_separation.sql
   20260829203000_w169_pause_guard_scope.sql
   20260905095834_pursuit_delivery_evidence_types.sql
@@ -83,4 +92,36 @@ done
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w173-interest-decisions-before.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/supabase/migrations/20260922111134_w173_interest_decisions_notifications.sql" >/dev/null
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/w173-interest-decisions-after.sql"
-echo "W173 exact-interest local PG17 rehearsal passed"
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260922142227_w175_recommendation_cycle_notifications.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260923173503_w196_attributed_staff_assistance.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-responses.sql"
+"${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-thesis.sql"
+"${psql[@]}" --file "$repo_root/scripts/rehearsals/w196-staff-received-nda.sql"
+
+# Two actual sessions: an owner response commits while a staff form still
+# carries the old exact-match timestamp. The staff call must wait, then reject.
+race_ids='76000000-0000-4000-8000-000000000011'
+IFS='|' read -r race_owner race_opp race_opp_updated race_match_updated <<< "$(${psql[@]} -AtF '|' -c "
+  SELECT m.repreneur_id,m.opportunity_id,o.updated_at,m.updated_at
+  FROM public.opportunity_matches m JOIN public.opportunities o ON o.id=m.opportunity_id
+  WHERE m.id='$race_ids'")"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.update_repreneur_opportunity_response('$race_ids','$race_owner','interested');
+  SELECT pg_sleep(1);
+  COMMIT;" >/dev/null &
+owner_race_pid=$!
+sleep 0.2
+set +e
+race_result="$("${psql[@]}" -At -c "SELECT public.w196_record_staff_opportunity_response(
+  '$race_owner','$race_opp','$race_ids',
+  '$race_opp_updated','$race_match_updated',NULL,
+  'declined',ARRAY['sector'],'Synthetic concurrent decline',
+  'w173-staff','w173-staff@example.test','76000000-0000-4000-8000-000000000098');" 2>&1)"
+race_status=$?
+set -e
+wait "$owner_race_pid"
+if [[ "$race_status" -eq 0 || "$race_result" != *staff_assistance_stale_response* ]]; then
+  echo "W196 concurrent owner/staff stale-form guard failed: $race_result" >&2
+  exit 1
+fi
+echo "W173/W196 exact-interest, attributed assistance and two-session race rehearsal passed"
