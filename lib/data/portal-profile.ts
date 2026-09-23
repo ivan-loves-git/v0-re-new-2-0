@@ -24,6 +24,7 @@ type PortalMilestoneColumn = (typeof PORTAL_MILESTONE_COLUMNS)[number]
 
 export type PortalRepreneurProfile = {
   id: string
+  updated_at: string
   first_name: string
   last_name: string
   q13_target_sectors_v2: string[]
@@ -51,6 +52,7 @@ export type PortalRepreneurProfile = {
 
 export const PORTAL_REPRENEUR_PROFILE_SELECT = [
   "id",
+  "updated_at",
   "first_name",
   "last_name",
   "q13_target_sectors_v2",
@@ -109,6 +111,7 @@ export function normalizePortalRepreneurProfile(row: unknown): PortalRepreneurPr
 
   return {
     id,
+    updated_at: readString(row.updated_at) ?? "",
     first_name: readString(row.first_name) ?? "",
     last_name: readString(row.last_name) ?? "",
     q13_target_sectors_v2: readStringArray(row.q13_target_sectors_v2),

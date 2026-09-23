@@ -1,4 +1,5 @@
 import Link from "next/link"
+import type { ReactNode } from "react"
 import { ArrowRight, CheckCircle2, Target } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -25,6 +26,10 @@ interface RepreneurProfileSummaryProps {
   opportunities: RepreneurOpportunityListItem[]
   dealsHref?: string
   detailHrefByOpportunityId?: Record<string, string>
+  mode?: "owner" | "staff-preview"
+  /** #190 binds an attributed staff action here; never fall back to a my-profile action. */
+  staffTargetThesisAction?: ReactNode
+  staffDocumentAssistanceAction?: ReactNode
 }
 
 type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
@@ -214,14 +219,19 @@ export function RepreneurProfileSummary({
   opportunities,
   dealsHref = "/portal/deals",
   detailHrefByOpportunityId,
+  mode = "owner",
+  staffTargetThesisAction,
+  staffDocumentAssistanceAction,
 }: RepreneurProfileSummaryProps) {
   if (!repreneur) {
     return (
       <Alert>
         <Target />
-        <AlertTitle>No linked repreneur profile</AlertTitle>
+        <AlertTitle>{mode === "staff-preview" ? "Selected repreneur profile unavailable" : "No linked repreneur profile"}</AlertTitle>
         <AlertDescription>
-          This login is not connected to a repreneur profile yet. Ask the Re-New team to link your email before using the portal.
+          {mode === "staff-preview"
+            ? "The selected repreneur's profile could not be loaded. Choose another repreneur or check this profile with the Re-New team."
+            : "This login is not connected to a repreneur profile yet. Ask the Re-New team to link your email before using the portal."}
         </AlertDescription>
       </Alert>
     )
@@ -232,6 +242,7 @@ export function RepreneurProfileSummary({
   )
   const proposedDeals = opportunities.filter((opportunity) => opportunity.match_status === "proposed")
   const pursuedDeals = opportunities.filter((opportunity) => opportunity.match_status === "active_pursuit")
+  const staffPreview = mode === "staff-preview"
   const opportunityDetailHref = (opportunity: RepreneurOpportunityListItem) =>
     detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id]
       ?? (opportunity.match_id ? `/portal/deals/${opportunity.match_id}` : dealsHref)
@@ -239,7 +250,7 @@ export function RepreneurProfileSummary({
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <p className="text-sm text-muted-foreground">Your Re-New profile</p>
+        <p className="text-sm text-muted-foreground">{staffPreview ? "Selected repreneur's Re-New profile" : "Your Re-New profile"}</p>
         <h1 className="text-2xl font-semibold tracking-normal">{repreneur.first_name} {repreneur.last_name}</h1>
       </header>
 
@@ -249,10 +260,12 @@ export function RepreneurProfileSummary({
             <Target data-icon="inline-start" />
             Target thesis
           </CardTitle>
-          <CardDescription>Keep the acquisition criteria Re-New uses to surface relevant opportunities current.</CardDescription>
-          <CardAction>
-            <RepreneurTargetThesisEditor repreneur={repreneur} />
-          </CardAction>
+          <CardDescription>{staffPreview
+            ? "Acquisition criteria Re-New uses to surface relevant opportunities."
+            : "Keep the acquisition criteria Re-New uses to surface relevant opportunities current."}</CardDescription>
+          {staffPreview
+            ? staffTargetThesisAction ? <CardAction>{staffTargetThesisAction}</CardAction> : null
+            : <CardAction><RepreneurTargetThesisEditor repreneur={repreneur} /></CardAction>}
         </CardHeader>
         <CardContent>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -268,13 +281,16 @@ export function RepreneurProfileSummary({
 
       <Card>
         <CardHeader>
-          <CardTitle>Your supporting items</CardTitle>
+          <CardTitle>{staffPreview ? "Supporting items" : "Your supporting items"}</CardTitle>
           <CardDescription>
-            Add or certify information for Re-New to review. These declarations never change readiness milestones.
+            {staffPreview
+              ? "Personal declarations belong to the repreneur. Staff can review them here but cannot certify on their behalf."
+              : "Add or certify information for Re-New to review. These declarations never change readiness milestones."}
           </CardDescription>
         </CardHeader>
+        {staffPreview && staffDocumentAssistanceAction ? <CardContent>{staffDocumentAssistanceAction}</CardContent> : null}
         <CardContent>
-          <RepreneurProfileContributions repreneur={repreneur} />
+          <RepreneurProfileContributions repreneur={repreneur} readOnly={staffPreview} />
         </CardContent>
       </Card>
 
@@ -301,8 +317,8 @@ export function RepreneurProfileSummary({
 
       <Card>
         <CardHeader>
-          <CardTitle>Your deals</CardTitle>
-          <CardDescription>Opportunities Re-New has made available to you.</CardDescription>
+          <CardTitle>{staffPreview ? "Selected repreneur's deals" : "Your deals"}</CardTitle>
+          <CardDescription>{staffPreview ? "Opportunities Re-New has made available to this repreneur." : "Opportunities Re-New has made available to you."}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <DealGroup

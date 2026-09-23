@@ -12,6 +12,7 @@ export type CriticalOperationName =
   | "portal.memo_download"
   | "portal.nda_template_download"
   | "portal.staff_preview_memo_download"
+  | "portal.staff_preview_nda_template_download"
   | "email.repreneur_send"
   | "email.password_reset_send"
   | "email.ma_source_send"

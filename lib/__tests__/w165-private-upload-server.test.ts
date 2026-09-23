@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   revalidateOpportunityDashboardTags: vi.fn(),
   revalidateRepreneurDashboardTags: vi.fn(),
   recalculateRepreneurScoresAndMatches: vi.fn(),
+  verifyStaffPortalSelection: vi.fn(),
   PdfEvidenceValidationError: class MockPdfEvidenceValidationError extends Error {},
   PdfEvidenceRuntimeError: class MockPdfEvidenceRuntimeError extends Error {},
 }))
@@ -24,6 +25,9 @@ vi.mock("@/lib/access-control", () => ({
 }))
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
+}))
+vi.mock("@/lib/staff-portal-selection", () => ({
+  verifyStaffPortalSelection: mocks.verifyStaffPortalSelection,
 }))
 vi.mock("@/lib/security/pdf-evidence", () => ({
   assertSafePdfEvidence: mocks.assertSafePdfEvidence,
@@ -125,6 +129,73 @@ describe("W-165 server upload authority", () => {
     vi.clearAllMocks()
     mocks.getCurrentUserAccess.mockResolvedValue(staffAccess())
     mocks.assertSafePdfEvidence.mockResolvedValue(undefined)
+    mocks.verifyStaffPortalSelection.mockResolvedValue({ workspaceId: "00000000-0000-4000-8000-000000000020",
+      generation: "00000000-0000-4000-8000-000000000021" })
+  })
+
+  it("denies a staff-received NDA before signed upload when the current sent E6 is absent", async () => {
+    const matchId = "00000000-0000-4000-8000-000000000030"
+    const ownerId = "00000000-0000-4000-8000-000000000040"
+    const insert = vi.fn()
+    const createSignedUploadUrl = vi.fn()
+    const client = {
+      from: vi.fn((table: string) => {
+        if (table !== "opportunity_matches") throw new Error(`Unexpected table ${table}`)
+        return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({
+          data: { id: matchId, opportunity_id: opportunityId, status: "active_pursuit",
+            opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
+          error: null,
+        }) }) }) }) }
+      }),
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+      storage: { from: () => ({ createSignedUploadUrl }) },
+      insert,
+    }
+    mocks.createAdminClient.mockReturnValue(client)
+    await expect(createPrivateUploadIntent(request({}), {
+      kind: "staff_received_signed_nda", resourceId: matchId, relatedId: ownerId,
+      fileName: "received.pdf", contentType: "application/pdf", sizeBytes: 100,
+      metadata: { selected_owner_id: ownerId, staff_portal_selection_token: "signed-selection",
+        source_kind: "email", source_reference: "Synthetic inbox", title: "Received NDA" },
+      idempotencyKey: "00000000-0000-4000-8000-000000000041",
+    })).rejects.toThrow("Current Gate 1 and its sent NDA notice")
+    expect(client.rpc).toHaveBeenCalledWith("journey_repreneur_authorized_template", {
+      p_match_id: matchId, p_repreneur_id: ownerId,
+    })
+    expect(createSignedUploadUrl).not.toHaveBeenCalled()
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it("rejects a finalized A upload capability after the staff workspace switches to B before reading bytes", async () => {
+    const download = vi.fn()
+    const intent = {
+      ...pendingPdfIntent(new Uint8Array(100)),
+      upload_kind: "staff_received_signed_nda",
+      related_id: opportunityId,
+      status: "finalized",
+      result: { artifactId: intentId },
+      metadata: {
+        selected_owner_id: opportunityId,
+        staff_portal_workspace_id: "00000000-0000-4000-8000-000000000020",
+        staff_portal_generation: "00000000-0000-4000-8000-000000000021",
+      },
+    }
+    mocks.createAdminClient.mockReturnValue({
+      from: (table: string) => ({
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({
+          data: table === "private_upload_intents" ? intent : {
+            staff_user_id: "staff-user",
+            selected_repreneur_id: "00000000-0000-4000-8000-000000000022",
+            generation: "00000000-0000-4000-8000-000000000023",
+          }, error: null,
+        }) }) }),
+      }),
+      storage: { from: () => ({ download }) },
+    })
+    await expect(finalizePrivateUpload(request({ intentId, finalizeSecret: secret }), {
+      intentId, finalizeSecret: secret,
+    })).rejects.toMatchObject({ status: 403 })
+    expect(download).not.toHaveBeenCalled()
   })
 
   it("authorizes an exact 20 MiB private path without receiving file bytes", async () => {
@@ -351,6 +422,35 @@ describe("W-165 server upload authority", () => {
       p_finalize_secret_hash: intent.finalize_secret_hash,
       p_content_sha256: digest,
     })
+  })
+
+  it("routes a staff-received signed PDF through its distinct guarded finalizer", async () => {
+    const bytes = new TextEncoder().encode("%PDF-1.4\n%%EOF\n")
+    const intent = {
+      ...pendingPdfIntent(bytes),
+      upload_kind: "staff_received_signed_nda",
+      related_id: opportunityId,
+      metadata: { opportunity_id: opportunityId, title: "Received NDA", source_kind: "email", source_reference: "Synthetic inbox",
+        selected_owner_id: opportunityId,
+        staff_portal_workspace_id: "00000000-0000-4000-8000-000000000020",
+        staff_portal_generation: "00000000-0000-4000-8000-000000000021" },
+    }
+    const finalizeRpc = vi.fn().mockResolvedValue({ data: { artifactId: "artifact-1", message: "Received signed NDA recorded for staff validation." }, error: null, status: 200 })
+    const cleanupQuery = { select: () => ({ eq: () => ({ is: async () => ({ data: [], error: null }) }) }) }
+    mocks.createAdminClient.mockReturnValue({
+      from: (table: string) => table === "private_upload_intents"
+        ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: intent, error: null }) }) }) }
+        : table === "staff_portal_workspaces"
+          ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: {
+            staff_user_id: "staff-user", selected_repreneur_id: opportunityId,
+            generation: "00000000-0000-4000-8000-000000000021",
+          }, error: null }) }) }) }
+        : table === "private_upload_cleanup_queue" ? cleanupQuery : null,
+      storage: { from: () => ({ download: async () => ({ data: new Blob([bytes], { type: "application/pdf" }), error: null }) }) },
+      rpc: finalizeRpc,
+    })
+    await finalizePrivateUpload(request({ intentId, finalizeSecret: secret }), { intentId, finalizeSecret: secret })
+    expect(finalizeRpc).toHaveBeenCalledWith("w196_finalize_staff_portal_upload", expect.objectContaining({ p_intent_id: intentId }))
   })
 
   it("returns a clear client rejection for an invalid PDF and records the content failure", async () => {

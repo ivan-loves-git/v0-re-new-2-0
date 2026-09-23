@@ -78,7 +78,7 @@ describe("ExternalPursuitBoard component", () => {
       owners: [{ id: "owner-1", name: "Owner One" }],
     }))
 
-    expect(html).toContain("External pursuits are private dossiers for you and authorised Re-New staff")
+    expect(html).toContain("External pursuits are private dossiers for their owner and authorised Re-New staff")
     expect(html).toContain("They are separate from Re-New Deal Flow")
     expect(html).toContain("External")
     expect(html).toContain("Re-New · read-only")
@@ -111,6 +111,33 @@ describe("ExternalPursuitBoard component", () => {
     expect(html).toContain('href="/portal/deals/match-1"')
     expect(html).toContain("See opportunity")
     expect(html).not.toContain("Open canonical journey")
+  })
+
+  it("keeps a selected-owner preview inspectable without exposing staff editing or deletion controls", () => {
+    const html = renderToStaticMarkup(createElement(ExternalPursuitBoard, {
+      external: [external({ ownerRepreneurId: "owner-1", staffInternalNotes: "Internal-only note" })],
+      renew: [],
+      isStaff: true,
+      readOnly: true,
+      selectedOwnerId: "owner-1",
+    }))
+
+    expect(html).toContain("Independent target")
+    expect(html).toContain("View dossier and files")
+    expect(html).not.toContain("Deletion is pending")
+    expect(html).not.toContain("Internal-only note")
+    expect(html).not.toContain("New external pursuit")
+    expect(html).not.toContain('aria-label="Move Independent target stage"')
+    expect(html).not.toContain("Permanently delete")
+
+    const pendingHtml = renderToStaticMarkup(createElement(ExternalPursuitBoard, {
+      external: [external({ deletionStatus: "delete_requested" })],
+      renew: [],
+      isStaff: true,
+      readOnly: true,
+      selectedOwnerId: "owner-1",
+    }))
+    expect(pendingHtml).not.toContain("Permanently delete")
   })
 
   it("keeps a pending staff dossier and its contact context inspectable before purge", () => {

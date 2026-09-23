@@ -74,7 +74,7 @@ describe("W-106 pursuit board", () => {
 
   it("keeps title-only intake, explicit staff ownership, labelled controls and responsive stage groups", () => {
     expect(board).toContain('setDraft(blankDraft())')
-    expect(board).toContain('setOwnerId("")')
+    expect(board).toContain('setOwnerId(selectedOwnerId ?? "")')
     expect(board).toContain('stage: "identified"')
     expect(board).toContain("<Label htmlFor={id}")
     expect(board).toContain("ariaLabel={`Move ${record.title} stage`}")

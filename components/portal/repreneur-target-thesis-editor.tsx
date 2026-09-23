@@ -181,6 +181,7 @@ export function RepreneurTargetThesisEditor({
   description = "Keep the criteria Re-New uses to surface relevant opportunities current. Your readiness milestones remain managed by Re-New.",
   saveLabel = "Save target thesis",
   errorMessage = "Could not update your target thesis.",
+  staffAssistanceName,
 }: {
   repreneur: TargetThesisProfile
   onSave?: (input: TargetThesisInput) => Promise<void>
@@ -190,10 +191,12 @@ export function RepreneurTargetThesisEditor({
   description?: string
   saveLabel?: string
   errorMessage?: string
+  staffAssistanceName?: string
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => initialDraft(repreneur))
+  const [staffConfirmed, setStaffConfirmed] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const reset = () => setDraft(initialDraft(repreneur))
@@ -235,6 +238,7 @@ export function RepreneurTargetThesisEditor({
       open={open}
       onOpenChange={(nextOpen) => {
         if (nextOpen) reset()
+        if (nextOpen) setStaffConfirmed(false)
         setOpen(nextOpen)
       }}
     >
@@ -365,11 +369,15 @@ export function RepreneurTargetThesisEditor({
             </div>
           </div>
         </div>
+        {staffAssistanceName ? <label className="flex items-start gap-2 text-sm">
+          <Checkbox checked={staffConfirmed} onCheckedChange={(value) => setStaffConfirmed(value === true)} />
+          I am acting as Re-New staff on behalf of {staffAssistanceName}. My edit will be attributed to me, not to the repreneur.
+        </label> : null}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
             Cancel
           </Button>
-          <Button type="button" onClick={save} disabled={isPending}>
+          <Button type="button" onClick={save} disabled={isPending || Boolean(staffAssistanceName && !staffConfirmed)}>
             {isPending && <Loader2 data-icon="inline-start" className="animate-spin" />}
             {saveLabel}
           </Button>
@@ -384,7 +392,7 @@ function dateLabel(value: string | null | undefined) {
   return formatDisplayDate(value, "en-GB")
 }
 
-export function RepreneurProfileContributions({ repreneur }: { repreneur: ProfileContributionsProfile }) {
+export function RepreneurProfileContributions({ repreneur, readOnly = false }: { repreneur: ProfileContributionsProfile; readOnly?: boolean }) {
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
@@ -437,7 +445,7 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
 
   return (
     <div className="space-y-3">
-      <input
+      {!readOnly ? <input
         ref={fileInputRef}
         type="file"
         accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -446,7 +454,7 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
           const file = event.target.files?.[0]
           if (file) void uploadLdc(file)
         }}
-      />
+      /> : null}
       <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-start gap-3">
           <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -473,13 +481,13 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
               </a>
             </Button>
           )}
-          {!ldcStaffValidated && !repreneur.ldc_url && (
+          {!readOnly && !ldcStaffValidated && !repreneur.ldc_url && (
             <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
               {isUploading ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Upload data-icon="inline-start" />}
               Add document
             </Button>
           )}
-          {!ldcStaffValidated && repreneur.ldc_url && !ldcCertificationDate && (
+          {!readOnly && !ldcStaffValidated && repreneur.ldc_url && !ldcCertificationDate && (
             <Button size="sm" onClick={() => void certify("ldc")} disabled={pendingContribution !== null}>
               {pendingContribution === "ldc" && <Loader2 data-icon="inline-start" className="animate-spin" />}
               Certify as current
@@ -504,7 +512,7 @@ export function RepreneurProfileContributions({ repreneur }: { repreneur: Profil
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {advisoryStaffValidated && <Badge variant="outline">Validated by Re-New</Badge>}
-          {!advisoryCertificationDate && !advisoryStaffValidated && (
+          {!readOnly && !advisoryCertificationDate && !advisoryStaffValidated && (
             <Button size="sm" onClick={() => void certify("advisory_team")} disabled={pendingContribution !== null}>
               {pendingContribution === "advisory_team" ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <CheckCircle2 data-icon="inline-start" />}
               My advisory team is in place

@@ -104,15 +104,31 @@ describe("Staff Portal Preview DEMO counts", () => {
     })
   })
 
-  it("counts the canonical live inventory even when the repreneur owns no matches", async () => {
+  it("does not advertise a namespace-wide count as one person's deal count", async () => {
     const [option] = await listStaffPortalPreviewOptions()
 
-    expect(option.visibleOpportunityCount).toBe(1)
+    expect(option.id).toBe(repreneurId)
+    expect(option).not.toHaveProperty("visibleOpportunityCount")
     expect(mocks.requireStaffAccess).toHaveBeenCalledOnce()
-    expect(mocks.rpc).toHaveBeenCalledWith("w164_repreneur_live_inventory", {
-      p_repreneur_id: repreneurId,
-      p_opportunity_id: null,
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it("does not confuse a shared email with a role linked to a different valid profile", async () => {
+    const otherId = "00000000-0000-4000-8000-000000000099"
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "repreneurs") return query({ data: [
+        { id: repreneurId, first_name: "Ada", last_name: "One", email: "shared@example.test", lifecycle_status: "client", is_demo: false },
+        { id: otherId, first_name: "Bea", last_name: "Two", email: "shared@example.test", lifecycle_status: "client", is_demo: false },
+      ], error: null })
+      if (table === "app_user_roles") return query({ data: [
+        { role: "repreneur", email: "shared@example.test", repreneur_id: otherId },
+      ], error: null })
+      throw new Error(`Unexpected table: ${table}`)
     })
+
+    const options = await listStaffPortalPreviewOptions()
+    expect(options[0].portalRoleLinked).toBe(false)
+    expect(options[1].portalRoleLinked).toBe(true)
   })
 
   it("shows canonical live inventory to a REAL preview with zero owned matches", async () => {

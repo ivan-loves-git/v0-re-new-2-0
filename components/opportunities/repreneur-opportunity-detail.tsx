@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { RepreneurPersonalReviewControl } from "@/components/opportunities/repreneur-personal-review"
 import { CalendarDays, CheckCircle2, Download, FileText, MapPin, ShieldCheck, XCircle, Users } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -29,6 +29,10 @@ interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityDetailItem
   readOnly?: boolean
   journey?: PortalCurrentPursuit | null
+  documentHrefs?: { ndaTemplate?: string; informationMemorandum?: string }
+  /** #190 supplies attributed staff controls without using owner-session actions. */
+  staffAssistanceControls?: ReactNode
+  staffDocumentAssistanceControls?: ReactNode
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityDetailItem) {
@@ -61,6 +65,9 @@ export function RepreneurOpportunityDetail({
   opportunity,
   readOnly = false,
   journey,
+  documentHrefs,
+  staffAssistanceControls,
+  staffDocumentAssistanceControls,
 }: RepreneurOpportunityDetailProps) {
   const [, setResponseClock] = useState(0)
   useEffect(() => {
@@ -77,6 +84,14 @@ export function RepreneurOpportunityDetail({
   const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit"
   const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
   const responseDeadline = formatRecommendationDeadline(opportunity.recommendation_expires_at)
+  const ndaTemplateHref = readOnly
+    ? documentHrefs?.ndaTemplate
+    : `/portal/deals/${opportunity.match_id}/nda-template`
+  const informationMemorandumHref = readOnly
+    ? documentHrefs?.informationMemorandum
+    : journey?.confidentialGrant
+      ? `/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.informationMemoDocumentId}`
+      : undefined
 
   return (
     <div className="flex flex-col gap-6">
@@ -181,7 +196,7 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {lockedForAnotherRepreneur || canExpressUnassignedInterest ? (
+          {(lockedForAnotherRepreneur || canExpressUnassignedInterest) && (!readOnly || !staffAssistanceControls) ? (
             <LockedOpportunityInterestAction
               opportunityId={opportunity.opportunity_id}
               interestRecorded={Boolean(opportunity.interest_expressed_at)}
@@ -192,11 +207,12 @@ export function RepreneurOpportunityDetail({
             />
           ) : null}
 
-          {readOnly && !lockedForAnotherRepreneur && canRespond(opportunity.match_status) && (
+          {readOnly && staffAssistanceControls}
+          {readOnly && !staffAssistanceControls && !lockedForAnotherRepreneur && canRespond(opportunity.match_status) && (
             <Alert>
               <ShieldCheck />
-              <AlertTitle>Staff preview</AlertTitle>
-              <AlertDescription>Response buttons are disabled in preview.</AlertDescription>
+              <AlertTitle>Staff assistance</AlertTitle>
+              <AlertDescription>Personal review markers stay with the repreneur. Attributed staff response controls are provided through the assistance workflow.</AlertDescription>
             </Alert>
           )}
 
@@ -255,7 +271,8 @@ export function RepreneurOpportunityDetail({
             )}
 
             {journey?.enabled && journey.ndaReadyNotified && !journey.revoked ? <>
-              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">NDA template</p><p className="text-xs text-muted-foreground">Use this exact validated template for your signed copy.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/nda-template`}><Download data-icon="inline-start" />Download template</a></Button></div>
+              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">NDA template</p><p className="text-xs text-muted-foreground">Use this exact validated template for your signed copy.</p></div>{ndaTemplateHref ? <Button asChild variant="outline" size="sm"><a href={ndaTemplateHref}><Download data-icon="inline-start" />Download template</a></Button> : null}</div>
+              {readOnly ? staffDocumentAssistanceControls : null}
               {!journey.gate2Passed && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
             </> : null}
 
@@ -267,7 +284,7 @@ export function RepreneurOpportunityDetail({
                   <div><dt className="text-xs text-muted-foreground">Named contact{journey.confidentialGrant.source.contactNames.length === 1 ? "" : "s"}</dt><dd>{journey.confidentialGrant.source.contactNames.join(", ")}</dd></div>
                 </dl>
               </div>
-              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Information memorandum (IM)</p><p className="text-xs text-muted-foreground">This exact IM was explicitly granted to this pursuit.</p></div><Button asChild variant="outline" size="sm"><a href={`/portal/deals/${opportunity.match_id}/documents/${journey.confidentialGrant.informationMemoDocumentId}`}><Download data-icon="inline-start" />Download IM</a></Button></div>
+              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">Information memorandum (IM)</p><p className="text-xs text-muted-foreground">This exact IM was explicitly granted to this pursuit.</p></div>{informationMemorandumHref ? <Button asChild variant="outline" size="sm"><a href={informationMemorandumHref}><Download data-icon="inline-start" />Download IM</a></Button> : null}</div>
             </> : null}
           </CardContent>
         </Card>

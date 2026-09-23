@@ -9,6 +9,7 @@ import {
   deleteExternalPursuitAttachment,
 } from "@/lib/actions/external-pursuit-attachments"
 import { uploadPrivateDocument } from "@/lib/private-upload"
+import { deleteSelectedExternalPursuitAttachment } from "@/lib/actions/staff-portal-external"
 import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES, type ExternalPursuitAttachment } from "@/lib/external-pursuit-attachments"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import { toast } from "sonner"
@@ -26,6 +27,7 @@ export interface ExternalPursuitAttachmentsPanelProps {
   readOnly?: boolean
   onOperationLockChange?: ExternalPursuitOperationLockHandler
   onAttachmentRemoved?: (pursuitId: string, attachmentId: string) => void
+  staffPortalSelection?: { ownerId: string; token: string }
 }
 
 export function ExternalPursuitAttachmentsPanel({
@@ -35,6 +37,7 @@ export function ExternalPursuitAttachmentsPanel({
   readOnly = false,
   onOperationLockChange,
   onAttachmentRemoved,
+  staffPortalSelection,
 }: ExternalPursuitAttachmentsPanelProps) {
   const generatedId = useId()
   const fileInputId = `external-pursuit-attachment-${pursuitId}-${generatedId}`
@@ -70,6 +73,10 @@ export function ExternalPursuitAttachmentsPanel({
         const result = await uploadPrivateDocument(file, {
           kind: "external_pursuit_attachment",
           resourceId: pursuitId,
+          metadata: staffPortalSelection ? {
+            selected_owner_id: staffPortalSelection.ownerId,
+            staff_portal_selection_token: staffPortalSelection.token,
+          } : {},
         })
         releaseOperationLock()
         captureExternalPursuitCompleted(role, "upload")
@@ -94,7 +101,10 @@ export function ExternalPursuitAttachmentsPanel({
     startTransition(async () => {
       let result
       try {
-        result = await deleteExternalPursuitAttachment(pursuitId, attempt.attachmentId, attempt.idempotencyKey)
+        result = staffPortalSelection
+          ? await deleteSelectedExternalPursuitAttachment(staffPortalSelection.ownerId, staffPortalSelection.token,
+              pursuitId, attempt.attachmentId, attempt.idempotencyKey)
+          : await deleteExternalPursuitAttachment(pursuitId, attempt.attachmentId, attempt.idempotencyKey)
       } catch {
         setRecovery({ attachmentId })
         toast.error("The removal result is unclear. Retry this exact removal.")
@@ -144,7 +154,7 @@ export function ExternalPursuitAttachmentsPanel({
     {!readOnly ? <form action={upload} className="mt-4 flex flex-wrap items-end gap-3">
       <div className="min-w-56 flex-1 space-y-2"><Label htmlFor={fileInputId}>Choose a private attachment</Label><Input id={fileInputId} ref={fileRef} name="file" type="file" required accept=".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png,.webp,.gif,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/jpeg,image/png,image/webp,image/gif" disabled={controlsLocked} /></div>
       <Button type="submit" disabled={pending || Boolean(recovery)}><Upload data-icon="inline-start" />{pending ? "Adding…" : "Add attachment"}</Button>
-    </form> : <p className="mt-4 text-sm text-muted-foreground">Deletion is pending. Files are available for staff review but cannot be changed.</p>}
+    </form> : <p className="mt-4 text-sm text-muted-foreground">Files are available for review here; changes are not available in this view.</p>}
     <p className="mt-2 text-xs text-muted-foreground">PDF, DOCX, XLSX, CSV and images only; maximum {EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MiB. Legacy Office files, executables, archives, HTML and SVG are not accepted.</p>
   </section>
 }

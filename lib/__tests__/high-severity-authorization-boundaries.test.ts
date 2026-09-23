@@ -93,7 +93,8 @@ describe("high-severity authorization boundaries", () => {
   it("requires staff access before correcting another repreneur's target thesis", () => {
     const source = functionSource("lib/actions/repreneur-profile.ts", "updateRepreneurTargetThesis")
     expect(source).toContain("requireStaffAccess")
-    expect(source).toContain("updateTargetThesisForRepreneur")
+    expect(source).toContain('supabase.rpc("w196_update_staff_target_thesis"')
+    expect(source).toContain("p_staff_user_id: access.user.id")
   })
 
   it("keeps the SQL role and CRM policies closed to browser API roles", () => {

@@ -36,6 +36,9 @@ describe("W-113 critical operation boundaries", () => {
     ).toContain(
       'startCriticalOperation("portal.staff_preview_memo_download")',
     )
+    expect(source("app/(dashboard)/portal-preview/deals/[matchId]/nda-template/route.ts")).toContain(
+      'startCriticalOperation("portal.staff_preview_nda_template_download")',
+    )
 
     const email = source("lib/email/send-email.ts")
     expect(email.match(/startCriticalOperation\("email\.repreneur_send"\)/g)).toHaveLength(
@@ -95,6 +98,7 @@ describe("W-113 critical operation boundaries", () => {
       "app/portal/deals/[matchId]/documents/[documentId]/route.ts",
       "app/portal/deals/[matchId]/nda-template/route.ts",
       "app/(dashboard)/portal-preview/deals/[matchId]/documents/[documentId]/route.ts",
+      "app/(dashboard)/portal-preview/deals/[matchId]/nda-template/route.ts",
     ]) {
       const route = source(path)
       expect(route).toContain('import { unstable_rethrow } from "next/navigation"')
