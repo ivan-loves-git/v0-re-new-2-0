@@ -137,6 +137,10 @@ done < <(
     | awk -F/ '$NF >= "20260830113100"'
 )
 
+# The additive #186 review queue is a numbered application migration. The
+# disposable stack must carry its private tables before browser journeys run.
+"${psql_safe[@]}" -f scripts/121_staff_email_review_queue.sql
+
 # The sanitized structure snapshot deliberately omits the real Acme/Bertrand
 # singleton while retaining its redacted integrity function. Reconstruct the
 # established synthetic support context used by the W-169 rehearsal so every
