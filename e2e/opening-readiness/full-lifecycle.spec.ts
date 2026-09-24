@@ -815,6 +815,10 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/emails");
     await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
+    const emailTabStrip = page.locator('#main-content:visible [data-slot="tabs-list"]:visible').locator("..");
+    await emailTabStrip.evaluate((strip) => { strip.scrollLeft = strip.scrollWidth; });
+    expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
+    await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
     await page.locator(`a[href="/emails/review/${cancelledReviewId}"]`).click();
     const subjectField = page.locator("#review-subject");
     await expect(subjectField).toBeVisible();
@@ -824,8 +828,15 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await subjectField.fill("QA reviewed subject - no send");
     await page.getByRole("button", { name: "Save reviewed text" }).click();
     await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
+    const hydrationErrors: string[] = [];
+    const collectHydrationError = (message: { type: () => string; text: () => string }) => {
+      if (message.type() === "error" && /react\.dev\/errors\/418/.test(message.text())) hydrationErrors.push(message.text());
+    };
+    page.on("console", collectHydrationError);
     await page.reload();
     await expect(subjectField).toHaveValue("QA reviewed subject - no send");
+    expect(hydrationErrors).toEqual([]);
+    page.off("console", collectHydrationError);
     await page.locator("#review-cancel-reason").fill("Disposable draft superseded before any send");
     await page.getByRole("button", { name: "Cancel with reason" }).click();
     await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
