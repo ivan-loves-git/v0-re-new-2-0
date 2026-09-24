@@ -30,12 +30,37 @@ CREATE TABLE public.opportunities(id uuid PRIMARY KEY, is_demo boolean NOT NULL)
 CREATE TABLE public.opportunity_matches(id uuid PRIMARY KEY, opportunity_id uuid REFERENCES public.opportunities(id));
 CREATE TABLE public.opportunity_pursuit_evidence(id uuid PRIMARY KEY, match_id uuid REFERENCES public.opportunity_matches(id));
 CREATE TABLE public.opportunity_ma_contacts(id uuid PRIMARY KEY);
-CREATE TABLE public.app_user_roles(user_id text, role text);
+CREATE TABLE public."user"(id text PRIMARY KEY, email text NOT NULL);
+CREATE TABLE public.app_user_roles(user_id text, email text NOT NULL, role text);
+CREATE TABLE public.ma_interactions(id uuid PRIMARY KEY, client_operation_key uuid, opportunity_id uuid,
+  template_key text, recipient_email_snapshot text, title text, body_markdown text,
+  delivery_status text, provider_message_id text, channel text DEFAULT 'email', direction text DEFAULT 'outbound',
+  provider_request_fingerprint text);
+CREATE TABLE public.opportunity_pursuit_handoff_deliveries(upstream_evidence_id uuid, match_id uuid,
+  handoff_type text, delivery_status text, provider_message_id text, evidence_id uuid,
+  attachment_snapshot jsonb, ma_interaction_id uuid, operation_key uuid, request_fingerprint text);
 INSERT INTO public.opportunities VALUES ('18600000-0000-4000-8000-000000000001',false),('18600000-0000-4000-8000-000000000002',true);
 INSERT INTO public.opportunity_ma_contacts VALUES ('18600000-0000-4000-8000-000000000003');
-INSERT INTO public.app_user_roles VALUES ('staff-1','staff'),('staff-2','staff'),('rep-1','repreneur');
+INSERT INTO public."user" VALUES
+  ('staff-1','staff-one@example.test'),('staff-2','staff-two@example.test'),
+  ('staff-fallback','Fallback@Example.Test'),('rep-1','rep@example.test'),
+  ('spoof-1','unassigned@example.test');
+INSERT INTO public.app_user_roles VALUES
+  ('staff-1','staff-one@example.test','staff'),('staff-2','staff-two@example.test','staff'),
+  (NULL,' fallback@example.test ','staff'),('rep-1','rep@example.test','repreneur');
 SQL
 "${psql[@]}" --file "$repo_root/scripts/121_staff_email_review_queue.sql" >/dev/null
+
+"${psql[@]}" -Atc "SELECT public.staff_email_review_assert_actor('staff-fallback')" >/dev/null
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_assert_actor('rep-1')" >/dev/null 2>&1; then
+  echo "Repreneur actor unexpectedly authorized" >&2; exit 1
+fi
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_assert_actor('spoof-1')" >/dev/null 2>&1; then
+  echo "Unrelated actor unexpectedly inherited a staff email role" >&2; exit 1
+fi
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_assert_actor('Fallback@Example.Test')" >/dev/null 2>&1; then
+  echo "Caller-supplied staff email unexpectedly bypassed the Better Auth user ID" >&2; exit 1
+fi
 
 "${psql[@]}" >/dev/null <<'SQL'
 DO $$ BEGIN
@@ -73,15 +98,86 @@ if "${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$review_id',3,'{
 fi
 "${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$review_id',3,'{\"to\":[\"receiver@example.test\"],\"subject\":\"Subject\"}'::jsonb,'staff-2')" >/dev/null
 token="$("${psql[@]}" -Atc "SELECT attempt_token FROM public.staff_email_reviews WHERE id='$review_id'")"
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$review_id','$token','failed',NULL,NULL,'later pre-I/O veto','staff-2')" >/dev/null 2>&1; then
+  echo "Earlier uncertain outcome was erased by a later veto" >&2; exit 1
+fi
 "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$review_id','$token','uncertain',NULL,NULL,'unknown result','staff-2')" >/dev/null
 "${psql[@]}" -Atc "UPDATE public.staff_email_reviews SET attempted_at=now()-interval '24 hours' WHERE id='$review_id'" >/dev/null
 if "${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$review_id',5,'{\"to\":[\"receiver@example.test\"],\"subject\":\"Subject\"}'::jsonb,'staff-2')" >/dev/null 2>&1; then
   echo "Expired uncertain payload unexpectedly retried" >&2; exit 1
 fi
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_cancel('$review_id',5,'Ignore unknown result','staff-2')" >/dev/null 2>&1; then
+  echo "Uncertain operation unexpectedly cancelled" >&2; exit 1
+fi
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_prepare('ma','18600000-0000-4000-8000-000000000006','18600000-0000-4000-8000-000000000001',NULL,NULL,'18600000-0000-4000-8000-000000000003','receiver@example.test','REAL','ma_opportunity_validity_check','copy-v1','Subject','Body','[]'::jsonb,'staff-1')" >/dev/null 2>&1; then
+  echo "New draft bypassed earlier uncertainty" >&2; exit 1
+fi
+
+# A fresh, independent opportunity exercises exact receipt linkage.
+"${psql[@]}" -Atc "INSERT INTO public.opportunities VALUES('18600000-0000-4000-8000-000000000007',false)" >/dev/null
+receipt_review="$("${psql[@]}" -Atc "SELECT public.staff_email_review_prepare('ma','18600000-0000-4000-8000-000000000008','18600000-0000-4000-8000-000000000007',NULL,NULL,'18600000-0000-4000-8000-000000000003','receiver@example.test','REAL','ma_opportunity_validity_check','copy-v1','Subject','Body','[]'::jsonb,'staff-1')")"
+receipt_token="$("${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$receipt_review',1,'{\"to\":[\"receiver@example.test\"],\"subject\":\"Subject\"}'::jsonb,'staff-1')")"
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$receipt_review','$receipt_token','sent',NULL,NULL,NULL,'staff-1')" >/dev/null 2>&1; then
+  echo "Sent queue state accepted a missing source receipt" >&2; exit 1
+fi
+"${psql[@]}" -Atc "INSERT INTO public.ma_interactions(id,client_operation_key,opportunity_id,template_key,recipient_email_snapshot,title,body_markdown,delivery_status,provider_message_id) VALUES('18600000-0000-4000-8000-000000000009','18600000-0000-4000-8000-000000000008','18600000-0000-4000-8000-000000000007','ma_opportunity_validity_check','receiver@example.test','Subject','Body','sent','provider-accepted-1')" >/dev/null
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$receipt_review','$receipt_token','sent','provider-fake','18600000-0000-4000-8000-000000000009',NULL,'staff-1')" >/dev/null 2>&1; then
+  echo "Sent queue state accepted a forged provider receipt" >&2; exit 1
+fi
+"${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$receipt_review','$receipt_token','sent','provider-accepted-1','18600000-0000-4000-8000-000000000009',NULL,'staff-1')" >/dev/null
+
+# Conclusive failure can safely retry the same immutable draft and payload.
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_matches VALUES('18600000-0000-4000-8000-000000000020','18600000-0000-4000-8000-000000000007')" >/dev/null
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence VALUES('18600000-0000-4000-8000-000000000021','18600000-0000-4000-8000-000000000020')" >/dev/null
+handoff_review="$("${psql[@]}" -Atc "SELECT public.staff_email_review_prepare('e6','18600000-0000-4000-8000-000000000021','18600000-0000-4000-8000-000000000007','18600000-0000-4000-8000-000000000020','18600000-0000-4000-8000-000000000021',NULL,'buyer@example.test','REAL','code:e6_nda_ready','w112-e6-v1','Ready','Ready body','[]'::jsonb,'staff-1')")"
+handoff_token="$("${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$handoff_review',1,'{\"to\":[\"buyer@example.test\"],\"subject\":\"Ready\"}'::jsonb,'staff-1')")"
+"${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$handoff_review','$handoff_token','failed',NULL,NULL,'provider rejected','staff-1')" >/dev/null
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$handoff_review',3,'{\"subject\":\"changed\"}'::jsonb,'staff-2')" >/dev/null 2>&1; then
+  echo "Failed handoff changed its reviewed payload" >&2; exit 1
+fi
+"${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$handoff_review',3,'{\"to\":[\"buyer@example.test\"],\"subject\":\"Ready\"}'::jsonb,'staff-2')" >/dev/null
+handoff_token="$("${psql[@]}" -Atc "SELECT attempt_token FROM public.staff_email_reviews WHERE id='$handoff_review'")"
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence VALUES('18600000-0000-4000-8000-000000000022','18600000-0000-4000-8000-000000000020')" >/dev/null
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_handoff_deliveries(upstream_evidence_id,match_id,handoff_type,delivery_status,provider_message_id,evidence_id,attachment_snapshot,ma_interaction_id) VALUES('18600000-0000-4000-8000-000000000021','18600000-0000-4000-8000-000000000020','e6','sent','provider-accepted-e6','18600000-0000-4000-8000-000000000022','[]'::jsonb,NULL)" >/dev/null
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$handoff_review','$handoff_token','sent','provider-accepted-e6','18600000-0000-4000-8000-000000000009',NULL,'staff-2')" >/dev/null 2>&1; then
+  echo "Sent handoff accepted unrelated MA evidence" >&2; exit 1
+fi
+"${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$handoff_review','$handoff_token','sent','provider-accepted-e6','18600000-0000-4000-8000-000000000022',NULL,'staff-2')" >/dev/null
+
+# E7 cannot claim acceptance using a handoff whose M&A interaction belongs to
+# a different provider operation, even when the provider ID happens to match.
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence VALUES('18600000-0000-4000-8000-000000000023','18600000-0000-4000-8000-000000000020'),('18600000-0000-4000-8000-000000000025','18600000-0000-4000-8000-000000000020')" >/dev/null
+e7_snapshot='[{"artifact_id":"18600000-0000-4000-8000-000000000030","document_id":"18600000-0000-4000-8000-000000000031","content_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","file_name":"signed.pdf","mime_type":"application/pdf","size_bytes":234}]'
+e7_review="$("${psql[@]}" -Atc "SELECT public.staff_email_review_prepare('e7','18600000-0000-4000-8000-000000000023','18600000-0000-4000-8000-000000000007','18600000-0000-4000-8000-000000000020','18600000-0000-4000-8000-000000000023','18600000-0000-4000-8000-000000000003','receiver@example.test','REAL','ma_nda_info_memo_request','w112-e7-v1','E7 subject','E7 body','$e7_snapshot'::jsonb,'staff-1')")"
+e7_token="$("${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$e7_review',1,'{\"to\":[\"receiver@example.test\"],\"subject\":\"E7 subject\"}'::jsonb,'staff-1')")"
+"${psql[@]}" -Atc "INSERT INTO public.ma_interactions(id,client_operation_key,opportunity_id,template_key,recipient_email_snapshot,title,body_markdown,delivery_status,provider_message_id,provider_request_fingerprint) VALUES('18600000-0000-4000-8000-000000000024','18600000-0000-4000-8000-000000000027','18600000-0000-4000-8000-000000000007','ma_nda_info_memo_request','receiver@example.test','E7 subject','E7 body','sent','provider-accepted-e7',repeat('a',64))" >/dev/null
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_handoff_deliveries(upstream_evidence_id,match_id,handoff_type,delivery_status,provider_message_id,evidence_id,attachment_snapshot,ma_interaction_id,operation_key,request_fingerprint) VALUES('18600000-0000-4000-8000-000000000023','18600000-0000-4000-8000-000000000020','e7','sent','provider-accepted-e7','18600000-0000-4000-8000-000000000025','$e7_snapshot'::jsonb,'18600000-0000-4000-8000-000000000024','18600000-0000-4000-8000-000000000026',repeat('a',64))" >/dev/null
+if "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$e7_review','$e7_token','sent','provider-accepted-e7','18600000-0000-4000-8000-000000000025',NULL,'staff-1')" >/dev/null 2>&1; then
+  echo "E7 accepted a mismatched M&A source operation" >&2; exit 1
+fi
+"${psql[@]}" -Atc "UPDATE public.ma_interactions SET client_operation_key='18600000-0000-4000-8000-000000000026' WHERE id='18600000-0000-4000-8000-000000000024'" >/dev/null
+"${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$e7_review','$e7_token','sent','provider-accepted-e7','18600000-0000-4000-8000-000000000025',NULL,'staff-1')" >/dev/null
+
+# All three handoff kinds permit only a same-review, same-payload retry after
+# a conclusive failure. E6 is exercised above; E4/E7 cover the MA-backed path.
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence VALUES('18600000-0000-4000-8000-000000000040','18600000-0000-4000-8000-000000000020'),('18600000-0000-4000-8000-000000000041','18600000-0000-4000-8000-000000000020')" >/dev/null
+for kind in e4 e7; do
+  if [ "$kind" = e4 ]; then upstream='18600000-0000-4000-8000-000000000040'; snapshot='[]'; else upstream='18600000-0000-4000-8000-000000000041'; snapshot="$e7_snapshot"; fi
+  retry_review="$("${psql[@]}" -Atc "SELECT public.staff_email_review_prepare('$kind','$upstream','18600000-0000-4000-8000-000000000007','18600000-0000-4000-8000-000000000020','$upstream','18600000-0000-4000-8000-000000000003','receiver@example.test','REAL','ma_nda_info_memo_request','w112-$kind-v1','Fixed subject','Fixed body','$snapshot'::jsonb,'staff-1')")"
+  retry_payload='{"to":["receiver@example.test"],"subject":"Fixed subject"}'
+  retry_token="$("${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$retry_review',1,'$retry_payload'::jsonb,'staff-1')")"
+  "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$retry_review','$retry_token','failed',NULL,NULL,'provider rejected','staff-1')" >/dev/null
+  "${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$retry_review',3,'$retry_payload'::jsonb,'staff-2')" >/dev/null
+  retry_token="$("${psql[@]}" -Atc "SELECT attempt_token FROM public.staff_email_reviews WHERE id='$retry_review'")"
+  "${psql[@]}" -Atc "SELECT public.staff_email_review_finish('$retry_review','$retry_token','failed',NULL,NULL,'second rejection','staff-2')" >/dev/null
+done
 
 demo_id="$("${psql[@]}" -Atc "SELECT public.staff_email_review_prepare('ma','18600000-0000-4000-8000-000000000005','18600000-0000-4000-8000-000000000002',NULL,NULL,'18600000-0000-4000-8000-000000000003','demo@example.test','DEMO','ma_opportunity_validity_check','copy-v1','Subject','Body','[]'::jsonb,'staff-1')")"
 if "${psql[@]}" -Atc "SELECT public.staff_email_review_reserve('$demo_id',1,'{}'::jsonb,'staff-1')" >/dev/null 2>&1; then
   echo "DEMO draft unexpectedly reserved for delivery" >&2; exit 1
 fi
-"${psql[@]}" -Atc "SELECT public.staff_email_review_cancel('$demo_id',1,'Synthetic draft not needed','staff-2')" >/dev/null
-echo "staff email review queue rehearsal passed: duplicate prepare, role grants, independent-session race, unchanged replay, 23h fence, DEMO denial, reasoned cancellation"
+"${psql[@]}" -Atc "SELECT public.staff_email_review_edit('$demo_id',1,'Edited subject','Edited body','staff-fallback')" >/dev/null
+"${psql[@]}" -Atc "SELECT public.staff_email_review_cancel('$demo_id',2,'Synthetic draft not needed','staff-2')" >/dev/null
+edited_cancelled="$("${psql[@]}" -Atc "SELECT state='cancelled' AND subject='Edited subject' AND body_text='Edited body' AND cancel_reason='Synthetic draft not needed' AND (SELECT count(*) FROM public.staff_email_review_events WHERE review_id='$demo_id')=3 FROM public.staff_email_reviews WHERE id='$demo_id'")"
+[ "$edited_cancelled" = "t" ] || { echo "Authenticated edit/cancel was not retained" >&2; exit 1; }
+echo "staff email review queue rehearsal passed: role resolution, independent-session race, unchanged/failed retry, 23h fence, clone/DEMO denial, linked source receipts, retained edit/cancel"

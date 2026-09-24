@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -25,10 +25,10 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
   const [reason, setReason] = useState("")
   const [error, setError] = useState("")
   const review: StaffEmailReview = initial.review
-  useEffect(() => { setSubject(review.subject); setBody(review.body_text) }, [review.version, review.subject, review.body_text])
   const changed = subject !== review.subject || body !== review.body_text
   const editable = review.source_kind === "ma" && review.state === "pending"
-  const sendable = review.state === "pending" || review.state === "uncertain" || review.state === "sending"
+  const sendable = review.state === "pending" || review.state === "uncertain" || review.state === "sending" ||
+    (review.state === "failed" && review.source_kind !== "ma")
   const cancellable = review.state === "pending" || review.state === "failed"
 
   function run(action: () => Promise<{ message: string; success?: boolean }>) {
@@ -61,6 +61,7 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
         {review.namespace === "DEMO" ? <Alert><AlertTitle>DEMO draft</AlertTitle><AlertDescription>Production delivery is disabled for this draft.</AlertDescription></Alert> : null}
         {!initial.catalogueEnabled ? <Alert><AlertTitle>Catalogue template disabled</AlertTitle><AlertDescription>This draft can be reviewed, but Send is blocked while {review.template_key} is inactive or missing in Templates. This review does not change the existing switch.</AlertDescription></Alert> : null}
         {review.state === "uncertain" || review.state === "sending" ? <Alert><AlertTitle>Outcome needs care</AlertTitle><AlertDescription>Retry only this unchanged operation after its two-minute lease. After 23 hours, reconcile with the provider; do not create another draft to resend.</AlertDescription></Alert> : null}
+        {review.state === "failed" && review.source_kind !== "ma" ? <Alert><AlertTitle>Conclusive failure</AlertTitle><AlertDescription>The handoff was not accepted. You may retry only this unchanged review while its safe window and current source gates remain valid, or cancel it with a reason.</AlertDescription></Alert> : null}
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div><dt className="text-muted-foreground">Recipient</dt><dd className="break-all font-medium">{review.recipient_email}</dd></div>
           <div><dt className="text-muted-foreground">Source action / event</dt><dd className="break-all">{review.source_kind} · {review.source_operation_id}</dd></div>
@@ -79,7 +80,7 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
         {editable && changed ? <Button disabled={busy || !subject.trim() || !body.trim()} onClick={() => run(() => editStaffEmailReview(review.id, review.version, subject, body))}>Save reviewed text</Button> : null}
         {sendable ? <Button disabled={busy || changed || review.namespace !== "REAL" || !initial.catalogueEnabled} onClick={() => {
           if (window.confirm(`Approve and send this exact version to ${review.recipient_email}?`)) run(() => approveAndSendStaffEmailReview(review.id, review.version))
-        }}>{busy ? "Working..." : review.state === "pending" ? "Approve and send" : "Retry unchanged operation"}</Button> : null}
+        }}>{busy ? "Working..." : review.state === "pending" ? "Approve and send" : review.state === "failed" ? "Retry unchanged after failure" : "Retry unchanged operation"}</Button> : null}
       </CardFooter>
     </Card>
     {cancellable ? <Card><CardHeader><CardTitle>Cancel this draft</CardTitle><CardDescription>Requires a reason. Sent and uncertain operations cannot be cancelled.</CardDescription></CardHeader><CardContent className="flex flex-col gap-3"><Label htmlFor="review-cancel-reason">Reason</Label><Input id="review-cancel-reason" value={reason} onChange={(event) => setReason(event.target.value)} /></CardContent><CardFooter><Button variant="destructive" disabled={busy || !reason.trim()} onClick={() => run(() => cancelStaffEmailReview(review.id, review.version, reason))}>Cancel with reason</Button></CardFooter></Card> : null}

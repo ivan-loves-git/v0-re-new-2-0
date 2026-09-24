@@ -790,6 +790,13 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       result: "active pursuit at interest",
     });
 
+    // The sanitized 771 structure has no historical M&A catalogue seed rows.
+    // Seed only this disposable key; missing catalogue keys remain a send veto.
+    await client.query(`INSERT INTO public.email_templates
+      (template_key,subject,description,is_active,requires_consent,body_markdown,body_editable)
+      VALUES ('ma_nda_info_memo_request','QA NDA and memo - {opportunityTitle}',
+        'Disposable M&A review fixture',false,false,'Bonjour {firstName},\\n\\nQA fixture NDA request.',true)
+      ON CONFLICT (template_key) DO UPDATE SET is_active=false`);
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
     await chooseOption(page, "#ma_template", "Request NDA and info memo");
     await expect(page.locator("#ma_subject")).not.toHaveValue("");
@@ -797,13 +804,40 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     // The disposable fixture deliberately tests an inactive catalogue key.
     // Preparation stays usable, but sending is visibly blocked until the
     // synthetic switch is restored. No production setting is touched.
-    await client.query("UPDATE public.email_templates SET is_active=false WHERE template_key='ma_nda_info_memo_request'");
     await page.getByRole("button", { name: "Prepare for review" }).click();
     await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
+    const cancelledReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
     await expect(page.getByText("Catalogue template disabled")).toBeVisible();
     await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled();
-    await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_nda_info_memo_request'");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/emails");
+    await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
+    await page.locator(`a[href="/emails/review/${cancelledReviewId}"]`).click();
+    const subjectField = page.locator("#review-subject");
+    await expect(subjectField).toBeVisible();
+    const sendButton = page.getByRole("button", { name: "Approve and send" });
+    const sendBox = await sendButton.boundingBox();
+    expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390);
+    await subjectField.fill("QA reviewed subject - no send");
+    await page.getByRole("button", { name: "Save reviewed text" }).click();
+    await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
     await page.reload();
+    await expect(subjectField).toHaveValue("QA reviewed subject - no send");
+    await page.locator("#review-cancel-reason").fill("Disposable draft superseded before any send");
+    await page.getByRole("button", { name: "Cancel with reason" }).click();
+    await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("cancelled", { exact: true }).first()).toBeVisible();
+    const cancelled = await one<{ state: string; subject: string; cancel_reason: string; events: number }>(client,
+      `SELECT r.state,r.subject,r.cancel_reason,
+        (SELECT count(*)::int FROM public.staff_email_review_events e WHERE e.review_id=r.id) AS events
+       FROM public.staff_email_reviews r WHERE r.id=$1`, [cancelledReviewId]);
+    expect(cancelled).toEqual({ state: "cancelled", subject: "QA reviewed subject - no send", cancel_reason: "Disposable draft superseded before any send", events: 3 });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_nda_info_memo_request'");
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
+    await chooseOption(page, "#ma_template", "Request NDA and info memo");
+    await page.getByRole("button", { name: "Prepare for review" }).click();
     await approvePreparedReview(page);
     const sourceReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
     const anonymousReviewContext = await browser.newContext({ baseURL });

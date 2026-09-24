@@ -77,6 +77,9 @@ async function persistPreparation(input: {
     p_subject: input.subject, p_body_text: input.body,
     p_attachment_snapshot: input.attachmentSnapshot, p_actor: user.id,
   })
+  if (error?.message?.includes("staff_email_review_unresolved_source_blocks_new_draft")) {
+    throw new Error("An earlier email for this opportunity is in flight or uncertain. Reopen that review; do not create a new draft to resend.")
+  }
   if (error || typeof data !== "string") throw new Error("The review draft could not be saved safely.")
   revalidatePath("/emails")
   return { success: true as const, reviewId: data, message: "Draft prepared for staff review. Nothing was sent." }
@@ -201,6 +204,35 @@ async function currentAttemptPayload(review: StaffEmailReview) {
   return { ...request, attachments }
 }
 
+async function readSourceDeliveryOutcome(review: StaffEmailReview): Promise<{
+  state: "sent" | "failed" | null; providerMessageId: string | null; evidenceId: string | null
+}> {
+  const db = createAdminClient()
+  if (review.source_kind === "ma") {
+    const { data, error } = await db.from("ma_interactions")
+      .select("id,delivery_status,provider_message_id")
+      .eq("client_operation_key", review.source_operation_id)
+      .eq("opportunity_id", review.opportunity_id)
+      .eq("template_key", review.template_key)
+      .eq("recipient_email_snapshot", review.recipient_email)
+      .eq("title", review.subject)
+      .eq("body_markdown", review.body_text).maybeSingle()
+    if (error || !data) return { state: null, providerMessageId: null, evidenceId: null }
+    return { state: data.delivery_status === "sent" && data.provider_message_id ? "sent"
+      : data.delivery_status === "failed" ? "failed" : null,
+      providerMessageId: data.provider_message_id ?? null, evidenceId: data.id ?? null }
+  }
+  const { data, error } = await db.from("opportunity_pursuit_handoff_deliveries")
+    .select("delivery_status,provider_message_id,evidence_id")
+    .eq("upstream_evidence_id", review.source_operation_id)
+    .eq("match_id", review.match_id)
+    .eq("handoff_type", review.source_kind).maybeSingle()
+  if (error || !data) return { state: null, providerMessageId: null, evidenceId: null }
+  return { state: data.delivery_status === "sent" && data.provider_message_id && data.evidence_id ? "sent"
+    : data.delivery_status === "failed" ? "failed" : null,
+    providerMessageId: data.provider_message_id ?? null, evidenceId: data.evidence_id ?? null }
+}
+
 export async function approveAndSendStaffEmailReview(id: string, version: number) {
   const { user } = await requireStaffAccess()
   const review = await reviewById(id)
@@ -212,7 +244,9 @@ export async function approveAndSendStaffEmailReview(id: string, version: number
   })
   if (reserveError || typeof token !== "string") {
     throw new Error(reserveError?.message?.includes("reconciliation_required")
-      ? "This earlier outcome is uncertain and its safe replay window expired. Reconcile it; do not resend."
+      ? review.state === "failed"
+        ? "This failed handoff's unchanged retry window expired. Reconcile the source record; do not mint a replacement operation."
+        : "This earlier outcome is uncertain and its safe replay window expired. Reconcile it; do not resend."
       : "This review is stale, in flight or blocked by another uncertain send. Refresh its state.")
   }
 
@@ -234,32 +268,26 @@ export async function approveAndSendStaffEmailReview(id: string, version: number
   } catch (error) {
     result = { success: false, operationState: "pending", message: error instanceof Error ? error.message : "The delivery result is uncertain." }
   }
-  // The source can report provider acceptance while a later lock/evidence
-  // finalizer fails. Never translate that false/sent combination to "failed".
-  let state: "sent" | "uncertain" | "failed" = result.success ? "sent"
-    : result.operationState === "pending" || result.operationState === "sent" ? "uncertain" : "failed"
-  let providerMessageId: string | null = null
-  let evidenceId: string | null = result.eventId ?? null
-  if (state === "sent") {
-    if (review.source_kind === "ma") {
-      const { data } = await db.from("ma_interactions").select("id,provider_message_id")
-        .eq("client_operation_key", review.source_operation_id).maybeSingle()
-      providerMessageId = data?.provider_message_id ?? null
-      evidenceId = data?.id ?? null
-    } else {
-      const { data } = await db.from("opportunity_pursuit_handoff_deliveries")
-        .select("provider_message_id,evidence_id").eq("upstream_evidence_id", review.source_operation_id)
-        .eq("handoff_type", review.source_kind).maybeSingle()
-      providerMessageId = data?.provider_message_id ?? null
-      evidenceId = data?.evidence_id ?? null
-    }
-    // A provider acceptance without its authoritative source receipt is not
-    // sufficient evidence for a completed queue outcome. Keep the frozen
-    // operation replayable for reconciliation instead of claiming "sent".
-    if (!providerMessageId || !evidenceId) state = "uncertain"
+  const priorOutcomeUnknown = review.state === "uncertain" || review.state === "sending"
+  let source: Awaited<ReturnType<typeof readSourceDeliveryOutcome>> | null = null
+  if (result.success || priorOutcomeUnknown) {
+    try { source = await readSourceDeliveryOutcome(review) }
+    catch { /* Unreadable evidence is unknown, never a conclusive failure. */ }
   }
+  // A later pre-I/O veto cannot erase an earlier unknown provider outcome.
+  // Only the source's finalized operation record can resolve it.
+  let state: "sent" | "uncertain" | "failed" = source?.state === "sent" ? "sent"
+    : priorOutcomeUnknown ? source?.state === "failed" ? "failed" : "uncertain"
+    : result.success || result.operationState === "pending" || result.operationState === "sent" ? "uncertain" : "failed"
+  if (result.success && source?.state !== "sent") state = "uncertain"
+  const providerMessageId = state === "sent" ? source?.providerMessageId ?? null : null
+  const evidenceId = state === "sent" ? source?.evidenceId ?? null : null
   const outcomeMessage = state === "uncertain" && result.success
     ? "The source reported provider acceptance, but its receipt could not be read. Do not create another send; reconcile this unchanged operation."
+    : priorOutcomeUnknown && state === "uncertain"
+      ? `${result.message} The earlier provider outcome remains uncertain; do not cancel or start another operation.`
+      : priorOutcomeUnknown && state === "failed"
+        ? "The source delivery record confirms a conclusive failure. The same reviewed message may be retried."
     : result.message
   const { error: finishError } = await db.rpc("staff_email_review_finish", {
     p_review_id: id, p_token: token, p_state: state,

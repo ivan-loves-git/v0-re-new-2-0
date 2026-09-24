@@ -69,10 +69,18 @@ GRANT SELECT ON TABLE public.staff_email_reviews, public.staff_email_review_even
 
 CREATE FUNCTION public.staff_email_review_assert_actor(p_actor text) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE v_staff_roles integer;
 BEGIN
-  IF nullif(btrim(p_actor), '') IS NULL OR NOT EXISTS (
-    SELECT 1 FROM public.app_user_roles WHERE role = 'staff' AND user_id = p_actor
-  ) THEN RAISE EXCEPTION 'staff_email_review_requires_staff_actor'; END IF;
+  IF nullif(btrim(p_actor), '') IS NULL THEN RAISE EXCEPTION 'staff_email_review_requires_staff_actor'; END IF;
+  -- The server passes the current Better Auth user ID, never a caller-supplied
+  -- email. Resolve its stored email exactly as requireStaffAccess does; the
+  -- service-role-only RPC cannot confer a staff role to an unrelated user.
+  SELECT count(*) INTO v_staff_roles
+  FROM public."user" account
+  JOIN public.app_user_roles role ON role.role = 'staff'
+    AND (role.user_id = account.id OR lower(btrim(role.email)) = lower(btrim(account.email)))
+  WHERE account.id = p_actor AND nullif(btrim(account.email), '') IS NOT NULL;
+  IF v_staff_roles <> 1 THEN RAISE EXCEPTION 'staff_email_review_requires_staff_actor'; END IF;
 END $$;
 
 CREATE FUNCTION public.staff_email_review_prepare(
@@ -99,6 +107,12 @@ BEGIN
     WHERE m.id = p_match_id AND m.opportunity_id = p_opportunity_id
       AND p_upstream_evidence_id = p_source_operation_id
   ) THEN RAISE EXCEPTION 'staff_email_review_handoff_source_invalid'; END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.staff_email_reviews prior
+    WHERE prior.opportunity_id=p_opportunity_id AND prior.state IN ('sending','uncertain')
+      AND (prior.source_kind IS DISTINCT FROM p_source_kind
+        OR prior.source_operation_id IS DISTINCT FROM p_source_operation_id)
+  ) THEN RAISE EXCEPTION 'staff_email_review_unresolved_source_blocks_new_draft'; END IF;
 
   INSERT INTO public.staff_email_reviews (
     source_kind, source_operation_id, opportunity_id, match_id, upstream_evidence_id,
@@ -151,7 +165,9 @@ BEGIN
   PERFORM public.staff_email_review_assert_actor(p_actor);
   SELECT * INTO v FROM public.staff_email_reviews WHERE id=p_review_id FOR UPDATE;
   IF v.id IS NULL OR v.version <> p_version OR v.namespace <> 'REAL'
-    OR v.state NOT IN ('pending','sending','uncertain') THEN RAISE EXCEPTION 'staff_email_review_stale_or_not_sendable'; END IF;
+    OR (v.state NOT IN ('pending','sending','uncertain')
+      AND NOT (v.state='failed' AND v.source_kind IN ('e4','e6','e7')))
+  THEN RAISE EXCEPTION 'staff_email_review_stale_or_not_sendable'; END IF;
   IF v.state = 'sending' AND v.attempted_at > now() - interval '2 minutes' THEN
     RAISE EXCEPTION 'staff_email_review_in_flight'; END IF;
   IF v.attempted_payload IS NOT NULL AND (
@@ -174,14 +190,81 @@ CREATE FUNCTION public.staff_email_review_finish(
   p_review_id uuid, p_token uuid, p_state text, p_provider_message_id text,
   p_delivery_evidence_id uuid, p_error text, p_actor text
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE v_version integer;
+DECLARE v public.staff_email_reviews%ROWTYPE; v_version integer; v_source_status text; v_linked_sent boolean;
 BEGIN
   PERFORM public.staff_email_review_assert_actor(p_actor);
   IF p_state NOT IN ('sent','failed','uncertain') THEN RAISE EXCEPTION 'staff_email_review_invalid_outcome'; END IF;
+  SELECT * INTO v FROM public.staff_email_reviews WHERE id=p_review_id FOR UPDATE;
+  IF v.id IS NULL OR v.state <> 'sending' OR v.attempt_token IS DISTINCT FROM p_token THEN
+    RAISE EXCEPTION 'staff_email_review_outcome_not_reserved'; END IF;
+
+  IF v.source_kind = 'ma' THEN
+    SELECT interaction.delivery_status INTO v_source_status
+    FROM public.ma_interactions interaction
+    WHERE interaction.client_operation_key=v.source_operation_id
+      AND interaction.opportunity_id=v.opportunity_id
+      AND interaction.template_key=v.template_key
+      AND interaction.recipient_email_snapshot=v.recipient_email
+      AND interaction.channel='email' AND interaction.direction='outbound'
+      AND interaction.title=v.subject AND interaction.body_markdown=v.body_text;
+    SELECT EXISTS (
+      SELECT 1 FROM public.ma_interactions interaction
+      WHERE interaction.id=p_delivery_evidence_id
+        AND interaction.client_operation_key=v.source_operation_id
+        AND interaction.opportunity_id=v.opportunity_id
+        AND interaction.template_key=v.template_key
+        AND interaction.recipient_email_snapshot=v.recipient_email
+        AND interaction.title=v.subject AND interaction.body_markdown=v.body_text
+        AND interaction.channel='email' AND interaction.direction='outbound'
+        AND interaction.delivery_status='sent'
+        AND interaction.provider_message_id=p_provider_message_id
+    ) INTO v_linked_sent;
+  ELSE
+    SELECT delivery.delivery_status INTO v_source_status
+    FROM public.opportunity_pursuit_handoff_deliveries delivery
+    WHERE delivery.upstream_evidence_id=v.source_operation_id
+      AND delivery.match_id=v.match_id AND delivery.handoff_type=v.source_kind;
+    SELECT EXISTS (
+      SELECT 1 FROM public.opportunity_pursuit_handoff_deliveries delivery
+      LEFT JOIN public.ma_interactions interaction ON interaction.id=delivery.ma_interaction_id
+      WHERE delivery.upstream_evidence_id=v.source_operation_id
+        AND delivery.match_id=v.match_id AND delivery.handoff_type=v.source_kind
+        AND delivery.evidence_id=p_delivery_evidence_id
+        AND delivery.provider_message_id=p_provider_message_id
+        AND delivery.delivery_status='sent'
+        AND delivery.attachment_snapshot=v.attachment_snapshot
+        AND (
+          (v.source_kind='e6' AND delivery.ma_interaction_id IS NULL)
+          OR (v.source_kind IN ('e4','e7') AND interaction.id IS NOT NULL
+            AND interaction.opportunity_id=v.opportunity_id
+            AND interaction.client_operation_key=delivery.operation_key
+            AND interaction.provider_request_fingerprint=delivery.request_fingerprint
+            AND interaction.channel='email' AND interaction.direction='outbound'
+            AND interaction.template_key=v.template_key
+            AND interaction.recipient_email_snapshot=v.recipient_email
+            AND interaction.title=v.subject AND interaction.body_markdown=v.body_text
+            AND interaction.delivery_status='sent'
+            AND interaction.provider_message_id=p_provider_message_id)
+        )
+    ) INTO v_linked_sent;
+  END IF;
+
+  IF p_state='sent' AND (
+    nullif(btrim(p_provider_message_id),'') IS NULL OR p_delivery_evidence_id IS NULL
+    OR v_linked_sent IS DISTINCT FROM true
+  ) THEN RAISE EXCEPTION 'staff_email_review_sent_requires_linked_source_receipt'; END IF;
+  IF p_state <> 'sent' AND (p_provider_message_id IS NOT NULL OR p_delivery_evidence_id IS NOT NULL) THEN
+    RAISE EXCEPTION 'staff_email_review_non_sent_cannot_claim_receipt'; END IF;
+  IF p_state='failed' AND (
+    v_source_status IN ('pending','sending','sent')
+    OR (EXISTS (SELECT 1 FROM public.staff_email_review_events event
+          WHERE event.review_id=v.id AND event.event_kind='uncertain')
+        AND v_source_status IS DISTINCT FROM 'failed')
+  ) THEN RAISE EXCEPTION 'staff_email_review_prior_outcome_not_conclusively_failed'; END IF;
   UPDATE public.staff_email_reviews SET state=p_state, outcome_at=now(),
     provider_message_id=p_provider_message_id, delivery_evidence_id=p_delivery_evidence_id,
     delivery_error=left(p_error,500), attempt_token=NULL, version=version+1
-  WHERE id=p_review_id AND state='sending' AND attempt_token=p_token RETURNING version INTO v_version;
+  WHERE id=p_review_id RETURNING version INTO v_version;
   IF v_version IS NULL THEN RAISE EXCEPTION 'staff_email_review_outcome_not_reserved'; END IF;
   INSERT INTO public.staff_email_review_events(review_id,event_kind,actor,version,detail)
     VALUES(p_review_id,p_state,p_actor,v_version,jsonb_build_object('provider_message_id',p_provider_message_id,'delivery_evidence_id',p_delivery_evidence_id,'error',left(p_error,500)));
