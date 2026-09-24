@@ -18,6 +18,7 @@ CREATE TABLE public.app_user_roles (
   email TEXT NOT NULL,
   role TEXT NOT NULL
 );
+CREATE TABLE public."user" (id TEXT PRIMARY KEY, email TEXT NOT NULL);
 CREATE TABLE public.ma_firms (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT NOT NULL);
 CREATE TABLE public.ma_offices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -106,6 +107,14 @@ TO service_role;
 
 INSERT INTO public.app_user_roles (user_id, email, role)
 VALUES ('bertrand-staff-user', 'bertrand.galas@edu.escp.eu', 'staff');
+INSERT INTO public."user" (id,email) VALUES
+  ('bertrand-staff-user','bertrand.galas@edu.escp.eu'),
+  ('staff-fallback','Fallback@Example.Test'),
+  ('spoof-actor','unassigned@example.test'),
+  ('rep-actor','rep@example.test');
+INSERT INTO public.app_user_roles (user_id,email,role) VALUES
+  (NULL,' fallback@example.test ','staff'),
+  ('rep-actor','rep@example.test','repreneur');
 
 WITH firm AS (
   INSERT INTO public.ma_firms (name) VALUES ('Synthetic Advisory') RETURNING id
@@ -637,6 +646,65 @@ BEGIN
   IF (SELECT COUNT(*) FROM public.ma_interaction_legacy_migration_manifest) <> 4 THEN
     RAISE EXCEPTION 'w062_clean_rerun_failed';
   END IF;
+END;
+$$;
+
+\ir 122_staff_email_ma_source_actor_alignment.sql
+
+-- Actual source begin/finalize, no provider I/O: email-only staff works while
+-- a repreneur, unrelated Better Auth ID, and submitted email string do not.
+DO $$
+DECLARE v_office uuid; v_affiliation uuid; v_opportunity uuid; v_token uuid; v_interaction uuid; v_replay uuid;
+BEGIN
+  IF has_function_privilege('anon','public.begin_ma_interaction_email_send(uuid,uuid,uuid,text,text,text,text,text,uuid,text,uuid)','EXECUTE')
+    OR has_function_privilege('authenticated','public.finalize_ma_interaction_email_send(uuid,text,text,text,text)','EXECUTE')
+    OR NOT has_function_privilege('service_role','public.begin_ma_interaction_email_send(uuid,uuid,uuid,text,text,text,text,text,uuid,text,uuid)','EXECUTE')
+  THEN RAISE EXCEPTION 'ma_source_rpc_service_only_acl_changed'; END IF;
+  SELECT office_id,id INTO v_office,v_affiliation FROM public.ma_contact_office_affiliations LIMIT 1;
+  INSERT INTO public.opportunities(reference,source_office_id)
+    VALUES('W062-EMAIL-ONLY-STAFF',v_office) RETURNING id INTO v_opportunity;
+  INSERT INTO public.ma_source_email_send_reservations(opportunity_id,actor,source_office_id,expires_at)
+    VALUES(v_opportunity,'staff-fallback',v_office,now()+interval '2 minutes') RETURNING reservation_token INTO v_token;
+  SELECT interaction_id INTO v_interaction FROM public.begin_ma_interaction_email_send(
+    v_opportunity,v_office,v_affiliation,'staff-fallback','ma_process_follow_up',
+    'contact@example.test','Fallback actor subject','Fallback actor body',
+    '00000000-0000-4000-8000-000000000121',repeat('c',64),v_token);
+  IF v_interaction IS NULL THEN RAISE EXCEPTION 'email_only_ma_source_begin_failed'; END IF;
+  IF NOT public.finalize_ma_interaction_email_send(
+      v_interaction,'staff-fallback','sent','synthetic-provider-accepted',NULL)
+  THEN RAISE EXCEPTION 'email_only_ma_source_finalize_failed'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.ma_interactions WHERE id=v_interaction
+      AND owner_staff_user_id='staff-fallback' AND created_by='staff-fallback'
+      AND delivery_status='sent' AND provider_message_id='synthetic-provider-accepted')
+  THEN RAISE EXCEPTION 'email_only_ma_source_delivery_not_retained'; END IF;
+  SELECT interaction_id INTO v_replay FROM public.begin_ma_interaction_email_send(
+    v_opportunity,v_office,v_affiliation,'staff-fallback','ma_process_follow_up',
+    'contact@example.test','Fallback actor subject','Fallback actor body',
+    '00000000-0000-4000-8000-000000000121',repeat('c',64),v_token);
+  IF v_replay IS DISTINCT FROM v_interaction THEN RAISE EXCEPTION 'ma_source_replay_changed_original_operation'; END IF;
+
+  BEGIN
+    PERFORM public.begin_ma_interaction_email_send(v_opportunity,v_office,v_affiliation,
+      'spoof-actor','ma_process_follow_up','contact@example.test','Wrong actor','Body',
+      '00000000-0000-4000-8000-000000000122',repeat('d',64),v_token);
+    RAISE EXCEPTION 'spoofed_ma_begin_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_interaction_email_begin_requires_exact_staff_actor%' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM public.finalize_ma_interaction_email_send(v_interaction,'rep-actor','sent','fake',NULL);
+    RAISE EXCEPTION 'repreneur_ma_finalize_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_interaction_email_finalize_requires_exact_staff_actor%' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM public.begin_ma_interaction_email_send(v_opportunity,v_office,v_affiliation,
+      'Fallback@Example.Test','ma_process_follow_up','contact@example.test','Email spoof','Body',
+      '00000000-0000-4000-8000-000000000123',repeat('e',64),v_token);
+    RAISE EXCEPTION 'email_string_ma_begin_was_allowed';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%ma_interaction_email_begin_requires_exact_staff_actor%' THEN RAISE; END IF;
+  END;
 END;
 $$;
 

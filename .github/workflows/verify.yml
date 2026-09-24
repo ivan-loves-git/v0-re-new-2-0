@@ -54,6 +54,26 @@ jobs:
       - name: Run repository verification
         run: pnpm verify
 
+      - name: Rehearse #186 private review queue and independent-session send race
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-staff-email-review-queue.sh'
+
+      - name: Rehearse #186 actual M&A source send with email-only staff
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-ma-interaction-persistence.sh'
+
       - name: Rehearse W-126 DEMO quarantine and portal response
         run: |
           docker run --rm \

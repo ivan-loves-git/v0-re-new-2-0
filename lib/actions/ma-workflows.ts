@@ -10,7 +10,8 @@ export async function getMaOpportunityWorkflow(opportunityId: string) {
 }
 export async function sendMaSourceWorkflowEmail(opportunityId: string, formData: FormData) {
   await requireStaffAccess()
-  return workflow.sendMaSourceWorkflowEmail(opportunityId, formData)
+  void opportunityId; void formData
+  return { success: false as const, message: "Prepare this email in Emails > Review & send before delivery." }
 }
 // Public staff action remains body-only. Private NDA bytes can be supplied only
 // by the server-only pursuit delivery path after its exact Gate 2 checks.
@@ -19,5 +20,6 @@ export async function sendMaSourceWorkflowEmailPayload(opportunityId: string, pa
   contactId?: string | null; clientOperationKey: string | null
 }) {
   await requireStaffAccess()
-  return workflow.sendMaSourceWorkflowEmailPayload(opportunityId, payload)
+  void opportunityId; void payload
+  return { success: false as const, message: "Prepare this email in Emails > Review & send before delivery." }
 }

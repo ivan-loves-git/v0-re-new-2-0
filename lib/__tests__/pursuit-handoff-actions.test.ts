@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const m = vi.hoisted(() => ({ staff: vi.fn(), prepare: vi.fn(), begin: vi.fn(), finalize: vi.fn(), current: vi.fn(), mail: vi.fn(), resend: vi.fn(), suppression: vi.fn(), recipient: vi.fn() }))
+const m = vi.hoisted(() => ({ staff: vi.fn(), prepare: vi.fn(), begin: vi.fn(), finalize: vi.fn(), current: vi.fn(), mail: vi.fn(), render: vi.fn(), review: vi.fn(), resend: vi.fn(), suppression: vi.fn(), recipient: vi.fn() }))
 vi.mock("@/lib/access-control", () => ({ requireStaffAccess: m.staff }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ from: () => ({ select: () => ({ eq: () => ({ maybeSingle: m.recipient }) }) }) }) }))
-vi.mock("@/lib/ma-workflows", () => ({ sendMaSourceWorkflowEmailPayload: m.mail }))
+vi.mock("@/lib/ma-workflows", () => ({ sendMaSourceWorkflowEmailPayload: m.mail, renderMaWorkflowContent: m.render }))
+vi.mock("@/lib/staff-email-review-guard", () => ({ requireReservedHandoffReview: m.review, sameAttachmentSnapshot: () => true }))
 vi.mock("@/lib/pursuit-handoff-delivery", () => ({ preparePursuitHandoff: m.prepare, beginPursuitHandoff: m.begin, finalizePursuitHandoff: m.finalize, assertPursuitHandoffCurrent: m.current }))
 vi.mock("@/lib/email/resend-client", () => ({ FROM_NAME: "Configured Re-New", FROM_EMAIL: "configured@re-new.invalid", resend: { emails: { send: m.resend } } }))
 vi.mock("@/lib/email/ma-contact-email-authorization", () => ({ isMaContactEmailAddressSuppressed: m.suppression }))
 vi.mock("@/lib/env", () => ({ env: { NEXT_PUBLIC_APP_URL: "https://app.re-new.team" } }))
 
 import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
+import { buildPursuitNdaReadyRequest, fixedIntermediaryHandoffCopy } from "@/lib/pursuit-handoff-copy"
 
 function prepared(blank = false) {
   return { handoff: { matchId: "match", opportunityId: "opp", upstreamId: "validation", type: "e4", snapshot: [] }, context: { opportunity: { public_title: "PME industrielle" }, upstream: { metadata: { blank_nda_present_at_validation: blank } }, repreneur: { id: "buyer", email: "buyer@re-new.invalid", first_name: "Buyer" } } }
@@ -22,6 +24,17 @@ beforeEach(() => {
   m.finalize.mockResolvedValue("evidence")
   m.current.mockResolvedValue(undefined)
   m.mail.mockResolvedValue({ success: true, eventId: "evidence", message: "sent" })
+  m.render.mockImplementation(async (_opportunityId, subject, body) => ({ subject, body }))
+  m.review.mockImplementation(async (reviewId, kind) => {
+    if (!reviewId) throw new Error("Prepare this handoff in Review & send before delivery.")
+    const { context } = await m.prepare.mock.results.at(-1)?.value
+    if (kind === "e6") {
+      const request = buildPursuitNdaReadyRequest("match", context)
+      return { template_key: "code:e6_nda_ready", template_version: "w112-e6-v1", subject: request.subject, body_text: request.text, recipient_email: request.to[0] }
+    }
+    const copy = fixedIntermediaryHandoffCopy(kind, Boolean(context.upstream.metadata?.blank_nda_present_at_validation))
+    return { subject: copy.subject, body_text: copy.body, attachment_snapshot: [], recipient_email: "source@re-new.invalid", contact_link_id: "link", template_version: `w112-${kind}-v1`, approved_by: "staff-id" }
+  })
   m.suppression.mockResolvedValue(false)
   m.recipient.mockResolvedValue({ data: { email: "buyer@re-new.invalid" }, error: null })
   m.resend.mockResolvedValue({ data: { id: "accepted" }, error: null })
@@ -34,9 +47,13 @@ describe("canonical pursuit handoff actions", () => {
     expect(m.prepare).not.toHaveBeenCalled()
     expect(m.mail).not.toHaveBeenCalled()
   })
+  it("retired direct handoff actions cannot bypass a reserved review", async () => {
+    expect((await sendPursuitNdaReadyNotice("match")).success).toBe(false)
+    expect(m.resend).not.toHaveBeenCalled()
+  })
   it.each([true, false])("E4 uses NDA presence frozen at validation (%s)", async (present) => {
     m.prepare.mockResolvedValue(prepared(present))
-    expect((await sendPursuitIntermediaryHandoff("match", "e4")).success).toBe(true)
+    expect((await sendPursuitIntermediaryHandoff("match", "e4", "review-id")).success).toBe(true)
     const [, payload, descriptor] = m.mail.mock.calls[0]
     expect(payload.body.includes("NDA à signer")).toBe(!present)
     expect(payload.subject).toBe(present ? "Confirmation d'intérêt repreneur - {opportunityTitle}" : "Processus NDA - {opportunityTitle}")
@@ -47,17 +64,17 @@ describe("canonical pursuit handoff actions", () => {
   it("does not replay historical E4 without the frozen request fact", async () => {
     const p = prepared(); p.context.upstream.metadata = {} as typeof p.context.upstream.metadata
     m.prepare.mockResolvedValue(p)
-    expect((await sendPursuitIntermediaryHandoff("match", "e4")).success).toBe(false)
+    expect((await sendPursuitIntermediaryHandoff("match", "e4", "review-id")).success).toBe(false)
     expect(m.mail).not.toHaveBeenCalled()
   })
   it.each(["sent", "in_flight"])("does not send E6 again while %s", async (status) => {
     m.begin.mockResolvedValue({ delivery_id: "delivery", operation_key: "same-operation", delivery_status: status, evidence_id: status === "sent" ? "evidence" : null })
-    const result = await sendPursuitNdaReadyNotice("match")
+    const result = await sendPursuitNdaReadyNotice("match", "review-id")
     expect(result.success).toBe(status === "sent")
     expect(m.resend).not.toHaveBeenCalled()
   })
   it("sends E6 to the exact repreneur with configured sender and no source details", async () => {
-    expect((await sendPursuitNdaReadyNotice("match")).success).toBe(true)
+    expect((await sendPursuitNdaReadyNotice("match", "review-id")).success).toBe(true)
     const [request, options] = m.resend.mock.calls[0]
     expect(request.from).toBe("Configured Re-New <configured@re-new.invalid>")
     expect(request.to).toEqual(["buyer@re-new.invalid"])
@@ -66,40 +83,41 @@ describe("canonical pursuit handoff actions", () => {
     expect(request.text).toContain("Le NDA de l'opportunité : PME industrielle")
     expect(Object.keys(request).sort()).toEqual(["from", "html", "subject", "text", "to"])
     expect(options).toEqual({ idempotencyKey: "same-operation" })
-    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: "same-operation" }), "staff@re-new.invalid", "sent", "accepted", null)
+    expect(m.begin).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(String), "staff-id")
+    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: "same-operation" }), "staff-id", "sent", "accepted", null)
   })
   it("escapes the approved public title in E6 without exposing source fields", async () => {
     const p = prepared()
     p.context.opportunity.public_title = "PME <industrie> & services"
     m.prepare.mockResolvedValue(p)
-    expect((await sendPursuitNdaReadyNotice("match")).success).toBe(true)
+    expect((await sendPursuitNdaReadyNotice("match", "review-id")).success).toBe(true)
     expect(m.resend.mock.calls[0][0].html).toContain("PME &lt;industrie&gt; &amp; services")
   })
   it.each(["provider", "transport"])("preserves an uncertain E6 operation after %s failure", async (mode) => {
     if (mode === "provider") m.resend.mockResolvedValue({ data: null, error: { name: "rate_limit_exceeded", message: "retry" } })
     else m.resend.mockRejectedValue(new Error("transport"))
-    const result = await sendPursuitNdaReadyNotice("match")
+    const result = await sendPursuitNdaReadyNotice("match", "review-id")
     expect(result.success).toBe(false)
     expect(result.message).toContain("uncertain")
     expect(m.finalize).not.toHaveBeenCalled()
   })
   it("records a conclusive rejection before offering an explicit retry", async () => {
     m.resend.mockResolvedValue({ data: null, error: { name: "validation_error", message: "Rejected sender" } })
-    const result = await sendPursuitNdaReadyNotice("match")
+    const result = await sendPursuitNdaReadyNotice("match", "review-id")
     expect(result.success).toBe(false)
-    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.anything(), "staff@re-new.invalid", "failed", null, "Rejected sender")
+    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.anything(), "staff-id", "failed", null, "Rejected sender")
   })
   it("does not send after recipient drift or suppression", async () => {
     m.recipient.mockResolvedValue({ data: { email: "different@re-new.invalid" }, error: null })
-    expect((await sendPursuitNdaReadyNotice("match")).success).toBe(false)
+    expect((await sendPursuitNdaReadyNotice("match", "review-id")).success).toBe(false)
     expect(m.resend).not.toHaveBeenCalled()
     m.suppression.mockResolvedValue(true)
-    expect((await sendPursuitNdaReadyNotice("match")).success).toBe(false)
+    expect((await sendPursuitNdaReadyNotice("match", "review-id")).success).toBe(false)
     expect(m.resend).not.toHaveBeenCalled()
   })
   it("keeps accepted-but-unfinalized E6 visibly pending", async () => {
     m.finalize.mockRejectedValue(new Error("database unavailable"))
-    const result = await sendPursuitNdaReadyNotice("match")
+    const result = await sendPursuitNdaReadyNotice("match", "review-id")
     expect(result.success).toBe(false)
     expect(result.message).toContain("reconcile")
     expect(m.resend).toHaveBeenCalledOnce()

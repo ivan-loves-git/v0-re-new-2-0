@@ -79,6 +79,19 @@ async function login(page: Page, email: string, loginPassword = password) {
   });
 }
 
+async function approvePreparedReview(page: Page) {
+  await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { name: "Review & send" })).toBeVisible();
+  page.once("dialog", async (dialog) => { await dialog.accept(); });
+  await page.getByRole("button", { name: "Approve and send" }).click();
+  await expect(page.getByText("Provider accepted the reviewed email.", { exact: false })).toBeVisible();
+  await page.reload();
+  const visibleReview = page.locator("#main-content:visible");
+  const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
+    .filter({ hasText: "Provider receipt qa-allowlist-accepted." });
+  await expect(receipt).toContainText("Sent means accepted by the provider, not delivered or read.");
+}
+
 async function chooseOption(
   page: Page,
   trigger: string,
@@ -780,14 +793,63 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       result: "active pursuit at interest",
     });
 
+    // The sanitized 771 structure has no historical M&A catalogue seed rows.
+    // Seed only this disposable key; missing catalogue keys remain a send veto.
+    await client.query(`INSERT INTO public.email_templates
+      (template_key,subject,description,is_active,requires_consent,body_markdown,body_editable)
+      VALUES ('ma_nda_info_memo_request','QA NDA and memo - {opportunityTitle}',
+        'Disposable M&A review fixture',false,false,'Bonjour {firstName},\\n\\nQA fixture NDA request.',true)
+      ON CONFLICT (template_key) DO UPDATE SET is_active=false`);
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
     await chooseOption(page, "#ma_template", "Request NDA and info memo");
     await expect(page.locator("#ma_subject")).not.toHaveValue("");
     await expect(page.locator("#ma_body")).not.toHaveValue("");
-    await page.getByRole("button", { name: "Send to contact" }).click();
-    await expect(
-      page.getByText("M&A email sent", { exact: true }),
-    ).toBeVisible();
+    // The disposable fixture deliberately tests an inactive catalogue key.
+    // Preparation stays usable, but sending is visibly blocked until the
+    // synthetic switch is restored. No production setting is touched.
+    await page.getByRole("button", { name: "Prepare for review" }).click();
+    await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
+    const cancelledReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
+    await expect(page.getByText("Catalogue template disabled")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/emails");
+    await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
+    await page.locator(`a[href="/emails/review/${cancelledReviewId}"]`).click();
+    const subjectField = page.locator("#review-subject");
+    await expect(subjectField).toBeVisible();
+    const sendButton = page.getByRole("button", { name: "Approve and send" });
+    const sendBox = await sendButton.boundingBox();
+    expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390);
+    await subjectField.fill("QA reviewed subject - no send");
+    await page.getByRole("button", { name: "Save reviewed text" }).click();
+    await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
+    await page.reload();
+    await expect(subjectField).toHaveValue("QA reviewed subject - no send");
+    await page.locator("#review-cancel-reason").fill("Disposable draft superseded before any send");
+    await page.getByRole("button", { name: "Cancel with reason" }).click();
+    await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("cancelled", { exact: true }).first()).toBeVisible();
+    const cancelled = await one<{ state: string; subject: string; cancel_reason: string; events: number }>(client,
+      `SELECT r.state,r.subject,r.cancel_reason,
+        (SELECT count(*)::int FROM public.staff_email_review_events e WHERE e.review_id=r.id) AS events
+       FROM public.staff_email_reviews r WHERE r.id=$1`, [cancelledReviewId]);
+    expect(cancelled).toEqual({ state: "cancelled", subject: "QA reviewed subject - no send", cancel_reason: "Disposable draft superseded before any send", events: 3 });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_nda_info_memo_request'");
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
+    await chooseOption(page, "#ma_template", "Request NDA and info memo");
+    await page.getByRole("button", { name: "Prepare for review" }).click();
+    await approvePreparedReview(page);
+    const sourceReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
+    const anonymousReviewContext = await browser.newContext({ baseURL });
+    const anonymousReviewPage = await anonymousReviewContext.newPage();
+    await anonymousReviewPage.goto(`/emails/review/${sourceReviewId}`);
+    await expect(anonymousReviewPage).toHaveURL(/\/auth\/login/);
+    await anonymousReviewContext.close();
+    await realPage.goto(`/emails/review/${sourceReviewId}`);
+    await expect(realPage).toHaveURL(/\/portal\/deals/);
     const sourceEmail = await one<{
       delivery_status: string;
       provider_message_id: string | null;
@@ -869,10 +931,8 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await blankSection.getByRole("button", { name: "Record version" }).click();
     await expect(blankSection.getByText("Version 1 recorded.")).toBeVisible();
 
-    await page
-      .getByRole("button", { name: "Send qualification and NDA request" })
-      .click();
-    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Qualification request sent." })).toBeVisible();
+    await page.getByRole("button", { name: "Prepare qualification and NDA request" }).click();
+    await approvePreparedReview(page);
     const e4 = await one<{ delivery_status: string; request_included: boolean; current_blank_exists: boolean; exact_validation: boolean }>(client,
       `SELECT d.delivery_status,position('nous transmettre un NDA à signer' in i.body_markdown)>0 AS request_included,
        EXISTS(SELECT 1 FROM public.opportunity_nda_artifacts a WHERE a.opportunity_id=$2 AND a.artifact_role='blank_template') AS current_blank_exists,
@@ -880,6 +940,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
        FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id
        WHERE d.match_id=$1 AND d.handoff_type='e4'`, [savedMatch.id, desktopOpportunityId]);
     expect(e4).toEqual({ delivery_status: "sent", request_included: true, current_blank_exists: true, exact_validation: true });
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await expect(
       page.getByRole("button", {
         name: "Record intermediary qualification",
@@ -904,9 +965,9 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(realPage.locator("#signed-nda-file")).toHaveCount(0);
     expect((await realPage.request.get(baseURL + "/portal/deals/" + savedMatch.id + "/nda-template")).status()).toBe(404);
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByRole("button", { name: "Send NDA-ready notice" })).toBeVisible();
-    await page.getByRole("button", { name: "Send NDA-ready notice" }).click();
-    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "NDA-ready notice sent." })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Prepare NDA-ready notice" })).toBeVisible();
+    await page.getByRole("button", { name: "Prepare NDA-ready notice" }).click();
+    await approvePreparedReview(page);
     const e6 = await one<{ delivery_status: string; provider_message_id: string; evidence: boolean }>(client,
       "SELECT d.delivery_status,d.provider_message_id,(e.id IS NOT NULL AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text) AS evidence FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.match_id=$1 AND d.handoff_type='e6'", [savedMatch.id]);
     expect(e6).toEqual({ delivery_status: "sent", provider_message_id: "qa-allowlist-accepted", evidence: true });
@@ -985,10 +1046,10 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     ).toBeVisible();
     await page.getByRole("button", { name: "Pass Gate 2" }).click();
     await expect(
-      page.getByRole("button", { name: "Send signed copies and memo request" }),
+      page.getByRole("button", { name: "Prepare signed copies and memo request" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Send signed copies and memo request" }).click();
-    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Signed copies and memo request sent." })).toBeVisible();
+    await page.getByRole("button", { name: "Prepare signed copies and memo request" }).click();
+    await approvePreparedReview(page);
     const e7 = await one<{ delivery_status: string; exact_interaction: boolean; attachment_snapshot: Array<{ content_sha256: string; size_bytes: number }> }>(client,
       "SELECT d.delivery_status,i.client_operation_key=d.operation_key AND i.provider_request_fingerprint=d.request_fingerprint AS exact_interaction,d.attachment_snapshot FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id WHERE d.match_id=$1 AND d.handoff_type='e7'", [savedMatch.id]);
     expect(e7.delivery_status).toBe("sent");
@@ -1004,6 +1065,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
         "Gate 1, E6, both current signatures, Gate 2 and E7 delivered through the safe mail adapter",
     });
 
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await page.locator("#journey-im").selectOption(memo.id);
     const expiry = new Date(Date.now() + 72 * 60 * 60 * 1000)
       .toISOString()

@@ -8,10 +8,10 @@ import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-me
 import { queueM2StaffPursuitEvent } from "@/lib/telemetry/m2-repreneur"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
-import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
+import { preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
 import { deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
 
-export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string } | { success: false; message: string }
+export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string; reviewId?: string } | { success: false; message: string }
 
 const evidenceAction: Partial<Record<OpportunityPursuitJourneyAction, string>> = {
   request_qualification: "qualification_requested", qualify: "intermediary_qualified", validate_template: "template_validated", pass_gate_1: "gate_1_passed",
@@ -122,25 +122,22 @@ export async function runOpportunityPursuitJourneyAction(input: {
       return { success: true, message: `Pursuit ${input.action} recorded.`, eventId: data }
     }
     if (input.action === "request_qualification") {
-      const result = await sendPursuitIntermediaryHandoff(input.matchId, "e4")
-      if (!result.success) throw new Error(result.message)
+      const result = await preparePursuitEmailReview(input.matchId, "e4")
       trace.success()
       capture("success")
-      return { success: true, message: result.message, eventId: result.eventId }
+      return { success: true, message: result.message, eventId: result.reviewId, reviewId: result.reviewId }
     }
     if (input.action === "send_nda_ready") {
-      const result = await sendPursuitNdaReadyNotice(input.matchId)
-      if (!result.success) throw new Error(result.message)
+      const result = await preparePursuitEmailReview(input.matchId, "e6")
       trace.success()
       capture("success")
-      return { success: true, message: result.message, eventId: result.eventId }
+      return { success: true, message: result.message, eventId: result.reviewId, reviewId: result.reviewId }
     }
     if (input.action === "record_dispatch") {
-      const result = await sendPursuitIntermediaryHandoff(input.matchId, "e7")
-      if (!result.success) throw new Error(result.message)
+      const result = await preparePursuitEmailReview(input.matchId, "e7")
       trace.success()
       capture("success")
-      return { success: true, message: result.message, eventId: result.eventId }
+      return { success: true, message: result.message, eventId: result.reviewId, reviewId: result.reviewId }
     }
     const eventType = evidenceAction[input.action]
     if (!eventType) {

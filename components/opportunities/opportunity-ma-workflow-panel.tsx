@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import type { MaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
+import { prepareMaEmailReview } from "@/lib/actions/staff-email-review"
 import { suppressionBlocksMaTemplate } from "@/lib/ma-contact-email-policy"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 import {
@@ -133,45 +134,23 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
         sessionStorage.setItem(storageKey, JSON.stringify(sendOperation))
       } catch {}
 
-      const response = await fetch(`/api/opportunities/${opportunityId}/ma-workflow/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          templateKey: formData.get("template_key"),
-          subject: formData.get("subject"),
-          body: formData.get("body_markdown"),
-          contactId: formData.get("contact_id"),
-          clientOperationKey: sendOperation.key,
-        }),
+      const result = await prepareMaEmailReview({
+        opportunityId, sourceOperationId: sendOperation.key,
+        templateKey: String(formData.get("template_key")),
+        subject: String(formData.get("subject")), body: String(formData.get("body_markdown")),
+        contactLinkId: String(formData.get("contact_id")),
       })
-      const result = (await response.json()) as {
-        success: boolean
-        message: string
-        operationState?: "pending" | "failed" | "sent"
-      }
-      if (!result.success) {
-        setFieldErrors({ form: result.message })
-        focusValidationSummary(validationSummaryRef)
-        if (result.operationState !== "pending") {
-          sendOperationRef.current = null
-          try {
-            sessionStorage.removeItem(storageKey)
-          } catch {}
-        }
-        toast.error("M&A email not sent", { description: result.message })
-        return
-      }
       sendOperationRef.current = null
       try {
         sessionStorage.removeItem(storageKey)
       } catch {}
-      toast.success("M&A email sent", { description: result.message })
-      router.refresh()
+      toast.success("Draft prepared", { description: result.message })
+      router.push(`/emails/review/${result.reviewId}`)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unexpected error while sending the intermediary email."
+      const message = error instanceof Error ? error.message : "Could not prepare the intermediary draft."
       setFieldErrors({ form: message })
       focusValidationSummary(validationSummaryRef)
-      toast.error("M&A email not sent", {
+      toast.error("Draft not prepared", {
         description: message,
       })
     } finally {
@@ -187,7 +166,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
             <Mail className="size-5" />
             Intermediary follow-up
           </CardTitle>
-          <CardDescription>Send a contextual M&A template to the linked source without leaving this opportunity.</CardDescription>
+          <CardDescription>Prepare a contextual M&A draft, then review and send it from Emails. Preparation never sends.</CardDescription>
         </CardHeader>
         <CardContent>
           <form noValidate onSubmit={handleSend} className="space-y-4">
@@ -351,7 +330,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                 <AlertTitle>Recipient for this follow-up</AlertTitle>
                 <AlertDescription>
                   <p className="break-words">
-                    This email will be sent to <strong>{recipientName}</strong>
+                    This draft is for <strong>{recipientName}</strong>
                     {selectedRecipient?.name ? ` from ${workflow.sourceName}` : ""} at <strong>{recipientEmail}</strong>.
                   </p>
                 </AlertDescription>
@@ -377,7 +356,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
             <div className="flex justify-end">
               <Button type="submit" disabled={isSending}>
                 <Send data-icon="inline-start" />
-                {isSending ? "Sending..." : "Send to contact"}
+                {isSending ? "Preparing..." : "Prepare for review"}
               </Button>
             </div>
           </form>

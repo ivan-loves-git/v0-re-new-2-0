@@ -1,4 +1,5 @@
 import "server-only"
+import { createHash } from "node:crypto"
 
 import { beginPursuitHandoff, finalizePursuitHandoff, assertPursuitHandoffCurrent, type PreparedPursuitHandoff, type HandoffAttempt } from "@/lib/pursuit-handoff-delivery"
 import { assertPursuitEmailSize } from "@/lib/pursuit-handoff-attachments"
@@ -278,10 +279,9 @@ function getWorkflowContacts(
           relation.contact_name_snapshot ??
           relation.affiliation?.contact?.display_name ??
           null,
-        email:
-          relation.contact_email_snapshot ??
-          relation.affiliation?.contact?.email ??
-          null,
+        // Delivery authority comes from the live canonical contact. A retained
+        // snapshot is history, not a fallback recipient if that email is gone.
+        email: relation.affiliation?.contact?.email ?? null,
         phone:
           relation.contact_phone_snapshot ??
           relation.affiliation?.contact?.phone ??
@@ -429,6 +429,50 @@ function markdownToEmailHtml(body: string) {
       (paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, "<br />")}</p>`,
     )
     .join("")
+}
+
+export function buildMaReviewedRequest(subject: string, body: string, recipientEmail: string, attachments?: ResendDeliveryRequest["attachments"]): ResendDeliveryRequest {
+  return {
+    from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [recipientEmail], subject,
+    html: markdownToEmailHtml(body), text: body,
+    ...(attachments ? { attachments } : {}),
+  }
+}
+
+// The review queue stores already-rendered text. Keep preparation and final
+// delivery on this one renderer so the approved words are the attempted words.
+export async function renderMaWorkflowContent(opportunityId: string, subject: string, body: string) {
+  const { variables } = await loadOpportunityContext(opportunityId)
+  return {
+    subject: substituteTemplateVariables(subject, variables),
+    body: substituteTemplateVariables(body, variables),
+  }
+}
+
+export async function getMaReviewContext(opportunityId: string, contactLinkId?: string | null) {
+  const { opportunity, contacts, defaultContact, activeMatch } = await loadOpportunityContext(opportunityId)
+  const contact = contactLinkId ? contacts.find((row) => row.id === contactLinkId) : defaultContact
+  if (!opportunity.source_office_id || !contact?.affiliationId || !contact.contactId || !contact.email) {
+    throw new Error("Choose a current canonical opportunity contact with an email address.")
+  }
+  return {
+    opportunityId: opportunity.id,
+    namespace: opportunity.is_demo ? "DEMO" as const : "REAL" as const,
+    contactLinkId: contact.id,
+    recipientEmail: contact.email,
+    activeMatchId: activeMatch?.id ?? null,
+  }
+}
+
+export async function getMaReviewTemplateVersion(templateKey: string, requireActive: boolean) {
+  const { data, error } = await createAdminClient().from("email_templates")
+    .select("template_key,subject,body_markdown,body_editable,is_active")
+    .eq("template_key", templateKey).maybeSingle()
+  if (error || !data?.template_key) throw new Error("This catalogue email is missing. No email was sent.")
+  if (requireActive && data.is_active !== true) {
+    throw new Error("This catalogue email is disabled in Templates. A staff member must enable it separately before sending.")
+  }
+  return createHash("sha256").update(JSON.stringify([data.subject, data.body_markdown, data.body_editable])).digest("hex")
 }
 
 async function sendIntermediaryEmail({
@@ -709,6 +753,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     clientOperationKey: string | null
   },
   handoff?: PreparedPursuitHandoff,
+  review?: { recipientEmail: string; templateVersion: string; actorId: string },
 ): Promise<MaEmailSendResult> {
   const { user } = await requireStaffAccess()
   const { templateKey, subject, body, contactId, clientOperationKey } = payload
@@ -726,6 +771,13 @@ export async function sendMaSourceWorkflowEmailPayload(
   }
 
   const supabase = createAdminClient()
+  if (!review) return { success: false, message: "Prepare this email in Review & send before delivery." }
+  try {
+    const version = await getMaReviewTemplateVersion(templateKey, true)
+    if (!handoff && version !== review.templateVersion) return { success: false, message: "The catalogue template changed after preparation. This draft cannot be sent." }
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "The catalogue template could not be verified." }
+  }
   const { data: sourceReviewRequired, error: sourceReviewError } =
     await supabase.rpc("ma_opportunity_source_review_required", {
       p_opportunity_id: opportunityId,
@@ -743,7 +795,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   const { data: emailReservationToken, error: emailReservationError } =
     await supabase.rpc("reserve_ma_source_email_send", {
       p_opportunity_id: opportunityId,
-      p_actor: user.id,
+      p_actor: review.actorId,
     })
 
   if (emailReservationError || typeof emailReservationToken !== "string") {
@@ -768,8 +820,13 @@ export async function sendMaSourceWorkflowEmailPayload(
     throw error
   }
 
-  const { opportunity, variables, activeMatch, contacts, defaultContact } =
+  const { opportunity, activeMatch, contacts, defaultContact } =
     workflowContext
+
+  if (opportunity.is_demo || review.recipientEmail.trim().toLowerCase() === "") {
+    await releaseReservation()
+    return { success: false, message: "Only REAL emails can be sent from Review & send." }
+  }
 
   if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
     await releaseReservation()
@@ -818,6 +875,10 @@ export async function sendMaSourceWorkflowEmailPayload(
         "Add an email to the selected M&A contact before sending a follow-up.",
     }
   }
+  if (recipientEmail.trim().toLowerCase() !== review.recipientEmail.trim().toLowerCase()) {
+    await releaseReservation()
+    return { success: false, message: "The canonical recipient changed after review. No email was sent." }
+  }
   if (!opportunity.source_office_id || !recipient.affiliationId) {
     await releaseReservation()
     return {
@@ -835,16 +896,9 @@ export async function sendMaSourceWorkflowEmailPayload(
     }
   }
 
-  const renderedSubject = substituteTemplateVariables(subject, variables)
-  const renderedBody = substituteTemplateVariables(body, variables)
-  const providerRequest: ResendDeliveryRequest = {
-    from: `${FROM_NAME} <${FROM_EMAIL}>`,
-    to: [recipientEmail],
-    subject: renderedSubject,
-    html: markdownToEmailHtml(renderedBody),
-    text: renderedBody,
-    ...(handoff?.attachments ? { attachments: handoff.attachments } : {}),
-  }
+  const renderedSubject = subject
+  const renderedBody = body
+  const providerRequest = buildMaReviewedRequest(renderedSubject, renderedBody, recipientEmail, handoff?.attachments)
   const providerRequestFingerprint =
     fingerprintResendDeliveryRequest(providerRequest, handoff ? `${handoff.type}:${handoff.upstreamId}` : undefined)
 
@@ -869,7 +923,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     contactId: recipient.contactId,
     opportunityId: opportunity.id,
     purpose: maContactEmailPurposeForTemplate(templateKey),
-    actor: user.id,
+    actor: review.actorId,
     operationKey: clientOperationKey,
   })
   if (!emailAuthorization.allowed) {
@@ -884,7 +938,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (handoff) {
     try {
       assertPursuitEmailSize(providerRequest)
-      handoffAttempt = await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.email)
+      handoffAttempt = await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.id)
       if (handoffAttempt.delivery_status === "sent") {
         await releaseReservation()
         return { success: true, message: "This pursuit handoff was already sent.", operationState: "sent", eventId: handoffAttempt.evidence_id ?? undefined }
@@ -900,7 +954,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   }
   const finishHandoff = async (status: "sent" | "failed", interactionId: string, providerMessageId: string | null, deliveryError: string | null) => {
     if (!handoffAttempt) return undefined
-    return finalizePursuitHandoff(supabase, handoffAttempt, user.email, status, providerMessageId, deliveryError, interactionId)
+    return finalizePursuitHandoff(supabase, handoffAttempt, user.id, status, providerMessageId, deliveryError, interactionId)
   }
 
   const { data: pendingRows, error: beginError } = await supabase.rpc(
@@ -909,7 +963,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       p_opportunity_id: opportunity.id,
       p_office_id: opportunity.source_office_id,
       p_affiliation_id: recipient.affiliationId,
-      p_actor: user.id,
+      p_actor: review.actorId,
       p_template_key: templateKey,
       p_recipient_email: recipientEmail,
       p_title: renderedSubject,
@@ -940,6 +994,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       )
         ? "The earlier email result needs manual reconciliation because its safe provider replay window has expired."
         : "Email blocked because a canonical delivery record could not be started or safely replayed.",
+      operationState: "pending",
     }
   }
 
@@ -1004,7 +1059,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     "finalize_ma_interaction_email_send",
     {
       p_interaction_id: interactionId,
-      p_actor: user.id,
+      p_actor: review.actorId,
       p_delivery_status: result.outcome,
       p_provider_message_id:
         result.outcome === "sent" ? result.providerMessageId : null,

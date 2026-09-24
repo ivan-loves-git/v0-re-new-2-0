@@ -125,7 +125,7 @@ describe("W-043 canonical NDA artifact foundation", () => {
     expect(pursuit).toContain("Legacy stage and NDA fields are history only")
     expect(pursuit).toContain("The repreneur uploads their own signed copy in the portal after Gate 1")
     expect(pursuit).toContain("Approve the selected Information Memorandum for this repreneur and grant access only after Gate 2 and the sent intermediary handoff")
-    expect(pursuit).toContain("Send signed copies and memo request")
+    expect(pursuit).toContain("Prepare signed copies and memo request")
     expect(contract).toContain(
       "Registering any artifact does not validate signer, opportunity or pursuit validity",
     )
