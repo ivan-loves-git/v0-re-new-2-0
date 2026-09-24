@@ -45,11 +45,12 @@ describe("E4/E7 canonical M&A delivery", () => {
     const result = await sendMaSourceWorkflowEmailPayload("opp", payload, handoff, review)
     expect(result).toMatchObject({ success: true, eventId: "evidence" })
     expect(m.order.indexOf("handoff reserved")).toBeLessThan(m.order.indexOf("provider"))
+    expect(m.begin).toHaveBeenCalledWith(expect.anything(), handoff, expect.any(String), "staff-id")
     expect(m.order.indexOf("current gate checked")).toBeLessThan(m.order.indexOf("provider"))
     expect(m.order.indexOf("finalize_ma_interaction_email_send")).toBeLessThan(m.order.indexOf("handoff finalized"))
     expect(m.rpc).toHaveBeenCalledWith("begin_ma_interaction_email_send", expect.objectContaining({ p_client_operation_key: operation }))
     expect(m.send).toHaveBeenCalledWith(expect.objectContaining({ to: ["contact@re-new.invalid"], attachments: handoff.attachments }), { idempotencyKey: "provider-key" })
-    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: operation }), "staff@re-new.invalid", "sent", "receipt", null, "interaction")
+    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: operation }), "staff-id", "sent", "receipt", null, "interaction")
   })
   it("does not call the provider while the handoff lease is in flight", async () => {
     m.begin.mockResolvedValue({ delivery_id: "delivery", operation_key: operation, delivery_status: "in_flight" })
@@ -65,7 +66,7 @@ describe("E4/E7 canonical M&A delivery", () => {
   it("records an actual canonical rejection before the handoff becomes retryable", async () => {
     m.send.mockResolvedValue({ data: null, error: { name: "validation_error", message: "sender rejected" } })
     expect(await sendMaSourceWorkflowEmailPayload("opp", payload, handoff, review)).toMatchObject({ success: false, operationState: "failed" })
-    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.anything(), "staff@re-new.invalid", "failed", null, "sender rejected", "interaction")
+    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.anything(), "staff-id", "failed", null, "sender rejected", "interaction")
   })
   it("blocks provider I/O when the gate becomes stale", async () => {
     m.current.mockRejectedValue(new Error("Gate changed"))

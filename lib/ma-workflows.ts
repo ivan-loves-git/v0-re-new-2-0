@@ -938,7 +938,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (handoff) {
     try {
       assertPursuitEmailSize(providerRequest)
-      handoffAttempt = await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.email)
+      handoffAttempt = await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.id)
       if (handoffAttempt.delivery_status === "sent") {
         await releaseReservation()
         return { success: true, message: "This pursuit handoff was already sent.", operationState: "sent", eventId: handoffAttempt.evidence_id ?? undefined }
@@ -954,7 +954,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   }
   const finishHandoff = async (status: "sent" | "failed", interactionId: string, providerMessageId: string | null, deliveryError: string | null) => {
     if (!handoffAttempt) return undefined
-    return finalizePursuitHandoff(supabase, handoffAttempt, user.email, status, providerMessageId, deliveryError, interactionId)
+    return finalizePursuitHandoff(supabase, handoffAttempt, user.id, status, providerMessageId, deliveryError, interactionId)
   }
 
   const { data: pendingRows, error: beginError } = await supabase.rpc(

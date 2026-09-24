@@ -83,7 +83,8 @@ describe("canonical pursuit handoff actions", () => {
     expect(request.text).toContain("Le NDA de l'opportunité : PME industrielle")
     expect(Object.keys(request).sort()).toEqual(["from", "html", "subject", "text", "to"])
     expect(options).toEqual({ idempotencyKey: "same-operation" })
-    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: "same-operation" }), "staff@re-new.invalid", "sent", "accepted", null)
+    expect(m.begin).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(String), "staff-id")
+    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: "same-operation" }), "staff-id", "sent", "accepted", null)
   })
   it("escapes the approved public title in E6 without exposing source fields", async () => {
     const p = prepared()
@@ -104,7 +105,7 @@ describe("canonical pursuit handoff actions", () => {
     m.resend.mockResolvedValue({ data: null, error: { name: "validation_error", message: "Rejected sender" } })
     const result = await sendPursuitNdaReadyNotice("match", "review-id")
     expect(result.success).toBe(false)
-    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.anything(), "staff@re-new.invalid", "failed", null, "Rejected sender")
+    expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.anything(), "staff-id", "failed", null, "Rejected sender")
   })
   it("does not send after recipient drift or suppression", async () => {
     m.recipient.mockResolvedValue({ data: { email: "different@re-new.invalid" }, error: null })

@@ -53,7 +53,7 @@ export async function sendPursuitNdaReadyNotice(matchId: string, reviewId?: stri
       throw new Error("The NDA-ready recipient or governed copy changed after review. No email was sent.")
     }
     if (await isMaContactEmailAddressSuppressed(email)) throw new Error("The existing email suppression policy blocks this recipient.")
-    const attempt = await beginPursuitHandoff(db, handoff, fingerprintResendDeliveryRequest(request, `e6:${handoff.upstreamId}`), staff.user.email)
+    const attempt = await beginPursuitHandoff(db, handoff, fingerprintResendDeliveryRequest(request, `e6:${handoff.upstreamId}`), staff.user.id)
     attemptReserved = attempt.delivery_status === "sending"
     if (attempt.delivery_status === "sent" && attempt.evidence_id) return { success: true as const, message: "NDA-ready notice was already sent.", eventId: attempt.evidence_id, operationState: "sent" as const }
     if (attempt.delivery_status === "in_flight") return { success: false as const, message: "The NDA-ready notice is still in flight. Retry the unchanged notice in two minutes.", operationState: "pending" as const }
@@ -61,7 +61,7 @@ export async function sendPursuitNdaReadyNotice(matchId: string, reviewId?: stri
     // Recheck the exact recipient and suppression immediately before provider I/O.
     const { data: current, error } = await db.from("repreneurs").select("email").eq("id", context.repreneur.id).maybeSingle()
     if (error || current?.email?.trim() !== email || await isMaContactEmailAddressSuppressed(email)) {
-      await finalizePursuitHandoff(db, attempt, staff.user.email, "failed", null, "Canonical recipient changed or became suppressed before provider I/O.")
+      await finalizePursuitHandoff(db, attempt, staff.user.id, "failed", null, "Canonical recipient changed or became suppressed before provider I/O.")
       return { success: false as const, message: "The NDA-ready recipient changed or cannot receive email. No new email was sent.", operationState: "failed" as const }
     }
     let outcome
@@ -69,7 +69,7 @@ export async function sendPursuitNdaReadyNotice(matchId: string, reviewId?: stri
     catch { return { success: false as const, message: "The NDA-ready result is uncertain. Retry this unchanged notice in two minutes; its send key will be reused.", operationState: "pending" as const } }
     if (outcome.outcome === "pending") return { success: false as const, message: "The NDA-ready result is uncertain. Retry this unchanged notice in two minutes; its send key will be reused.", operationState: "pending" as const }
     let eventId
-    try { eventId = await finalizePursuitHandoff(db, attempt, staff.user.email, outcome.outcome, outcome.outcome === "sent" ? outcome.providerMessageId : null, outcome.outcome === "failed" ? outcome.error : null) }
+    try { eventId = await finalizePursuitHandoff(db, attempt, staff.user.id, outcome.outcome, outcome.outcome === "sent" ? outcome.providerMessageId : null, outcome.outcome === "failed" ? outcome.error : null) }
     catch { return { success: false as const, message: "The provider result needs to be recorded. Retry this unchanged notice in two minutes to reconcile it safely.", operationState: "pending" as const } }
     if (outcome.outcome === "failed") return { success: false as const, message: "The provider rejected the NDA-ready notice.", operationState: "failed" as const }
     return { success: true as const, message: "NDA-ready notice sent.", eventId: eventId!, operationState: "sent" as const }

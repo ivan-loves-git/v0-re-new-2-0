@@ -26,9 +26,9 @@ psql=("$pg_bin/psql" -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_rehears
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE ROLE service_role NOLOGIN;
-CREATE TABLE public.opportunities(id uuid PRIMARY KEY, is_demo boolean NOT NULL);
-CREATE TABLE public.opportunity_matches(id uuid PRIMARY KEY, opportunity_id uuid REFERENCES public.opportunities(id));
-CREATE TABLE public.opportunity_pursuit_evidence(id uuid PRIMARY KEY, match_id uuid REFERENCES public.opportunity_matches(id));
+CREATE TABLE public.opportunities(id uuid PRIMARY KEY, is_demo boolean NOT NULL, status text NOT NULL DEFAULT 'active');
+CREATE TABLE public.opportunity_matches(id uuid PRIMARY KEY, opportunity_id uuid REFERENCES public.opportunities(id), status text NOT NULL DEFAULT 'active_pursuit');
+CREATE TABLE public.opportunity_pursuit_evidence(id uuid PRIMARY KEY, match_id uuid REFERENCES public.opportunity_matches(id), actor text, metadata jsonb);
 CREATE TABLE public.opportunity_ma_contacts(id uuid PRIMARY KEY);
 CREATE TABLE public."user"(id text PRIMARY KEY, email text NOT NULL);
 CREATE TABLE public.app_user_roles(user_id text, email text NOT NULL, role text);
@@ -36,9 +36,15 @@ CREATE TABLE public.ma_interactions(id uuid PRIMARY KEY, client_operation_key uu
   template_key text, recipient_email_snapshot text, title text, body_markdown text,
   delivery_status text, provider_message_id text, channel text DEFAULT 'email', direction text DEFAULT 'outbound',
   provider_request_fingerprint text);
-CREATE TABLE public.opportunity_pursuit_handoff_deliveries(upstream_evidence_id uuid, match_id uuid,
+CREATE TABLE public.opportunity_pursuit_handoff_deliveries(
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), upstream_evidence_id uuid, match_id uuid,
   handoff_type text, delivery_status text, provider_message_id text, evidence_id uuid,
-  attachment_snapshot jsonb, ma_interaction_id uuid, operation_key uuid, request_fingerprint text);
+  attachment_snapshot jsonb DEFAULT '[]'::jsonb, ma_interaction_id uuid,
+  operation_key uuid DEFAULT gen_random_uuid(), request_fingerprint text,
+  attempt_count integer DEFAULT 1, attempt_started_at timestamptz DEFAULT clock_timestamp(),
+  last_attempt_at timestamptz DEFAULT clock_timestamp(), last_attempted_by text,
+  prior_attempts jsonb DEFAULT '[]'::jsonb, delivery_error text, created_by text,
+  finalized_at timestamptz, sent_at timestamptz);
 INSERT INTO public.opportunities VALUES ('18600000-0000-4000-8000-000000000001',false),('18600000-0000-4000-8000-000000000002',true);
 INSERT INTO public.opportunity_ma_contacts VALUES ('18600000-0000-4000-8000-000000000003');
 INSERT INTO public."user" VALUES
@@ -50,6 +56,33 @@ INSERT INTO public.app_user_roles VALUES
   (NULL,' fallback@example.test ','staff'),('rep-1','rep@example.test','repreneur');
 SQL
 "${psql[@]}" --file "$repo_root/scripts/121_staff_email_review_queue.sql" >/dev/null
+
+# Install the two unchanged released source RPC definitions in this disposable
+# schema. Other pursuit gates are minimal synthetic prerequisites; the begin and
+# finalize functions under test are read verbatim from the shipped migration.
+"${psql[@]}" >/dev/null <<'SQL'
+CREATE FUNCTION public.wave_journey_is_enabled() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+CREATE FUNCTION public.w164_match_has_same_namespace(uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
+CREATE FUNCTION public.journey_current_cycle_event(uuid) RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
+CREATE FUNCTION public.journey_current_gate_1_event(p_match_id uuid) RETURNS uuid LANGUAGE sql AS $$
+  SELECT id FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id ORDER BY id LIMIT 1 $$;
+CREATE FUNCTION public.journey_current_gate_2_event(uuid) RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
+CREATE FUNCTION public.journey_handoff_delivery_event_type(text) RETURNS text LANGUAGE sql AS $$ SELECT 'e6_nda_ready_notified'::text $$;
+CREATE FUNCTION public.journey_append_evidence(uuid,text,text,text,uuid,uuid,text,jsonb) RETURNS uuid
+LANGUAGE plpgsql AS $$
+DECLARE v_id uuid;
+BEGIN
+  INSERT INTO public.opportunity_pursuit_evidence(id,match_id,actor,metadata)
+    VALUES(gen_random_uuid(),$1,$3,$8) RETURNING id INTO v_id;
+  RETURN v_id;
+END $$;
+SQL
+awk '
+  /^CREATE OR REPLACE FUNCTION public.journey_begin_handoff_delivery\(/ { inside=1 }
+  inside { print }
+  inside && /^END \$\$;/ { ended++; if (ended==2) exit }
+' "$repo_root/supabase/migrations/20260905095841_pursuit_delivery_handoffs.sql" | "${psql[@]}" >/dev/null
+"${psql[@]}" --file "$repo_root/scripts/123_staff_email_handoff_source_actor_alignment.sql" >/dev/null
 
 "${psql[@]}" -Atc "SELECT public.staff_email_review_assert_actor('staff-fallback')" >/dev/null
 if "${psql[@]}" -Atc "SELECT public.staff_email_review_assert_actor('rep-1')" >/dev/null 2>&1; then
@@ -180,4 +213,32 @@ fi
 "${psql[@]}" -Atc "SELECT public.staff_email_review_cancel('$demo_id',2,'Synthetic draft not needed','staff-2')" >/dev/null
 edited_cancelled="$("${psql[@]}" -Atc "SELECT state='cancelled' AND subject='Edited subject' AND body_text='Edited body' AND cancel_reason='Synthetic draft not needed' AND (SELECT count(*) FROM public.staff_email_review_events WHERE review_id='$demo_id')=3 FROM public.staff_email_reviews WHERE id='$demo_id'")"
 [ "$edited_cancelled" = "t" ] || { echo "Authenticated edit/cancel was not retained" >&2; exit 1; }
+
+# The real E6 source begin/finalize functions must accept the canonical Better
+# Auth ID even when its only staff role matches by normalized email.
+"${psql[@]}" -Atc "INSERT INTO public.opportunities VALUES('18600000-0000-4000-8000-000000000050',false,'active')" >/dev/null
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_matches(id,opportunity_id) VALUES('18600000-0000-4000-8000-000000000051','18600000-0000-4000-8000-000000000050')" >/dev/null
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence(id,match_id) VALUES('18600000-0000-4000-8000-000000000052','18600000-0000-4000-8000-000000000051')" >/dev/null
+e6_source="$("${psql[@]}" -Atc "SELECT delivery_id||'|'||operation_key FROM public.journey_begin_handoff_delivery('18600000-0000-4000-8000-000000000051','18600000-0000-4000-8000-000000000052','e6',repeat('a',64),'staff-fallback','[]'::jsonb)")"
+e6_delivery_id="${e6_source%%|*}"
+e6_operation_key="${e6_source#*|}"
+e6_evidence="$("${psql[@]}" -Atc "SELECT public.journey_finalize_handoff_delivery('$e6_delivery_id','$e6_operation_key','staff-fallback','sent','synthetic-e6-accepted',NULL,NULL)")"
+e6_source_retained="$("${psql[@]}" -Atc "SELECT d.delivery_status='sent' AND d.created_by='staff-fallback' AND d.last_attempted_by='staff-fallback' AND d.provider_message_id='synthetic-e6-accepted' AND e.actor='staff-fallback' FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.id='$e6_delivery_id' AND e.id='$e6_evidence'")"
+[ "$e6_source_retained" = "t" ] || { echo "Email-only E6 source delivery was not retained" >&2; exit 1; }
+e6_replay="$("${psql[@]}" -Atc "SELECT delivery_id||'|'||operation_key||'|'||delivery_status||'|'||evidence_id FROM public.journey_begin_handoff_delivery('18600000-0000-4000-8000-000000000051','18600000-0000-4000-8000-000000000052','e6',repeat('a',64),'staff-2','[]'::jsonb)")"
+[ "$e6_replay" = "$e6_delivery_id|$e6_operation_key|sent|$e6_evidence" ] || { echo "Accepted E6 source did not preserve its operation on replay" >&2; exit 1; }
+e6_original_actor="$("${psql[@]}" -Atc "SELECT created_by FROM public.opportunity_pursuit_handoff_deliveries WHERE id='$e6_delivery_id'")"
+[ "$e6_original_actor" = staff-fallback ] || { echo "E6 replay changed original actor attribution" >&2; exit 1; }
+for denied in rep-1 spoof-1 Fallback@Example.Test; do
+  if denial="$("${psql[@]}" -Atc "SELECT public.journey_begin_handoff_delivery('18600000-0000-4000-8000-000000000051','18600000-0000-4000-8000-000000000052','e6',repeat('a',64),'$denied','[]'::jsonb)" 2>&1)"; then
+    echo "Denied actor unexpectedly began an E6 source delivery: $denied" >&2; exit 1
+  fi
+  [[ "$denial" == *'Handoff requires a valid request and exact staff actor.'* ]] || { echo "E6 denial was not its staff guard: $denied" >&2; exit 1; }
+done
+if denial="$("${psql[@]}" -Atc "SELECT public.journey_finalize_handoff_delivery('$e6_delivery_id','$e6_operation_key','rep-1','sent','fake',NULL,NULL)" 2>&1)"; then
+  echo "Repreneur unexpectedly finalized E6 source delivery" >&2; exit 1
+fi
+[[ "$denial" == *'Handoff finalization requires exact staff and bounded delivery evidence.'* ]] || { echo "E6 finalizer denial was not its staff guard" >&2; exit 1; }
+source_acl="$("${psql[@]}" -Atc "SELECT NOT has_function_privilege('anon','public.journey_begin_handoff_delivery(uuid,uuid,text,text,text,jsonb)','EXECUTE') AND NOT has_function_privilege('authenticated','public.journey_finalize_handoff_delivery(uuid,uuid,text,text,text,text,uuid)','EXECUTE') AND has_function_privilege('service_role','public.journey_begin_handoff_delivery(uuid,uuid,text,text,text,jsonb)','EXECUTE')")"
+[ "$source_acl" = t ] || { echo "E6 source RPC service-only ACL changed" >&2; exit 1; }
 echo "staff email review queue rehearsal passed: role resolution, independent-session race, unchanged/failed retry, 23h fence, clone/DEMO denial, linked source receipts, retained edit/cancel"
