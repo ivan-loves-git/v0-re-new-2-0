@@ -32,6 +32,7 @@ const roadmapEvents: RoadmapPeriod[] = [
     events: [
       { title: "A staff review step inside WAVE", type: "feature", description: "Staff can prepare the existing M&A follow-ups and NDA handoffs, check the exact recipient and wording, then explicitly approve a REAL send or cancel with a reason. An uncertain result stays visible and cannot be bypassed with a new draft." },
       { title: "Existing email controls stay in place", type: "decision", description: "Automatic emails and Manual Send are unchanged. Disabled M&A templates can still be prepared for review but cannot send until their existing switch is enabled separately." },
+      { title: "Clear review times and phone navigation", type: "fix", description: "Review and history times now agree on Paris time after a page reload. On a phone, the Emails tabs scroll instead of crowding or clipping their labels." },
     ],
   },
   {

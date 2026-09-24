@@ -12,10 +12,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { approveAndSendStaffEmailReview, cancelStaffEmailReview, editStaffEmailReview, type StaffEmailReview } from "@/lib/actions/staff-email-review"
+import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
 type ReviewRecord = Awaited<ReturnType<typeof import("@/lib/actions/staff-email-review").getStaffEmailReview>>
 
-function time(value: string | null) { return value ? new Date(value).toLocaleString("fr-FR") : "—" }
+function time(value: string | null) {
+  return value ? formatDisplayDateTime(value, "fr-FR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }) : "—"
+}
 
 export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
   const router = useRouter()

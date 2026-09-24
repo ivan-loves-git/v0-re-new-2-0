@@ -6,6 +6,7 @@ import {
   expect,
   test,
   type BrowserContext,
+  type ConsoleMessage,
   type Page,
 } from "@playwright/test";
 import { verifyPassword } from "better-auth/crypto";
@@ -21,6 +22,9 @@ const databaseUrl = process.env.OPENING_FIXTURE_DATABASE_URL;
 const releaseSha = process.env.OPENING_FIXTURE_RELEASE_SHA;
 const runnerTemp = process.env.RUNNER_TEMP;
 const baseURL = "http://127.0.0.1:3000";
+
+// Only this file's browser page uses Paris time; the CI dev server stays UTC.
+test.use({ timezoneId: "Europe/Paris" });
 
 if (
   !password ||
@@ -815,7 +819,12 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/emails");
     await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
+    const emailTabStrip = page.locator('#main-content:visible [data-slot="tabs-list"]:visible').locator("..");
+    await emailTabStrip.evaluate((strip) => { strip.scrollLeft = strip.scrollWidth; });
+    expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
+    await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
     await page.locator(`a[href="/emails/review/${cancelledReviewId}"]`).click();
+    expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("Europe/Paris");
     const subjectField = page.locator("#review-subject");
     await expect(subjectField).toBeVisible();
     const sendButton = page.getByRole("button", { name: "Approve and send" });
@@ -824,9 +833,28 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await subjectField.fill("QA reviewed subject - no send");
     await page.getByRole("button", { name: "Save reviewed text" }).click();
     await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
-    await page.reload();
-    await expect(subjectField).toHaveValue("QA reviewed subject - no send");
-    await page.locator("#review-cancel-reason").fill("Disposable draft superseded before any send");
+    const hydrationErrors: string[] = [];
+    const recordHydrationError = (message: string) => {
+      if (/react\.dev\/errors\/418|react error #418|hydration failed|hydration mismatch|server.rendered HTML didn.t match the client|text content does not match server.rendered HTML|tree hydrated but some attributes/i.test(message)) {
+        hydrationErrors.push(message);
+      }
+    };
+    const collectPageError = (error: Error) => recordHydrationError(error.message);
+    const collectConsoleError = (message: ConsoleMessage) => {
+      if (message.type() === "error") recordHydrationError(message.text());
+    };
+    page.on("pageerror", collectPageError);
+    page.on("console", collectConsoleError);
+    try {
+      await page.reload();
+      await expect(subjectField).toHaveValue("QA reviewed subject - no send");
+      await page.locator("#review-cancel-reason").fill("Disposable draft superseded before any send");
+      await expect(page.getByRole("button", { name: "Cancel with reason" })).toBeEnabled();
+      expect(hydrationErrors).toEqual([]);
+    } finally {
+      page.off("pageerror", collectPageError);
+      page.off("console", collectConsoleError);
+    }
     await page.getByRole("button", { name: "Cancel with reason" }).click();
     await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
     await page.reload();

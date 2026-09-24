@@ -28,7 +28,7 @@ CREATE ROLE authenticated NOLOGIN;
 CREATE ROLE service_role NOLOGIN;
 CREATE TABLE public.opportunities(id uuid PRIMARY KEY, is_demo boolean NOT NULL, status text NOT NULL DEFAULT 'active');
 CREATE TABLE public.opportunity_matches(id uuid PRIMARY KEY, opportunity_id uuid REFERENCES public.opportunities(id), status text NOT NULL DEFAULT 'active_pursuit');
-CREATE TABLE public.opportunity_pursuit_evidence(id uuid PRIMARY KEY, match_id uuid REFERENCES public.opportunity_matches(id), actor text, metadata jsonb);
+CREATE TABLE public.opportunity_pursuit_evidence(id uuid PRIMARY KEY, match_id uuid REFERENCES public.opportunity_matches(id), actor text, metadata jsonb, event_type text);
 CREATE TABLE public.opportunity_ma_contacts(id uuid PRIMARY KEY);
 CREATE TABLE public."user"(id text PRIMARY KEY, email text NOT NULL);
 CREATE TABLE public.app_user_roles(user_id text, email text NOT NULL, role text);
@@ -65,15 +65,16 @@ CREATE FUNCTION public.wave_journey_is_enabled() RETURNS boolean LANGUAGE sql AS
 CREATE FUNCTION public.w164_match_has_same_namespace(uuid) RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;
 CREATE FUNCTION public.journey_current_cycle_event(uuid) RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
 CREATE FUNCTION public.journey_current_gate_1_event(p_match_id uuid) RETURNS uuid LANGUAGE sql AS $$
-  SELECT id FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id ORDER BY id LIMIT 1 $$;
+  SELECT id FROM public.opportunity_pursuit_evidence
+  WHERE match_id=p_match_id AND event_type='gate_1_passed' ORDER BY id LIMIT 1 $$;
 CREATE FUNCTION public.journey_current_gate_2_event(uuid) RETURNS uuid LANGUAGE sql AS $$ SELECT NULL::uuid $$;
 CREATE FUNCTION public.journey_handoff_delivery_event_type(text) RETURNS text LANGUAGE sql AS $$ SELECT 'e6_nda_ready_notified'::text $$;
 CREATE FUNCTION public.journey_append_evidence(uuid,text,text,text,uuid,uuid,text,jsonb) RETURNS uuid
 LANGUAGE plpgsql AS $$
 DECLARE v_id uuid;
 BEGIN
-  INSERT INTO public.opportunity_pursuit_evidence(id,match_id,actor,metadata)
-    VALUES(gen_random_uuid(),$1,$3,$8) RETURNING id INTO v_id;
+  INSERT INTO public.opportunity_pursuit_evidence(id,match_id,actor,metadata,event_type)
+    VALUES(gen_random_uuid(),$1,$3,$8,$2) RETURNING id INTO v_id;
   RETURN v_id;
 END $$;
 SQL
@@ -218,13 +219,16 @@ edited_cancelled="$("${psql[@]}" -Atc "SELECT state='cancelled' AND subject='Edi
 # Auth ID even when its only staff role matches by normalized email.
 "${psql[@]}" -Atc "INSERT INTO public.opportunities VALUES('18600000-0000-4000-8000-000000000050',false,'active')" >/dev/null
 "${psql[@]}" -Atc "INSERT INTO public.opportunity_matches(id,opportunity_id) VALUES('18600000-0000-4000-8000-000000000051','18600000-0000-4000-8000-000000000050')" >/dev/null
-"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence(id,match_id) VALUES('18600000-0000-4000-8000-000000000052','18600000-0000-4000-8000-000000000051')" >/dev/null
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence(id,match_id,event_type) VALUES('18600000-0000-4000-8000-000000000052','18600000-0000-4000-8000-000000000051','gate_1_passed')" >/dev/null
 e6_source="$("${psql[@]}" -Atc "SELECT delivery_id||'|'||operation_key FROM public.journey_begin_handoff_delivery('18600000-0000-4000-8000-000000000051','18600000-0000-4000-8000-000000000052','e6',repeat('a',64),'staff-fallback','[]'::jsonb)")"
 e6_delivery_id="${e6_source%%|*}"
 e6_operation_key="${e6_source#*|}"
 e6_evidence="$("${psql[@]}" -Atc "SELECT public.journey_finalize_handoff_delivery('$e6_delivery_id','$e6_operation_key','staff-fallback','sent','synthetic-e6-accepted',NULL,NULL)")"
 e6_source_retained="$("${psql[@]}" -Atc "SELECT d.delivery_status='sent' AND d.created_by='staff-fallback' AND d.last_attempted_by='staff-fallback' AND d.provider_message_id='synthetic-e6-accepted' AND e.actor='staff-fallback' FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.id='$e6_delivery_id' AND e.id='$e6_evidence'")"
 [ "$e6_source_retained" = "t" ] || { echo "Email-only E6 source delivery was not retained" >&2; exit 1; }
+# A later non-Gate-1 event with a lower UUID must not displace Gate 1. The
+# released source begin RPC is exercised again below, including its gate check.
+"${psql[@]}" -Atc "INSERT INTO public.opportunity_pursuit_evidence(id,match_id,event_type) VALUES('10000000-0000-4000-8000-000000000001','18600000-0000-4000-8000-000000000051','e6_nda_ready_notified')" >/dev/null
 e6_replay="$("${psql[@]}" -Atc "SELECT delivery_id||'|'||operation_key||'|'||delivery_status||'|'||evidence_id FROM public.journey_begin_handoff_delivery('18600000-0000-4000-8000-000000000051','18600000-0000-4000-8000-000000000052','e6',repeat('a',64),'staff-2','[]'::jsonb)")"
 [ "$e6_replay" = "$e6_delivery_id|$e6_operation_key|sent|$e6_evidence" ] || { echo "Accepted E6 source did not preserve its operation on replay" >&2; exit 1; }
 e6_original_actor="$("${psql[@]}" -Atc "SELECT created_by FROM public.opportunity_pursuit_handoff_deliveries WHERE id='$e6_delivery_id'")"

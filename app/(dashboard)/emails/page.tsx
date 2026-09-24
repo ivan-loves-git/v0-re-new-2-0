@@ -28,13 +28,15 @@ export default async function EmailsPage() {
 
 
       <Tabs defaultValue="review" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 sm:w-fit sm:min-w-[650px]">
-          <TabsTrigger value="review">Review &amp; send</TabsTrigger>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="logs">History</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="send">Manual Send</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto border-b border-border/80">
+          <TabsList className="w-max border-b-0">
+            <TabsTrigger value="review">Review &amp; send</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="logs">History</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="send">Manual Send</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="review" className="mt-6"><ReviewQueue reviews={reviews} /></TabsContent>
 
