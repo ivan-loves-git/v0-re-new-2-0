@@ -28,7 +28,7 @@ const roadmapEvents: RoadmapPeriod[] = [
     period: "Sep 24, 2026",
     version: "0.9.77",
     title: "Review operational emails before sending",
-    isCompleted: false,
+    isCompleted: true,
     events: [
       { title: "A staff review step inside WAVE", type: "feature", description: "Staff can prepare the existing M&A follow-ups and NDA handoffs, check the exact recipient and wording, then explicitly approve a REAL send or cancel with a reason. An uncertain result stays visible and cannot be bypassed with a new draft." },
       { title: "Existing email controls stay in place", type: "decision", description: "Automatic emails and Manual Send are unchanged. Disabled M&A templates can still be prepared for review but cannot send until their existing switch is enabled separately." },

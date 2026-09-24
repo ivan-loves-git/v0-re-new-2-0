@@ -86,7 +86,10 @@ async function approvePreparedReview(page: Page) {
   await page.getByRole("button", { name: "Approve and send" }).click();
   await expect(page.getByText("Provider accepted the reviewed email.", { exact: false })).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Sent means accepted by the provider, not delivered or read.", { exact: false })).toBeVisible();
+  const visibleReview = page.locator("#main-content:visible");
+  const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
+    .filter({ hasText: "Provider receipt qa-allowlist-accepted." });
+  await expect(receipt).toContainText("Sent means accepted by the provider, not delivered or read.");
 }
 
 async function chooseOption(
