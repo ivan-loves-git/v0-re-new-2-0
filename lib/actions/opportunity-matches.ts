@@ -711,6 +711,11 @@ export async function markOpportunityMatchReviewed(matchId: string, opportunityI
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .in("status", ["interested", "declined"])
+    .is("reviewed_at", null)
+    .select("id")
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
 

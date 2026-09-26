@@ -26,6 +26,7 @@ interface LockedOpportunityInterestActionProps {
   lockedForAnotherRepreneur?: boolean
   readOnly?: boolean
   recommendationExpiresAt?: string | null
+  withdrawnExpectation?: { interestAt: string; updatedAt: string }
 }
 
 export function LockedOpportunityInterestAction({
@@ -35,6 +36,7 @@ export function LockedOpportunityInterestAction({
   lockedForAnotherRepreneur = false,
   readOnly = false,
   recommendationExpiresAt,
+  withdrawnExpectation,
 }: LockedOpportunityInterestActionProps) {
   const [state, formAction, pending] = useActionState(
     expressOpportunityInterestAction,
@@ -93,6 +95,10 @@ export function LockedOpportunityInterestAction({
 
           <form action={formAction} data-wave-action="express_interest" data-wave-workflow="portal_deals">
             <input type="hidden" name="opportunity_id" value={opportunityId} />
+            {withdrawnExpectation && <>
+              <input type="hidden" name="withdrawn_interest_at" value={withdrawnExpectation.interestAt} />
+              <input type="hidden" name="withdrawn_updated_at" value={withdrawnExpectation.updatedAt} />
+            </>}
             <Button type="submit" disabled={pending || responseExpired}>
               {pending ? <Spinner data-icon="inline-start" /> : <CheckCircle2 data-icon="inline-start" />}
               {pending

@@ -38,15 +38,20 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
 
   return {
     async recordInterest(input): Promise<LockedOpportunityInterestRecord> {
-      const { data, error } = await supabase.rpc(
-        "express_opportunity_interest",
-        {
+      const { data, error } = input.withdrawnExpectation
+        ? await supabase.rpc("w192_reexpress_withdrawn_interest", {
+          p_opportunity_id: input.opportunityId,
+          p_repreneur_id: input.repreneurId,
+          p_actor_id: input.actorId,
+          p_expected_withdrawn_at: input.withdrawnExpectation.interestAt,
+          p_expected_updated_at: input.withdrawnExpectation.updatedAt,
+        })
+        : await supabase.rpc("express_opportunity_interest", {
           p_opportunity_id: input.opportunityId,
           p_repreneur_id: input.repreneurId,
           p_actor_id: input.actorId,
           p_expressed_at: input.expressedAt,
-        },
-      )
+        })
 
       if (error) {
         if (isUnavailableRpcError(error)) {

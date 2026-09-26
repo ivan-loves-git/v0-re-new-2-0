@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
 import { StaffInterestRejectionControl } from "@/components/opportunities/staff-interest-rejection-control"
 import { markOpportunityMatchReviewed, validateOpportunityPursuit } from "@/lib/actions/opportunity-matches"
+import { isPendingOpportunityResponse } from "@/lib/opportunity-response-queue"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   getOpportunityMatchRecommendationLabel,
@@ -51,7 +52,7 @@ function declineReasonLabels(response: OpportunityMatchResponse) {
 }
 
 export function OpportunityResponseReviewTable({ responses }: OpportunityResponseReviewTableProps) {
-  const pendingCount = responses.filter((response) => !response.reviewed_at).length
+  const pendingCount = responses.filter(isPendingOpportunityResponse).length
 
   if (responses.length === 0) {
     return (
@@ -110,7 +111,7 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                             {response.interest_withdrawal.reason} · {response.interest_withdrawal.origin === "staff" ? "Re-New staff" : "Repreneur"} ({response.interest_withdrawal.actor})
                           </div>
                         )}
-                        {!response.reviewed_at && (
+                        {isPendingOpportunityResponse(response) && (
                           <Badge variant="outline" className="w-fit">
                             New response
                           </Badge>
@@ -172,7 +173,9 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                           />
                         )}
 
-                        {response.reviewed_at ? (
+                        {response.status === "withdrawn" ? (
+                          <span className="text-sm text-muted-foreground">Historical withdrawal; no validation pending</span>
+                        ) : response.reviewed_at ? (
                           <span className="text-sm text-muted-foreground">Reviewed {formatDateTime(response.reviewed_at)}</span>
                         ) : (
                           <form action={reviewAction}>

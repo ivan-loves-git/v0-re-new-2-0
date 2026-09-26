@@ -16,7 +16,7 @@ export function InterestWithdrawalControl({ staff, onConfirm }: {
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const [reason, setReason] = useState(staff
-    ? "The repreneur asked Re-New to withdraw this interest."
+    ? "Re-New staff is withdrawing this interest on the repreneur's behalf."
     : "I expressed interest by mistake.")
   const [message, setMessage] = useState("")
 

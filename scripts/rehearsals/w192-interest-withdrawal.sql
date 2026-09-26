@@ -9,7 +9,11 @@ VALUES
 ('97000000-0000-4000-8000-000000000073','W192-3','active','76000000-0000-4000-8000-000000000002','fixture',false,'Withdrawal C'),
 ('97000000-0000-4000-8000-000000000074','W192-4','active','76000000-0000-4000-8000-000000000002','fixture',false,'Race withdrawal first'),
 ('97000000-0000-4000-8000-000000000075','W192-5','active','76000000-0000-4000-8000-000000000002','fixture',false,'Race validation first'),
-('97000000-0000-4000-8000-000000000076','W192-6','active','76000000-0000-4000-8000-000000000002','fixture',false,'Namespace mismatch');
+('97000000-0000-4000-8000-000000000076','W192-6','active','76000000-0000-4000-8000-000000000002','fixture',false,'Namespace mismatch'),
+('97000000-0000-4000-8000-000000000077','W192-7','active','76000000-0000-4000-8000-000000000002','fixture',false,'Queued notice after validation'),
+('97000000-0000-4000-8000-000000000078','W192-8','active','76000000-0000-4000-8000-000000000002','fixture',false,'Decline notice after reconsideration'),
+('97000000-0000-4000-8000-000000000079','W192-9','active','76000000-0000-4000-8000-000000000002','fixture',false,'Expression retry withdrawal first'),
+('97000000-0000-4000-8000-000000000080','W192-10','active','76000000-0000-4000-8000-000000000002','fixture',false,'Expression retry first');
 INSERT INTO public.repreneurs(id,email,first_name,last_name,created_by,is_demo)
 VALUES('97000000-0000-4000-8000-000000000066','w192-demo@example.test','Demo','Boundary','fixture',true);
 INSERT INTO public.app_user_roles(user_id,email,role,repreneur_id)
@@ -21,7 +25,11 @@ VALUES
 ('97000000-0000-4000-8000-000000000083','97000000-0000-4000-8000-000000000073','76000000-0000-4000-8000-000000000004','proposed','w173-staff',NULL),
 ('97000000-0000-4000-8000-000000000084','97000000-0000-4000-8000-000000000074','76000000-0000-4000-8000-000000000004','proposed','w173-staff',NULL),
 ('97000000-0000-4000-8000-000000000085','97000000-0000-4000-8000-000000000075','76000000-0000-4000-8000-000000000004','proposed','w173-staff',NULL),
-('97000000-0000-4000-8000-000000000086','97000000-0000-4000-8000-000000000076','97000000-0000-4000-8000-000000000066','interested','fixture',clock_timestamp());
+('97000000-0000-4000-8000-000000000086','97000000-0000-4000-8000-000000000076','97000000-0000-4000-8000-000000000066','interested','fixture',clock_timestamp()),
+('97000000-0000-4000-8000-000000000087','97000000-0000-4000-8000-000000000077','76000000-0000-4000-8000-000000000004','proposed','w173-staff',NULL),
+('97000000-0000-4000-8000-000000000088','97000000-0000-4000-8000-000000000078','76000000-0000-4000-8000-000000000004','proposed','w173-staff',NULL),
+('97000000-0000-4000-8000-000000000089','97000000-0000-4000-8000-000000000079','76000000-0000-4000-8000-000000000004','proposed','w173-staff',NULL),
+('97000000-0000-4000-8000-000000000090','97000000-0000-4000-8000-000000000080','76000000-0000-4000-8000-000000000004','proposed','w173-staff',NULL);
 RESET session_replication_role;
 
 INSERT INTO public.repreneur_opportunity_review_state(repreneur_id,opportunity_id,is_demo,reviewed)
@@ -35,7 +43,39 @@ FROM public.opportunity_matches WHERE id IN (
   '97000000-0000-4000-8000-000000000082',
   '97000000-0000-4000-8000-000000000083',
   '97000000-0000-4000-8000-000000000084',
-  '97000000-0000-4000-8000-000000000085');
+  '97000000-0000-4000-8000-000000000085',
+  '97000000-0000-4000-8000-000000000087',
+  '97000000-0000-4000-8000-000000000089',
+  '97000000-0000-4000-8000-000000000090');
+
+DO $$ DECLARE v_match public.opportunity_matches%ROWTYPE; v_event UUID; v_claim JSONB;
+BEGIN
+  SELECT * INTO v_match FROM public.opportunity_matches WHERE id='97000000-0000-4000-8000-000000000087';
+  SELECT id INTO v_event FROM public.opportunity_interest_events
+    WHERE match_id=v_match.id AND event_type='proposed_interested';
+  PERFORM public.w173_validate_exact_interest(v_match.id,v_match.opportunity_id,'w173-staff',
+    v_match.interest_expressed_at,v_match.updated_at,'w192-queued-valid');
+  IF public.w173_interest_delivery_payload(v_event) IS NULL
+  THEN RAISE EXCEPTION 'w192_validated_queued_notice_suppressed'; END IF;
+  UPDATE public.opportunity_interest_notification_deliveries
+    SET status='failed',lease_token=NULL,lease_expires_at=NULL WHERE event_id=v_event;
+  v_claim:=public.w173_claim_interest_delivery(v_event);
+  IF v_claim->>'status'<>'claimed' OR public.w173_interest_delivery_payload(v_event) IS NULL
+  THEN RAISE EXCEPTION 'w192_validated_retry_notice_suppressed'; END IF;
+END $$;
+
+SELECT public.update_repreneur_opportunity_response(
+  '97000000-0000-4000-8000-000000000088','76000000-0000-4000-8000-000000000004','declined');
+DO $$ DECLARE v_event UUID;
+BEGIN
+  SELECT id INTO v_event FROM public.opportunity_interest_events
+    WHERE match_id='97000000-0000-4000-8000-000000000088' AND event_type='proposed_declined';
+  PERFORM public.express_opportunity_interest(
+    '97000000-0000-4000-8000-000000000078','76000000-0000-4000-8000-000000000004',
+    'w173-repreneur-interest',clock_timestamp());
+  IF public.w173_interest_delivery_payload(v_event) IS NULL
+  THEN RAISE EXCEPTION 'w192_unrelated_decline_notice_suppressed'; END IF;
+END $$;
 
 DO $$ DECLARE v_match public.opportunity_matches%ROWTYPE;
   v_event UUID; v_alert UUID; v_first JSONB; v_new public.opportunity_matches%ROWTYPE;
@@ -102,8 +142,22 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM<>'Only an interested match can start a pursuit.' THEN RAISE; END IF;
   END;
-  PERFORM public.express_opportunity_interest(v_match.opportunity_id,v_match.repreneur_id,
-    'w173-repreneur-interest',v_match.interest_expressed_at);
+  BEGIN
+    PERFORM public.express_opportunity_interest(v_match.opportunity_id,v_match.repreneur_id,
+      'w173-repreneur-interest',v_match.interest_expressed_at);
+    RAISE EXCEPTION 'w192_old_expression_retry_reactivated';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM<>'interest_not_available' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM public.w192_reexpress_withdrawn_interest(v_match.opportunity_id,v_match.repreneur_id,
+      'w173-repreneur-interest',v_match.interest_expressed_at,v_match.updated_at);
+    RAISE EXCEPTION 'w192_stale_withdrawn_page_reactivated';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM<>'interest_not_available' THEN RAISE; END IF;
+  END;
+  PERFORM public.w192_reexpress_withdrawn_interest(v_match.opportunity_id,v_match.repreneur_id,
+    'w173-repreneur-interest',v_new.interest_expressed_at,v_new.updated_at);
   SELECT * INTO v_new FROM public.opportunity_matches WHERE id=v_match.id;
   IF v_new.status<>'interested' OR v_new.interest_expressed_at<=v_match.interest_expressed_at
     OR date_trunc('milliseconds',v_new.interest_expressed_at)<=date_trunc('milliseconds',v_match.interest_expressed_at)

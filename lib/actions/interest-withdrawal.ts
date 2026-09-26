@@ -25,9 +25,16 @@ function refresh(matchId: string, opportunityId: string, repreneurId: string) {
 }
 
 function withdrawalFailure(message?: string): InterestWithdrawalResult {
-  return { ok: false, message: message?.includes("withdrawal_requires_staff_drop")
-    ? "Re-New has already validated this pursuit. Contact the team to use the normal Drop process."
-    : "This exact interest has changed. Refresh the page before taking action." }
+  if (message?.includes("withdrawal_requires_staff_drop")) {
+    return { ok: false, message: "Re-New has already validated this pursuit. Contact the team to use the normal Drop process." }
+  }
+  if (message?.includes("withdrawal_interest_stale") || message?.includes("staff_portal_selection_changed")) {
+    return { ok: false, message: "This exact interest or selected workspace has changed. Refresh the page before taking action." }
+  }
+  if (message?.includes("withdrawal_actor_denied")) {
+    return { ok: false, message: "This account cannot withdraw that repreneur's interest." }
+  }
+  return { ok: false, message: "The withdrawal could not be confirmed right now. Please try again." }
 }
 
 export async function withdrawMyOpportunityInterest(

@@ -223,6 +223,8 @@ export function RepreneurOpportunityDetail({
               lockedForAnotherRepreneur={lockedForAnotherRepreneur}
               readOnly={readOnly}
               recommendationExpiresAt={opportunity.match_status === "withdrawn" ? null : opportunity.recommendation_expires_at}
+              withdrawnExpectation={opportunity.match_status === "withdrawn" && opportunity.interest_expressed_at
+                ? { interestAt: opportunity.interest_expressed_at, updatedAt: opportunity.updated_at } : undefined}
             />
           ) : null}
 

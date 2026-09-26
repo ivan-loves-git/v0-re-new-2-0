@@ -99,6 +99,18 @@ describe("locked opportunity interest", () => {
     expect(store.markNotificationSent).not.toHaveBeenCalled()
   })
 
+  it("carries the exact withdrawn page version for a genuine later interest", async () => {
+    const store = createStore({ matchId: "match-1", expressedAt: NOW,
+      notificationSentAt: null, notificationSuppressed: true })
+    const expectation = { interestAt: "2026-07-14T12:00:00.000Z", updatedAt: "2026-07-14T12:01:00.000Z" }
+    await expressOpportunityInterest({ opportunityId: DETAILS.opportunityId,
+      repreneurId: DETAILS.repreneurId, actorId: "user-1", now: NOW,
+      withdrawnExpectation: expectation }, { store, notifier: { send: vi.fn() } })
+    expect(store.recordInterest).toHaveBeenCalledWith(expect.objectContaining({
+      withdrawnExpectation: expectation,
+    }))
+  })
+
   it("keeps the signal retryable when the staff email fails", async () => {
     const store = createStore({
       matchId: "match-1",

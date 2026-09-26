@@ -110,12 +110,12 @@ BEGIN
     IF v_match.interest_expressed_at IS NULL THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
     RETURN QUERY SELECT v_match.id,v_match.interest_expressed_at,v_match.interest_notification_sent_at; RETURN;
   END IF;
+  IF v_has_match AND v_match.status='withdrawn'
+    AND current_setting('wave.w192_reinterest_match',true) IS DISTINCT FROM v_match.id::text
+  THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
   v_new_token:=GREATEST(clock_timestamp(),
     COALESCE(date_trunc('milliseconds',v_match.interest_expressed_at),'-infinity'::timestamptz)+interval '1 millisecond');
   IF v_has_match THEN
-    IF v_match.status='withdrawn' THEN
-      PERFORM set_config('wave.w192_reinterest_match',v_match.id::text,true);
-    END IF;
     UPDATE public.opportunity_matches SET status='interested',decline_reason_categories='{}',decline_reason_text=NULL,
       pursuit_stage=NULL,pursuit_stage_notes=NULL,pursuit_stage_updated_by=NULL,pursuit_stage_updated_at=NULL,
       reviewed_by=NULL,reviewed_at=NULL,interest_expressed_at=v_new_token,interest_notification_sent_at=NULL
@@ -125,6 +125,33 @@ BEGIN
     VALUES(p_opportunity_id,p_repreneur_id,'interested',p_actor_id,v_new_token) RETURNING * INTO v_match;
   END IF;
   RETURN QUERY SELECT v_match.id,v_match.interest_expressed_at,v_match.interest_notification_sent_at;
+END $$;
+
+-- Only a fresh, explicitly submitted Withdrawn page may re-express interest.
+-- Ordinary retries of the former interest call have no token/version proof and
+-- cannot silently turn a confirmed withdrawal back into a request.
+CREATE FUNCTION public.w192_reexpress_withdrawn_interest(
+  p_opportunity_id UUID,p_repreneur_id UUID,p_actor_id TEXT,
+  p_expected_withdrawn_at TIMESTAMPTZ,p_expected_updated_at TIMESTAMPTZ
+) RETURNS TABLE(match_id UUID,expressed_at TIMESTAMPTZ,notification_sent_at TIMESTAMPTZ)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
+DECLARE v_match public.opportunity_matches%ROWTYPE; v_demo BOOLEAN;
+BEGIN
+  SELECT is_demo INTO v_demo FROM public.repreneurs WHERE id=p_repreneur_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
+  PERFORM 1 FROM public.opportunities WHERE id=p_opportunity_id AND status='active'
+    AND is_demo=v_demo FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
+  SELECT * INTO v_match FROM public.opportunity_matches
+    WHERE opportunity_id=p_opportunity_id AND repreneur_id=p_repreneur_id FOR UPDATE;
+  IF v_match.id IS NULL OR v_match.status<>'withdrawn'
+    OR v_match.interest_expressed_at IS DISTINCT FROM p_expected_withdrawn_at
+    OR v_match.updated_at IS DISTINCT FROM p_expected_updated_at
+    OR NOT public.w164_match_has_same_namespace(v_match.id)
+  THEN RAISE EXCEPTION 'interest_not_available' USING ERRCODE='P0001'; END IF;
+  PERFORM set_config('wave.w192_reinterest_match',v_match.id::text,true);
+  RETURN QUERY SELECT * FROM public.express_opportunity_interest(
+    p_opportunity_id,p_repreneur_id,p_actor_id,clock_timestamp());
 END $$;
 
 -- A withdrawn request is ordinary inventory, not a still-open response to
@@ -222,9 +249,11 @@ BEGIN
     OR EXISTS(SELECT 1 FROM public.opportunity_pursuit_confidential_grants g
       WHERE g.match_id=p_match_id AND g.revoked_at IS NULL)
   THEN RAISE EXCEPTION 'withdrawal_interest_stale' USING ERRCODE='P0001'; END IF;
+  -- The canonical match is the arbitration lock shared with validation.
+  -- Do not wait on the opportunity row here: expression owns that row before
+  -- this match, and a second lock would create an avoidable lock-order cycle.
   PERFORM 1 FROM public.opportunities o WHERE o.id=p_opportunity_id
-    AND o.status='active' AND o.is_demo=(SELECT is_demo FROM public.repreneurs WHERE id=p_repreneur_id)
-    FOR UPDATE;
+    AND o.status='active' AND o.is_demo=(SELECT is_demo FROM public.repreneurs WHERE id=p_repreneur_id);
   IF NOT FOUND THEN RAISE EXCEPTION 'withdrawal_interest_stale' USING ERRCODE='P0001'; END IF;
 
   PERFORM set_config('wave.w192_withdraw_match',p_match_id::text,true);
@@ -344,10 +373,11 @@ BEGIN
     AND (e.event_type IN ('proposed_interested','proposed_declined') OR (
       public.w175_assignment_recipient_email(r.email) IS NOT NULL
       AND NOT public.ma_contact_email_address_is_suppressed(r.email)))
-    AND ((e.event_type='proposed_interested' AND m.status='interested'
-        AND e.interest_expressed_at=m.interest_expressed_at)
-      OR (e.event_type='proposed_declined' AND m.status='declined'
-        AND e.interest_expressed_at IS NOT DISTINCT FROM m.interest_expressed_at)
+    AND ((e.event_type='proposed_interested' AND NOT EXISTS(
+        SELECT 1 FROM public.opportunity_interest_events withdrawn
+        WHERE withdrawn.match_id=e.match_id AND withdrawn.event_type='withdrawn'
+          AND withdrawn.interest_expressed_at=e.interest_expressed_at))
+      OR e.event_type='proposed_declined'
       OR (e.event_type='validated' AND m.status='active_pursuit'
         AND e.validation_evidence_id=public.journey_current_cycle_event(m.id))
       OR (e.event_type='rejected' AND m.status='interested'
@@ -448,12 +478,14 @@ END $$;
 REVOKE ALL ON FUNCTION public.w192_guard_withdrawn_match_status(),
   public.w192_guard_interest_event_history(),
   public.w192_withdraw_exact_interest(UUID,UUID,UUID,TEXT,TEXT,TIMESTAMPTZ,TIMESTAMPTZ,TEXT,UUID,UUID),
+  public.w192_reexpress_withdrawn_interest(UUID,UUID,TEXT,TIMESTAMPTZ,TIMESTAMPTZ),
   public.w192_begin_direct_interest_notice(UUID,TIMESTAMPTZ),
   public.w192_complete_direct_interest_notice(UUID,TIMESTAMPTZ,TEXT,TEXT),
   public.w192_staff_withdrawals(TEXT,UUID[])
   FROM PUBLIC,anon,authenticated,service_role;
 GRANT EXECUTE ON FUNCTION
   public.w192_withdraw_exact_interest(UUID,UUID,UUID,TEXT,TEXT,TIMESTAMPTZ,TIMESTAMPTZ,TEXT,UUID,UUID),
+  public.w192_reexpress_withdrawn_interest(UUID,UUID,TEXT,TIMESTAMPTZ,TIMESTAMPTZ),
   public.w192_begin_direct_interest_notice(UUID,TIMESTAMPTZ),
   public.w192_complete_direct_interest_notice(UUID,TIMESTAMPTZ,TEXT,TEXT),
   public.w192_staff_withdrawals(TEXT,UUID[])

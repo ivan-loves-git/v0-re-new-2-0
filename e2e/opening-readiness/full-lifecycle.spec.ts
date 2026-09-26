@@ -298,7 +298,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
   page,
   browser,
 }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(420_000);
   const manifest = JSON.parse(
     await readFile(join(inputDirectory, "manifest.json"), "utf8"),
   ) as InputManifest;
@@ -333,6 +333,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
   let realContext: BrowserContext | null = null;
   let realNonOwnerContext: BrowserContext | null = null;
   let demoContext: BrowserContext | null = null;
+  let demoMobileContext: BrowserContext | null = null;
   let anonymousContext: BrowserContext | null = null;
 
   try {
@@ -1355,6 +1356,122 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       count: 2,
     });
 
+    // #192 runs only on the owned synthetic DEMO pair. The protected fixture
+    // has no provider credential; it does not alter the REAL lifecycle below.
+    await demoPage.goto("/portal/deals/" + mobileOpportunityId);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => {
+      const { rows } = await client.query<{ id: string; status: string }>(
+        "SELECT id,status FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2",
+        [mobileOpportunityId, fixture.ids.demoRepreneur],
+      );
+      return rows[0] ?? null;
+    }, { timeout: 30_000 }).toMatchObject({ status: "interested" });
+    const initialInterest = await one<{ id: string; interest_expressed_at: string }>(client,
+      "SELECT id,interest_expressed_at::text FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2",
+      [mobileOpportunityId, fixture.ids.demoRepreneur]);
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Withdraw interest" }).click();
+    const desktopWithdrawal = demoPage.getByRole("alertdialog");
+    await expect(desktopWithdrawal).toContainText("It does not erase the record or recall an email already sent.");
+    await desktopWithdrawal.getByRole("button", { name: "Keep interest" }).click();
+    expect((await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status).toBe("interested");
+    await demoPage.getByRole("button", { name: "Withdraw interest" }).click();
+    await demoPage.getByRole("alertdialog").getByRole("button", { name: "Confirm withdrawal" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("withdrawn");
+    await demoPage.goto("/portal/deals");
+    await expect(demoPage.locator('section[aria-labelledby="deal-section-in-progress"]'))
+      .not.toContainText(mobileTitle);
+    await expect(demoPage.locator('section[aria-labelledby="deal-section-live-opportunities"]'))
+      .toContainText(mobileTitle);
+    const firstWithdrawal = await one<{ reviewed_at: string | null; reason: string }>(client,
+      `SELECT m.reviewed_at::text,e.internal_reason AS reason FROM public.opportunity_matches m
+       JOIN public.opportunity_interest_events e ON e.match_id=m.id AND e.event_type='withdrawn'
+       WHERE m.id=$1 AND e.interest_expressed_at=$2`,
+      [initialInterest.id, initialInterest.interest_expressed_at]);
+    expect(firstWithdrawal.reviewed_at).toBeNull();
+    expect(firstWithdrawal.reason).toBe("I expressed interest by mistake.");
+    await page.goto("/opportunities/" + mobileOpportunityId + "?tab=recommendations");
+    const withdrawnStaffRow = page.getByRole("row")
+      .filter({ hasText: fixture.repreneurs.demo.email });
+    await expect(withdrawnStaffRow).toContainText("Withdrawn");
+    await expect(withdrawnStaffRow.getByRole("button", { name: "Validate" })).toHaveCount(0);
+    await record({ step: "owner desktop withdrawal requires explicit confirmation", surface: "desktop",
+      result: "cancel preserved interest; confirm retained unreviewed history without pending validation and moved deal out of In Progress" });
+
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => one<{ status: string; interest_expressed_at: string }>(client,
+      "SELECT status,interest_expressed_at::text FROM public.opportunity_matches WHERE id=$1", [initialInterest.id]),
+    { timeout: 30_000 }).toMatchObject({ status: "interested" });
+    const secondToken = (await one<{ interest_expressed_at: string }>(client,
+      "SELECT interest_expressed_at::text FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).interest_expressed_at;
+    expect(Date.parse(secondToken)).toBeGreaterThan(Date.parse(initialInterest.interest_expressed_at));
+    demoMobileContext = await browser.newContext({ ...devices["iPhone 13"], baseURL,
+      storageState: await demoContext.storageState() });
+    const demoMobilePage = await demoMobileContext.newPage();
+    await demoMobilePage.goto("/portal/deals/" + initialInterest.id);
+    await demoMobilePage.getByRole("button", { name: "Withdraw interest" }).click();
+    const mobileWithdrawal = demoMobilePage.getByRole("alertdialog");
+    const mobileBounds = await mobileWithdrawal.boundingBox();
+    expect(mobileBounds && mobileBounds.x + mobileBounds.width).toBeLessThanOrEqual(390);
+    await mobileWithdrawal.getByRole("button", { name: "Keep interest" }).click();
+    expect((await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status).toBe("interested");
+    await demoMobilePage.getByRole("button", { name: "Withdraw interest" }).click();
+    await demoMobilePage.getByRole("alertdialog").getByRole("button", { name: "Confirm withdrawal" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("withdrawn");
+    await record({ step: "owner mobile withdrawal requires explicit confirmation", surface: "mobile",
+      result: "cancel preserved fresh interest; confirm retained a distinct withdrawn token" });
+
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("interested");
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.demoRepreneur
+      + "&dealId=" + mobileOpportunityId);
+    await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    await page.getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
+    await page.getByRole("button", { name: "Withdraw interest" }).click();
+    await expect(page.getByRole("alertdialog").locator("textarea"))
+      .toHaveValue("Re-New staff is withdrawing this interest on the repreneur's behalf.");
+    await page.getByRole("alertdialog").getByRole("button", { name: "Confirm withdrawal" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("withdrawn");
+    const staffWithdrawal = await one<{ actor: string; origin: string }>(client,
+      `SELECT actor,withdrawal_origin AS origin FROM public.opportunity_interest_events
+       WHERE match_id=$1 AND event_type='withdrawn' ORDER BY occurred_at DESC LIMIT 1`,
+      [initialInterest.id]);
+    expect(staffWithdrawal).toEqual({ actor: fixture.authIds.staffUser, origin: "staff" });
+    await record({ step: "staff withdrew exact interest in selected DEMO workspace", surface: "database",
+      result: "selected-owner action retained actual staff actor and neutral on-behalf reason" });
+
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("interested");
+    const finalInterest = await one<{ interest_expressed_at: string }>(client,
+      "SELECT interest_expressed_at::text FROM public.opportunity_matches WHERE id=$1", [initialInterest.id]);
+    expect(Date.parse(finalInterest.interest_expressed_at)).toBeGreaterThan(Date.parse(secondToken));
+    await page.goto("/opportunities/" + mobileOpportunityId + "?tab=recommendations");
+    const demoMatchRow = page.getByRole("row").filter({ hasText: fixture.repreneurs.demo.email });
+    await demoMatchRow.getByRole("button", { name: "Validate" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("active_pursuit");
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await expect(demoPage.getByRole("button", { name: "Withdraw interest" })).toHaveCount(0);
+    await record({ step: "fresh DEMO interest needs fresh validation", surface: "database",
+      result: "new token validated once; prior withdrawal evidence kept; no post-validation withdrawal action" });
+
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await page.getByRole("button", { name: "Record Continue" }).click();
     await expect(page.locator("#pursuit-complete-reason")).toBeVisible();
@@ -1501,6 +1618,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       realContext?.close(),
       realNonOwnerContext?.close(),
       demoContext?.close(),
+      demoMobileContext?.close(),
       anonymousContext?.close(),
     ]);
     await client.end();

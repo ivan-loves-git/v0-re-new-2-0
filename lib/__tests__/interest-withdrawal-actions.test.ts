@@ -81,6 +81,17 @@ describe("confirmed exact-interest withdrawal actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled()
   })
 
+  it("distinguishes a known stale request from an unknown persistence failure", async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: null, error: { message: "withdrawal_interest_stale" } })
+      .mockResolvedValueOnce({ data: null, error: { message: "connection unavailable" } })
+    const stale = await withdrawMyOpportunityInterest(target.matchId, target.opportunityId,
+      target.interestAt, target.updatedAt, "Selected by mistake")
+    const unavailable = await withdrawMyOpportunityInterest(target.matchId, target.opportunityId,
+      target.interestAt, target.updatedAt, "Selected by mistake")
+    expect(stale).toMatchObject({ ok: false, message: expect.stringContaining("has changed") })
+    expect(unavailable).toEqual({ ok: false, message: "The withdrawal could not be confirmed right now. Please try again." })
+  })
+
   it("pauses new owner and staff withdrawals without touching stored history", async () => {
     vi.stubEnv("INTEREST_WITHDRAWAL_DISABLED", "1")
     await expect(withdrawMyOpportunityInterest(target.matchId, target.opportunityId,

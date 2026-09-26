@@ -45,6 +45,11 @@ export async function expressOpportunityInterestAction(
   }
 
   const now = new Date().toISOString()
+  const withdrawnAt = formData.get("withdrawn_interest_at")
+  const withdrawnVersion = formData.get("withdrawn_updated_at")
+  const withdrawnExpectation = typeof withdrawnAt === "string" && typeof withdrawnVersion === "string"
+    && Number.isFinite(Date.parse(withdrawnAt)) && Number.isFinite(Date.parse(withdrawnVersion))
+    ? { interestAt: withdrawnAt, updatedAt: withdrawnVersion } : undefined
 
   try {
     const outcome = await expressOpportunityInterest(
@@ -53,6 +58,7 @@ export async function expressOpportunityInterestAction(
         repreneurId: access.repreneurId,
         actorId: access.user.id,
         now,
+        withdrawnExpectation,
       },
       {
         store: createLockedOpportunityInterestStore(),

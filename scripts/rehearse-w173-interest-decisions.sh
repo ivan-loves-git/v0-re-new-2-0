@@ -245,4 +245,47 @@ if [[ "$validation_race_state" != "active_pursuit" ]]; then
   echo "W192 validation-first race left $validation_race_state" >&2
   exit 1
 fi
+IFS='|' read -r expression_token expression_version <<< "$(${psql[@]} -AtF '|' -c "
+  SELECT interest_expressed_at,updated_at FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000089'")"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.w192_withdraw_exact_interest(
+    '97000000-0000-4000-8000-000000000089','97000000-0000-4000-8000-000000000079',
+    '76000000-0000-4000-8000-000000000004','w173-repreneur-interest','interested@example.test',
+    '$expression_token','$expression_version','Withdraw before old expression retry');
+  SELECT pg_sleep(1); COMMIT;" >/dev/null &
+withdraw_expression_pid=$!
+sleep 0.2
+set +e
+old_expression_loser="$(${psql[@]} -At -c "SELECT public.express_opportunity_interest(
+  '97000000-0000-4000-8000-000000000079','76000000-0000-4000-8000-000000000004',
+  'w173-repreneur-interest','$expression_token');" 2>&1)"
+old_expression_status=$?
+set -e
+wait "$withdraw_expression_pid"
+if [[ "$old_expression_status" -eq 0 || "$old_expression_loser" != *interest_not_available* ]]; then
+  echo "W192 withdrawal-first old expression retry was accepted: $old_expression_loser" >&2
+  exit 1
+fi
+IFS='|' read -r expression_token expression_version <<< "$(${psql[@]} -AtF '|' -c "
+  SELECT interest_expressed_at,updated_at FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000090'")"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.express_opportunity_interest(
+    '97000000-0000-4000-8000-000000000080','76000000-0000-4000-8000-000000000004',
+    'w173-repreneur-interest','$expression_token');
+  SELECT pg_sleep(1); COMMIT;" >/dev/null &
+expression_winner_pid=$!
+sleep 0.2
+"${psql[@]}" -At -c "SELECT public.w192_withdraw_exact_interest(
+  '97000000-0000-4000-8000-000000000090','97000000-0000-4000-8000-000000000080',
+  '76000000-0000-4000-8000-000000000004','w173-repreneur-interest','interested@example.test',
+  '$expression_token','$expression_version','Withdraw after old expression retry');" >/dev/null
+wait "$expression_winner_pid"
+expression_race_state="$(${psql[@]} -At -c "SELECT status FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000090'")"
+if [[ "$expression_race_state" != "withdrawn" ]]; then
+  echo "W192 expression-first race left $expression_race_state" >&2
+  exit 1
+fi
 echo "W173/W196/W192 exact-interest and attributed assistance rehearsal passed"
