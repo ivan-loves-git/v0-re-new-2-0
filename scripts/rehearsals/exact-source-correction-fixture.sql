@@ -6,6 +6,13 @@ CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE ROLE service_role NOLOGIN;
 CREATE ROLE postgres NOLOGIN;
+CREATE TYPE public.opportunity_nda_artifact_role AS ENUM
+  ('blank_template','renew_signed_copy','repreneur_signed_copy');
+CREATE TYPE public.opportunity_pursuit_evidence_type AS ENUM
+  ('mutual_interest_validated','qualification_requested','intermediary_qualified',
+   'template_validated','gate_1_passed','renew_signed_copy_validated',
+   'repreneur_signed_copy_validated','gate_2_passed','manual_package_dispatched',
+   'confidential_access_granted','access_revoked','continued','dropped','reopened','completed');
 
 CREATE TABLE public."user" (id TEXT PRIMARY KEY, email TEXT NOT NULL);
 CREATE TABLE public.app_user_roles (user_id TEXT, email TEXT, role TEXT NOT NULL);
@@ -28,14 +35,27 @@ CREATE TABLE public.opportunity_ma_contacts (id UUID PRIMARY KEY DEFAULT GEN_RAN
   UNIQUE(opportunity_id,affiliation_id));
 CREATE UNIQUE INDEX one_current_primary ON public.opportunity_ma_contacts(opportunity_id) WHERE is_active AND is_primary;
 
-CREATE TABLE public.opportunity_matches (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), status TEXT NOT NULL);
+CREATE TABLE public.repreneurs (id UUID PRIMARY KEY, is_demo BOOLEAN NOT NULL DEFAULT FALSE);
+CREATE TABLE public.opportunity_matches (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id),
+  repreneur_id UUID NOT NULL REFERENCES public.repreneurs(id), status TEXT NOT NULL,
+  nda_status TEXT, nda_document_id UUID);
 CREATE TABLE public.opportunity_pursuit_events (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id));
 CREATE TABLE public.opportunity_pursuit_evidence (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id),
-  match_id UUID REFERENCES public.opportunity_matches(id), event_type TEXT NOT NULL);
-CREATE TABLE public.opportunity_pursuit_confidential_grants (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), revoked_at TIMESTAMPTZ);
+  match_id UUID REFERENCES public.opportunity_matches(id), event_type public.opportunity_pursuit_evidence_type NOT NULL,
+  nda_artifact_id UUID, recorded_at TIMESTAMPTZ NOT NULL, metadata JSONB NOT NULL DEFAULT '{}'::JSONB);
+CREATE TABLE public.wave_journey_settings (singleton BOOLEAN PRIMARY KEY, enabled BOOLEAN NOT NULL);
+CREATE TABLE public.opportunity_pursuit_confidential_grants (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id),
+  match_id UUID NOT NULL REFERENCES public.opportunity_matches(id), information_memo_document_id UUID,
+  cycle_started_evidence_id UUID, gate_2_evidence_id UUID, dispatch_evidence_id UUID,
+  nda_expires_at TIMESTAMPTZ, revoked_at TIMESTAMPTZ);
 CREATE TABLE public.opportunity_pursuit_handoff_deliveries (id UUID PRIMARY KEY, match_id UUID NOT NULL REFERENCES public.opportunity_matches(id));
-CREATE TABLE public.opportunity_documents (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), title TEXT);
-CREATE TABLE public.opportunity_nda_artifacts (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), artifact_role TEXT);
+CREATE TABLE public.opportunity_documents (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), title TEXT,
+  document_type TEXT NOT NULL DEFAULT 'other', recipient_match_id UUID, recipient_repreneur_id UUID,
+  visibility TEXT NOT NULL DEFAULT 'staff_only', external_url TEXT, storage_bucket TEXT, storage_path TEXT,
+  file_name TEXT, mime_type TEXT, size_bytes BIGINT);
+CREATE TABLE public.opportunity_nda_artifacts (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id),
+  match_id UUID REFERENCES public.opportunity_matches(id), artifact_role public.opportunity_nda_artifact_role NOT NULL,
+  version_number INTEGER NOT NULL, document_id UUID REFERENCES public.opportunity_documents(id));
 CREATE TABLE public.ma_source_email_send_reservations (opportunity_id UUID PRIMARY KEY REFERENCES public.opportunities(id),
   reservation_token UUID NOT NULL, expires_at TIMESTAMPTZ NOT NULL);
 CREATE TABLE public.staff_email_reviews (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), state TEXT NOT NULL);
@@ -45,13 +65,6 @@ CREATE TABLE public.opportunity_source_contacts (opportunity_id UUID NOT NULL RE
 CREATE TABLE public.ma_source_interactions (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id), status TEXT NOT NULL DEFAULT 'sent');
 CREATE TABLE public.opportunity_memo_notifications (id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id));
 CREATE TABLE public.recipient_im_cleanup (document_id UUID PRIMARY KEY, opportunity_id UUID NOT NULL REFERENCES public.opportunities(id));
-
-CREATE FUNCTION public.journey_current_gate_1_event(p_match_id UUID) RETURNS UUID
-LANGUAGE sql STABLE AS $$ SELECT id FROM public.opportunity_pursuit_evidence
-  WHERE match_id=p_match_id AND event_type='gate_1_passed' ORDER BY id DESC LIMIT 1 $$;
-CREATE FUNCTION public.journey_current_gate_2_event(p_match_id UUID) RETURNS UUID
-LANGUAGE sql STABLE AS $$ SELECT id FROM public.opportunity_pursuit_evidence
-  WHERE match_id=p_match_id AND event_type='gate_2_passed' ORDER BY id DESC LIMIT 1 $$;
 
 INSERT INTO public."user" VALUES ('staff-191','staff-191@example.test'),('other-191','other-191@example.test'),('rep-191','rep-191@example.test');
 INSERT INTO public.app_user_roles VALUES ('staff-191','staff-191@example.test','staff'),('other-191','other-191@example.test','staff'),('rep-191','rep-191@example.test','repreneur');
@@ -82,6 +95,26 @@ INSERT INTO public.opportunity_ma_contacts(id,opportunity_id,affiliation_id,is_p
   ('19100000-0000-4000-8000-000000000052','19100000-0000-4000-8000-000000000042','19100000-0000-4000-8000-000000000031',TRUE,'staff-191'),
   ('19100000-0000-4000-8000-000000000053','19100000-0000-4000-8000-000000000043','19100000-0000-4000-8000-000000000031',TRUE,'staff-191'),
   ('19100000-0000-4000-8000-000000000054','19100000-0000-4000-8000-000000000041','19100000-0000-4000-8000-000000000034',FALSE,'staff-191');
-INSERT INTO public.opportunity_matches VALUES ('19100000-0000-4000-8000-000000000061','19100000-0000-4000-8000-000000000042','active_pursuit');
-INSERT INTO public.opportunity_pursuit_evidence VALUES ('19100000-0000-4000-8000-000000000062','19100000-0000-4000-8000-000000000042','19100000-0000-4000-8000-000000000061','qualification_requested');
-INSERT INTO public.opportunity_documents VALUES ('19100000-0000-4000-8000-000000000071','19100000-0000-4000-8000-000000000042','Retained document');
+INSERT INTO public.repreneurs VALUES ('19100000-0000-4000-8000-000000000081',FALSE);
+INSERT INTO public.wave_journey_settings VALUES (TRUE,TRUE);
+INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,nda_status,nda_document_id)
+VALUES ('19100000-0000-4000-8000-000000000061','19100000-0000-4000-8000-000000000042',
+  '19100000-0000-4000-8000-000000000081','active_pursuit','signed','19100000-0000-4000-8000-000000000071');
+-- The old generic qualification predates the current pursuit cycle. Legacy
+-- match NDA fields and a retained document do not turn it into current gates.
+INSERT INTO public.opportunity_pursuit_evidence(id,opportunity_id,match_id,event_type,recorded_at) VALUES
+  ('19100000-0000-4000-8000-000000000062','19100000-0000-4000-8000-000000000042',
+   '19100000-0000-4000-8000-000000000061','qualification_requested','2026-09-01T12:00:00Z'),
+  ('19100000-0000-4000-8000-000000000063','19100000-0000-4000-8000-000000000042',
+   '19100000-0000-4000-8000-000000000061','mutual_interest_validated','2026-09-02T12:00:00Z');
+INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type) VALUES
+  ('19100000-0000-4000-8000-000000000071','19100000-0000-4000-8000-000000000042','Retained document','deal_book');
+INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,visibility,storage_bucket,
+  storage_path,file_name,mime_type,size_bytes) VALUES
+  ('19100000-0000-4000-8000-000000000072','19100000-0000-4000-8000-000000000042',
+   'Retained blank NDA','nda','staff_only','opportunity-documents',
+   '19100000-0000-4000-8000-000000000042/nda-artifacts/blank_template/synthetic.pdf',
+   'synthetic.pdf','application/pdf',128);
+INSERT INTO public.opportunity_nda_artifacts(id,opportunity_id,match_id,artifact_role,version_number,document_id)
+VALUES ('19100000-0000-4000-8000-000000000073','19100000-0000-4000-8000-000000000042',
+  NULL,'blank_template',1,'19100000-0000-4000-8000-000000000072');

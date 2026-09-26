@@ -38,6 +38,15 @@ function_from assert_opportunity_office_context "$repo_root/scripts/076_ma_offic
 function_from enforce_ma_interaction_office_context "$repo_root/scripts/080_ma_interaction_persistence.sql"
 function_from guard_ma_interaction_mutation "$repo_root/scripts/080_ma_interaction_persistence.sql"
 function_from guard_ma_interaction_opportunity_source_office "$repo_root/scripts/080_ma_interaction_persistence.sql"
+function_from wave_journey_is_enabled "$repo_root/scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"
+function_from journey_current_cycle_event "$repo_root/scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"
+function_from journey_current_template_id "$repo_root/scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"
+function_from journey_current_gate_1_event "$repo_root/scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"
+function_from journey_current_signed_validation_event "$repo_root/scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"
+function_from journey_current_gate_2_event "$repo_root/scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"
+function_from journey_current_dispatch_event "$repo_root/scripts/088_canonical_pursuit_evidence_and_confidentiality.sql"
+function_from journey_repreneur_authorized_template "$repo_root/scripts/112_demo_opportunity_quarantine.sql"
+function_from journey_repreneur_can_access_confidential "$repo_root/scripts/124_recipient_information_memos.sql"
 "${psql[@]}" >/dev/null <<'SQL'
 CREATE TRIGGER capture_opportunity_ma_contact_snapshot BEFORE INSERT ON public.opportunity_ma_contacts
   FOR EACH ROW EXECUTE FUNCTION public.capture_opportunity_ma_contact_snapshot();

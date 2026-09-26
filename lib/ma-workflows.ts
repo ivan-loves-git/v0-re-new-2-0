@@ -636,32 +636,10 @@ async function loadOpportunityContext(opportunityId: string) {
   return { opportunity, variables, activeMatch, contacts, defaultContact }
 }
 
-export async function getMaOpportunityWorkflow(
+async function readMaOpportunityInteractionHistory(
+  supabase: ReturnType<typeof createAdminClient>,
   opportunityId: string,
-): Promise<MaOpportunityWorkflow> {
-  await requireStaffAccess()
-  const supabase = createAdminClient()
-  const { opportunity, variables, activeMatch, contacts, defaultContact } =
-    await loadOpportunityContext(opportunityId)
-
-  const drafts = await Promise.all(
-    MA_TEMPLATE_KEYS.map(async (templateKey) => {
-      const metadata = TEMPLATE_METADATA[templateKey]
-      const subject = await getTemplateSubject(templateKey, metadata.name)
-      const body =
-        (await getTemplateBody(templateKey)) ||
-        MA_TEMPLATE_DEFAULT_BODIES[templateKey] ||
-        ""
-      return {
-        templateKey,
-        name: metadata.name,
-        description: metadata.description,
-        subject: substituteTemplateVariables(subject, variables),
-        body: substituteTemplateVariables(body, variables),
-      }
-    }),
-  )
-
+): Promise<MaSourceInteraction[]> {
   // Keep opportunity-centric history complete after an audited office change.
   // PostgREST caps one response, so fetch ordered pages rather than showing
   // only the latest eight and silently hiding retained old-office evidence.
@@ -694,7 +672,7 @@ export async function getMaOpportunityWorkflow(
     officeName: office.name,
     firmName: firmNames.get(office.firm_id) ?? null,
   }]))
-  const interactions = interactionRows.map(
+  return interactionRows.map(
     (interaction): MaSourceInteraction => ({
       id: interaction.id,
       opportunity_id: interaction.opportunity_id ?? opportunityId,
@@ -715,6 +693,44 @@ export async function getMaOpportunityWorkflow(
       created_at: interaction.created_at,
     }),
   )
+}
+
+// A separate, guarded entrypoint lets acceptance tests exercise the exact
+// paged read and office joins used by the staff workflow, not prefilled UI data.
+export async function getMaOpportunityInteractionHistory(
+  opportunityId: string,
+): Promise<MaSourceInteraction[]> {
+  await requireStaffAccess()
+  return readMaOpportunityInteractionHistory(createAdminClient(), opportunityId)
+}
+
+export async function getMaOpportunityWorkflow(
+  opportunityId: string,
+): Promise<MaOpportunityWorkflow> {
+  await requireStaffAccess()
+  const supabase = createAdminClient()
+  const { opportunity, variables, activeMatch, contacts, defaultContact } =
+    await loadOpportunityContext(opportunityId)
+
+  const drafts = await Promise.all(
+    MA_TEMPLATE_KEYS.map(async (templateKey) => {
+      const metadata = TEMPLATE_METADATA[templateKey]
+      const subject = await getTemplateSubject(templateKey, metadata.name)
+      const body =
+        (await getTemplateBody(templateKey)) ||
+        MA_TEMPLATE_DEFAULT_BODIES[templateKey] ||
+        ""
+      return {
+        templateKey,
+        name: metadata.name,
+        description: metadata.description,
+        subject: substituteTemplateVariables(subject, variables),
+        body: substituteTemplateVariables(body, variables),
+      }
+    }),
+  )
+
+  const interactions = await readMaOpportunityInteractionHistory(supabase, opportunityId)
 
   // Legacy NDA and visibility metadata no longer establishes confidential
   // access. The canonical pursuit projection is the only disclosure authority.

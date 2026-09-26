@@ -14,11 +14,39 @@ BEGIN
 END;
 $$;
 
+-- These are the released 088/112/124 predicates loaded from source by the
+-- runner, not fixture substitutes. The old generic qualification predates
+-- the current cycle and cannot become Gate 1, Gate 2 or repreneur access.
+CREATE FUNCTION public.rehearsal_assert_no_current_pursuit_access()
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT public.wave_journey_is_enabled()
+    OR public.journey_current_cycle_event('19100000-0000-4000-8000-000000000061')
+       IS DISTINCT FROM '19100000-0000-4000-8000-000000000063'::UUID
+    OR public.journey_current_template_id('19100000-0000-4000-8000-000000000061')
+       IS DISTINCT FROM '19100000-0000-4000-8000-000000000073'::UUID
+    OR public.journey_current_gate_1_event('19100000-0000-4000-8000-000000000061') IS NOT NULL
+    OR public.journey_current_gate_2_event('19100000-0000-4000-8000-000000000061') IS NOT NULL
+    OR public.journey_repreneur_can_access_confidential(
+         '19100000-0000-4000-8000-000000000061',
+         '19100000-0000-4000-8000-000000000081',
+         '19100000-0000-4000-8000-000000000071')
+    OR EXISTS (SELECT 1 FROM public.journey_repreneur_authorized_template(
+         '19100000-0000-4000-8000-000000000061',
+         '19100000-0000-4000-8000-000000000081'))
+    OR (SELECT COUNT(*) FROM public.opportunity_pursuit_evidence
+        WHERE match_id='19100000-0000-4000-8000-000000000061'
+          AND event_type='qualification_requested')<>1
+  THEN RAISE EXCEPTION 'old_qualification_promoted_to_current_pursuit_access'; END IF;
+END;
+$$;
+
 DO $$ BEGIN
   IF NOT (SELECT prosecdef AND ARRAY_TO_STRING(proconfig, ',') LIKE 'search_path=%'
           FROM pg_proc WHERE oid='public.guard_ma_interaction_opportunity_source_office()'::REGPROCEDURE)
   THEN RAISE EXCEPTION 'migration_089_guard_security_regressed'; END IF;
 END $$;
+SELECT public.rehearsal_assert_no_current_pursuit_access();
 
 SELECT public.rehearsal_expect_error(
   $$UPDATE public.opportunities SET source_office_id='19100000-0000-4000-8000-000000000012'
@@ -68,7 +96,7 @@ DO $$ BEGIN
     OR (SELECT COUNT(*) FROM public.opportunity_ma_contacts WHERE NOT is_active)<>4
     OR (SELECT COUNT(*) FROM public.ma_interactions WHERE office_id='19100000-0000-4000-8000-000000000011')<>2
     OR (SELECT COUNT(*) FROM public.opportunity_matches WHERE status='active_pursuit')<>1
-    OR (SELECT COUNT(*) FROM public.opportunity_documents)<>1
+    OR (SELECT COUNT(*) FROM public.opportunity_documents)<>2
     OR (SELECT COUNT(*) FROM public.opportunity_pursuit_evidence WHERE event_type='qualification_requested')<>1
     OR EXISTS (SELECT 1 FROM public.opportunity_pursuit_confidential_grants)
     OR public.journey_current_gate_1_event('19100000-0000-4000-8000-000000000061') IS NOT NULL
@@ -77,6 +105,7 @@ DO $$ BEGIN
     RAISE EXCEPTION 'apply_or_history_invariant_failed';
   END IF;
 END $$;
+SELECT public.rehearsal_assert_no_current_pursuit_access();
 DO $$
 DECLARE item JSONB; post JSONB;
 BEGIN
@@ -183,3 +212,38 @@ END $$;
 SELECT public.rehearsal_expect_error(
   $$SELECT public.apply_exact_source_correction('19100000-0000-4000-8000-000000000099','staff-191')$$,
   'exact_source_correction_replay_state_drifted');
+
+-- A second, completely disjoint eligible triple cannot consume the same
+-- approved #191 authority. This tests the public registration boundary, while
+-- the table-level UNIQUE constraint also closes simultaneous owner sessions.
+INSERT INTO public.opportunities(id,reference,status,is_demo,source_identity_to_verify,
+  source_office_id,description,updated_by) VALUES
+  ('19100000-0000-4000-8000-000000000044','SYN-191-D','paused',FALSE,TRUE,'19100000-0000-4000-8000-000000000011','Synthetic D','staff-191'),
+  ('19100000-0000-4000-8000-000000000045','SYN-191-E','paused',FALSE,TRUE,'19100000-0000-4000-8000-000000000011','Synthetic E','staff-191'),
+  ('19100000-0000-4000-8000-000000000046','SYN-191-F','paused',FALSE,TRUE,'19100000-0000-4000-8000-000000000011','Synthetic F','staff-191');
+INSERT INTO public.opportunity_ma_contacts(id,opportunity_id,affiliation_id,is_primary,linked_by) VALUES
+  ('19100000-0000-4000-8000-000000000055','19100000-0000-4000-8000-000000000044','19100000-0000-4000-8000-000000000031',TRUE,'staff-191'),
+  ('19100000-0000-4000-8000-000000000056','19100000-0000-4000-8000-000000000045','19100000-0000-4000-8000-000000000031',TRUE,'staff-191'),
+  ('19100000-0000-4000-8000-000000000057','19100000-0000-4000-8000-000000000046','19100000-0000-4000-8000-000000000031',TRUE,'staff-191');
+DO $$ BEGIN
+  PERFORM public.assert_opportunity_office_context(id)
+    FROM public.opportunities WHERE reference IN ('SYN-191-D','SYN-191-E','SYN-191-F');
+  IF (SELECT COUNT(*) FROM public.opportunities WHERE reference IN ('SYN-191-D','SYN-191-E','SYN-191-F'))<>3
+    OR EXISTS (SELECT 1 FROM renew_private.exact_source_manifests m,
+               JSONB_ARRAY_ELEMENTS(m.items) item
+               WHERE (item->>'opportunity_id')::UUID IN
+                 ('19100000-0000-4000-8000-000000000044',
+                  '19100000-0000-4000-8000-000000000045',
+                  '19100000-0000-4000-8000-000000000046')) THEN
+    RAISE EXCEPTION 'second_manifest_fixture_is_not_disjoint';
+  END IF;
+END $$;
+SELECT public.rehearsal_expect_error(
+  $$SELECT public.register_exact_source_correction(
+    '19100000-0000-4000-8000-000000000098','staff-191',
+    '[
+      {"opportunity_id":"19100000-0000-4000-8000-000000000044","reference":"SYN-191-D","old_office_id":"19100000-0000-4000-8000-000000000011","old_primary_affiliation_id":"19100000-0000-4000-8000-000000000031","new_office_id":"19100000-0000-4000-8000-000000000012","new_primary_affiliation_id":"19100000-0000-4000-8000-000000000032"},
+      {"opportunity_id":"19100000-0000-4000-8000-000000000045","reference":"SYN-191-E","old_office_id":"19100000-0000-4000-8000-000000000011","old_primary_affiliation_id":"19100000-0000-4000-8000-000000000031","new_office_id":"19100000-0000-4000-8000-000000000012","new_primary_affiliation_id":"19100000-0000-4000-8000-000000000032"},
+      {"opportunity_id":"19100000-0000-4000-8000-000000000046","reference":"SYN-191-F","old_office_id":"19100000-0000-4000-8000-000000000011","old_primary_affiliation_id":"19100000-0000-4000-8000-000000000031","new_office_id":"19100000-0000-4000-8000-000000000013","new_primary_affiliation_id":"19100000-0000-4000-8000-000000000033"}
+    ]'::JSONB)$$,
+  'exact_source_manifest_authority_already_registered');

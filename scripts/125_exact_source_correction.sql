@@ -12,7 +12,8 @@ CREATE TABLE renew_private.exact_source_manifests (
   actor TEXT NOT NULL CHECK (BTRIM(actor) <> ''),
   items JSONB NOT NULL CHECK (JSONB_TYPEOF(items) = 'array' AND JSONB_ARRAY_LENGTH(items) = 3),
   registered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  registered_txid BIGINT NOT NULL DEFAULT TXID_CURRENT()
+  registered_txid BIGINT NOT NULL DEFAULT TXID_CURRENT(),
+  CONSTRAINT exact_source_manifest_one_per_authority UNIQUE (authority_ref)
 );
 
 -- An intent is inserted before the guarded office UPDATE, and a receipt after
@@ -213,6 +214,10 @@ BEGIN
     RAISE EXCEPTION 'exact_source_manifest_requires_three_targets';
   END IF;
   PERFORM renew_private.assert_actual_staff(p_actor);
+  IF EXISTS (SELECT 1 FROM renew_private.exact_source_manifests
+             WHERE authority_ref='re-new-team/renew-governance#191') THEN
+    RAISE EXCEPTION 'exact_source_manifest_authority_already_registered';
+  END IF;
 
   FOR target IN SELECT value FROM JSONB_ARRAY_ELEMENTS(p_targets) AS input(value)
     ORDER BY (value->>'opportunity_id')::UUID LOOP
