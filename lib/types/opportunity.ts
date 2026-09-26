@@ -372,6 +372,8 @@ export interface MaSourceInteraction {
    */
   id: string
   opportunity_id: string
+  original_office_name?: string | null
+  original_firm_name?: string | null
   source_id?: string | null
   contact_id?: string | null
   template_key: string

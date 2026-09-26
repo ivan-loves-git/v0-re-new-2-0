@@ -662,18 +662,44 @@ export async function getMaOpportunityWorkflow(
     }),
   )
 
-  const { data, error } = await supabase
-    .from("ma_interactions")
-    .select("*")
-    .eq("opportunity_id", opportunityId)
-    .order("occurred_at", { ascending: false })
-    .limit(8)
-
-  if (error) throw new Error(error.message)
-  const interactions = ((data ?? []) as MaInteraction[]).map(
+  // Keep opportunity-centric history complete after an audited office change.
+  // PostgREST caps one response, so fetch ordered pages rather than showing
+  // only the latest eight and silently hiding retained old-office evidence.
+  const interactionRows: MaInteraction[] = []
+  const pageSize = 200
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("ma_interactions")
+      .select("*")
+      .eq("opportunity_id", opportunityId)
+      .order("occurred_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1)
+    if (error) throw new Error(error.message)
+    interactionRows.push(...((data ?? []) as MaInteraction[]))
+    if ((data ?? []).length < pageSize) break
+  }
+  const officeIds = [...new Set(interactionRows.map((interaction) => interaction.office_id))]
+  const { data: officeRows, error: officeError } = officeIds.length
+    ? await supabase.from("ma_offices").select("id,name,firm_id").in("id", officeIds)
+    : { data: [], error: null }
+  if (officeError) throw new Error(officeError.message)
+  const firmIds = [...new Set((officeRows ?? []).map((office) => office.firm_id))]
+  const { data: firmRows, error: firmError } = firmIds.length
+    ? await supabase.from("ma_firms").select("id,name").in("id", firmIds)
+    : { data: [], error: null }
+  if (firmError) throw new Error(firmError.message)
+  const firmNames = new Map((firmRows ?? []).map((firm) => [firm.id, firm.name]))
+  const originalOffices = new Map((officeRows ?? []).map((office) => [office.id, {
+    officeName: office.name,
+    firmName: firmNames.get(office.firm_id) ?? null,
+  }]))
+  const interactions = interactionRows.map(
     (interaction): MaSourceInteraction => ({
       id: interaction.id,
       opportunity_id: interaction.opportunity_id ?? opportunityId,
+      original_office_name: originalOffices.get(interaction.office_id)?.officeName ?? null,
+      original_firm_name: originalOffices.get(interaction.office_id)?.firmName ?? null,
       template_key: interaction.template_key ?? "",
       channel: interaction.channel,
       direction: interaction.direction ?? "outbound",

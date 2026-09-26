@@ -366,7 +366,7 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
       <Card className="min-w-0">
         <CardHeader>
           <CardTitle>Interaction history</CardTitle>
-          <CardDescription>Recent source follow-ups logged for this opportunity.</CardDescription>
+          <CardDescription>Source follow-ups for this opportunity, attributed to their original office.</CardDescription>
         </CardHeader>
         <CardContent>
           {workflow.interactions.length === 0 ? (
@@ -386,6 +386,11 @@ export function OpportunityMaWorkflowPanel({ opportunityId, workflow }: Opportun
                     <span className="text-xs text-muted-foreground">{formatDate(interaction.sent_at ?? interaction.occurred_at ?? interaction.created_at)}</span>
                   </div>
                   <p className="font-medium">{interaction.subject}</p>
+                  {interaction.original_office_name ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Original source: {[interaction.original_firm_name, interaction.original_office_name].filter(Boolean).join(" · ")}
+                    </p>
+                  ) : null}
                   {interaction.body_markdown ? <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">{interaction.body_markdown}</p> : null}
                   <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                     <UserRound className="size-3" />
