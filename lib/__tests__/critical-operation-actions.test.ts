@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   requireStaffAccess: vi.fn(),
@@ -52,6 +52,57 @@ describe("critical server action traces", () => {
       user: { id: "user-private-1", email: "owner@example.test" },
       repreneurId: "repreneur-private-1",
     })
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("refuses a new personalized grant during guarded rollback without altering the canonical grant", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const rpc = vi.fn()
+    const from = vi.fn((table: string) => {
+      if (table !== "opportunity_documents") throw new Error(`Unexpected table ${table}`)
+      return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { recipient_match_id: "match-private-1" }, error: null }) }) }) }
+    })
+    mocks.createAdminClient.mockReturnValue({ from, rpc })
+
+    await expect(runOpportunityPursuitJourneyAction({
+      matchId: "match-private-1", action: "grant_confidential_access",
+      documentId: "memo-private-1", ndaExpiresAt: "2026-10-01T12:00:00.000Z",
+    })).resolves.toEqual({ success: false, message: "Recipient-specific IM operations are temporarily paused." })
+    expect(rpc).not.toHaveBeenCalled()
+  })
+
+  it("keeps ordinary reusable grants available during guarded rollback", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const rpc = vi.fn().mockResolvedValue({ data: "grant-event-1", error: null })
+    const from = vi.fn((table: string) => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({
+      data: table === "opportunity_documents" ? { recipient_match_id: null } : { opportunity_id: "opportunity-1" }, error: null,
+    }) }) }) }))
+    mocks.createAdminClient.mockReturnValue({ from, rpc })
+    mocks.triggerOpportunityMemoNotification.mockResolvedValue(true)
+
+    await expect(runOpportunityPursuitJourneyAction({
+      matchId: "match-private-1", action: "grant_confidential_access",
+      documentId: "reusable-memo-1", ndaExpiresAt: "2026-10-01T12:00:00.000Z",
+    })).resolves.toEqual({ success: true, message: "IM approved and confidential access granted.", eventId: "grant-event-1" })
+    expect(rpc).toHaveBeenCalledWith("journey_grant_confidential_access", expect.objectContaining({
+      p_information_memo_document_id: "reusable-memo-1",
+    }))
+  })
+
+  it("still commits a canonical Drop and reports denied-access cleanup pending during guarded rollback", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const rpc = vi.fn().mockResolvedValue({ data: "drop-event-1", error: null })
+    mocks.createAdminClient.mockReturnValue({
+      rpc,
+      from: () => ({ select: (_columns: string, options?: { head?: boolean }) => options?.head
+        ? Object.assign(Promise.resolve({ count: 1, error: null }), { neq: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() })
+        : { neq: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), limit: vi.fn() } }),
+    })
+
+    await expect(runOpportunityPursuitJourneyAction({
+      matchId: "match-private-1", action: "drop", reason: "no_viable_match",
+    })).resolves.toEqual({ success: true, message: "Pursuit dropped. Recipient IM access is denied; private deletion remains pending for retry.", eventId: "drop-event-1" })
+    expect(rpc).toHaveBeenCalledWith("journey_transition_terminal", expect.objectContaining({ p_transition: "drop" }))
   })
 
   it("preserves a successful pursuit action while tracing no business ids", async () => {

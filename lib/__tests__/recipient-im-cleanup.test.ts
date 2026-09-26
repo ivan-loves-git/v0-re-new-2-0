@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({ createAdminClient: vi.fn() }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
@@ -12,6 +12,23 @@ const path = `${opportunityId}/recipient-im/${matchId}/private.pdf`
 
 describe("recipient IM private cleanup", () => {
   beforeEach(() => vi.clearAllMocks())
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("leaves denied Drop tombstones queued without dispatching physical deletion during rollback", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const remove = vi.fn()
+    const rpc = vi.fn()
+    mocks.createAdminClient.mockReturnValue({
+      from: () => ({ select: (_columns: string, options?: { head?: boolean }) => options?.head
+        ? Object.assign(Promise.resolve({ count: 1, error: null }), { eq: vi.fn().mockReturnThis(), neq: vi.fn().mockReturnThis() })
+        : { eq: vi.fn().mockReturnThis(), neq: vi.fn().mockReturnThis(), order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [{ document_id: documentId, opportunity_id: opportunityId, match_id: matchId, storage_bucket: "opportunity-documents", storage_path: path, status: "pending" }], error: null }) } }),
+      storage: { from: () => ({ remove }) }, rpc,
+    })
+
+    expect(await processRecipientImCleanup({ matchId })).toEqual({ examined: 0, deleted: 0, failed: 0, remaining: 1 })
+    expect(remove).not.toHaveBeenCalled()
+    expect(rpc).not.toHaveBeenCalled()
+  })
 
   it("records failure without a deletion receipt, then retries only the same bound object", async () => {
     const remove = vi.fn()

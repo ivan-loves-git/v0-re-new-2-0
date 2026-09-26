@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
@@ -68,6 +68,8 @@ function requestDocument(id = documentId, download = false) {
 }
 
 describe("staff opportunity document route", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.requireStaffAccess.mockResolvedValue({ role: "staff", user: { id: "staff-1" } })
@@ -129,6 +131,7 @@ describe("staff opportunity document route", () => {
   })
 
   it("denies a dropped recipient-bound IM to staff before signing its Storage path", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
     const { createSignedUrl, rpc } = setupAdminClient({
       storage_bucket: "opportunity-documents", storage_path: `${opportunityId}/recipient-im/match-a/memo.pdf`,
       file_name: "memo.pdf", mime_type: "application/pdf", recipient_match_id: "match-a",

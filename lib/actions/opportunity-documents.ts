@@ -15,6 +15,7 @@ import type {
 } from "@/lib/types/opportunity"
 import { LEGACY_MULTIPART_MAX_FILE_BYTES } from "@/lib/upload-limits"
 import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
+import { RECIPIENT_IM_PAUSED_MESSAGE, recipientImOperationsPaused } from "@/lib/recipient-im-operations"
 
 const OPPORTUNITY_DOCUMENTS_BUCKET = "opportunity-documents"
 const MAX_DOCUMENT_BYTES = LEGACY_MULTIPART_MAX_FILE_BYTES
@@ -130,6 +131,7 @@ export async function listOpportunityDocuments(opportunityId: string): Promise<O
 export async function setOpportunityRecipientImRequired(opportunityId: string, required: boolean): Promise<OpportunityDocumentMutationResult> {
   try {
     const { user } = await requireStaffAccess()
+    if (required && recipientImOperationsPaused()) return { success: false, message: RECIPIENT_IM_PAUSED_MESSAGE }
     const { error } = await createAdminClient().rpc("set_opportunity_recipient_im_required", {
       p_opportunity_id: opportunityId, p_required: required, p_actor: user.id,
     })
@@ -146,13 +148,22 @@ export async function setOpportunityRecipientImRequired(opportunityId: string, r
 export async function retryRecipientImCleanup(opportunityId: string, documentId: string): Promise<OpportunityDocumentMutationResult> {
   await requireStaffAccess()
   try {
-    const { data: exact, error: exactError } = await createAdminClient()
-      .from("recipient_im_cleanup").select("document_id")
+    const supabase = createAdminClient()
+    const readExact = () => supabase.from("recipient_im_cleanup")
+      .select("document_id,status,deletion_receipt_at")
       .eq("opportunity_id", opportunityId).eq("document_id", documentId).maybeSingle()
+    const confirmed = (row: { status: string; deletion_receipt_at: string | null }) =>
+      row.status === "deleted" && Boolean(row.deletion_receipt_at)
+    const { data: exact, error: exactError } = await readExact()
     if (exactError || !exact) return { success: false, message: "No recipient IM cleanup exists for this opportunity and document." }
-    const result = await processRecipientImCleanup({ opportunityId, documentId, limit: 1 })
+    if (!confirmed(exact)) {
+      // A concurrent cron may confirm the exact receipt even if this attempt fails.
+      await processRecipientImCleanup({ opportunityId, documentId, limit: 1 }).catch(() => null)
+    }
+    const { data: current, error: currentError } = await readExact()
+    if (currentError || !current) throw new Error("Recipient IM cleanup receipt could not be read back.")
     revalidatePath(`/opportunities/${opportunityId}`)
-    if (result.deleted === 1) return { success: true, message: "Exact private IM deletion confirmed." }
+    if (confirmed(current)) return { success: true, message: "Exact private IM deletion confirmed." }
     return { success: false, message: "Access remains denied. Private deletion is still pending; retry safely." }
   } catch {
     return { success: false, message: "Access remains denied. Private deletion could not be confirmed yet." }

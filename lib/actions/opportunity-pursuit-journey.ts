@@ -11,6 +11,7 @@ import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
 import { preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
 import { deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
 import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
+import { RECIPIENT_IM_PAUSED_MESSAGE, recipientImOperationsPaused } from "@/lib/recipient-im-operations"
 
 export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string; reviewId?: string } | { success: false; message: string }
 
@@ -77,6 +78,16 @@ export async function runOpportunityPursuitJourneyAction(input: {
         trace.failure("validation_failed")
         capture("validation_error", "validation_failed")
         return { success: false, message: "Set the NDA expiry before granting confidential access." }
+      }
+      if (recipientImOperationsPaused()) {
+        const { data: candidate, error: candidateError } = await supabase.from("opportunity_documents")
+          .select("recipient_match_id").eq("id", input.documentId).maybeSingle()
+        if (candidateError || !candidate) throw new Error("The selected Information Memorandum is unavailable.")
+        if (candidate.recipient_match_id) {
+          trace.failure("validation_failed")
+          capture("validation_error", "validation_failed")
+          return { success: false, message: RECIPIENT_IM_PAUSED_MESSAGE }
+        }
       }
       const { data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt })
       if (error) throw error

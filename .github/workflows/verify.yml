@@ -104,6 +104,16 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-w169-lifecycle-outcomes.sh'
 
+      - name: "Rehearse #185 recipient-bound IM lifecycle and Drop races"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-recipient-information-memos.sh'
+
       - name: Rehearse W-173 exact interest decisions and notification fences
         run: |
           docker run --rm \

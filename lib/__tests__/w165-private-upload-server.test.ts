@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   getCurrentUserAccess: vi.fn(),
@@ -131,6 +131,54 @@ describe("W-165 server upload authority", () => {
     mocks.assertSafePdfEvidence.mockResolvedValue(undefined)
     mocks.verifyStaffPortalSelection.mockResolvedValue({ workspaceId: "00000000-0000-4000-8000-000000000020",
       generation: "00000000-0000-4000-8000-000000000021" })
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("refuses a new recipient-specific upload capability during guarded rollback", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const createSignedUploadUrl = vi.fn()
+    const insert = vi.fn()
+    mocks.createAdminClient.mockReturnValue({
+      from: (table: string) => {
+        if (table === "opportunities") return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: opportunityId, recipient_im_required: true, status: "active", is_demo: false }, error: null }) }) }) }
+        if (table === "opportunity_matches") return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: "00000000-0000-4000-8000-000000000031", opportunity_id: opportunityId, repreneur_id: "00000000-0000-4000-8000-000000000032", status: "active_pursuit", repreneur: { is_demo: false } }, error: null }) }) }) }) }
+        if (table === "private_upload_intents") return { insert }
+        throw new Error(`Unexpected table ${table}`)
+      },
+      storage: { from: () => ({ createSignedUploadUrl }) },
+    })
+
+    await expect(createPrivateUploadIntent(request({}), {
+      kind: "opportunity_document", resourceId: opportunityId, relatedId: "00000000-0000-4000-8000-000000000031",
+      fileName: "recipient.pdf", contentType: "application/pdf", sizeBytes: 100,
+      metadata: { document_type: "deal_book", visibility: "staff_only", title: "Recipient IM" },
+      idempotencyKey: "00000000-0000-4000-8000-000000000033",
+    })).rejects.toThrow("Recipient-specific IM operations are temporarily paused.")
+    expect(insert).not.toHaveBeenCalled()
+    expect(createSignedUploadUrl).not.toHaveBeenCalled()
+  })
+
+  it("closes an already-issued recipient IM intent before finalization during guarded rollback", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const intent = { ...pendingPdfIntent(new Uint8Array([1, 2, 3])),
+      related_id: "00000000-0000-4000-8000-000000000031",
+      storage_path: `${opportunityId}/recipient-im/00000000-0000-4000-8000-000000000031/${intentId}-memo.pdf` }
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    const download = vi.fn()
+    mocks.createAdminClient.mockReturnValue({
+      from: (table: string) => {
+        if (table !== "private_upload_intents") throw new Error(`Unexpected table ${table}`)
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: intent, error: null }) }) }) }
+      },
+      storage: { from: () => ({ download }) }, rpc,
+    })
+
+    await expect(finalizePrivateUpload(request({}), { intentId, finalizeSecret: secret }))
+      .rejects.toThrow("Recipient-specific IM operations are temporarily paused.")
+    expect(rpc).toHaveBeenCalledWith("close_w165_private_upload_intent", expect.objectContaining({
+      p_intent_id: intentId, p_failure_code: "recipient_im_operations_disabled",
+    }))
+    expect(download).not.toHaveBeenCalled()
   })
 
   it("denies a staff-received NDA before signed upload when the current sent E6 is absent", async () => {

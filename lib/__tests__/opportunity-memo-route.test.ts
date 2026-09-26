@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
@@ -86,6 +86,8 @@ const informationMemo = {
 }
 
 describe("repreneur info-memo download route", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal("fetch", mocks.fetch)
@@ -150,6 +152,7 @@ describe("repreneur info-memo download route", () => {
   })
 
   it("does not deliver a personalized response when Drop revokes it during private Storage retrieval", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
     const { createSignedUrl } = setupAdminClient({
       document: { ...informationMemo, recipient_match_id: "match-1", recipient_repreneur_id: "repreneur-1" },
     })

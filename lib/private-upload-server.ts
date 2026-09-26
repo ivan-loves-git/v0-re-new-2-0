@@ -7,6 +7,7 @@ import { revalidateOpportunityDashboardTags, revalidateRepreneurDashboardTags } 
 import { env } from "@/lib/env"
 import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES } from "@/lib/external-pursuit-attachments"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
+import { RECIPIENT_IM_PAUSED_MESSAGE, recipientImOperationsPaused } from "@/lib/recipient-im-operations"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { recalculateRepreneurScoresAndMatches } from "@/lib/repreneur-profile-refresh"
 import { matchesExpectedFileStructure } from "@/lib/security/external-pursuit-attachment-content"
@@ -269,6 +270,7 @@ async function authorizeIntent(
     if (error || !data) throw new PrivateUploadError("Opportunity not found.", 404)
     let recipientMatchId: string | null = null
     if (documentType === "deal_book" && data.recipient_im_required) {
+      if (recipientImOperationsPaused()) throw new PrivateUploadError(RECIPIENT_IM_PAUSED_MESSAGE, 503)
       recipientMatchId = uuidValue(input.relatedId, true)!
       const { data: match, error: matchError } = await supabase.from("opportunity_matches")
         .select("id,opportunity_id,repreneur_id,status,repreneur:repreneurs!inner(is_demo)")
@@ -738,6 +740,10 @@ export async function finalizePrivateUpload(request:Request,payload:unknown) {
     : result
   if (intent.status==="finalized" && intent.result) return clientResult(intent.result)
   if (intent.status!=="pending") throw new PrivateUploadError("This upload is already closed.",409)
+  if (intent.upload_kind==="opportunity_document" && intent.related_id && recipientImOperationsPaused()) {
+    await closeIntent(intent,"recipient_im_operations_disabled")
+    throw new PrivateUploadError(RECIPIENT_IM_PAUSED_MESSAGE,503)
+  }
   if (Date.parse(intent.expires_at)<=Date.now()) {
     await closeIntent(intent,"expired","expired")
     throw new PrivateUploadError("Upload authorization expired. Choose the file again.",410)
