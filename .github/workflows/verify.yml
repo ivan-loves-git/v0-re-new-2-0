@@ -124,7 +124,7 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-exact-source-correction.sh'
 
-      - name: Rehearse W-173 exact interest decisions and notification fences
+      - name: Rehearse W-173/W-196/W-192 exact interest decisions and withdrawal races
         run: |
           docker run --rm \
             --user postgres \

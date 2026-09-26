@@ -58,6 +58,7 @@ describe("locked opportunity interest", () => {
     })
     expect(notifier.send).toHaveBeenCalledWith({
       ...DETAILS,
+      matchId: "match-1",
       expressedAt: NOW,
       idempotencyKey: lockedOpportunityInterestIdempotencyKey("match-1", NOW),
     })
@@ -65,6 +66,7 @@ describe("locked opportunity interest", () => {
       matchId: "match-1",
       repreneurId: DETAILS.repreneurId,
       opportunityId: DETAILS.opportunityId,
+      expressedAt: NOW,
       sentAt: NOW,
     })
   })
@@ -95,6 +97,18 @@ describe("locked opportunity interest", () => {
     expect(store.getNotificationDetails).not.toHaveBeenCalled()
     expect(notifier.send).not.toHaveBeenCalled()
     expect(store.markNotificationSent).not.toHaveBeenCalled()
+  })
+
+  it("carries the exact withdrawn page version for a genuine later interest", async () => {
+    const store = createStore({ matchId: "match-1", expressedAt: NOW,
+      notificationSentAt: null, notificationSuppressed: true })
+    const expectation = { interestAt: "2026-07-14T12:00:00.000Z", updatedAt: "2026-07-14T12:01:00.000Z" }
+    await expressOpportunityInterest({ opportunityId: DETAILS.opportunityId,
+      repreneurId: DETAILS.repreneurId, actorId: "user-1", now: NOW,
+      withdrawnExpectation: expectation }, { store, notifier: { send: vi.fn() } })
+    expect(store.recordInterest).toHaveBeenCalledWith(expect.objectContaining({
+      withdrawnExpectation: expectation,
+    }))
   })
 
   it("keeps the signal retryable when the staff email fails", async () => {

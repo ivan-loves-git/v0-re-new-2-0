@@ -36,6 +36,7 @@ export type OpportunityMatchStatus =
   | "shortlisted"
   | "proposed"
   | "interested"
+  | "withdrawn"
   | "declined"
   | "active_pursuit"
   | "dropped"
@@ -194,6 +195,7 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
   { value: "shortlisted", label: "Shortlisted" },
   { value: "proposed", label: "Proposed" },
   { value: "interested", label: "Interested" },
+  { value: "withdrawn", label: "Withdrawn" },
   { value: "declined", label: "Declined" },
   { value: "active_pursuit", label: "Active pursuit" },
   { value: "dropped", label: "Dropped" },
@@ -751,6 +753,8 @@ export interface OpportunityMatchRepreneur {
 export interface OpportunityMatch extends OpportunityConfidentialityGate {
   /** Staff-only private exact-interest decision, never a portal field. */
   interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
+  /** Staff-only withdrawal history for the current exact request. */
+  interest_withdrawal?: { interest_expressed_at: string; reason: string; withdrawn_at: string; actor: string; origin: "owner" | "staff" } | null
   /** Staff-only readback; never projected into the repreneur portal. */
   assignment_email_status?: "pending" | "sent" | "failed" | "blocked" | "review_required" | "delivery_issue" | "unavailable" | null
   id: string
@@ -825,7 +829,7 @@ export interface OpportunityMatchResponse {
   id: string
   opportunity_id: string
   repreneur_id: string
-  status: Extract<OpportunityMatchStatus, "interested" | "declined">
+  status: Extract<OpportunityMatchStatus, "interested" | "withdrawn" | "declined">
   platform_recommendation: OpportunityMatchRecommendation
   platform_score?: number | null
   human_recommendation: OpportunityMatchRecommendation
@@ -836,6 +840,7 @@ export interface OpportunityMatchResponse {
   reviewed_at?: string | null
   interest_expressed_at?: string | null
   interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
+  interest_withdrawal?: OpportunityMatch["interest_withdrawal"]
   updated_at: string
   opportunity?: Pick<
     Opportunity,

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { RepreneurOpportunityDetail } from "@/components/opportunities/repreneur-opportunity-detail"
 import { getMyRepreneurOpportunity } from "@/lib/actions/repreneur-opportunities"
 import { readPortalCurrentPursuit } from "@/lib/data/current-pursuit"
+import { interestWithdrawalOperationsPaused } from "@/lib/interest-withdrawal-operations"
 
 
 export default async function PortalDealDetailPage({ params }: { params: Promise<{ matchId: string }> }) {
@@ -32,7 +33,8 @@ export default async function PortalDealDetailPage({ params }: { params: Promise
           Back to deals
         </Link>
       </Button>
-      <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} />
+      <RepreneurOpportunityDetail opportunity={opportunity} journey={journey}
+        withdrawalPaused={interestWithdrawalOperationsPaused()} />
     </div>
   )
 }

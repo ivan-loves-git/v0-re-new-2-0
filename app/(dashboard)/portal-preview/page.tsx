@@ -35,6 +35,7 @@ import { projectSelectedReNewPursuits } from "@/lib/portal-preview-pursuits"
 import { isUuid } from "@/lib/uuid"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { currentStaffPortalSelectionToken } from "@/lib/staff-portal-selection"
+import { interestWithdrawalOperationsPaused } from "@/lib/interest-withdrawal-operations"
 
 interface StaffPortalPreviewPageProps {
   searchParams: Promise<{
@@ -183,6 +184,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
           <RepreneurOpportunityDetail
             opportunity={selectedOpportunity}
             readOnly
+            withdrawalPaused={interestWithdrawalOperationsPaused()}
             journey={previewJourney}
             staffAssistanceControls={opportunityUpdatedAt && selectedOption && selectedOwnerToken ? <StaffOpportunityResponseControls
               selectionToken={selectedOwnerToken}
@@ -197,6 +199,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               expectedInterestAt={selectedOpportunity.match_id ? selectedOpportunity.interest_expressed_at ?? null : null}
               interestRejected={Boolean(selectedOpportunity.interest_rejected)}
               recommendationExpiresAt={selectedOpportunity.recommendation_expires_at}
+              withdrawalPaused={interestWithdrawalOperationsPaused()}
             /> : null}
             staffDocumentAssistanceControls={selectedOption && selectedOwnerToken && selectedOpportunity.match_id
               && previewJourney?.enabled && previewJourney.gate1Passed && previewJourney.ndaReadyNotified

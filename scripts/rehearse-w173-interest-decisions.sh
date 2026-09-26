@@ -184,4 +184,108 @@ if [[ "$nda_race_state" != "safe" ]]; then
   echo "W196 concurrent Pause left a committed received NDA: $nda_race_state" >&2
   exit 1
 fi
-echo "W173/W196 exact-interest, attributed assistance and two-session race rehearsal passed"
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260926120000_w192_withdrawn_status.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260926120100_w192_exact_interest_withdrawal.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/supabase/migrations/20260920140000_repreneur_opportunity_review_state.sql" >/dev/null
+"${psql[@]}" --file "$repo_root/scripts/rehearsals/w192-interest-withdrawal.sql"
+IFS='|' read -r withdraw_token withdraw_version <<< "$(${psql[@]} -AtF '|' -c "
+  SELECT interest_expressed_at,updated_at FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000084'")"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.w192_withdraw_exact_interest(
+    '97000000-0000-4000-8000-000000000084','97000000-0000-4000-8000-000000000074',
+    '76000000-0000-4000-8000-000000000004','w173-repreneur-interest','interested@example.test',
+    '$withdraw_token','$withdraw_version','Race withdrawn first');
+  SELECT pg_sleep(1); COMMIT;" >/dev/null &
+withdraw_winner_pid=$!
+sleep 0.2
+set +e
+validation_loser="$(${psql[@]} -At -c "SELECT public.w173_validate_exact_interest(
+  '97000000-0000-4000-8000-000000000084','97000000-0000-4000-8000-000000000074',
+  'w173-staff','$withdraw_token','$withdraw_version','w192-race-withdraw-first');" 2>&1)"
+validation_loser_status=$?
+set -e
+wait "$withdraw_winner_pid"
+if [[ "$validation_loser_status" -eq 0 || "$validation_loser" != *validation_interest_stale* ]]; then
+  echo "W192 withdrawal-first race did not reject validation: $validation_loser" >&2
+  exit 1
+fi
+withdraw_race_state="$(${psql[@]} -At -c "SELECT status FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000084'")"
+if [[ "$withdraw_race_state" != "withdrawn" ]]; then
+  echo "W192 withdrawal-first race left $withdraw_race_state" >&2
+  exit 1
+fi
+
+IFS='|' read -r validation_token validation_version <<< "$(${psql[@]} -AtF '|' -c "
+  SELECT interest_expressed_at,updated_at FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000085'")"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.w173_validate_exact_interest(
+    '97000000-0000-4000-8000-000000000085','97000000-0000-4000-8000-000000000075',
+    'w173-staff','$validation_token','$validation_version','w192-race-validation-first');
+  SELECT pg_sleep(1); COMMIT;" >/dev/null &
+validation_winner_pid=$!
+sleep 0.2
+set +e
+withdraw_loser="$(${psql[@]} -At -c "SELECT public.w192_withdraw_exact_interest(
+  '97000000-0000-4000-8000-000000000085','97000000-0000-4000-8000-000000000075',
+  '76000000-0000-4000-8000-000000000004','w173-repreneur-interest','interested@example.test',
+  '$validation_token','$validation_version','Race validation first');" 2>&1)"
+withdraw_loser_status=$?
+set -e
+wait "$validation_winner_pid"
+if [[ "$withdraw_loser_status" -eq 0 || "$withdraw_loser" != *withdrawal_requires_staff_drop* ]]; then
+  echo "W192 validation-first race did not direct to staff Drop: $withdraw_loser" >&2
+  exit 1
+fi
+validation_race_state="$(${psql[@]} -At -c "SELECT status FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000085'")"
+if [[ "$validation_race_state" != "active_pursuit" ]]; then
+  echo "W192 validation-first race left $validation_race_state" >&2
+  exit 1
+fi
+IFS='|' read -r expression_token expression_version <<< "$(${psql[@]} -AtF '|' -c "
+  SELECT interest_expressed_at,updated_at FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000089'")"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.w192_withdraw_exact_interest(
+    '97000000-0000-4000-8000-000000000089','97000000-0000-4000-8000-000000000079',
+    '76000000-0000-4000-8000-000000000004','w173-repreneur-interest','interested@example.test',
+    '$expression_token','$expression_version','Withdraw before old expression retry');
+  SELECT pg_sleep(1); COMMIT;" >/dev/null &
+withdraw_expression_pid=$!
+sleep 0.2
+set +e
+old_expression_loser="$(${psql[@]} -At -c "SELECT public.express_opportunity_interest(
+  '97000000-0000-4000-8000-000000000079','76000000-0000-4000-8000-000000000004',
+  'w173-repreneur-interest','$expression_token');" 2>&1)"
+old_expression_status=$?
+set -e
+wait "$withdraw_expression_pid"
+if [[ "$old_expression_status" -eq 0 || "$old_expression_loser" != *interest_not_available* ]]; then
+  echo "W192 withdrawal-first old expression retry was accepted: $old_expression_loser" >&2
+  exit 1
+fi
+IFS='|' read -r expression_token expression_version <<< "$(${psql[@]} -AtF '|' -c "
+  SELECT interest_expressed_at,updated_at FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000090'")"
+"${psql[@]}" -q -c "BEGIN;
+  SELECT public.express_opportunity_interest(
+    '97000000-0000-4000-8000-000000000080','76000000-0000-4000-8000-000000000004',
+    'w173-repreneur-interest','$expression_token');
+  SELECT pg_sleep(1); COMMIT;" >/dev/null &
+expression_winner_pid=$!
+sleep 0.2
+"${psql[@]}" -At -c "SELECT public.w192_withdraw_exact_interest(
+  '97000000-0000-4000-8000-000000000090','97000000-0000-4000-8000-000000000080',
+  '76000000-0000-4000-8000-000000000004','w173-repreneur-interest','interested@example.test',
+  '$expression_token','$expression_version','Withdraw after old expression retry');" >/dev/null
+wait "$expression_winner_pid"
+expression_race_state="$(${psql[@]} -At -c "SELECT status FROM public.opportunity_matches
+  WHERE id='97000000-0000-4000-8000-000000000090'")"
+if [[ "$expression_race_state" != "withdrawn" ]]; then
+  echo "W192 expression-first race left $expression_race_state" >&2
+  exit 1
+fi
+echo "W173/W196/W192 exact-interest and attributed assistance rehearsal passed"

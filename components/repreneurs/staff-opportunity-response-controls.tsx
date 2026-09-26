@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { recordStaffPortalOpportunityResponse, type StaffOpportunityResponseInput } from "@/lib/actions/staff-portal-assistance"
+import { withdrawStaffPortalOpportunityInterest } from "@/lib/actions/interest-withdrawal"
+import { InterestWithdrawalControl } from "@/components/opportunities/interest-withdrawal-control"
 import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 import { OPPORTUNITY_DECLINE_REASON_OPTIONS, type OpportunityDeclineReasonCategory } from "@/lib/types/opportunity"
 
@@ -16,6 +18,7 @@ type Props = Omit<StaffOpportunityResponseInput, "response" | "declineReasonCate
   opportunityTitle: string
   matchStatus: string | null
   interestRejected: boolean
+  withdrawalPaused?: boolean
   recommendationExpiresAt: string | null | undefined
 }
 
@@ -33,6 +36,8 @@ export function StaffOpportunityResponseControls(props: Props) {
   const canInterest = eligible && props.matchStatus !== "interested" && interestOpen
   const canDecline = eligible && Boolean(props.matchId)
     && ["proposed", "interested"].includes(props.matchStatus ?? "")
+  const canWithdraw = !props.withdrawalPaused && eligible && props.matchStatus === "interested"
+    && Boolean(props.matchId && props.expectedInterestAt && props.expectedMatchUpdatedAt)
 
   function submit(response: "interested" | "declined") {
     const draft = {
@@ -62,7 +67,7 @@ export function StaffOpportunityResponseControls(props: Props) {
     })
   }
 
-  if (!canInterest && !canDecline) return null
+  if (!canInterest && !canDecline && !canWithdraw) return null
   return <div className="space-y-3 rounded-md border p-4" data-wave-workflow="staff_portal_assistance">
     <p className="text-sm font-medium">Re-New staff response for {props.repreneurName}</p>
     <p className="text-xs text-muted-foreground">Deal: {props.opportunityTitle}. This action records your staff identity; it does not sign in as the repreneur or mark their personal review.</p>
@@ -85,5 +90,14 @@ export function StaffOpportunityResponseControls(props: Props) {
       {canInterest ? <Button type="button" disabled={!confirmed || pending} onClick={() => submit("interested")}>{pending ? "Saving…" : props.matchStatus === "declined" || props.matchStatus === "dropped" ? "Reconsider interest" : "Record interest"}</Button> : null}
       {canDecline ? <Button type="button" variant="outline" disabled={!confirmed || pending || reasons.length === 0 || !reasonText.trim()} onClick={() => submit("declined")}>Record not a fit</Button> : null}
     </div>
+    {canWithdraw && confirmed && <InterestWithdrawalControl staff onConfirm={(reason) => withdrawStaffPortalOpportunityInterest({
+      selectionToken: props.selectionToken,
+      repreneurId: props.repreneurId,
+      opportunityId: props.opportunityId,
+      matchId: props.matchId!,
+      expectedInterestAt: props.expectedInterestAt!,
+      expectedUpdatedAt: props.expectedMatchUpdatedAt!,
+      reason,
+    })} />}
   </div>
 }

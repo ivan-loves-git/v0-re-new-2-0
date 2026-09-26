@@ -33,6 +33,7 @@ import {
   type OpportunityPursuitStage,
 } from "@/lib/types/opportunity"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
+import { isPendingOpportunityResponse } from "@/lib/opportunity-response-queue"
 
 
 interface ActivePursuitRow {
@@ -141,7 +142,8 @@ export default async function OpportunityDashboardPage() {
   // available in the staff opportunity list, but must not affect its counts
   // or follow-up queues.
   const productionOpportunities = opportunities.filter((opportunity) => !opportunity.is_demo)
-  const pendingResponses = responses.filter((response) => !response.reviewed_at).slice(0, 6)
+  const actionableResponses = responses.filter(isPendingOpportunityResponse)
+  const pendingResponses = actionableResponses.slice(0, 6)
   const recentOpportunities = productionOpportunities.slice(0, 6)
   const activePursuits = activePursuitSummary.rows
   const openOpportunities = productionOpportunities.filter(
@@ -159,7 +161,7 @@ export default async function OpportunityDashboardPage() {
 
       <KpiMetricGrid className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
         <KpiMetricTile title="Open opportunities" value={openOpportunities.length} period="Current inventory" icon={BriefcaseBusiness} tone="opportunity" trend={null} info={{ title: "Open opportunities", description: "Draft, active, and paused opportunities currently available to staff.", why: "Closed and archived records are excluded from this working inventory." }} />
-        <KpiMetricTile title="Pending responses" value={responses.filter((response) => !response.reviewed_at).length} period="Waiting for review" icon={Inbox} tone="attention" trend={null} info={{ title: "Pending responses", description: "Repreneur interest or decline responses awaiting staff review.", why: "These decisions unblock the next matching step." }} />
+        <KpiMetricTile title="Pending responses" value={actionableResponses.length} period="Waiting for review" icon={Inbox} tone="attention" trend={null} info={{ title: "Pending responses", description: "Repreneur interest or decline responses awaiting staff review.", why: "These decisions unblock the next matching step." }} />
         <KpiMetricTile title="Active pursuits" value={activePursuitSummary.totalCount} period="Validated deal paths" icon={Landmark} tone="repreneur" trend={null} info={{ title: "Active pursuits", description: "All validated one-repreneur deal paths currently in execution.", why: "The count now reflects the full set while the queue below remains intentionally concise." }} />
         <KpiMetricTile title="NDA blocked" value={activePursuitSummary.ndaBlockedCount} period="Document access gated" icon={ShieldAlert} tone={activePursuitSummary.ndaBlockedCount > 0 ? "risk" : "neutral"} trend={null} info={{ title: "NDA blocked", description: "Active pursuits where access still depends on an NDA.", why: "These paths need document follow-up before they can progress." }} />
       </KpiMetricGrid>

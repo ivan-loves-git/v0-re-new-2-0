@@ -120,6 +120,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "lib/actions/external-pursuits.ts": boundary("portal_owner", ["getExternalPursuit", "createExternalPursuit", "updateExternalPursuit", "moveExternalPursuitStage", "listExternalPursuitBoard", "updateExternalPursuitFollowUp", "saveExternalPursuitContact", "requestExternalPursuitDeletion"]),
   "lib/actions/intake-v2.ts": boundary("public", ["submitIntakeV2"]),
   "lib/actions/intake.ts": boundary("public", ["createIntakeDraft", "updateIntakeBackground", "updateIntakeMAExperience", "updateIntakeGoals", "completeIntake"]),
+  "lib/actions/interest-withdrawal.ts": boundary("portal_owner", ["withdrawMyOpportunityInterest", "withdrawStaffPortalOpportunityInterest"], { withdrawStaffPortalOpportunityInterest: "staff" }),
   "lib/actions/leadership-assessment.ts": boundary("authenticated_capability", ["createAssessment", "getAssessmentByToken", "submitAssessment", "getLatestAssessment", "getPendingAssessment"], { createAssessment: "staff", getLatestAssessment: "staff", getPendingAssessment: "staff" }),
   "lib/actions/ma-contact-email-policy.ts": boundary("staff", ["setMaContactCampaignEmailSuppression"]),
   "lib/actions/ma-relationship-workspaces.ts": boundary("staff", [

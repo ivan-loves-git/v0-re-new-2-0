@@ -25,6 +25,16 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 27, 2026",
+    version: "0.9.79",
+    title: "Withdraw an interest before Re-New validates it",
+    isCompleted: false,
+    events: [
+      { title: "Correct an accidental interest without losing history", type: "feature", description: "A repreneur can confirm withdrawal of their current unvalidated interest; Re-New staff can do the same in the selected repreneur workspace with their own identity recorded. The deal shows Withdrawn instead of appearing as an active pursuit or a Decline." },
+      { title: "One decision wins", type: "decision", description: "If Re-New has already validated the pursuit, the normal staff-managed Drop process applies. An earlier alert already in flight remains recorded, while a later eligible interest must be a fresh request. This candidate is awaiting release proof." },
+    ],
+  },
+  {
     period: "Sep 26, 2026",
     version: "0.9.78",
     title: "Recipient-specific information memoranda",
