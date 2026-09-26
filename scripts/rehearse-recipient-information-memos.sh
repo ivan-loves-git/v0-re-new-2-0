@@ -57,27 +57,57 @@ RETURNS UUID LANGUAGE plpgsql AS $$ DECLARE v_id UUID; BEGIN
   INSERT INTO public.opportunity_pursuit_evidence(match_id,event_type,actor,idempotency_key,evidence_reference)
   VALUES($1,$2,$3,$4,$7) RETURNING id INTO v_id; RETURN v_id;
 END $$;
+-- Only the W-169 Drop seam is needed in this disposable schema. Migration 124
+-- must leave the production W-169 function intact, including reason checks.
+CREATE FUNCTION public.journey_transition_terminal(UUID,TEXT,TEXT,TEXT,TEXT DEFAULT NULL)
+RETURNS UUID LANGUAGE plpgsql AS $$ DECLARE v_status TEXT; BEGIN
+  IF $2 <> 'drop' THEN RAISE EXCEPTION 'unsupported_fixture_transition'; END IF;
+  IF NULLIF(BTRIM($5),'') IS NULL THEN RAISE EXCEPTION 'pursuit_drop_reason_required'; END IF;
+  IF $5 NOT IN ('no_viable_match','dd_disqualified_repreneur') THEN RAISE EXCEPTION 'pursuit_drop_reason_invalid'; END IF;
+  SELECT status INTO v_status FROM public.opportunity_matches WHERE id=$1 FOR UPDATE;
+  IF v_status IS DISTINCT FROM 'active_pursuit' THEN RAISE EXCEPTION 'Only an active pursuit can be dropped.'; END IF;
+  PERFORM public.journey_revoke_confidential_access($1,$3,'dropped',$4||':revoke');
+  UPDATE public.opportunity_matches SET status='dropped',pursuit_stage='dropped',
+    pursuit_stage_updated_by=$3,pursuit_stage_updated_at=NOW() WHERE id=$1;
+  RETURN public.journey_append_evidence($1,'dropped',$3,$4,NULL,NULL,$5);
+END $$;
 INSERT INTO public.opportunities(id,is_demo,status) VALUES('18500000-0000-4000-8000-000000000001',FALSE,'active');
+INSERT INTO public.opportunities(id,is_demo,status) VALUES('18510000-0000-4000-8000-000000000001',TRUE,'active');
 INSERT INTO public.repreneurs VALUES('18500000-0000-4000-8000-000000000002',FALSE),('18500000-0000-4000-8000-000000000003',FALSE);
+INSERT INTO public.repreneurs VALUES('18510000-0000-4000-8000-000000000002',TRUE);
 INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,pursuit_stage_updated_by,pursuit_stage_updated_at) VALUES
   ('18500000-0000-4000-8000-000000000004','18500000-0000-4000-8000-000000000001','18500000-0000-4000-8000-000000000002','active_pursuit',NULL,NULL),
   ('18500000-0000-4000-8000-000000000005','18500000-0000-4000-8000-000000000001','18500000-0000-4000-8000-000000000003','interested',NULL,NULL);
+INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status)
+  VALUES('18510000-0000-4000-8000-000000000004','18510000-0000-4000-8000-000000000001','18510000-0000-4000-8000-000000000002','active_pursuit');
 INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,storage_bucket,storage_path,file_name,mime_type,uploaded_by)
   VALUES('18500000-0000-4000-8000-000000000006','18500000-0000-4000-8000-000000000001','Legacy reusable','deal_book','opportunity-documents',
     '18500000-0000-4000-8000-000000000001/documents/legacy.pdf','legacy.pdf','application/pdf','staff-1');
+INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,storage_bucket,storage_path,file_name,mime_type,uploaded_by)
+  VALUES('18510000-0000-4000-8000-000000000006','18510000-0000-4000-8000-000000000001','Legacy demo reusable','deal_book','opportunity-documents',
+    '18510000-0000-4000-8000-000000000001/documents/legacy-demo.pdf','legacy-demo.pdf','application/pdf','staff-1');
 INSERT INTO public.app_user_roles VALUES('staff-1','staff@example.test','staff');
 INSERT INTO public.opportunity_pursuit_confidential_grants VALUES
   ('18500000-0000-4000-8000-000000000007','18500000-0000-4000-8000-000000000004','18500000-0000-4000-8000-000000000001',
    '18500000-0000-4000-8000-000000000006',NULL,clock_timestamp()+INTERVAL '1 day',
    '18500000-0000-4000-8000-000000000090','18500000-0000-4000-8000-000000000091','18500000-0000-4000-8000-000000000092');
+INSERT INTO public.opportunity_pursuit_confidential_grants VALUES
+  ('18510000-0000-4000-8000-000000000007','18510000-0000-4000-8000-000000000004','18510000-0000-4000-8000-000000000001',
+   '18510000-0000-4000-8000-000000000006',NULL,clock_timestamp()+INTERVAL '1 day',
+   '18500000-0000-4000-8000-000000000090','18500000-0000-4000-8000-000000000091','18500000-0000-4000-8000-000000000092');
 SQL
 
+terminal_before="$("${psql[@]}" -Atc "SELECT md5(pg_get_functiondef('public.journey_transition_terminal(uuid,text,text,text,text)'::regprocedure))")"
 "${psql[@]}" --file "$repo_root/scripts/124_recipient_information_memos.sql" >/dev/null
+terminal_after="$("${psql[@]}" -Atc "SELECT md5(pg_get_functiondef('public.journey_transition_terminal(uuid,text,text,text,text)'::regprocedure))")"
+[ "$terminal_before" = "$terminal_after" ] || { echo "Migration replaced the canonical terminal transition" >&2; exit 1; }
 "${psql[@]}" >/dev/null <<'SQL'
 DO $$ BEGIN
   IF (SELECT recipient_im_required FROM public.opportunities LIMIT 1) THEN RAISE EXCEPTION 'legacy_flag_changed'; END IF;
   IF (SELECT recipient_match_id FROM public.opportunity_documents WHERE title='Legacy reusable') IS NOT NULL THEN RAISE EXCEPTION 'legacy_im_reclassified'; END IF;
   IF NOT public.journey_repreneur_can_access_confidential('18500000-0000-4000-8000-000000000004','18500000-0000-4000-8000-000000000002','18500000-0000-4000-8000-000000000006') THEN RAISE EXCEPTION 'legacy_grant_lost'; END IF;
+  IF NOT public.journey_repreneur_can_access_confidential('18510000-0000-4000-8000-000000000004','18510000-0000-4000-8000-000000000002','18510000-0000-4000-8000-000000000006') THEN RAISE EXCEPTION 'same_namespace_demo_grant_lost'; END IF;
+  IF public.journey_repreneur_can_access_confidential('18510000-0000-4000-8000-000000000004','18500000-0000-4000-8000-000000000002','18510000-0000-4000-8000-000000000006') THEN RAISE EXCEPTION 'cross_namespace_demo_grant_leaked'; END IF;
   IF has_table_privilege('anon','public.recipient_im_cleanup','SELECT') OR has_table_privilege('authenticated','public.recipient_im_cleanup','SELECT')
      OR has_table_privilege('service_role','public.recipient_im_cleanup','UPDATE') OR has_function_privilege('anon','public.set_opportunity_recipient_im_required(uuid,boolean,text)','EXECUTE')
   THEN RAISE EXCEPTION 'browser_or_service_write_permission_leaked'; END IF;
@@ -177,13 +207,33 @@ DO $$ BEGIN
     RAISE EXCEPTION 'B_inherited_A_im';
   EXCEPTION WHEN OTHERS THEN IF SQLERRM='B_inherited_A_im' THEN RAISE; END IF; END;
 END $$;
-SELECT public.set_opportunity_recipient_im_required('18500000-0000-4000-8000-000000000001',FALSE,'staff-1');
+INSERT INTO public.private_upload_intents VALUES
+  ('18500000-0000-4000-8000-000000000014','18500000-0000-4000-8000-000000000001/recipient-im/18500000-0000-4000-8000-000000000005/fresh-b.pdf',
+   'opportunity_document','pending','18500000-0000-4000-8000-000000000005','staff','18500000-0000-4000-8000-000000000001','opportunity-documents','staff-1','application/pdf');
+INSERT INTO public.opportunity_documents(id,opportunity_id,title,document_type,storage_bucket,storage_path,file_name,mime_type,uploaded_by)
+  VALUES('18500000-0000-4000-8000-000000000015','18500000-0000-4000-8000-000000000001','B personalized','deal_book','opportunity-documents',
+   '18500000-0000-4000-8000-000000000001/recipient-im/18500000-0000-4000-8000-000000000005/fresh-b.pdf','fresh-b.pdf','application/pdf','staff-1');
 INSERT INTO public.opportunity_pursuit_confidential_grants VALUES('18500000-0000-4000-8000-000000000013','18500000-0000-4000-8000-000000000005','18500000-0000-4000-8000-000000000001',
-  '18500000-0000-4000-8000-000000000006',NULL,clock_timestamp()+INTERVAL '1 day',
+  '18500000-0000-4000-8000-000000000015',NULL,clock_timestamp()+INTERVAL '1 day',
   '18500000-0000-4000-8000-000000000090','18500000-0000-4000-8000-000000000091','18500000-0000-4000-8000-000000000092');
 DO $$ BEGIN
+  IF NOT public.journey_repreneur_can_access_confidential('18500000-0000-4000-8000-000000000005','18500000-0000-4000-8000-000000000003','18500000-0000-4000-8000-000000000015')
+    OR public.journey_repreneur_can_access_confidential('18500000-0000-4000-8000-000000000004','18500000-0000-4000-8000-000000000002','18500000-0000-4000-8000-000000000015')
+    OR NOT EXISTS(SELECT 1 FROM public.opportunity_documents WHERE id='18500000-0000-4000-8000-000000000015'
+      AND recipient_match_id='18500000-0000-4000-8000-000000000005' AND recipient_repreneur_id='18500000-0000-4000-8000-000000000003')
+  THEN RAISE EXCEPTION 'B_fresh_recipient_im_invalid'; END IF;
+END $$;
+SELECT public.set_opportunity_recipient_im_required('18500000-0000-4000-8000-000000000001',FALSE,'staff-1');
+UPDATE public.opportunity_pursuit_confidential_grants SET information_memo_document_id='18500000-0000-4000-8000-000000000006'
+  WHERE match_id='18500000-0000-4000-8000-000000000005';
+DO $$ BEGIN
   IF NOT public.journey_repreneur_can_access_confidential('18500000-0000-4000-8000-000000000005','18500000-0000-4000-8000-000000000003','18500000-0000-4000-8000-000000000006')
+    OR (SELECT recipient_match_id FROM public.opportunity_documents WHERE id='18500000-0000-4000-8000-000000000015') IS DISTINCT FROM '18500000-0000-4000-8000-000000000005'::UUID
   THEN RAISE EXCEPTION 'B_reusable_grant_missing'; END IF;
+  BEGIN
+    PERFORM public.journey_transition_terminal('18500000-0000-4000-8000-000000000005','drop','staff-1','invalid-reason','arbitrary_reason');
+    RAISE EXCEPTION 'unsupported_drop_reason_accepted';
+  EXCEPTION WHEN OTHERS THEN IF SQLERRM='unsupported_drop_reason_accepted' THEN RAISE; END IF; END;
 END $$;
 SQL
 

@@ -15,6 +15,7 @@ import {
   type CriticalOperationTrace,
 } from "@/lib/observability/critical-operation"
 import { cleanupExpiredPrivateUploads } from "@/lib/private-upload-server"
+import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
 import { isBookingReminderDue } from "@/lib/booking-request-reminder"
 
 export const maxDuration = 60
@@ -459,6 +460,12 @@ export async function GET(request: Request) {
       await cleanupExpiredPrivateUploads({ batchSize: 25 })
     } catch {
       privateUploadCleanupErrors.push("private_upload_cleanup_failed")
+    }
+    try {
+      const recipientIm = await processRecipientImCleanup({ limit: 25 })
+      if (recipientIm.failed > 0) privateUploadCleanupErrors.push("recipient_im_cleanup_failed")
+    } catch {
+      privateUploadCleanupErrors.push("recipient_im_cleanup_failed")
     }
     if (privateUploadCleanupErrors.length > 0) privateUploadCleanupTrace.failure("persistence_failed")
     else privateUploadCleanupTrace.success()

@@ -2,11 +2,17 @@ import "server-only"
 
 import { Pool } from "pg"
 import { env } from "@/lib/env"
+import { postgresSslForConnection } from "@/lib/postgres-ssl"
 
 let pool: Pool | null = null
 
 function recipientImPool() {
-  return pool ??= new Pool({ connectionString: env.DATABASE_URL, max: 2, idleTimeoutMillis: 10_000 })
+  return pool ??= new Pool({
+    connectionString: env.DATABASE_URL,
+    ssl: postgresSslForConnection(env.DATABASE_URL),
+    max: 2,
+    idleTimeoutMillis: 10_000,
+  })
 }
 
 /** Keep the pursuit's row locked until recipient bytes are fully buffered and

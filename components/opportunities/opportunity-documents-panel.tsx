@@ -364,7 +364,7 @@ export function OpportunityDocumentsPanel({
                       <TableCell>
                         <div className="font-medium">{document.title}</div>
                         {document.recipient_match_id ? <p className="mt-1 text-xs text-muted-foreground">Recipient-specific · {recipientName} · pursuit {document.recipient_match_id.slice(0, 8)}</p> : document.document_type === "deal_book" ? <p className="mt-1 text-xs text-muted-foreground">Ordinary reusable IM</p> : null}
-                        {document.recipient_im_cleanup_status ? <p className="mt-1 text-xs text-muted-foreground">Dropped {document.recipient_im_dropped_at ? formatDate(document.recipient_im_dropped_at) : ""} · {document.recipient_im_drop_reason ?? "recorded reason"} · {document.recipient_im_cleanup_status === "deleted" ? "private deletion confirmed" : "access denied, private deletion pending"}</p> : null}
+                        {document.recipient_im_cleanup_status ? <p className="mt-1 text-xs text-muted-foreground">Dropped {document.recipient_im_dropped_at ? formatDate(document.recipient_im_dropped_at) : ""} · {document.recipient_im_drop_reason ?? "recorded reason"} · {document.recipient_im_cleanup_status === "deleted" ? "private deletion confirmed" : document.recipient_im_cleanup_status === "failed" ? "access denied, private deletion failed; retry available" : "access denied, private deletion pending"}</p> : null}
                         {document.document_type === "deal_book" && !canRemoveUnusedIm && (
                           <p className="mt-1 text-xs text-muted-foreground">Locked after use. Upload a corrected next version instead.</p>
                         )}
@@ -379,7 +379,7 @@ export function OpportunityDocumentsPanel({
                             Retained NDA evidence
                           </Badge>
                         )}
-                        {document.recipient_match_id && <Badge variant="outline" className="ml-2">{document.recipient_im_cleanup_status === "deleted" ? "Deleted" : document.recipient_im_cleanup_status ? "Cleanup pending" : "Recipient-bound"}</Badge>}
+                        {document.recipient_match_id && <Badge variant="outline" className="ml-2">{document.recipient_im_cleanup_status === "deleted" ? "Deleted" : document.recipient_im_cleanup_status === "failed" ? "Cleanup failed" : document.recipient_im_cleanup_status === "pending" ? "Cleanup pending" : "Recipient-bound"}</Badge>}
                         {document.visibility === "approved_for_repreneur" && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             {document.repreneur_approved_at && document.repreneur_approved_by

@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const mocks = vi.hoisted(() => ({ connect: vi.fn(), query: vi.fn(), release: vi.fn() }))
-vi.mock("pg", () => ({ Pool: class { connect() { return mocks.connect() } } }))
+const mocks = vi.hoisted(() => ({ connect: vi.fn(), query: vi.fn(), release: vi.fn(), poolConfig: vi.fn() }))
+vi.mock("pg", () => ({ Pool: class {
+  constructor(config: unknown) { mocks.poolConfig(config) }
+  connect() { return mocks.connect() }
+} }))
 vi.mock("@/lib/env", () => ({ env: { DATABASE_URL: "postgres://synthetic@127.0.0.1:1/synthetic" } }))
 
 import { withRecipientImPursuitLock } from "@/lib/recipient-im-download-lock"
@@ -23,6 +26,9 @@ describe("recipient IM download serialization", () => {
       return "prepared-private-response"
     })
     expect(await withRecipientImPursuitLock("match-a", work)).toBe("prepared-private-response")
+    expect(mocks.poolConfig).toHaveBeenCalledWith(expect.objectContaining({
+      ssl: { rejectUnauthorized: false },
+    }))
     expect(mocks.query.mock.calls.at(-1)).toEqual(["COMMIT"])
     expect(mocks.release).toHaveBeenCalledOnce()
   })

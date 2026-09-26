@@ -171,7 +171,7 @@ CREATE OR REPLACE FUNCTION public.journey_repreneur_can_access_confidential(
     JOIN public.opportunity_pursuit_confidential_grants grant_row ON grant_row.match_id=match.id
     JOIN public.opportunity_documents document ON document.id=grant_row.information_memo_document_id
     WHERE match.id=p_match_id AND match.repreneur_id=p_repreneur_id AND match.status='active_pursuit'
-      AND opportunity.status='active' AND NOT opportunity.is_demo
+      AND opportunity.status='active'
       AND grant_row.information_memo_document_id=p_document_id
       AND document.opportunity_id=match.opportunity_id AND document.document_type='deal_book'
       AND (document.recipient_match_id IS NULL OR
@@ -195,24 +195,6 @@ BEGIN
     AND v_match.opportunity_id=v_document.opportunity_id
     AND v_match.repreneur_id=v_document.recipient_repreneur_id
     AND NOT EXISTS(SELECT 1 FROM public.recipient_im_cleanup WHERE document_id=p_document_id);
-END $$;
-
--- The existing terminal transition accepted p_closure_reason but did not
--- persist it on Drop. Record that already-required staff choice on the
--- canonical immutable event; the deferred tombstone then copies it exactly.
--- All non-Drop branches retain their existing behaviour.
-CREATE OR REPLACE FUNCTION public.journey_transition_terminal(
-  p_match_id UUID,p_transition TEXT,p_actor TEXT,p_idempotency_key TEXT,p_closure_reason TEXT DEFAULT NULL
-) RETURNS UUID LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
-DECLARE v_match public.opportunity_matches%ROWTYPE; v_event UUID; BEGIN
- IF NOT public.wave_journey_is_enabled() THEN RAISE EXCEPTION 'wave_journey_disabled'; END IF;
- SELECT id INTO v_event FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND idempotency_key=p_idempotency_key; IF v_event IS NOT NULL THEN RETURN v_event; END IF;
- SELECT * INTO v_match FROM public.opportunity_matches WHERE id=p_match_id FOR UPDATE; IF v_match.id IS NULL THEN RAISE EXCEPTION 'Pursuit not found.'; END IF;
- IF p_transition='continue' THEN IF v_match.status<>'active_pursuit' OR NOT public.journey_repreneur_can_access_confidential(p_match_id,v_match.repreneur_id,(SELECT information_memo_document_id FROM public.opportunity_pursuit_confidential_grants WHERE match_id=p_match_id)) THEN RAISE EXCEPTION 'Continue requires a live current confidential grant.'; END IF; RETURN public.journey_append_evidence(p_match_id,'continued',p_actor,p_idempotency_key); END IF;
- IF p_transition='drop' THEN IF v_match.status<>'active_pursuit' THEN RAISE EXCEPTION 'Only an active pursuit can be dropped.'; END IF; IF NULLIF(BTRIM(p_closure_reason),'') IS NULL THEN RAISE EXCEPTION 'A Drop reason is required.'; END IF; PERFORM public.journey_revoke_confidential_access(p_match_id,p_actor,'dropped',p_idempotency_key||':revoke'); UPDATE public.opportunity_matches SET status='dropped',pursuit_stage='dropped',pursuit_stage_updated_by=p_actor,pursuit_stage_updated_at=NOW() WHERE id=p_match_id; RETURN public.journey_append_evidence(p_match_id,'dropped',p_actor,p_idempotency_key,NULL,NULL,BTRIM(p_closure_reason)); END IF;
- IF p_transition='complete' THEN IF v_match.status<>'active_pursuit' OR NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id=p_match_id AND event_type='continued' AND recorded_at>=public.journey_current_cycle_started_at(p_match_id)) THEN RAISE EXCEPTION 'Complete requires current continued external follow-up.'; END IF; PERFORM public.journey_revoke_confidential_access(p_match_id,p_actor,'completed',p_idempotency_key||':revoke'); UPDATE public.opportunity_matches SET status='completed',pursuit_stage='closed',pursuit_stage_updated_by=p_actor,pursuit_stage_updated_at=NOW() WHERE id=p_match_id; PERFORM set_config('wave.journey_terminal_transition','on',true); UPDATE public.opportunities SET status='closed',updated_by=p_actor WHERE id=v_match.opportunity_id; INSERT INTO public.opportunity_closure_history(opportunity_id,reason,closed_by) VALUES(v_match.opportunity_id,'signed_repreneur'::public.opportunity_closure_reason,p_actor); RETURN public.journey_append_evidence(p_match_id,'completed',p_actor,p_idempotency_key,NULL,NULL,p_closure_reason); END IF;
- IF p_transition='reopen' THEN IF v_match.status<>'dropped' THEN RAISE EXCEPTION 'Only a dropped pursuit can reopen.'; END IF; UPDATE public.opportunity_matches SET status='interested',pursuit_stage=NULL,pursuit_stage_notes=NULL,pursuit_stage_updated_by=p_actor,pursuit_stage_updated_at=NOW() WHERE id=p_match_id; RETURN public.journey_append_evidence(p_match_id,'reopened',p_actor,p_idempotency_key); END IF;
- RAISE EXCEPTION 'Unsupported pursuit transition.';
 END $$;
 
 -- Deferred so the canonical Drop function can first append its immutable
