@@ -75,6 +75,7 @@ async function requireCurrentSchema() {
     opportunityIsDemo: boolean;
     namespaceGuard: boolean;
     directUploads: boolean;
+    recipientIm: boolean;
     currentClosure: boolean;
     journeyControl: boolean;
     journeySingleton: boolean;
@@ -84,6 +85,9 @@ async function requireCurrentSchema() {
       EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='opportunities' AND column_name='is_demo') AS "opportunityIsDemo",
       EXISTS(SELECT 1 FROM pg_proc WHERE proname='w164_match_has_same_namespace') AS "namespaceGuard",
       EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='private_upload_intents') AS "directUploads",
+      EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='recipient_im_cleanup')
+        AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='opportunities' AND column_name='recipient_im_required')
+        AND EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='opportunity_documents' AND column_name='recipient_match_id') AS "recipientIm",
       EXISTS(SELECT 1 FROM pg_proc WHERE proname='close_opportunity_with_reason') AS "currentClosure",
       EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='wave_journey_settings')
         AND EXISTS(SELECT 1 FROM pg_proc WHERE proname='wave_journey_is_enabled') AS "journeyControl",

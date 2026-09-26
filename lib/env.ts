@@ -37,6 +37,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_INTAKE_V2: z.string().optional(),
   NEXT_PUBLIC_SHOW_SCORE_BREAKDOWN: z.string().optional(),
   NEXT_PUBLIC_SHOW_TEST_AUTOFILL: z.string().optional(),
+  RECIPIENT_IM_OPERATIONS_DISABLED: z.enum(["1"]).optional(),
   QA_CONTRACT_MODE: z.enum(["protected"]).optional(),
 
   // Node environment

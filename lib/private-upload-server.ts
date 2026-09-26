@@ -7,6 +7,7 @@ import { revalidateOpportunityDashboardTags, revalidateRepreneurDashboardTags } 
 import { env } from "@/lib/env"
 import { EXTERNAL_PURSUIT_ATTACHMENT_MAX_BYTES } from "@/lib/external-pursuit-attachments"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
+import { RECIPIENT_IM_PAUSED_MESSAGE, recipientImOperationsPaused } from "@/lib/recipient-im-operations"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { recalculateRepreneurScoresAndMatches } from "@/lib/repreneur-profile-refresh"
 import { matchesExpectedFileStructure } from "@/lib/security/external-pursuit-attachment-content"
@@ -264,13 +265,31 @@ async function authorizeIntent(
       throw new PrivateUploadError("This document stays staff-only until the pursuit workflow grants access.")
     }
     requireMetadataText(input.metadata, "title", "Document title")
-    const { data, error } = await supabase.from("opportunities").select("id").eq("id", opportunityId).maybeSingle()
+    const { data, error } = await supabase.from("opportunities")
+      .select("id,status,is_demo,recipient_im_required").eq("id", opportunityId).maybeSingle()
     if (error || !data) throw new PrivateUploadError("Opportunity not found.", 404)
+    let recipientMatchId: string | null = null
+    if (documentType === "deal_book" && data.recipient_im_required) {
+      if (recipientImOperationsPaused()) throw new PrivateUploadError(RECIPIENT_IM_PAUSED_MESSAGE, 503)
+      recipientMatchId = uuidValue(input.relatedId, true)!
+      const { data: match, error: matchError } = await supabase.from("opportunity_matches")
+        .select("id,opportunity_id,repreneur_id,status,repreneur:repreneurs!inner(is_demo)")
+        .eq("id", recipientMatchId).eq("opportunity_id", opportunityId).maybeSingle()
+      const repreneur = Array.isArray(match?.repreneur) ? match.repreneur[0] : match?.repreneur
+      if (matchError || !match || match.status !== "active_pursuit" || data.status !== "active"
+        || !isOpportunityInRepreneurNamespace(data, repreneur)) {
+        throw new PrivateUploadError("An active same-namespace pursuit is required for this recipient IM.", 404)
+      }
+    } else if (input.relatedId) {
+      throw new PrivateUploadError("This document cannot be bound to a pursuit.")
+    }
     return {
-      ...actor,resourceId: opportunityId,relatedId: null,
+      ...actor,resourceId: opportunityId,relatedId: recipientMatchId,
       metadata: { ...input.metadata, document_type: documentType, visibility },
       bucket: "opportunity-documents",
-      path: `${opportunityId}/documents/${intentId}-${safePathFilename(input.fileName)}`,
+      path: recipientMatchId
+        ? `${opportunityId}/recipient-im/${recipientMatchId}/${intentId}-${safePathFilename(input.fileName)}`
+        : `${opportunityId}/documents/${intentId}-${safePathFilename(input.fileName)}`,
     }
   }
 
@@ -721,6 +740,10 @@ export async function finalizePrivateUpload(request:Request,payload:unknown) {
     : result
   if (intent.status==="finalized" && intent.result) return clientResult(intent.result)
   if (intent.status!=="pending") throw new PrivateUploadError("This upload is already closed.",409)
+  if (intent.upload_kind==="opportunity_document" && intent.related_id && recipientImOperationsPaused()) {
+    await closeIntent(intent,"recipient_im_operations_disabled")
+    throw new PrivateUploadError(RECIPIENT_IM_PAUSED_MESSAGE,503)
+  }
   if (Date.parse(intent.expires_at)<=Date.now()) {
     await closeIntent(intent,"expired","expired")
     throw new PrivateUploadError("Upload authorization expired. Choose the file again.",410)

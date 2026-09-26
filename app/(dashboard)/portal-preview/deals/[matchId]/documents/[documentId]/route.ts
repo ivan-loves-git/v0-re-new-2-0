@@ -3,6 +3,7 @@ import { unstable_rethrow } from "next/navigation"
 import { getCurrentUserAccess } from "@/lib/access-control"
 import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { withRecipientImPursuitLock } from "@/lib/recipient-im-download-lock"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import {
   privateStorageDownloadError,
@@ -54,7 +55,7 @@ export async function GET(
 
     const { data: document, error: documentError } = await supabase
       .from("opportunity_documents")
-      .select("id, document_type, external_url, storage_bucket, storage_path")
+      .select("id, document_type, external_url, storage_bucket, storage_path, recipient_match_id, recipient_repreneur_id")
       .eq("id", documentId)
       .maybeSingle()
 
@@ -70,6 +71,12 @@ export async function GET(
       trace.failure("not_found")
       return privateStorageDownloadError("Not found", 404)
     }
+    if (document.recipient_match_id) {
+      if (document.recipient_match_id !== matchId || document.recipient_repreneur_id !== repreneurId) {
+        trace.failure("authorization_denied")
+        return privateStorageDownloadError("Not found", 404)
+      }
+    }
 
     if (document.external_url) {
       trace.failure("not_found")
@@ -81,25 +88,52 @@ export async function GET(
       return privateStorageDownloadError("Document file is unavailable.", 404)
     }
 
-    const bucket = document.storage_bucket || "opportunity-documents"
-    const { data: signedUrl, error: signedUrlError } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(document.storage_path, 60)
-
-    if (signedUrlError || !signedUrl?.signedUrl) {
-      trace.failure("storage_failed")
-      return privateStorageDownloadError("Document file is unavailable.")
+    const deliver = async () => {
+      if (document.recipient_match_id) {
+        const stillAuthorized = await resolvePortalPursuitResource({
+          matchId, viewer: { kind: "staff-preview", repreneurId },
+          resource: { kind: "information-memorandum", documentId },
+        })
+        if (stillAuthorized?.kind !== "information-memorandum") {
+          trace.failure("authorization_denied")
+          return privateStorageDownloadError("Not found", 404)
+        }
+      }
+      const bucket = document.storage_bucket || "opportunity-documents"
+      const { data: signedUrl, error: signedUrlError } = await supabase.storage
+        .from(bucket).createSignedUrl(document.storage_path, 60)
+      if (signedUrlError || !signedUrl?.signedUrl) {
+        trace.failure("storage_failed")
+        return privateStorageDownloadError("Document file is unavailable.")
+      }
+      const response = await proxyPrivateSignedStorageDownload(signedUrl.signedUrl, {
+        contentType: "application/pdf", filename: "information-memorandum.pdf",
+        bufferBeforeReturn: Boolean(document.recipient_match_id),
+      })
+      if (!response) {
+        trace.failure("storage_failed")
+        return privateStorageDownloadError("Document file is unavailable.")
+      }
+      if (document.recipient_match_id) {
+        const stillAuthorized = await resolvePortalPursuitResource({
+          matchId, viewer: { kind: "staff-preview", repreneurId },
+          resource: { kind: "information-memorandum", documentId },
+        })
+        if (stillAuthorized?.kind !== "information-memorandum") {
+          trace.failure("authorization_denied")
+          return privateStorageDownloadError("Not found", 404)
+        }
+      }
+      trace.success()
+      return response
     }
-    const response = await proxyPrivateSignedStorageDownload(signedUrl.signedUrl, {
-      contentType: "application/pdf",
-      filename: "information-memorandum.pdf",
-    })
-    if (!response) {
-      trace.failure("storage_failed")
-      return privateStorageDownloadError("Document file is unavailable.")
+    if (!document.recipient_match_id) return deliver()
+    try {
+      return await withRecipientImPursuitLock(matchId, deliver)
+    } catch {
+      trace.failure("authorization_denied")
+      return privateStorageDownloadError("Not found", 404)
     }
-    trace.success()
-    return response
   } catch (error) {
     unstable_rethrow(error)
     trace.failure("internal_error")

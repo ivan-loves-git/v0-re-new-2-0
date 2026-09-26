@@ -157,7 +157,11 @@ describe("operational stale tabs and retried staff actions", () => {
     const from = vi.fn(() => ({ select }))
     mocks.createAdminClient.mockReturnValue({ rpc, from })
 
-    await expect(invoke()).resolves.toBeUndefined()
+    if (current.status === "dropped") {
+      await expect(invoke()).resolves.toEqual({ cleanupPending: true })
+    } else {
+      await expect(invoke()).resolves.toBeUndefined()
+    }
     expect(matchFilter).toHaveBeenCalledWith("id", "match-1")
     expect(opportunityFilter).toHaveBeenCalledWith("opportunity_id", "opportunity-1")
   })

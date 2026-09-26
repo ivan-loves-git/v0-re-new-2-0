@@ -536,6 +536,16 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       surface: "mobile",
       result: "active DEMO only",
     });
+    await mobilePage.goto("/opportunities/" + mobileOpportunityId + "?tab=documents");
+    const mobileRecipientToggle = mobilePage.getByRole("button", { name: "Require recipient-specific IMs" });
+    await expect(mobileRecipientToggle).toBeVisible();
+    const mobileToggleBox = await mobileRecipientToggle.boundingBox();
+    expect(mobileToggleBox && mobileToggleBox.x + mobileToggleBox.width).toBeLessThanOrEqual(390);
+    await mobileRecipientToggle.click();
+    await expect(mobilePage.locator("#main-content:visible").getByText("Recipient-specific required", { exact: true })).toBeVisible();
+    await mobilePage.getByRole("button", { name: "Use reusable IMs for future grants" }).click();
+    await expect(mobilePage.locator("#main-content:visible").getByText("Reusable IMs", { exact: true })).toBeVisible();
+    await record({ step: "staff IM flag remained usable on a DEMO mobile viewport", surface: "mobile", result: "explicit on/off; no files reclassified" });
     await mobileContext.close();
     mobileContext = null;
 
@@ -902,24 +912,33 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.goto(
       "/opportunities/" + desktopOpportunityId + "?tab=documents",
     );
-    await page.locator("#document-title").fill("QA LIFECYCLE IM — SYNTHETIC");
+    await expect(page.locator("#main-content:visible").getByText("Reusable IMs", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Require recipient-specific IMs" }).click();
+    await expect(page.locator("#main-content:visible").getByText("Recipient-specific required", { exact: true })).toBeVisible();
+    await page.reload();
+    await page.locator("#document-title").fill("QA LIFECYCLE RECIPIENT IM — SYNTHETIC");
     await chooseOption(page, "#document-type", "Information memorandum (IM)");
+    await expect(page.locator("#main-content:visible")).toContainText("This upload will belong only to");
     await page
       .locator("#document-file")
       .setInputFiles(manifest.files.informationMemorandum.path);
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(
-      page.getByText("QA LIFECYCLE IM — SYNTHETIC", { exact: true }),
+      page.getByText("QA LIFECYCLE RECIPIENT IM — SYNTHETIC", { exact: true }),
     ).toBeVisible();
     const memo = await one<{
       id: string;
       size_bytes: string;
       content_sha256: string;
+      recipient_match_id: string;
+      recipient_repreneur_id: string;
     }>(
       client,
-      "SELECT document.id,document.size_bytes::text,intent.content_sha256 FROM public.opportunity_documents document JOIN public.private_upload_intents intent ON intent.bucket_id=document.storage_bucket AND intent.storage_path=document.storage_path AND intent.status='finalized' WHERE document.opportunity_id=$1 AND document.document_type='deal_book'",
+      "SELECT document.id,document.size_bytes::text,intent.content_sha256,document.recipient_match_id::text,document.recipient_repreneur_id::text FROM public.opportunity_documents document JOIN public.private_upload_intents intent ON intent.bucket_id=document.storage_bucket AND intent.storage_path=document.storage_path AND intent.status='finalized' WHERE document.opportunity_id=$1 AND document.document_type='deal_book'",
       [desktopOpportunityId],
     );
+    expect(memo.recipient_match_id).toBe(savedMatch.id);
+    expect(memo.recipient_repreneur_id).toBe(fixture.ids.realRepreneur);
     expect(Number(memo.size_bytes)).toBe(
       manifest.files.informationMemorandum.bytes,
     );
@@ -941,9 +960,9 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(deniedMemo.headers()["cache-control"]).toBe("private, no-store");
     expect(deniedMemo.headers()["referrer-policy"]).toBe("no-referrer");
     await record({
-      step: "IM persisted privately and portal access failed closed",
+      step: "recipient IM bound privately and portal access failed closed",
       surface: "storage",
-      result: "hash matched; pre-grant download denied",
+      result: "hash and exact pursuit/repreneur binding matched; pre-grant download denied",
     });
 
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
@@ -1292,6 +1311,17 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       result:
         "exact bytes to owner; anonymous, DEMO and second REAL non-owner denied",
     });
+
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=documents");
+    await page.getByRole("button", { name: "Use reusable IMs for future grants" }).click();
+    await expect(page.locator("#main-content:visible").getByText("Reusable IMs", { exact: true })).toBeVisible();
+    await expect(page.locator("#main-content:visible")).toContainText("Recipient-specific ·");
+    const stillBound = await one<{ recipient_match_id: string; recipient_repreneur_id: string }>(client,
+      "SELECT recipient_match_id::text,recipient_repreneur_id::text FROM public.opportunity_documents WHERE id=$1", [memo.id]);
+    expect(stillBound).toEqual({ recipient_match_id: savedMatch.id, recipient_repreneur_id: fixture.ids.realRepreneur });
+    const stillGranted = await realPage.request.get(baseURL + memoHref!);
+    expect(stillGranted.status()).toBe(200);
+    await expectMemoDenied(demoPage, savedMatch.id, memo.id);
 
     await page.goto("/analytics_op");
     const activeOpportunitiesCard = page

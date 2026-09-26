@@ -6,6 +6,7 @@ import {
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { withRecipientImPursuitLock } from "@/lib/recipient-im-download-lock"
 import { isUuid } from "@/lib/uuid"
 
 /**
@@ -26,14 +27,13 @@ export async function GET(
 
   const { data: document, error } = await supabase
     .from("opportunity_documents")
-    .select("storage_bucket, storage_path, file_name, mime_type")
+    .select("storage_bucket, storage_path, file_name, mime_type, recipient_match_id")
     .eq("id", documentId)
     .eq("opportunity_id", opportunityId)
     .maybeSingle()
 
   if (error) return privateStorageDownloadError("Unable to open document.", 500)
   if (!document) return privateStorageDownloadError("Not found", 404)
-
   const expectedPrefix = `${opportunityId}/`
   if (
     document.storage_bucket !== "opportunity-documents" ||
@@ -42,22 +42,39 @@ export async function GET(
     return privateStorageDownloadError("Not found", 404)
   }
 
-  const { data: signedUrl, error: signedUrlError } = await supabase.storage
+  const deliver = async () => {
+    if (document.recipient_match_id) {
+      const { data: live, error: liveError } = await supabase.rpc("recipient_im_staff_can_read", {
+        p_document_id: documentId,
+      })
+      if (liveError || !live) return privateStorageDownloadError("Not found", 404)
+    }
+    const { data: signedUrl, error: signedUrlError } = await supabase.storage
     .from("opportunity-documents")
     .createSignedUrl(document.storage_path, 60)
-  if (signedUrlError) {
-    return privateStorageDownloadError("Unable to open document.", 500)
-  }
+    if (signedUrlError) return privateStorageDownloadError("Unable to open document.", 500)
 
-  const shouldDownload = new URL(request.url).searchParams.has("download")
-  const response = await proxyPrivateSignedStorageDownload(signedUrl?.signedUrl ?? "", {
-    filename: document.file_name,
-    contentType: document.mime_type
-      ? privateSignedDownloadContentType(document.mime_type)
-      : privateSignedDownloadContentTypeFromFilename(
-          document.file_name ?? document.storage_path,
-        ),
-    disposition: shouldDownload ? "attachment" : "inline",
-  })
-  return response ?? privateStorageDownloadError("Unable to open document.")
+    const shouldDownload = new URL(request.url).searchParams.has("download")
+    const response = await proxyPrivateSignedStorageDownload(signedUrl?.signedUrl ?? "", {
+      filename: document.file_name,
+      ...(document.recipient_match_id ? { bufferBeforeReturn: true } : {}),
+      contentType: document.mime_type
+        ? privateSignedDownloadContentType(document.mime_type)
+        : privateSignedDownloadContentTypeFromFilename(document.file_name ?? document.storage_path),
+      disposition: shouldDownload ? "attachment" : "inline",
+    })
+    if (response && document.recipient_match_id) {
+      const { data: stillLive, error: liveError } = await supabase.rpc("recipient_im_staff_can_read", {
+        p_document_id: documentId,
+      })
+      if (liveError || !stillLive) return privateStorageDownloadError("Not found", 404)
+    }
+    return response ?? privateStorageDownloadError("Unable to open document.")
+  }
+  if (!document.recipient_match_id) return deliver()
+  try {
+    return await withRecipientImPursuitLock(document.recipient_match_id, deliver)
+  } catch {
+    return privateStorageDownloadError("Not found", 404)
+  }
 }

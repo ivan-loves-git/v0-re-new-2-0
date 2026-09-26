@@ -25,6 +25,16 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 26, 2026",
+    version: "0.9.78",
+    title: "Recipient-specific information memoranda",
+    isCompleted: false,
+    events: [
+      { title: "A separate copy for each repreneur", type: "feature", description: "Re-New can require a personalized IM on an opportunity, upload it for the exact active pursuit, and grant it only through the existing NDA and approval steps. Existing IMs stay reusable and unchanged." },
+      { title: "Clear Drop cleanup", type: "decision", description: "Dropping a pursuit removes access immediately and schedules deletion of only that repreneur's private IM copy. Staff can see whether deletion is confirmed or still needs a retry. This candidate is awaiting release proof." },
+    ],
+  },
+  {
     period: "Sep 24, 2026",
     version: "0.9.77",
     title: "Review operational emails before sending",

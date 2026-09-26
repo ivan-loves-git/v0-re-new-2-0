@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("@/lib/access-control", () => ({ requireStaffAccess: mocks.requireStaffAccess }))
+vi.mock("@/lib/recipient-im-download-lock", () => ({ withRecipientImPursuitLock: async (_matchId: string, work: () => Promise<Response>) => work() }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
 vi.mock("@/lib/storage/private-signed-download", () => ({
   proxyPrivateSignedStorageDownload: mocks.proxyDownload,
@@ -35,6 +36,7 @@ function setupAdminClient(document: {
   storage_path: string | null
   file_name?: string | null
   mime_type?: string | null
+  recipient_match_id?: string | null
 } | null = {
   storage_bucket: "opportunity-documents",
   storage_path: `${opportunityId}/documents/memo.pdf`,
@@ -49,11 +51,13 @@ function setupAdminClient(document: {
     data: { signedUrl: "https://storage.example.test/signed-document" },
     error: null,
   })
+  const rpc = vi.fn().mockResolvedValue({ data: true, error: null })
   mocks.createAdminClient.mockReturnValue({
     from: vi.fn(() => ({ select })),
     storage: { from: vi.fn(() => ({ createSignedUrl })) },
+    rpc,
   })
-  return { createSignedUrl, select }
+  return { createSignedUrl, select, rpc }
 }
 
 function requestDocument(id = documentId, download = false) {
@@ -64,6 +68,8 @@ function requestDocument(id = documentId, download = false) {
 }
 
 describe("staff opportunity document route", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.requireStaffAccess.mockResolvedValue({ role: "staff", user: { id: "staff-1" } })
@@ -122,6 +128,28 @@ describe("staff opportunity document route", () => {
         disposition: "attachment",
       },
     )
+  })
+
+  it("denies a dropped recipient-bound IM to staff before signing its Storage path", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const { createSignedUrl, rpc } = setupAdminClient({
+      storage_bucket: "opportunity-documents", storage_path: `${opportunityId}/recipient-im/match-a/memo.pdf`,
+      file_name: "memo.pdf", mime_type: "application/pdf", recipient_match_id: "match-a",
+    })
+    rpc.mockResolvedValueOnce({ data: false, error: null })
+    expect((await requestDocument()).status).toBe(404)
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("withholds buffered recipient-bound bytes if Drop commits during Storage retrieval", async () => {
+    const { rpc } = setupAdminClient({
+      storage_bucket: "opportunity-documents", storage_path: `${opportunityId}/recipient-im/match-a/memo.pdf`,
+      file_name: "memo.pdf", mime_type: "application/pdf", recipient_match_id: "match-a",
+    })
+    rpc.mockResolvedValueOnce({ data: true, error: null }).mockResolvedValueOnce({ data: false, error: null })
+    expect((await requestDocument()).status).toBe(404)
+    expect(mocks.proxyDownload).toHaveBeenCalledWith("https://storage.example.test/signed-document", expect.objectContaining({ bufferBeforeReturn: true }))
+    expect(rpc).toHaveBeenCalledTimes(2)
   })
 
   it("does not create a storage URL when the private file is unavailable", async () => {

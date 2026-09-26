@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateBody: vi.fn(),
   deliverCronReminder: vi.fn(),
   cleanupExpiredPrivateUploads: vi.fn(),
+  processRecipientImCleanup: vi.fn(),
   runPendingInterestNotifications: vi.fn(),
   runPendingMemoFeedbackReminders: vi.fn(),
 }))
@@ -33,6 +34,9 @@ vi.mock("@/lib/email/cron-reminder-delivery", async (importOriginal) => {
 })
 vi.mock("@/lib/private-upload-server", () => ({
   cleanupExpiredPrivateUploads: mocks.cleanupExpiredPrivateUploads,
+}))
+vi.mock("@/lib/recipient-im-cleanup", () => ({
+  processRecipientImCleanup: mocks.processRecipientImCleanup,
 }))
 vi.mock("@/lib/email/interest-notification-delivery", () => ({
   runPendingInterestNotifications: mocks.runPendingInterestNotifications,
@@ -131,6 +135,7 @@ describe("critical route traces", () => {
       examined: 0,
       cleaned: 0,
     })
+    mocks.processRecipientImCleanup.mockResolvedValue({ examined: 0, deleted: 0, failed: 0, remaining: 0 })
     mocks.runPendingInterestNotifications.mockResolvedValue({ sent: 0, failed: 0, reviewRequired: 0 })
     mocks.runPendingMemoFeedbackReminders.mockResolvedValue({
       sent: 0, failed: 0, reviewRequired: 0, processed: 0, budgetDeferred: 0,
@@ -219,6 +224,7 @@ describe("critical route traces", () => {
       "cron.private_upload_cleanup",
       "cron.abandoned_forms",
     ])
+    expect(mocks.processRecipientImCleanup).toHaveBeenCalledWith({ limit: 25 })
   })
 
   it("isolates new notification families behind separate fail-closed daily routes", async () => {
