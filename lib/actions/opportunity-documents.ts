@@ -14,6 +14,7 @@ import type {
   OpportunityDocumentVisibility,
 } from "@/lib/types/opportunity"
 import { LEGACY_MULTIPART_MAX_FILE_BYTES } from "@/lib/upload-limits"
+import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
 
 const OPPORTUNITY_DOCUMENTS_BUCKET = "opportunity-documents"
 const MAX_DOCUMENT_BYTES = LEGACY_MULTIPART_MAX_FILE_BYTES
@@ -97,24 +98,65 @@ export async function listOpportunityDocuments(opportunityId: string): Promise<O
   const documentIds = documents.map((document) => document.id)
   if (documentIds.length === 0) return documents
 
-  const [grantsResult, evidenceResult, legacyResult] = await Promise.all([
+  const [grantsResult, evidenceResult, legacyResult, recipientCleanupResult] = await Promise.all([
     supabase.from("opportunity_pursuit_confidential_grants").select("information_memo_document_id").in("information_memo_document_id", documentIds),
     supabase.from("opportunity_pursuit_evidence").select("document_id").in("document_id", documentIds),
     supabase.from("opportunity_matches").select("nda_document_id").in("nda_document_id", documentIds),
+    supabase.from("recipient_im_cleanup").select("document_id,status,dropped_by,dropped_at,drop_reason,deletion_receipt_at").eq("opportunity_id", opportunityId),
   ])
   if (grantsResult.error) throw new Error(grantsResult.error.message)
   if (evidenceResult.error) throw new Error(evidenceResult.error.message)
   if (legacyResult.error) throw new Error(legacyResult.error.message)
+  if (recipientCleanupResult.error) throw new Error(recipientCleanupResult.error.message)
 
   const usedDocumentIds = new Set([
     ...(grantsResult.data ?? []).map((row) => row.information_memo_document_id),
     ...(evidenceResult.data ?? []).map((row) => row.document_id),
     ...(legacyResult.data ?? []).map((row) => row.nda_document_id),
   ].filter((id): id is string => Boolean(id)))
+  const cleanupByDocumentId = new Map((recipientCleanupResult.data ?? []).map((row) => [row.document_id, row]))
   return documents.map((document) => ({
     ...document,
-    can_remove_unused_retained: document.document_type === "deal_book" && !usedDocumentIds.has(document.id),
+    can_remove_unused_retained: document.document_type === "deal_book"
+      && !document.recipient_match_id && !usedDocumentIds.has(document.id),
+    recipient_im_cleanup_status: cleanupByDocumentId.get(document.id)?.status ?? null,
+    recipient_im_dropped_by: cleanupByDocumentId.get(document.id)?.dropped_by ?? null,
+    recipient_im_dropped_at: cleanupByDocumentId.get(document.id)?.dropped_at ?? null,
+    recipient_im_drop_reason: cleanupByDocumentId.get(document.id)?.drop_reason ?? null,
+    recipient_im_deletion_receipt_at: cleanupByDocumentId.get(document.id)?.deletion_receipt_at ?? null,
   }))
+}
+
+export async function setOpportunityRecipientImRequired(opportunityId: string, required: boolean): Promise<OpportunityDocumentMutationResult> {
+  try {
+    const { user } = await requireStaffAccess()
+    const { error } = await createAdminClient().rpc("set_opportunity_recipient_im_required", {
+      p_opportunity_id: opportunityId, p_required: required, p_actor: user.id,
+    })
+    if (error) throw new Error(error.message)
+    revalidatePath(`/opportunities/${opportunityId}`)
+    return { success: true, message: required
+      ? "New IM grants now require a fresh copy for the exact repreneur. Existing files and grants are unchanged."
+      : "New IM grants may use ordinary reusable files. Recipient-bound copies remain bound to their original repreneur." }
+  } catch {
+    return { success: false, message: "IM handling could not be changed. Refresh and try again." }
+  }
+}
+
+export async function retryRecipientImCleanup(opportunityId: string, documentId: string): Promise<OpportunityDocumentMutationResult> {
+  await requireStaffAccess()
+  try {
+    const { data: exact, error: exactError } = await createAdminClient()
+      .from("recipient_im_cleanup").select("document_id")
+      .eq("opportunity_id", opportunityId).eq("document_id", documentId).maybeSingle()
+    if (exactError || !exact) return { success: false, message: "No recipient IM cleanup exists for this opportunity and document." }
+    const result = await processRecipientImCleanup({ opportunityId, documentId, limit: 1 })
+    revalidatePath(`/opportunities/${opportunityId}`)
+    if (result.deleted === 1) return { success: true, message: "Exact private IM deletion confirmed." }
+    return { success: false, message: "Access remains denied. Private deletion is still pending; retry safely." }
+  } catch {
+    return { success: false, message: "Access remains denied. Private deletion could not be confirmed yet." }
+  }
 }
 
 export async function registerOpportunityDocument(formData: FormData): Promise<OpportunityDocumentMutationResult> {
@@ -133,6 +175,14 @@ export async function registerOpportunityDocument(formData: FormData): Promise<O
     if (!title) throw new Error("Document title is required")
     if (!(file instanceof File) && !externalUrl) throw new Error("Upload a file or provide an external URL")
     assertGenericOpportunityDocumentPolicy(documentType, visibility, file, externalUrl)
+    if (documentType === "deal_book") {
+      const { data: opportunity, error: opportunityError } = await supabase.from("opportunities")
+        .select("recipient_im_required").eq("id", opportunityId).maybeSingle()
+      if (opportunityError || !opportunity) throw new Error("Opportunity not found.")
+      if (opportunity.recipient_im_required) {
+        throw new Error("Use the private recipient-specific upload for the active pursuit.")
+      }
+    }
 
     let storagePath: string | null = null
   let fileName: string | null = null

@@ -287,11 +287,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setPendingActionId(matchId)
     setFeedback(null)
     try {
-      await dropOpportunityPursuit(matchId, opportunityId, reason)
+      const result = await dropOpportunityPursuit(matchId, opportunityId, reason)
       showFeedback({
         type: "success",
         title: "Pursuit dropped",
-        description: "The opportunity is unlocked for another interested repreneur.",
+        description: result.cleanupPending
+          ? "The opportunity is unlocked. Recipient IM access is denied; private deletion remains pending for retry."
+          : "The opportunity is unlocked for another interested repreneur. No recipient IM private deletion is pending.",
       })
       setDropReason("")
     } catch (error) {

@@ -53,6 +53,7 @@ import {
 
 interface OpportunityPursuitPanelProps {
   opportunityId: string
+  recipientImRequired: boolean
   matches: OpportunityMatch[]
   documents: OpportunityDocument[]
   ndaArtifacts: OpportunityNdaArtifact[]
@@ -87,7 +88,7 @@ function repreneurName(match: OpportunityMatch | null) {
   return [match.repreneur.first_name, match.repreneur.last_name].filter(Boolean).join(" ") || match.repreneur.email
 }
 
-export function OpportunityPursuitPanel({ opportunityId, matches, documents, ndaArtifacts, projection, legacyEventCount }: OpportunityPursuitPanelProps) {
+export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, matches, documents, ndaArtifacts, projection, legacyEventCount }: OpportunityPursuitPanelProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null)
@@ -99,7 +100,11 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
   const currentTemplate = projection?.currentTemplate ?? ndaArtifacts.find((artifact) => artifact.artifact_role === "blank_template" && !artifact.match_id) ?? null
   const currentRenew = projection?.currentRenewSignedCopy ?? ndaArtifacts.find((artifact) => artifact.artifact_role === "renew_signed_copy" && artifact.match_id === activeMatch?.id) ?? null
   const currentRepreneur = projection?.currentRepreneurSignedCopy ?? ndaArtifacts.find((artifact) => artifact.artifact_role === "repreneur_signed_copy" && artifact.match_id === activeMatch?.id) ?? null
-  const imDocuments = documents.filter((document) => document.document_type === "deal_book")
+  const imDocuments = documents.filter((document) => document.document_type === "deal_book"
+    && !document.recipient_im_cleanup_status
+    && (document.recipient_match_id
+      ? document.recipient_match_id === activeMatch?.id && document.recipient_repreneur_id === activeMatch?.repreneur_id
+      : !recipientImRequired))
   const repreneurArtifacts = ndaArtifacts.filter((artifact) => artifact.artifact_role === "repreneur_signed_copy")
 
   function run(action: () => Promise<{ success: boolean; message: string; reviewId?: string }>) {
@@ -176,8 +181,9 @@ export function OpportunityPursuitPanel({ opportunityId, matches, documents, nda
       </Card>
 
       {activeMatch && projection?.gate2Passed && projection.dispatched ? <Card>
-        <CardHeader><CardTitle>Confidential access and outcome</CardTitle><CardDescription>Approve the selected Information Memorandum for this repreneur and grant access only after Gate 2 and the sent intermediary handoff.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Confidential access and outcome</CardTitle><CardDescription>Approve the selected Information Memorandum for this repreneur and grant access only after Gate 2 and the sent intermediary handoff. {recipientImRequired ? "This opportunity requires a fresh recipient-specific PDF uploaded in Documents for this exact pursuit." : "Ordinary reusable IMs remain available through a separate grant for each pursuit."}</CardDescription></CardHeader>
         <CardContent className="flex flex-col gap-4">
+          {!hasLiveGrant && recipientImRequired && imDocuments.length === 0 ? <Alert><FileText /><AlertTitle>Recipient IM not uploaded yet</AlertTitle><AlertDescription>Approval and NDA steps remain available. Only IM access waits for staff to upload a new personalized copy for {repreneurName(activeMatch)}.</AlertDescription></Alert> : null}
           {!hasLiveGrant && <form action={(formData) => {
             const documentId = String(formData.get("document_id") ?? "")
             const ndaExpiresAt = String(formData.get("nda_expires_at") ?? "")

@@ -434,6 +434,10 @@ export interface Opportunity {
   /** Canonical staff-only W-039 geography identity; literal location remains reader-facing. */
   geography_node_id?: string | null
   status: OpportunityStatus
+  /** Staff-only #185 choice; existing opportunities remain false. */
+  recipient_im_required?: boolean
+  recipient_im_required_changed_at?: string | null
+  recipient_im_required_changed_by?: string | null
   source_id?: string | null
   source_office_id?: string | null
   source_label?: string | null
@@ -671,6 +675,14 @@ export interface OpportunityDocument {
   repreneur_approved_by?: string | null
   uploaded_at: string
   updated_at: string
+  /** Immutable recipient ownership; null denotes an ordinary reusable IM. */
+  recipient_match_id?: string | null
+  recipient_repreneur_id?: string | null
+  recipient_im_cleanup_status?: "pending" | "failed" | "deleted" | null
+  recipient_im_dropped_by?: string | null
+  recipient_im_dropped_at?: string | null
+  recipient_im_drop_reason?: string | null
+  recipient_im_deletion_receipt_at?: string | null
   /** Server-read W-170 projection only; the removal RPC rechecks under lock. */
   can_remove_unused_retained?: boolean
 }

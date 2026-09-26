@@ -28,6 +28,16 @@ describe("private signed download proxy", () => {
     expect(await response?.text()).toBe("pdf-bytes")
   })
 
+  it("consumes recipient-bound bytes before returning for final access revalidation", async () => {
+    const upstream = new Response("private-pdf", { headers: { "content-type": "application/pdf" } })
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(upstream))
+    const response = await proxyPrivateSignedStorageDownload(SIGNED_URL, {
+      filename: "recipient.pdf", contentType: "application/pdf", bufferBeforeReturn: true,
+    })
+    expect(upstream.bodyUsed).toBe(true)
+    expect(await response?.text()).toBe("private-pdf")
+  })
+
   it("rejects an arbitrary URL rather than turning the route into an SSRF proxy", async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)

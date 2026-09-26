@@ -10,6 +10,7 @@ import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
 import { preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
 import { deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
+import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
 
 export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string; reviewId?: string } | { success: false; message: string }
 
@@ -117,9 +118,16 @@ export async function runOpportunityPursuitJourneyAction(input: {
     if (["continue", "drop", "reopen", "complete"].includes(input.action)) {
       const { data, error } = await supabase.rpc("journey_transition_terminal", { p_match_id: input.matchId, p_transition: input.action, p_actor: actor, p_idempotency_key: key, p_closure_reason: input.reason ?? null })
       if (error) throw error
+      let message = `Pursuit ${input.action} recorded.`
+      if (input.action === "drop") {
+        const cleanup = await processRecipientImCleanup({ matchId: input.matchId }).catch(() => null)
+        message = cleanup && cleanup.failed === 0 && cleanup.remaining === 0
+          ? cleanup.deleted > 0 ? "Pursuit dropped. Recipient IM private deletion confirmed." : "Pursuit dropped. No recipient IM private deletion is pending."
+          : "Pursuit dropped. Recipient IM access is denied; private deletion remains pending for retry."
+      }
       trace.success()
       capture("success")
-      return { success: true, message: `Pursuit ${input.action} recorded.`, eventId: data }
+      return { success: true, message, eventId: data }
     }
     if (input.action === "request_qualification") {
       const result = await preparePursuitEmailReview(input.matchId, "e4")

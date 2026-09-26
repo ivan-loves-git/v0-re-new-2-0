@@ -248,6 +248,33 @@ describe("W-165 server upload authority", () => {
     expect(createSignedUploadUrl).toHaveBeenCalledWith(result.path, { upsert: false })
   })
 
+  it("binds a flagged IM upload to the exact active pursuit before issuing a private upload capability", async () => {
+    const matchId = "00000000-0000-4000-8000-000000000031"
+    const ownerId = "00000000-0000-4000-8000-000000000032"
+    const insert = vi.fn().mockResolvedValue({ error: null })
+    const createSignedUploadUrl = vi.fn().mockResolvedValue({ data: { token: "signed-token" }, error: null })
+    mocks.createAdminClient.mockReturnValue({
+      from: (table: string) => {
+        if (table === "opportunities") return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: opportunityId, recipient_im_required: true, status: "active", is_demo: false }, error: null }) }) }) }
+        if (table === "opportunity_matches") return { select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: matchId, opportunity_id: opportunityId, repreneur_id: ownerId, status: "active_pursuit", repreneur: { is_demo: false } }, error: null }) }) }) }) }
+        if (table === "private_upload_intents") return { insert }
+        throw new Error(`Unexpected table ${table}`)
+      },
+      storage: { from: () => ({ createSignedUploadUrl }) },
+    })
+
+    const result = await createPrivateUploadIntent(request({}), {
+      kind: "opportunity_document", resourceId: opportunityId, relatedId: matchId,
+      fileName: "recipient.pdf", contentType: "application/pdf", sizeBytes: 100,
+      metadata: { document_type: "deal_book", visibility: "staff_only", title: "Recipient IM" },
+      idempotencyKey: "00000000-0000-4000-8000-000000000033",
+    })
+
+    expect(result.path).toMatch(new RegExp(`^${opportunityId}/recipient-im/${matchId}/`))
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ resource_id: opportunityId, related_id: matchId }))
+    expect(createSignedUploadUrl).toHaveBeenCalledOnce()
+  })
+
   it("rejects one byte over 20 MiB and a cross-origin request before authorization", async () => {
     await expect(createPrivateUploadIntent(request({}), {
       kind: "opportunity_document",

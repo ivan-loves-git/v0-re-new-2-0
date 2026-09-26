@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("@/lib/access-control", () => ({ getCurrentUserAccess: mocks.getCurrentUserAccess }))
+vi.mock("@/lib/recipient-im-download-lock", () => ({ withRecipientImPursuitLock: async (_matchId: string, work: () => Promise<Response>) => work() }))
 vi.mock("@/lib/data/current-pursuit", () => ({
   resolvePortalPursuitResource: mocks.resolvePortalPursuitResource,
 }))

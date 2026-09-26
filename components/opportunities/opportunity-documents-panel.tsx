@@ -14,6 +14,8 @@ import {
   type PendingUnusedRetainedDocumentCleanup,
   removeOpportunityDocument,
   removeUnusedRetainedOpportunityDocument,
+  retryRecipientImCleanup,
+  setOpportunityRecipientImRequired,
   updateOpportunityDocumentVisibility,
 } from "@/lib/actions/opportunity-documents"
 import { PRIVATE_DOCUMENT_MAX_LABEL, uploadPrivateDocument } from "@/lib/private-upload"
@@ -34,10 +36,13 @@ import {
   type OpportunityDocument,
   type OpportunityDocumentType,
   type OpportunityDocumentVisibility,
+  type OpportunityMatch,
 } from "@/lib/types/opportunity"
 
 interface OpportunityDocumentsPanelProps {
   opportunityId: string
+  recipientImRequired: boolean
+  matches: OpportunityMatch[]
   documents: OpportunityDocument[]
   canonicalNdaDocumentIds?: string[]
   pendingCleanups?: PendingUnusedRetainedDocumentCleanup[]
@@ -59,6 +64,8 @@ function documentTypeLabel(type: OpportunityDocumentType) {
 
 export function OpportunityDocumentsPanel({
   opportunityId,
+  recipientImRequired,
+  matches,
   documents,
   canonicalNdaDocumentIds = [],
   pendingCleanups = [],
@@ -68,7 +75,12 @@ export function OpportunityDocumentsPanel({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const validationSummaryRef = useRef<HTMLDivElement>(null)
   const [pendingDocumentId, setPendingDocumentId] = useState<string | null>(null)
+  const [flagPending, setFlagPending] = useState(false)
   const [documentType, setDocumentType] = useState<OpportunityDocumentType>("teaser")
+  const activePursuit = matches.find((match) => match.status === "active_pursuit") ?? null
+  const activeRepreneurName = activePursuit?.repreneur
+    ? [activePursuit.repreneur.first_name, activePursuit.repreneur.last_name].filter(Boolean).join(" ") || activePursuit.repreneur.email
+    : null
   const canonicalNdaDocumentIdSet = new Set(canonicalNdaDocumentIds)
   const selectedTypeIsStaffOnly = documentType === "source_teaser" || documentType === "deal_book"
 
@@ -77,6 +89,7 @@ export function OpportunityDocumentsPanel({
     if (!String(formData.get("title") ?? "").trim()) errors["document-title"] = "Enter a document title."
     const file = formData.get("file")
     if (!(file instanceof File) || file.size <= 0) errors["document-file"] = "Select a file to upload."
+    if (documentType === "deal_book" && recipientImRequired && !activePursuit) errors.form = "An active pursuit is required before uploading a recipient-specific IM."
     return errors
   }
 
@@ -97,6 +110,7 @@ export function OpportunityDocumentsPanel({
       const result = await uploadPrivateDocument(file, {
         kind: "opportunity_document",
         resourceId: opportunityId,
+        relatedId: documentType === "deal_book" && recipientImRequired ? activePursuit?.id : null,
         metadata: { title, document_type: documentType, visibility },
       })
       toast.success("Document added", { description: String(result.message ?? "Document added.") })
@@ -175,8 +189,38 @@ export function OpportunityDocumentsPanel({
     setPendingDocumentId(null)
   }
 
+  async function handleRecipientImFlag() {
+    setFlagPending(true)
+    const result = await setOpportunityRecipientImRequired(opportunityId, !recipientImRequired)
+    if (result.success) {
+      toast.success("IM handling changed", { description: result.message })
+      router.refresh()
+    } else {
+      toast.error("IM handling not changed", { description: result.message })
+    }
+    setFlagPending(false)
+  }
+
+  async function handleRecipientCleanupRetry(documentId: string) {
+    setPendingDocumentId(documentId)
+    const result = await retryRecipientImCleanup(opportunityId, documentId)
+    if (result.success) {
+      toast.success("Private deletion confirmed", { description: result.message })
+      router.refresh()
+    } else {
+      toast.error("Private deletion pending", { description: result.message })
+    }
+    setPendingDocumentId(null)
+  }
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader><CardTitle>Information memorandum handling</CardTitle><CardDescription>{recipientImRequired
+          ? "New IM grants require an already-personalized PDF uploaded for the exact active pursuit. Existing files and grants are not reclassified or removed."
+          : "Ordinary IMs can be reused through separate pursuit grants. Existing recipient-bound copies, if any, remain tied to their original repreneur."}</CardDescription></CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-3"><Badge variant={recipientImRequired ? "default" : "secondary"}>{recipientImRequired ? "Recipient-specific required" : "Reusable IMs"}</Badge><Button type="button" variant="outline" disabled={flagPending} onClick={handleRecipientImFlag}>{flagPending ? "Saving..." : recipientImRequired ? "Use reusable IMs for future grants" : "Require recipient-specific IMs"}</Button></CardContent>
+      </Card>
       {pendingCleanups.length > 0 && <Card><CardHeader><CardTitle>Pending private cleanup</CardTitle><CardDescription>Document metadata is already removed. Retry safely to remove the remaining private file.</CardDescription></CardHeader><CardContent className="space-y-2">{pendingCleanups.map((cleanup) => <div key={cleanup.documentId} className="flex items-center justify-between gap-3 rounded-md border p-3"><span className="text-sm">Private document cleanup pending</span><Button type="button" variant="outline" disabled={pendingDocumentId === cleanup.documentId} onClick={() => handleRetryCleanup(cleanup.documentId)}>{pendingDocumentId === cleanup.documentId ? "Retrying..." : "Retry cleanup"}</Button></div>)}</CardContent></Card>}
       <Card>
         <CardHeader>
@@ -184,7 +228,7 @@ export function OpportunityDocumentsPanel({
             <Upload className="size-5" />
             Add document
           </CardTitle>
-          <CardDescription>Source teasers and Information Memoranda stay staff-only; access is granted only from the pursuit workflow.</CardDescription>
+          <CardDescription>Source teasers and Information Memoranda stay staff-only; access is granted only from the pursuit workflow. {documentType === "deal_book" && recipientImRequired ? activePursuit ? `This upload will belong only to ${activeRepreneurName ?? "the active repreneur"}.` : "Start an active pursuit before uploading its personalized IM." : null}</CardDescription>
         </CardHeader>
         <CardContent>
           <form noValidate action={handleSubmit} className="grid gap-4 lg:grid-cols-[1fr_180px_220px_1fr_auto] lg:items-end">
@@ -263,7 +307,7 @@ export function OpportunityDocumentsPanel({
               <FieldError id="document-file" message={fieldErrors["document-file"]} />
               <p className="text-xs text-muted-foreground">Private upload, maximum {PRIVATE_DOCUMENT_MAX_LABEL}.</p>
             </div>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || (documentType === "deal_book" && recipientImRequired && !activePursuit)}>
               {isSubmitting ? "Adding..." : "Add"}
             </Button>
           </form>
@@ -303,6 +347,11 @@ export function OpportunityDocumentsPanel({
                     const isCanonicalNdaArtifact = canonicalNdaDocumentIdSet.has(document.id)
                     const policy = getOpportunityDocumentPolicy(document.document_type, isCanonicalNdaArtifact)
                     const canRemoveUnusedIm = document.can_remove_unused_retained === true
+                    const recipientMatch = document.recipient_match_id ? matches.find((match) => match.id === document.recipient_match_id) : null
+                    const recipientName = recipientMatch?.repreneur
+                      ? [recipientMatch.repreneur.first_name, recipientMatch.repreneur.last_name].filter(Boolean).join(" ") || recipientMatch.repreneur.email
+                      : "the recorded repreneur"
+                    const recipientDeletedOrPending = Boolean(document.recipient_im_cleanup_status)
                     const state: DocumentInteractionState = pendingDocumentId === document.id
                       ? "pending"
                       : canRemoveUnusedIm
@@ -314,6 +363,8 @@ export function OpportunityDocumentsPanel({
                     <TableRow key={document.id}>
                       <TableCell>
                         <div className="font-medium">{document.title}</div>
+                        {document.recipient_match_id ? <p className="mt-1 text-xs text-muted-foreground">Recipient-specific · {recipientName} · pursuit {document.recipient_match_id.slice(0, 8)}</p> : document.document_type === "deal_book" ? <p className="mt-1 text-xs text-muted-foreground">Ordinary reusable IM</p> : null}
+                        {document.recipient_im_cleanup_status ? <p className="mt-1 text-xs text-muted-foreground">Dropped {document.recipient_im_dropped_at ? formatDate(document.recipient_im_dropped_at) : ""} · {document.recipient_im_drop_reason ?? "recorded reason"} · {document.recipient_im_cleanup_status === "deleted" ? "private deletion confirmed" : "access denied, private deletion pending"}</p> : null}
                         {document.document_type === "deal_book" && !canRemoveUnusedIm && (
                           <p className="mt-1 text-xs text-muted-foreground">Locked after use. Upload a corrected next version instead.</p>
                         )}
@@ -328,6 +379,7 @@ export function OpportunityDocumentsPanel({
                             Retained NDA evidence
                           </Badge>
                         )}
+                        {document.recipient_match_id && <Badge variant="outline" className="ml-2">{document.recipient_im_cleanup_status === "deleted" ? "Deleted" : document.recipient_im_cleanup_status ? "Cleanup pending" : "Recipient-bound"}</Badge>}
                         {document.visibility === "approved_for_repreneur" && (
                           <p className="mt-1 text-xs text-muted-foreground">
                             {document.repreneur_approved_at && document.repreneur_approved_by
@@ -340,7 +392,7 @@ export function OpportunityDocumentsPanel({
                       <TableCell>{formatDate(document.uploaded_at)}</TableCell>
                       <TableCell>
                         <DocumentRowActions
-                          policy={canRemoveUnusedIm ? { ...policy, canRemove: true } : policy}
+                          policy={recipientDeletedOrPending ? { ...policy, canView: false, canDownload: false, canRemove: false } : canRemoveUnusedIm ? { ...policy, canRemove: true } : policy}
                           state={state}
                           viewHref={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}`}
                           downloadHref={`/opportunities/${encodeURIComponent(opportunityId)}/documents/${encodeURIComponent(document.id)}?download`}
@@ -350,6 +402,7 @@ export function OpportunityDocumentsPanel({
                             ? () => handleRemoveUnusedRetained(document.id, document.title)
                             : policy.canRemove ? () => handleRemove(document.id) : undefined}
                         />
+                        {document.recipient_im_cleanup_status && document.recipient_im_cleanup_status !== "deleted" ? <Button type="button" size="sm" variant="outline" disabled={pendingDocumentId === document.id} onClick={() => handleRecipientCleanupRetry(document.id)}>Retry private deletion</Button> : null}
                       </TableCell>
                     </TableRow>
                     )

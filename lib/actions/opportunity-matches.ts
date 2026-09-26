@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
 import { deliverRecommendationAssignment, withAssignmentEmailStatus } from "@/lib/email/recommendation-assignment-delivery"
 import { deliverInterestNotification, deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
 import { interestRejectionFeedback } from "@/lib/interest-rejection-feedback"
@@ -818,7 +819,10 @@ export async function dropOpportunityPursuit(
     if (!alreadyStored) throw new Error(error.message)
   }
 
+  const cleanup = await processRecipientImCleanup({ matchId }).catch(() => null)
+
   revalidateMatchPaths(opportunityId, matchId)
+  return { cleanupPending: cleanup === null || cleanup.failed > 0 || cleanup.remaining > 0 }
 }
 
 export async function reopenDroppedOpportunityMatch(matchId: string, opportunityId: string) {

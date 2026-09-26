@@ -264,13 +264,30 @@ async function authorizeIntent(
       throw new PrivateUploadError("This document stays staff-only until the pursuit workflow grants access.")
     }
     requireMetadataText(input.metadata, "title", "Document title")
-    const { data, error } = await supabase.from("opportunities").select("id").eq("id", opportunityId).maybeSingle()
+    const { data, error } = await supabase.from("opportunities")
+      .select("id,status,is_demo,recipient_im_required").eq("id", opportunityId).maybeSingle()
     if (error || !data) throw new PrivateUploadError("Opportunity not found.", 404)
+    let recipientMatchId: string | null = null
+    if (documentType === "deal_book" && data.recipient_im_required) {
+      recipientMatchId = uuidValue(input.relatedId, true)!
+      const { data: match, error: matchError } = await supabase.from("opportunity_matches")
+        .select("id,opportunity_id,repreneur_id,status,repreneur:repreneurs!inner(is_demo)")
+        .eq("id", recipientMatchId).eq("opportunity_id", opportunityId).maybeSingle()
+      const repreneur = Array.isArray(match?.repreneur) ? match.repreneur[0] : match?.repreneur
+      if (matchError || !match || match.status !== "active_pursuit" || data.status !== "active"
+        || !isOpportunityInRepreneurNamespace(data, repreneur)) {
+        throw new PrivateUploadError("An active same-namespace pursuit is required for this recipient IM.", 404)
+      }
+    } else if (input.relatedId) {
+      throw new PrivateUploadError("This document cannot be bound to a pursuit.")
+    }
     return {
-      ...actor,resourceId: opportunityId,relatedId: null,
+      ...actor,resourceId: opportunityId,relatedId: recipientMatchId,
       metadata: { ...input.metadata, document_type: documentType, visibility },
       bucket: "opportunity-documents",
-      path: `${opportunityId}/documents/${intentId}-${safePathFilename(input.fileName)}`,
+      path: recipientMatchId
+        ? `${opportunityId}/recipient-im/${recipientMatchId}/${intentId}-${safePathFilename(input.fileName)}`
+        : `${opportunityId}/documents/${intentId}-${safePathFilename(input.fileName)}`,
     }
   }
 
