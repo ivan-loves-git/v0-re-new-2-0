@@ -1416,8 +1416,18 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await demoMobilePage.goto("/portal/deals/" + initialInterest.id);
     await demoMobilePage.getByRole("button", { name: "Withdraw interest" }).click();
     const mobileWithdrawal = demoMobilePage.getByRole("alertdialog");
+    await expect(mobileWithdrawal).toBeVisible();
+    // The shared dialog enters with a 200 ms translated animation. Measure its
+    // resting geometry, not the transient frame that can extend past the edge.
+    await mobileWithdrawal.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+    });
+    const mobileViewportWidth = demoMobilePage.viewportSize()?.width;
+    expect(mobileViewportWidth).toBe(390);
     const mobileBounds = await mobileWithdrawal.boundingBox();
-    expect(mobileBounds && mobileBounds.x + mobileBounds.width).toBeLessThanOrEqual(390);
+    expect(mobileBounds).not.toBeNull();
+    expect(mobileBounds!.x).toBeGreaterThanOrEqual(-1);
+    expect(mobileBounds!.x + mobileBounds!.width).toBeLessThanOrEqual(mobileViewportWidth! + 1);
     await mobileWithdrawal.getByRole("button", { name: "Keep interest" }).click();
     expect((await one<{ status: string }>(client,
       "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status).toBe("interested");
