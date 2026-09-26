@@ -79,6 +79,7 @@ END $$;
 
 DO $$ DECLARE v_match public.opportunity_matches%ROWTYPE;
   v_event UUID; v_alert UUID; v_first JSONB; v_new public.opportunity_matches%ROWTYPE;
+  v_stale_review_count INT;
 BEGIN
   IF has_function_privilege('anon','public.w192_withdraw_exact_interest(uuid,uuid,uuid,text,text,timestamptz,timestamptz,text,uuid,uuid)','EXECUTE')
     OR has_table_privilege('authenticated','public.opportunity_interest_direct_notices','SELECT')
@@ -159,6 +160,14 @@ BEGIN
   PERFORM public.w192_reexpress_withdrawn_interest(v_match.opportunity_id,v_match.repreneur_id,
     'w173-repreneur-interest',v_new.interest_expressed_at,v_new.updated_at);
   SELECT * INTO v_new FROM public.opportunity_matches WHERE id=v_match.id;
+  -- A staff Mark Reviewed form rendered for interest A cannot consume fresh B.
+  UPDATE public.opportunity_matches SET reviewed_by='w173-staff',reviewed_at=clock_timestamp()
+    WHERE id=v_match.id AND opportunity_id=v_match.opportunity_id
+      AND status='interested' AND updated_at=v_match.updated_at
+      AND interest_expressed_at=v_match.interest_expressed_at AND reviewed_at IS NULL;
+  GET DIAGNOSTICS v_stale_review_count=ROW_COUNT;
+  IF v_stale_review_count<>0 OR (SELECT reviewed_at FROM public.opportunity_matches WHERE id=v_match.id) IS NOT NULL
+  THEN RAISE EXCEPTION 'w192_stale_review_consumed_fresh_interest'; END IF;
   IF v_new.status<>'interested' OR v_new.interest_expressed_at<=v_match.interest_expressed_at
     OR date_trunc('milliseconds',v_new.interest_expressed_at)<=date_trunc('milliseconds',v_match.interest_expressed_at)
     OR v_new.interest_notification_sent_at IS NOT NULL

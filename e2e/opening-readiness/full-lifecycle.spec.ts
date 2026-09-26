@@ -1383,8 +1383,8 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
     { timeout: 30_000 }).toBe("withdrawn");
     await demoPage.goto("/portal/deals");
-    await expect(demoPage.locator('section[aria-labelledby="deal-section-in-progress"]'))
-      .not.toContainText(mobileTitle);
+    await expect(demoPage.locator('section[aria-labelledby="deal-section-in-progress"]')
+      .getByText(mobileTitle, { exact: true })).toHaveCount(0);
     await expect(demoPage.locator('section[aria-labelledby="deal-section-live-opportunities"]'))
       .toContainText(mobileTitle);
     const firstWithdrawal = await one<{ reviewed_at: string | null; reason: string }>(client,

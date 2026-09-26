@@ -88,7 +88,9 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
             </TableHeader>
             <TableBody>
               {responses.map((response) => {
-                const reviewAction = markOpportunityMatchReviewed.bind(null, response.id, response.opportunity_id)
+                const reviewAction = markOpportunityMatchReviewed.bind(null, response.id,
+                  response.opportunity_id, response.status, response.interest_expressed_at ?? null,
+                  response.updated_at)
                 const validateAction = validateOpportunityPursuit.bind(
                   null, response.id, response.opportunity_id, response.interest_expressed_at ?? null, response.updated_at,
                 )

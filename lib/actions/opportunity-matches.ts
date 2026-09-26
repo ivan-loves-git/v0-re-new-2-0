@@ -700,11 +700,17 @@ export async function removeOpportunityMatch(
   return { ok: true }
 }
 
-export async function markOpportunityMatchReviewed(matchId: string, opportunityId: string) {
+export async function markOpportunityMatchReviewed(
+  matchId: string, opportunityId: string, expectedStatus: OpportunityMatchStatus,
+  expectedInterestAt: string | null, expectedUpdatedAt: string,
+) {
   const access = await requireStaffAccess()
+  if ((expectedStatus !== "interested" && expectedStatus !== "declined")
+    || !Number.isFinite(Date.parse(expectedUpdatedAt))
+    || (expectedInterestAt !== null && !Number.isFinite(Date.parse(expectedInterestAt)))) return
   const supabase = createAdminClient()
 
-  const { error } = await supabase
+  const candidate = supabase
     .from("opportunity_matches")
     .update({
       reviewed_by: access.user.id,
@@ -712,8 +718,12 @@ export async function markOpportunityMatchReviewed(matchId: string, opportunityI
     })
     .eq("id", matchId)
     .eq("opportunity_id", opportunityId)
-    .in("status", ["interested", "declined"])
+    .eq("status", expectedStatus)
+    .eq("updated_at", expectedUpdatedAt)
     .is("reviewed_at", null)
+  const { error } = await (expectedInterestAt === null
+    ? candidate.is("interest_expressed_at", null)
+    : candidate.eq("interest_expressed_at", expectedInterestAt))
     .select("id")
     .maybeSingle()
 
