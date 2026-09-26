@@ -10,9 +10,17 @@ export type StaffInterestRejection = {
   delivery_status: "pending" | "failed" | "sent" | "suppressed" | "review_required"
 }
 
+export type StaffInterestWithdrawal = {
+  interest_expressed_at: string
+  reason: string
+  withdrawn_at: string
+  actor: string
+  origin: "owner" | "staff"
+}
+
 /** The only app reader of private reasons. Callers authenticate staff first;
  * the service-only RPC independently checks the exact staff actor. */
-export async function withStaffInterestRejections<T extends { id: string }>(rows: T[], actorId: string): Promise<(T & { interest_rejection?: StaffInterestRejection | null })[]> {
+export async function withStaffInterestRejections<T extends { id: string; status?: string; interest_expressed_at?: string | null }>(rows: T[], actorId: string): Promise<(T & { interest_rejection?: StaffInterestRejection | null; interest_withdrawal?: StaffInterestWithdrawal | null })[]> {
   if (rows.length === 0) return rows
   const byMatch = new Map<string, StaffInterestRejection>()
   for (let offset = 0; offset < rows.length; offset += 100) {
@@ -31,7 +39,27 @@ export async function withStaffInterestRejections<T extends { id: string }>(rows
       })
     }
   }
-  return rows.map((row) => ({ ...row, interest_rejection: byMatch.get(row.id) ?? null }))
+  const withdrawnRows = rows.filter((row) => row.status === "withdrawn" && row.interest_expressed_at)
+  const withdrawals = new Map<string, StaffInterestWithdrawal>()
+  for (let offset = 0; offset < withdrawnRows.length; offset += 100) {
+    const { data, error } = await createAdminClient().rpc("w192_staff_withdrawals", {
+      p_actor: actorId,
+      p_match_ids: withdrawnRows.slice(offset, offset + 100).map((row) => row.id),
+    })
+    if (error) throw new Error("Could not read staff interest withdrawals.")
+    for (const event of data ?? []) {
+      if (!event.reason || (event.origin !== "owner" && event.origin !== "staff")) continue
+      withdrawals.set(event.match_id, {
+        interest_expressed_at: event.interest_expressed_at,
+        reason: event.reason,
+        withdrawn_at: event.withdrawn_at,
+        actor: event.actor,
+        origin: event.origin,
+      })
+    }
+  }
+  return rows.map((row) => ({ ...row, interest_rejection: byMatch.get(row.id) ?? null,
+    interest_withdrawal: withdrawals.get(row.id) ?? null }))
 }
 
 /** Portal receives only a boolean for its own exact matches: never actor,

@@ -105,6 +105,11 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                             {response.decline_reason_text ? ` - ${response.decline_reason_text}` : ""}
                           </div>
                         )}
+                        {response.status === "withdrawn" && response.interest_withdrawal && (
+                          <div className="max-w-52 text-xs text-muted-foreground">
+                            {response.interest_withdrawal.reason} · {response.interest_withdrawal.origin === "staff" ? "Re-New staff" : "Repreneur"} ({response.interest_withdrawal.actor})
+                          </div>
+                        )}
                         {!response.reviewed_at && (
                           <Badge variant="outline" className="w-fit">
                             New response

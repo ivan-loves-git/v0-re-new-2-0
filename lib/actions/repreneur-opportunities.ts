@@ -38,7 +38,7 @@ import type {
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
 
-const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit", "dropped"]
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "withdrawn", "declined", "active_pursuit", "dropped"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
@@ -520,7 +520,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
         visible_documents: [],
         memo_availability: undefined,
       }))
-      .map((opportunity) => withDealBucket(opportunity, false))
+      .map((opportunity) => withDealBucket(opportunity, opportunity.match_status === "withdrawn"))
       .filter(isDefined),
   }
 }
@@ -646,7 +646,7 @@ async function listRepreneurDealFlowForProfile(
     }))
     .map((opportunity) => withStaffRecommendation(opportunity, decisionState.proposed.has(opportunity.match_id)))
     .map((opportunity) => withRepreneurGeographyLabel(opportunity, geography))
-    .map((opportunity) => withDealBucket(opportunity, false))
+    .map((opportunity) => withDealBucket(opportunity, opportunity.match_status === "withdrawn"))
     .filter(isDefined)
   const statefulOpportunityIds = new Set(statefulDeals.map((opportunity) => opportunity.opportunity_id))
   const geographyAwareRepreneur = withMatchingGeographyTargets(repreneur, geography)

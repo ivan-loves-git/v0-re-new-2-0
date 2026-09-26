@@ -53,7 +53,7 @@ import {
   type OpportunityPursuitDropReason,
 } from "@/lib/types/opportunity"
 
-const STAFF_EDITABLE_STATUS_OPTIONS = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter((option) => option.value !== "active_pursuit")
+const STAFF_EDITABLE_STATUS_OPTIONS = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter((option) => option.value !== "active_pursuit" && option.value !== "withdrawn")
 const REPRENEUR_EXPOSURE_STATUSES = new Set(["proposed", "interested"])
 
 interface OpportunityMatchesPanelProps {
@@ -591,6 +591,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                           <StaffRecommendationRenewAction matchId={match.id} status={match.status} expiresAt={match.recommendation_expires_at} />
                           <StaffAssignmentEmailStatus matchId={match.id} status={match.assignment_email_status} />
                           {match.status === "interested" && match.interest_rejection && <Badge variant="outline">Interest not selected</Badge>}
+                          {match.status === "withdrawn" && match.interest_withdrawal && <p className="max-w-56 text-xs text-muted-foreground">{match.interest_withdrawal.reason} · {match.interest_withdrawal.origin === "staff" ? "Re-New staff" : "Repreneur"} ({match.interest_withdrawal.actor})</p>}
                         </TableCell>
                         <TableCell>
                           <Badge variant={recommendationVariant(match.platform_recommendation)}>

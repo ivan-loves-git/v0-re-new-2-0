@@ -8,9 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LockedOpportunityInterestAction } from "@/components/opportunities/locked-opportunity-interest-action"
+import { InterestWithdrawalControl } from "@/components/opportunities/interest-withdrawal-control"
 import { RepreneurNdaSignatureUpload } from "@/components/opportunities/repreneur-nda-signature-upload"
 import { RepreneurOpportunityDeclineAction } from "@/components/opportunities/repreneur-opportunity-decline-action"
 import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity-responses"
+import { withdrawMyOpportunityInterest } from "@/lib/actions/interest-withdrawal"
 import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 import {
   getOpportunityMatchStatusLabel,
@@ -28,6 +30,7 @@ type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDe
 interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityDetailItem
   readOnly?: boolean
+  withdrawalPaused?: boolean
   journey?: PortalCurrentPursuit | null
   documentHrefs?: { ndaTemplate?: string; informationMemorandum?: string }
   /** #190 supplies attributed staff controls without using owner-session actions. */
@@ -64,6 +67,7 @@ function canRespond(status: RepreneurOpportunityDetailItem["match_status"]) {
 export function RepreneurOpportunityDetail({
   opportunity,
   readOnly = false,
+  withdrawalPaused = false,
   journey,
   documentHrefs,
   staffAssistanceControls,
@@ -81,7 +85,7 @@ export function RepreneurOpportunityDetail({
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
   const canExpressUnassignedInterest = !opportunity.match_id
-  const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit"
+  const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && opportunity.match_status !== "withdrawn"
   const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
   const responseDeadline = formatRecommendationDeadline(opportunity.recommendation_expires_at)
   const ndaTemplateHref = readOnly
@@ -106,7 +110,7 @@ export function RepreneurOpportunityDetail({
           {opportunity.match_status === "active_pursuit" && opportunity.pursuit_stage && <Badge variant="outline">{getOpportunityPursuitStageLabel(opportunity.pursuit_stage)}</Badge>}
           {opportunity.pursuit_stage_provenance === "staff_confirmed_history" && <Badge variant="outline">Stage confirmed by Re-New</Badge>}
           {isStaffRecommended(opportunity) && !opportunity.interest_rejected
-            && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped"
+            && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped" && opportunity.match_status !== "withdrawn"
             ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
         </div>
@@ -160,6 +164,21 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
+          {opportunity.match_status === "withdrawn" && (
+            <Alert>
+              <XCircle />
+              <AlertTitle>Interest withdrawn</AlertTitle>
+              <AlertDescription>This request is no longer awaiting Re-New validation. If this opportunity remains eligible, you can express a fresh interest; earlier emails and history remain recorded.</AlertDescription>
+            </Alert>
+          )}
+
+          {!readOnly && !withdrawalPaused && opportunity.match_status === "interested" && !opportunity.interest_rejected
+            && opportunity.match_id && opportunity.interest_expressed_at && (
+            <InterestWithdrawalControl onConfirm={(reason) => withdrawMyOpportunityInterest(
+              opportunity.match_id!, opportunity.opportunity_id, opportunity.interest_expressed_at!, opportunity.updated_at, reason,
+            )} />
+          )}
+
           {opportunity.match_status === "dropped" && !lockedForAnotherRepreneur && (
             <Alert>
               <XCircle />
@@ -196,14 +215,14 @@ export function RepreneurOpportunityDetail({
             </Alert>
           )}
 
-          {(lockedForAnotherRepreneur || canExpressUnassignedInterest) && (!readOnly || !staffAssistanceControls) ? (
+          {(lockedForAnotherRepreneur || canExpressUnassignedInterest || opportunity.match_status === "withdrawn") && (!readOnly || !staffAssistanceControls) ? (
             <LockedOpportunityInterestAction
               opportunityId={opportunity.opportunity_id}
-              interestRecorded={Boolean(opportunity.interest_expressed_at)}
-              notificationSent={Boolean(opportunity.interest_notification_sent_at)}
+              interestRecorded={opportunity.match_status !== "withdrawn" && Boolean(opportunity.interest_expressed_at)}
+              notificationSent={opportunity.match_status !== "withdrawn" && Boolean(opportunity.interest_notification_sent_at)}
               lockedForAnotherRepreneur={lockedForAnotherRepreneur}
               readOnly={readOnly}
-              recommendationExpiresAt={opportunity.recommendation_expires_at}
+              recommendationExpiresAt={opportunity.match_status === "withdrawn" ? null : opportunity.recommendation_expires_at}
             />
           ) : null}
 

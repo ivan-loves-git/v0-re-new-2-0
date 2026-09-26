@@ -25,6 +25,8 @@ export function classifyRepreneurDeal(
     case "interested":
     case "active_pursuit":
       return candidate.matchId ? "in_progress" : null
+    case "withdrawn":
+      return candidate.matchId && candidate.isBroadDiscoveryEligible ? "live" : null
     case "declined":
     case "dropped":
       return candidate.matchId ? "declined" : null

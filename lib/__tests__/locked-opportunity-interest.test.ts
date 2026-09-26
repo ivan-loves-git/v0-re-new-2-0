@@ -58,6 +58,7 @@ describe("locked opportunity interest", () => {
     })
     expect(notifier.send).toHaveBeenCalledWith({
       ...DETAILS,
+      matchId: "match-1",
       expressedAt: NOW,
       idempotencyKey: lockedOpportunityInterestIdempotencyKey("match-1", NOW),
     })
@@ -65,6 +66,7 @@ describe("locked opportunity interest", () => {
       matchId: "match-1",
       repreneurId: DETAILS.repreneurId,
       opportunityId: DETAILS.opportunityId,
+      expressedAt: NOW,
       sentAt: NOW,
     })
   })
