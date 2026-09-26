@@ -289,7 +289,7 @@ function DealCard({
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-          {staffRecommended && !isDeclined && !opportunity.interest_rejected ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
+          {staffRecommended && !isDeclined && opportunity.match_status !== "withdrawn" && !opportunity.interest_rejected ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
           {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
           {opportunity.match_status === "interested" ? <Badge variant="outline">{opportunity.interest_rejected ? "Interest not selected by Re-New" : "Interest sent, awaiting Re-New validation"}</Badge> : null}
           {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">Active pursuit</Badge> : null}

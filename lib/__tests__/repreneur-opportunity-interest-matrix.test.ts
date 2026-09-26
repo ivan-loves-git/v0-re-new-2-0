@@ -25,7 +25,7 @@ describe("repreneur opportunity interest matrix", () => {
   it("offers self-discovered interest only in the detail for unassigned or locked opportunities", () => {
     expect(listSource).not.toContain("LockedOpportunityInterestAction")
     expect(listSource).toContain("View detail")
-    expect(detailSource).toContain("{(lockedForAnotherRepreneur || canExpressUnassignedInterest) && (!readOnly || !staffAssistanceControls) ? (")
+    expect(detailSource).toContain("{(lockedForAnotherRepreneur || canExpressUnassignedInterest || opportunity.match_status === \"withdrawn\") && (!readOnly || !staffAssistanceControls) ? (")
     expect(detailSource).toContain("lockedForAnotherRepreneur={lockedForAnotherRepreneur}")
     expect(querySource).toContain("is_locked_for_other_repreneur: isLockedForOtherRepreneur(")
   })

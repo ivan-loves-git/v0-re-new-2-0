@@ -38,7 +38,7 @@ import {
 
 const MATCH_RECOMMENDATION_VALUES = OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS.map((option) => option.value)
 const STAFF_EDITABLE_MATCH_STATUS_VALUES: OpportunityMatchStatus[] = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter(
-  (option) => option.value !== "active_pursuit",
+  (option) => option.value !== "active_pursuit" && option.value !== "withdrawn",
 ).map((option) => option.value as OpportunityMatchStatus)
 const REPRENEUR_MATCHING_INPUT_FIELDS = `
   who_score,
@@ -428,7 +428,7 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
       opportunity:opportunities!inner(id, reference, public_title, sector, location, is_demo),
       repreneur:repreneurs!inner(id, first_name, last_name, email, lifecycle_status, journey_stage, recommendation, who_score, when_score, is_demo)
     `)
-    .in("status", ["interested", "declined"])
+    .in("status", ["interested", "withdrawn", "declined"])
     .eq("opportunity.is_demo", false)
     .eq("repreneur.is_demo", false)
     .order("reviewed_at", { ascending: true, nullsFirst: true })
@@ -711,6 +711,11 @@ export async function markOpportunityMatchReviewed(matchId: string, opportunityI
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", matchId)
+    .eq("opportunity_id", opportunityId)
+    .in("status", ["interested", "declined"])
+    .is("reviewed_at", null)
+    .select("id")
+    .maybeSingle()
 
   if (error) throw new Error(error.message)
 

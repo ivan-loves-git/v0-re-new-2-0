@@ -45,6 +45,11 @@ describe("repreneur Deals bucket classifier", () => {
     }))).toBe("live")
   })
 
+  it("keeps an eligible withdrawn interest in ordinary Live inventory, never In Progress or Declined", () => {
+    expect(classifyRepreneurDeal(candidate({ matchId: "match-withdrawn", matchStatus: "withdrawn" }))).toBe("live")
+    expect(classifyRepreneurDeal(candidate({ matchId: "match-withdrawn", matchStatus: "withdrawn", isBroadDiscoveryEligible: false }))).toBeNull()
+  })
+
   it("produces no duplicate opportunity across the four exhaustive buckets", () => {
     const buckets = partitionRepreneurDealBuckets([
       candidate({ opportunityId: "proposed", matchId: "match-proposed", matchStatus: "proposed" }),

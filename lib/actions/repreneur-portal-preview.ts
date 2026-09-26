@@ -30,7 +30,7 @@ import type {
 } from "@/lib/types/opportunity"
 import type { ExternalPursuitBoardRecord } from "@/lib/types/external-pursuit"
 
-const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit", "dropped"]
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "withdrawn", "declined", "active_pursuit", "dropped"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
