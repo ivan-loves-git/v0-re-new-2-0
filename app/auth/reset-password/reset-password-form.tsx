@@ -14,6 +14,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { LanguageToggle } from "@/components/intake-v2/language-toggle"
+import { useUiCopy } from "@/components/i18n/ui-text"
+import type { UiCopyKey } from "@/lib/i18n/ui-copy"
 
 interface ResetPasswordFormProps {
   portalSetup: boolean
@@ -76,6 +79,7 @@ function captureResetToken() {
 }
 
 function InvalidLink({ portalSetup }: { portalSetup: boolean }) {
+  const u = useUiCopy()
   const recoveryHref = portalSetup
     ? "/auth/forgot-password?intent=portal"
     : "/auth/forgot-password"
@@ -86,23 +90,22 @@ function InvalidLink({ portalSetup }: { portalSetup: boolean }) {
       className="flex min-h-svh items-center justify-center bg-background p-4"
     >
       <div className="w-full max-w-md">
+        <div className="mb-3 flex justify-end"><LanguageToggle /></div>
         <div className="rounded-lg border bg-card p-8 text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-destructive/10">
             <XCircle className="size-8 text-destructive" />
           </div>
           <h1 className="mb-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
-            {portalSetup ? "Lien d'acces indisponible" : "Invalid link"}
+            {u(portalSetup ? "Access link unavailable" : "Invalid link")}
           </h1>
           <p className="mb-6 text-muted-foreground">
-            {portalSetup
-              ? "Ce lien d'acces est invalide, a expire ou a deja ete utilise. Demandez un nouveau lien pour continuer."
-              : "This password reset link is invalid, expired, or has already been used. Request a new link to continue."}
+            {u(portalSetup ? "This access link is invalid, expired, or already used. Request a new link to continue." : "This password reset link is invalid, expired, or has already been used. Request a new link to continue.")}
           </p>
           <Link
             href={recoveryHref}
             className="font-medium text-primary hover:underline"
           >
-            {portalSetup ? "Demander un nouveau lien" : "Request a new link"}
+            {u("Request a new link")}
           </Link>
         </div>
       </div>
@@ -111,12 +114,13 @@ function InvalidLink({ portalSetup }: { portalSetup: boolean }) {
 }
 
 export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
+  const u = useUiCopy()
   const [token, setToken] = useState<string | null>(null)
   const [linkState, setLinkState] = useState<LinkState>("validating")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<UiCopyKey | null>(null)
   const [success, setSuccess] = useState(false)
   const preflightStarted = useRef(false)
   const componentActive = useRef(false)
@@ -178,9 +182,10 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
         className="flex min-h-svh items-center justify-center bg-background p-4"
       >
         <div className="w-full max-w-md">
+          <div className="mb-3 flex justify-end"><LanguageToggle /></div>
           <div className="rounded-lg border bg-card p-8 text-center">
             <Loader2 className="mx-auto size-8 animate-spin text-primary" />
-            <p className="mt-4 text-muted-foreground">Validation du lien...</p>
+            <p className="mt-4 text-muted-foreground">{u("Validating link...")}</p>
           </div>
         </div>
       </main>
@@ -202,20 +207,12 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
     }
 
     if (password !== confirmPassword) {
-      setError(
-        portalSetup
-          ? "Les mots de passe ne correspondent pas."
-          : "Passwords don't match.",
-      )
+      setError("Passwords don't match.")
       return
     }
 
     if (password.length < 8) {
-      setError(
-        portalSetup
-          ? "Le mot de passe doit contenir au moins 8 caracteres."
-          : "Password must be at least 8 characters.",
-      )
+      setError("Password must be at least 8 characters.")
       return
     }
 
@@ -233,11 +230,7 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
           return
         }
 
-        setError(
-          portalSetup
-            ? "Impossible de terminer maintenant. Reessayez dans quelques instants."
-            : "We couldn't finish the password reset. Please try again in a moment.",
-        )
+        setError("We couldn't finish the password reset. Please try again in a moment.")
         return
       }
 
@@ -246,11 +239,7 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
       setToken(null)
       setSuccess(true)
     } catch {
-      setError(
-        portalSetup
-          ? "Impossible de terminer maintenant. Reessayez dans quelques instants."
-          : "We couldn't finish the password reset. Please try again in a moment.",
-      )
+      setError("We couldn't finish the password reset. Please try again in a moment.")
     } finally {
       setLoading(false)
     }
@@ -262,6 +251,7 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
       className="flex min-h-svh items-center justify-center bg-background p-4"
     >
       <div className="w-full max-w-md">
+        <div className="mb-3 flex justify-end"><LanguageToggle /></div>
         <div className="rounded-lg border bg-card p-8">
           {success ? (
             <div className="text-center">
@@ -269,43 +259,39 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
                 <CheckCircle className="size-8 text-success" />
               </div>
               <h1 className="mb-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
-                {portalSetup ? "Mot de passe cree" : "Password reset"}
+                {u(portalSetup ? "Password created" : "Password reset")}
               </h1>
               <p className="mb-6 text-muted-foreground">
-                {portalSetup
-                  ? "Votre acces est pret. Vous pouvez maintenant vous connecter a la plateforme Re-New."
-                  : "Your password has been successfully reset."}
+                {u(portalSetup ? "Your access is ready. You can now sign in to Re-New." : "Your password has been successfully reset.")}
               </p>
               <Link
                 href="/auth/login"
                 className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground hover:bg-[#1859bd]"
               >
-                {portalSetup ? "Se connecter" : "Sign in"}
+                {u("Sign in")}
               </Link>
             </div>
           ) : (
             <>
-              <p className="wave-eyebrow mb-2">WAVE access</p>
+              <p className="wave-eyebrow mb-2">{u("WAVE access")}</p>
               <h1 className="mb-2 text-2xl font-semibold tracking-[-0.025em] text-foreground">
-                {portalSetup ? "Creer votre mot de passe" : "Set new password"}
+                {u(portalSetup ? "Create your password" : "Set new password")}
               </h1>
               <p className="mb-6 text-muted-foreground">
-                {portalSetup
-                  ? "Choisissez le mot de passe qui vous permettra d'acceder a la plateforme Re-New."
-                  : "Enter your new password below."}
+                {u(portalSetup ? "Choose the password you will use to access your Re-New space." : "Enter your new password below.")}
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-foreground">
-                    {portalSetup ? "Mot de passe" : "New password"}
+                    {u(portalSetup ? "Password" : "New password")}
                   </Label>
                   <Input
                     id="password"
                     name="password"
                     type="password"
                     autoComplete="new-password"
-                    placeholder="Min 8 characters"
+                    placeholder={u("Min 8 characters")}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     required
@@ -316,16 +302,14 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-foreground">
-                    {portalSetup
-                      ? "Confirmer le mot de passe"
-                      : "Confirm password"}
+                    {u("Confirm password")}
                   </Label>
                   <Input
                     id="confirmPassword"
                     name="confirmPassword"
                     type="password"
                     autoComplete="new-password"
-                    placeholder="Repeat your password"
+                    placeholder={u("Repeat your password")}
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     required
@@ -336,7 +320,7 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
 
                 {error && (
                   <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertDescription>{u(error)}</AlertDescription>
                   </Alert>
                 )}
 
@@ -345,13 +329,7 @@ export function ResetPasswordForm({ portalSetup }: ResetPasswordFormProps) {
                   className="h-11 w-full"
                   disabled={loading}
                 >
-                  {loading
-                    ? portalSetup
-                      ? "Enregistrement..."
-                      : "Resetting..."
-                    : portalSetup
-                      ? "Creer mon mot de passe"
-                      : "Reset password"}
+                  {u(loading ? (portalSetup ? "Saving..." : "Resetting...") : (portalSetup ? "Save password" : "Reset password"))}
                 </Button>
               </form>
             </>

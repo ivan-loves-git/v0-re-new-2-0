@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import type { ReactNode } from "react"
 import { ArrowRight, CheckCircle2, Target } from "lucide-react"
@@ -20,6 +22,11 @@ import type { PortalRepreneurProfile } from "@/lib/data/portal-profile"
 import type { RepreneurDealFlowOpportunity, RepreneurOpportunityExposure } from "@/lib/types/opportunity"
 import { getEbitdaMarginPercentage } from "@/lib/utils/repreneur-deal-discovery"
 import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
+import { useUiCopy, useUiLanguage } from "@/components/i18n/ui-text"
+import { sectorUiLabel, geographyUiLabel, milestoneUiLabel } from "@/lib/i18n/canonical-labels"
+import { displayLocale } from "@/lib/i18n/ui-language"
+import { uiCopy, uiCopyWith } from "@/lib/i18n/ui-copy"
+import type { Language } from "@/lib/i18n/translations"
 
 interface RepreneurProfileSummaryProps {
   repreneur: PortalRepreneurProfile | null
@@ -80,55 +87,64 @@ const EQUITY_LABELS: Record<string, string> = {
   ">450": "Over €450K",
 }
 
-function displayValue(value: string | null | undefined, labels: Record<string, string> = {}) {
-  if (!value) return "To refine"
-  return labels[value] ?? value
+function combineValues(values: string[], language: Language, label: (value: string) => string) {
+  const displayValues = values.filter(Boolean).map(label)
+  return displayValues.length > 0 ? Array.from(new Set(displayValues)).join(", ") : uiCopy(language, "To refine")
 }
 
-function combineValues(values: string[], labels: Record<string, string>) {
-  const displayValues = values.map((value) => displayValue(value, labels)).filter((value) => value !== "To refine")
-  return displayValues.length > 0 ? Array.from(new Set(displayValues)).join(", ") : "To refine"
+function formatNumber(value: number, language: Language) {
+  return new Intl.NumberFormat(displayLocale(language), { maximumFractionDigits: 1 }).format(value)
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(value)
+function formatRange(minimum: number | null, maximum: number | null, suffix: string, language: Language) {
+  if (minimum === null && maximum === null) return uiCopy(language, "To refine")
+  const unit = suffix === "people" ? uiCopy(language, "people") : suffix
+  if (minimum === null) return uiCopyWith(language, "Up to {value} {unit}", { value: formatNumber(maximum!, language), unit })
+  if (maximum === null) return uiCopyWith(language, "From {value} {unit}", { value: formatNumber(minimum, language), unit })
+  return uiCopyWith(language, "{minimum}–{maximum} {unit}", { minimum: formatNumber(minimum, language), maximum: formatNumber(maximum, language), unit })
 }
 
-function formatRange(minimum: number | null, maximum: number | null, suffix: string) {
-  if (minimum === null && maximum === null) return "To refine"
-  if (minimum === null) return `Up to ${formatNumber(maximum!)} ${suffix}`
-  if (maximum === null) return `From ${formatNumber(minimum)} ${suffix}`
-  return `${formatNumber(minimum)}–${formatNumber(maximum)} ${suffix}`
-}
-
-function thesisFields(repreneur: PortalRepreneurProfile) {
+function thesisFields(repreneur: PortalRepreneurProfile, language: Language) {
   const investmentCapacity = repreneur.q16_equity ?? repreneur.q14_investment_capacity ?? repreneur.investment_capacity
-  const dealSize = combineValues(repreneur.q14_deal_size, DEAL_SIZE_LABELS)
+  const dealSizeLabel = (value: string) => language === "fr"
+    ? ({ "1-3M": "1–3 M€", "3-5M": "3–5 M€", ">5M": "Plus de 5 M€" }[value] ?? value)
+    : DEAL_SIZE_LABELS[value] ?? value
+  const dealSize = combineValues(repreneur.q14_deal_size, language, dealSizeLabel)
+  const sectorLabel = (value: string) => language === "fr"
+    ? ({ all: "Tous les secteurs", retail: "Commerce et distribution", industry: "Industrie", services: "Services", construction: "Construction", healthcare: "Santé", tech: "Tech et numérique", environment: "Environnement", hospitality: "Hôtellerie et restauration", transport: "Transport et logistique", other: "Autre" }[value] ?? sectorUiLabel(value, language))
+    : SECTOR_LABELS[value] ?? sectorUiLabel(value, language)
+  const geographyLabel = (value: string) => language === "en"
+    ? GEOGRAPHY_LABELS[value] ?? geographyUiLabel(value, language)
+    : geographyUiLabel(value, language)
+  const equityLabel = (value: string) => language === "fr"
+    ? ({ tbd: "Moins de 150 K€", "151-250": "151–250 K€", "251-350": "251–350 K€", "351-450": "351–450 K€", ">450": "Plus de 450 K€" }[value] ?? value)
+    : EQUITY_LABELS[value] ?? value
 
   return [
-    { label: "Sectors", value: combineValues([...repreneur.q13_target_sectors_v2, ...repreneur.sector_preferences], SECTOR_LABELS) },
-    { label: "Geography", value: combineValues([...repreneur.q12_geo_zones, ...repreneur.target_location], GEOGRAPHY_LABELS) },
-    { label: "Deal size", value: dealSize !== "To refine" ? dealSize : displayValue(repreneur.target_acquisition_size) },
-    { label: "Investment capacity", value: displayValue(investmentCapacity, EQUITY_LABELS) },
-    { label: "Revenue range", value: formatRange(repreneur.target_revenue_min_meur, repreneur.target_revenue_max_meur, "M EUR") },
-    { label: "EBITDA range", value: formatRange(repreneur.target_ebitda_min_keur, repreneur.target_ebitda_max_keur, "k EUR") },
-    { label: "Minimum EBITDA margin", value: repreneur.target_ebitda_margin_min_pct === null ? "To refine" : `${formatNumber(repreneur.target_ebitda_margin_min_pct)}%` },
-    { label: "Staff-size range", value: formatRange(repreneur.target_staff_size_min, repreneur.target_staff_size_max, "people") },
+    { label: uiCopy(language, "Sectors"), value: combineValues([...repreneur.q13_target_sectors_v2, ...repreneur.sector_preferences], language, sectorLabel) },
+    { label: uiCopy(language, "Geography"), value: combineValues([...repreneur.q12_geo_zones, ...repreneur.target_location], language, geographyLabel) },
+    { label: uiCopy(language, "Deal size"), value: dealSize !== uiCopy(language, "To refine") ? dealSize : repreneur.target_acquisition_size
+      ? dealSizeLabel(repreneur.target_acquisition_size) : uiCopy(language, "To refine") },
+    { label: uiCopy(language, "Investment capacity"), value: investmentCapacity ? equityLabel(investmentCapacity) : uiCopy(language, "To refine") },
+    { label: uiCopy(language, "Revenue range"), value: formatRange(repreneur.target_revenue_min_meur, repreneur.target_revenue_max_meur, "M EUR", language) },
+    { label: uiCopy(language, "EBITDA range"), value: formatRange(repreneur.target_ebitda_min_keur, repreneur.target_ebitda_max_keur, "k EUR", language) },
+    { label: uiCopy(language, "Minimum EBITDA margin"), value: repreneur.target_ebitda_margin_min_pct === null ? uiCopy(language, "To refine") : `${formatNumber(repreneur.target_ebitda_margin_min_pct, language)}%` },
+    { label: uiCopy(language, "Staff-size range"), value: formatRange(repreneur.target_staff_size_min, repreneur.target_staff_size_max, "people", language) },
   ]
 }
 
-function opportunityTitle(opportunity: RepreneurOpportunityListItem) {
-  return opportunity.public_title || "Confidential acquisition opportunity"
+function opportunityTitle(opportunity: RepreneurOpportunityListItem, language: Language) {
+  return opportunity.public_title || uiCopy(language, "Confidential acquisition opportunity")
 }
 
-function formatOpportunityMetric(value: number | null | undefined, suffix: string) {
+function formatOpportunityMetric(value: number | null | undefined, suffix: string, language: Language) {
   if (value === null || value === undefined) return "—"
-  return `${formatNumber(value)} ${suffix}`
+  return `${formatNumber(value, language)} ${suffix}`
 }
 
-function formatOpportunityMargin(opportunity: RepreneurOpportunityListItem) {
+function formatOpportunityMargin(opportunity: RepreneurOpportunityListItem, language: Language) {
   const margin = getEbitdaMarginPercentage(opportunity)
-  return margin === null ? "—" : `${formatNumber(margin)}%`
+  return margin === null ? "—" : `${formatNumber(margin, language)}%`
 }
 
 function DealGroup({
@@ -144,6 +160,8 @@ function DealGroup({
   emptyMessage: string
   detailHrefForOpportunity: (opportunity: RepreneurOpportunityListItem) => string
 }) {
+  const u = useUiCopy()
+  const language = useUiLanguage()
   return (
     <section aria-labelledby={`${title.toLowerCase().replaceAll(" ", "-")}-heading`} className="flex flex-col gap-3">
       <div>
@@ -155,7 +173,7 @@ function DealGroup({
       ) : (
         <ul className="divide-y border-y">
           {opportunities.map((opportunity) => {
-            const title = opportunityTitle(opportunity)
+            const title = opportunityTitle(opportunity, language)
 
             return (
               <li key={opportunity.match_id} className="flex flex-col gap-4 py-4 text-sm">
@@ -163,46 +181,46 @@ function DealGroup({
                   <h4 className="font-medium">{title}</h4>
                   <dl className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
                     <div className="flex flex-col gap-1">
-                      <WaveMicroLabel asChild><dt>Geography</dt></WaveMicroLabel>
+                      <WaveMicroLabel asChild><dt>{u("Geography")}</dt></WaveMicroLabel>
                       <dd className="text-foreground">{displayRepreneurOpportunityGeography(opportunity.location)}</dd>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <WaveMicroLabel asChild><dt>Sector</dt></WaveMicroLabel>
-                      <dd className="text-foreground">{opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}</dd>
+                      <WaveMicroLabel asChild><dt>{u("Sector")}</dt></WaveMicroLabel>
+                      <dd className="text-foreground">{opportunity.sector || opportunity.activity ? sectorUiLabel(opportunity.sector ?? opportunity.activity ?? "", language) : u("Sector to confirm")}</dd>
                     </div>
                     <div className="flex flex-col gap-1">
-                      <WaveMicroLabel asChild><dt>Date added</dt></WaveMicroLabel>
+                      <WaveMicroLabel asChild><dt>{u("Date added")}</dt></WaveMicroLabel>
                       <dd className="text-foreground">{opportunity.date_added_display ?? "-"}</dd>
                     </div>
                   </dl>
                   <p className="line-clamp-2 text-muted-foreground">
-                    {opportunity.teaser_summary || "Anonymized opportunity details are being prepared."}
+                    {opportunity.teaser_summary || u("Anonymized opportunity details are being prepared.")}
                   </p>
                 </div>
                 <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <div className="flex flex-col gap-1">
-                    <WaveMicroLabel asChild><dt>Revenue</dt></WaveMicroLabel>
-                    <dd className="font-medium">{formatOpportunityMetric(opportunity.revenue_meur, "M EUR")}</dd>
+                    <WaveMicroLabel asChild><dt>{u("Revenue")}</dt></WaveMicroLabel>
+                    <dd className="font-medium">{formatOpportunityMetric(opportunity.revenue_meur, "M EUR", language)}</dd>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <WaveMicroLabel asChild><dt>EBITDA</dt></WaveMicroLabel>
-                    <dd className="font-medium">{formatOpportunityMetric(opportunity.ebitda_keur, "K EUR")}</dd>
+                    <WaveMicroLabel asChild><dt>{u("EBITDA")}</dt></WaveMicroLabel>
+                    <dd className="font-medium">{formatOpportunityMetric(opportunity.ebitda_keur, "K EUR", language)}</dd>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <WaveMicroLabel asChild><dt>EBITDA margin</dt></WaveMicroLabel>
-                    <dd className="font-medium">{formatOpportunityMargin(opportunity)}</dd>
+                    <WaveMicroLabel asChild><dt>{u("EBITDA margin")}</dt></WaveMicroLabel>
+                    <dd className="font-medium">{formatOpportunityMargin(opportunity, language)}</dd>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <WaveMicroLabel asChild><dt>Employees</dt></WaveMicroLabel>
+                    <WaveMicroLabel asChild><dt>{u("Employees")}</dt></WaveMicroLabel>
                     <dd className="font-medium">{opportunity.headcount_range ?? opportunity.headcount ?? "—"}</dd>
                   </div>
                 </dl>
                 <Link
                   href={detailHrefForOpportunity(opportunity)}
                   className="inline-flex w-fit items-center gap-1 font-medium text-primary hover:underline"
-                  aria-label={`View details for ${title}`}
+                  aria-label={u("View details for {title}", { title })}
                 >
-                  View detail
+                  {u("View detail")}
                   <ArrowRight className="size-4" />
                 </Link>
               </li>
@@ -223,15 +241,17 @@ export function RepreneurProfileSummary({
   staffTargetThesisAction,
   staffDocumentAssistanceAction,
 }: RepreneurProfileSummaryProps) {
+  const u = useUiCopy()
+  const language = useUiLanguage()
   if (!repreneur) {
     return (
       <Alert>
         <Target />
-        <AlertTitle>{mode === "staff-preview" ? "Selected repreneur profile unavailable" : "No linked repreneur profile"}</AlertTitle>
+        <AlertTitle>{u(mode === "staff-preview" ? "Selected repreneur profile unavailable" : "No linked repreneur profile")}</AlertTitle>
         <AlertDescription>
           {mode === "staff-preview"
-            ? "The selected repreneur's profile could not be loaded. Choose another repreneur or check this profile with the Re-New team."
-            : "This login is not connected to a repreneur profile yet. Ask the Re-New team to link your email before using the portal."}
+            ? u("The selected repreneur's profile could not be loaded. Choose another repreneur or check this profile with the Re-New team.")
+            : u("This login is not connected to a repreneur profile yet. Ask the Re-New team to link your email before using the portal.")}
         </AlertDescription>
       </Alert>
     )
@@ -250,7 +270,7 @@ export function RepreneurProfileSummary({
   return (
     <div className="flex flex-col gap-6">
       <header>
-        <p className="text-sm text-muted-foreground">{staffPreview ? "Selected repreneur's Re-New profile" : "Your Re-New profile"}</p>
+        <p className="text-sm text-muted-foreground">{u(staffPreview ? "Selected repreneur's Re-New profile" : "Your Re-New profile")}</p>
         <h1 className="text-2xl font-semibold tracking-normal">{repreneur.first_name} {repreneur.last_name}</h1>
       </header>
 
@@ -258,18 +278,18 @@ export function RepreneurProfileSummary({
         <CardHeader>
           <CardTitle className="inline-flex items-center gap-2">
             <Target data-icon="inline-start" />
-            Target thesis
+            {u("Target thesis")}
           </CardTitle>
-          <CardDescription>{staffPreview
+          <CardDescription>{u(staffPreview
             ? "Acquisition criteria Re-New uses to surface relevant opportunities."
-            : "Keep the acquisition criteria Re-New uses to surface relevant opportunities current."}</CardDescription>
+            : "Keep the acquisition criteria Re-New uses to surface relevant opportunities current.")}</CardDescription>
           {staffPreview
             ? staffTargetThesisAction ? <CardAction>{staffTargetThesisAction}</CardAction> : null
             : <CardAction><RepreneurTargetThesisEditor repreneur={repreneur} /></CardAction>}
         </CardHeader>
         <CardContent>
           <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-            {thesisFields(repreneur).map((field) => (
+            {thesisFields(repreneur, language).map((field) => (
               <div key={field.label} className="flex flex-col gap-1">
                 <dt className="text-xs text-muted-foreground">{field.label}</dt>
                 <dd className="text-sm font-medium">{field.value}</dd>
@@ -281,11 +301,11 @@ export function RepreneurProfileSummary({
 
       <Card>
         <CardHeader>
-          <CardTitle>{staffPreview ? "Supporting items" : "Your supporting items"}</CardTitle>
+          <CardTitle>{u(staffPreview ? "Supporting items" : "Your supporting items")}</CardTitle>
           <CardDescription>
-            {staffPreview
+            {u(staffPreview
               ? "Personal declarations belong to the repreneur. Staff can review them here but cannot certify on their behalf."
-              : "Add or certify information for Re-New to review. These declarations never change readiness milestones."}
+              : "Add or certify information for Re-New to review. These declarations never change readiness milestones.")}
           </CardDescription>
         </CardHeader>
         {staffPreview && staffDocumentAssistanceAction ? <CardContent>{staffDocumentAssistanceAction}</CardContent> : null}
@@ -296,18 +316,18 @@ export function RepreneurProfileSummary({
 
       <Card>
         <CardHeader>
-          <CardTitle>Readiness milestones</CardTitle>
-          <CardDescription>Managed and updated by Re-New. This view is read-only.</CardDescription>
+          <CardTitle>{u("Readiness milestones")}</CardTitle>
+          <CardDescription>{u("Managed and updated by Re-New. This view is read-only.")}</CardDescription>
         </CardHeader>
         <CardContent>
           {completedMilestones.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No readiness milestones have been marked complete yet.</p>
+            <p className="text-sm text-muted-foreground">{u("No readiness milestones have been marked complete yet.")}</p>
           ) : (
             <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
               {completedMilestones.map((milestone) => (
                 <div key={milestone.key} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
                   <CheckCircle2 className="text-primary" />
-                  <span>{milestone.label}</span>
+                  <span>{milestoneUiLabel(milestone.key, milestone.label, language)}</span>
                 </div>
               ))}
             </div>
@@ -317,26 +337,26 @@ export function RepreneurProfileSummary({
 
       <Card>
         <CardHeader>
-          <CardTitle>{staffPreview ? "Selected repreneur's deals" : "Your deals"}</CardTitle>
-          <CardDescription>{staffPreview ? "Opportunities Re-New has made available to this repreneur." : "Opportunities Re-New has made available to you."}</CardDescription>
+          <CardTitle>{u(staffPreview ? "Selected repreneur's deals" : "Your deals")}</CardTitle>
+          <CardDescription>{u(staffPreview ? "Opportunities Re-New has made available to this repreneur." : "Opportunities Re-New has made available to you.")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <DealGroup
-            title="Proposed deals"
-            description="Available for your review in the Deals area."
+            title={u("Proposed deals")}
+            description={u("Available for your review in the Deals area.")}
             opportunities={proposedDeals}
-            emptyMessage="No proposed deals are available at the moment."
+            emptyMessage={u("No proposed deals are available at the moment.")}
             detailHrefForOpportunity={opportunityDetailHref}
           />
           <DealGroup
-            title="Pursued deals"
-            description="Validated by Re-New as active pursuits."
+            title={u("Pursued deals")}
+            description={u("Validated by Re-New as active pursuits.")}
             opportunities={pursuedDeals}
-            emptyMessage="No active pursuits are recorded at the moment."
+            emptyMessage={u("No active pursuits are recorded at the moment.")}
             detailHrefForOpportunity={opportunityDetailHref}
           />
           <Link href={dealsHref} className="w-fit text-sm font-medium text-primary hover:underline">
-            Open all deals
+            {u("Open all deals")}
           </Link>
         </CardContent>
       </Card>

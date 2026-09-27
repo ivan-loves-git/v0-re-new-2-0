@@ -2,24 +2,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { AlertCircle } from "lucide-react"
+import { UiText } from "@/components/i18n/ui-text"
+import { LanguageToggle } from "@/components/intake-v2/language-toggle"
 
 export default function AuthErrorPage() {
   return (
     <main id="main-content" className="flex min-h-svh items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+      <div className="w-full max-w-md"><div className="mb-3 flex justify-end"><LanguageToggle /></div><Card>
         <CardHeader className="space-y-1">
           <div className="flex items-center gap-2">
             <AlertCircle className="size-5 text-destructive" />
-            <CardTitle className="text-2xl font-semibold tracking-[-0.025em]">Authentication error</CardTitle>
+            <CardTitle className="text-2xl font-semibold tracking-[-0.025em]"><UiText text="Authentication error" /></CardTitle>
           </div>
-          <CardDescription>There was a problem signing you in</CardDescription>
+          <CardDescription><UiText text="There was a problem signing you in" /></CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild className="w-full">
-            <Link href="/auth/login">Back to Login</Link>
+            <Link href="/auth/login"><UiText text="Back to Login" /></Link>
           </Button>
         </CardContent>
-      </Card>
+      </Card></div>
     </main>
   )
 }
