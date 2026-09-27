@@ -47,11 +47,6 @@ export function LanguageToggle({ chromeLanguage }: { chromeLanguage?: 'fr' | 'en
         EN
       </button>
     </div>
-    <p className="max-w-64 text-right text-[11px] leading-4 text-muted-foreground">
-      {copyLanguage === 'fr'
-        ? 'Ce choix concerne uniquement l’interface. Les contenus, documents et e-mails peuvent conserver leur langue d’origine.'
-        : 'Interface only. Original content, documents and emails may remain in their original language.'}
-    </p>
     {saveError ? <p className="text-xs text-destructive" role="alert">{copyLanguage === 'fr' ? 'Impossible d’enregistrer la langue. Réessayez.' : 'Could not save your language. Please try again.'}</p> : null}
     </div>
   )
