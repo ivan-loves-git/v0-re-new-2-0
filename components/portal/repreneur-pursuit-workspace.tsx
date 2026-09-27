@@ -36,12 +36,12 @@ function workspaceStatus(deal: SidebarDeal): StatusFilter {
 }
 
 export function filterWorkspaceDeals<T extends SidebarDeal>(deals: T[], query: string, status: StatusFilter): T[] {
-  const needle = query.trim().toLocaleLowerCase()
+  const needle = query.trim().toLowerCase()
   return deals.filter((deal) => {
     if (status !== "all" && workspaceStatus(deal) !== status) return false
     if (!needle) return true
     return [deal.public_title, deal.sector, deal.activity, deal.geography_label, deal.location]
-      .some((value) => value?.toLocaleLowerCase().includes(needle))
+      .some((value) => value?.toLowerCase().includes(needle))
   })
 }
 

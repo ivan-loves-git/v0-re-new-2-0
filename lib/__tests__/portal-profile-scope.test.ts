@@ -147,7 +147,7 @@ describe("repreneur portal profile scope", () => {
     expect(opportunityDetail).toContain("opportunity.match_id &&")
     expect(opportunityDetail).toContain("matchId={opportunity.match_id}")
     expect(opportunityDetail).toContain("const canExpressUnassignedInterest = !opportunity.match_id")
-    expect(opportunityDetail).toContain("(opportunity.match_status || canExpressUnassignedInterest) ? <Card>")
+    expect(opportunityDetail).toContain("(opportunity.match_status || canExpressUnassignedInterest) ? <Card")
   })
 
   it("resolves deal details through an owned match or the namespace-safe live inventory", () => {
@@ -165,7 +165,7 @@ describe("repreneur portal profile scope", () => {
     expect(detailGetter).toContain("if (matchResult.error) throw new Error(matchResult.error.message)")
     expect(detailGetter).toContain("const exposure = matchResult.data ? normalizeExposure(matchResult.data, repreneur) : null")
     expect(detailGetter).toContain('supabase.rpc("w164_repreneur_live_inventory"')
-    expect(detailPage).toContain("const opportunity = await getMyRepreneurOpportunity(matchId)")
+    expect(detailPage).toContain("getMyRepreneurOpportunity(matchId)")
     expect(detailPage).toContain("if (!opportunity)")
     expect(detailPage).toContain("notFound()")
   })

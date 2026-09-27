@@ -43,4 +43,17 @@ describe("repreneur pursuit workspace", () => {
     expect(html).not.toContain("staff-secret")
     expect(html).not.toContain("source_firm_id")
   })
+
+  it("keeps an eligible discovery-only detail actionable without adding it to matched pursuits", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(RepreneurPursuitWorkspace, {
+        opportunity: { ...opportunity, match_id: null, match_status: null, is_staff_recommended: false, is_outside_current_criteria: false },
+        deals: [], actions: {}, journey: null,
+      })))
+    expect(html).toContain("Original approved public description")
+    expect(html).toContain("Express interest")
+    expect(html).toContain('data-wave-action="express_interest"')
+    expect(html).toContain("0 pursuits in this view")
+    expect(html).not.toContain('href="/portal/deals/own-match"')
+  })
 })
