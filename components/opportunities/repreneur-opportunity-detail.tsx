@@ -286,16 +286,22 @@ export function RepreneurOpportunityDetail({
                     : journey.revoked
                       ? copy("Confidential access has been revoked for this pursuit.")
                       : journey.ndaReadyNotified
-                        ? copy("Your NDA is ready. Upload your signed copy for Re-New review. The Information Memorandum remains locked until the signed NDA handoff and staff approval are complete.")
+                        ? copy(journey.signedCopyState === "not_submitted"
+                            ? "Your NDA is ready. Upload your signed copy for Re-New review. The Information Memorandum remains locked until the signed NDA handoff and staff approval are complete."
+                            : journey.signedCopyState === "awaiting_validation"
+                              ? "Your signed NDA has been received and is awaiting Re-New validation. The Information Memorandum remains locked."
+                              : journey.signedCopyState === "validated"
+                                ? "Your signed NDA has been validated. The Information Memorandum remains locked until Re-New grants access."
+                                : "The signed NDA status is unavailable. The Information Memorandum remains locked. Re-New will tell you when the next action is available.")
                         : copy("Re-New is preparing your NDA. We will notify you when it is ready to download and sign.")}
                 </AlertDescription>
               </Alert>
             )}
 
             {journey?.enabled && journey.ndaReadyNotified && journey.signedCopyState !== "unknown" && !journey.revoked ? <>
-              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{copy("NDA template")}</p><p className="text-xs text-muted-foreground">{copy("Use this exact validated template for your signed copy.")}</p></div>{ndaTemplateHref ? <Button asChild variant="outline" size="sm"><a href={ndaTemplateHref}><Download data-icon="inline-start" />{copy("Download template")}</a></Button> : null}</div>
+              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{copy("NDA template")}</p><p className="text-xs text-muted-foreground">{copy(journey.signedCopyState === "not_submitted" ? "Use this exact validated template for your signed copy." : "This validated NDA template remains available for reference.")}</p></div>{ndaTemplateHref ? <Button asChild variant="outline" size="sm"><a href={ndaTemplateHref}><Download data-icon="inline-start" />{copy("Download template")}</a></Button> : null}</div>
               {readOnly ? staffDocumentAssistanceControls : null}
-              {journey.signedCopyState === "awaiting_validation" ? <p className="text-sm text-muted-foreground">{copy("Your signed NDA has been received for staff validation.")}</p> : null}
+              {journey.signedCopyState === "awaiting_validation" ? <p role="status" className="text-sm text-muted-foreground">{copy("Your signed NDA has been received for staff validation.")}</p> : null}
               {journey.signedCopyState === "not_submitted" && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
             </> : null}
 

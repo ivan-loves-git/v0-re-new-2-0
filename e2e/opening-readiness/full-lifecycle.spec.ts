@@ -1043,27 +1043,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(e6).toEqual({ delivery_status: "sent", provider_message_id: "qa-allowlist-accepted", evidence: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
 
-    // The attributed staff receipt is distinct from the owner's later upload.
-    // It leaves signer validation, Gate 2 and disclosure untouched.
-    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur + "&dealId=" + savedMatch.id);
-    await page.locator("#staff-nda-title").fill("QA STAFF-RECEIVED NDA — SYNTHETIC");
-    await page.locator("#staff-nda-file").setInputFiles(manifest.files.staffReceivedNda.path);
-    await page.locator("#staff-nda-reference").fill("Synthetic received-email reference");
-    await page.getByText("I am Re-New staff recording a copy already signed by", { exact: false }).click();
-    await page.getByRole("button", { name: "Record received PDF" }).click();
-    await expect(page.getByText("Received NDA recorded as staff evidence; staff validation is still required.")).toBeVisible();
-    const receipt = await one<{ digest: string; staff_user_id: string; source_kind: string; validated: number; gate2: number }>(client,
-      `SELECT a.content_sha256 AS digest,r.staff_user_id,r.source_kind,
-        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='repreneur_signed_copy_validated') AS validated,
-        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='gate_2_passed') AS gate2
-       FROM public.staff_received_nda_receipts r JOIN public.opportunity_nda_artifacts a ON a.id=r.artifact_id
-       WHERE r.match_id=$1 ORDER BY r.recorded_at DESC LIMIT 1`, [savedMatch.id]);
-    expect(receipt).toEqual({ digest: manifest.files.staffReceivedNda.sha256, staff_user_id: fixture.authIds.staffUser,
-      source_kind: "email", validated: 0, gate2: 0 });
-    await record({ step: "staff received an already-signed NDA without claiming signature or validation", surface: "database",
-      result: "distinct PDF hash, actual staff actor, source provenance, no Gate 2" });
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
-
     const renewSection = page
       .getByRole("heading", { name: "Re-New-signed copy" })
       .locator("xpath=ancestor::section");
@@ -1078,7 +1058,9 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
 
     await realPage.goto("/portal/deals/" + savedMatch.id);
     await openOwnerDocuments(realPage);
-    const ndaDownloadHref = await realPage
+    const ownerDocuments = realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      .getByRole("tabpanel", { name: "Documents" });
+    const ndaDownloadHref = await ownerDocuments
       .getByRole("link", { name: "Download template" })
       .getAttribute("href");
     expect(ndaDownloadHref).toBeTruthy();
@@ -1090,21 +1072,61 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(createHash("sha256").update(ndaBytes).digest("hex")).toBe(
       manifest.files.blankNda.sha256,
     );
-    await realPage
+    await ownerDocuments
       .locator("#signed-nda-title")
       .fill("QA LIFECYCLE REPRENEUR NDA — SYNTHETIC");
-    await realPage
+    await ownerDocuments
       .locator("#signed-nda-file")
       .setInputFiles(manifest.files.repreneurSignedNda.path);
-    await realPage.getByRole("button", { name: "Upload signed copy" }).click();
-    const signedNdaForm = realPage.locator("form").filter({
-      has: realPage.locator("#signed-nda-title"),
-    });
+    await ownerDocuments.getByRole("button", { name: "Upload signed copy" }).click();
+    await openOwnerDocuments(realPage);
     await expect(
-      signedNdaForm.getByRole("status").filter({
+      ownerDocuments.getByRole("status").filter({
         hasText: "Your signed NDA has been received for staff validation.",
       }),
     ).toBeVisible();
+    await expect(ownerDocuments.locator("#signed-nda-title")).toHaveCount(0);
+    await expect(ownerDocuments.getByRole("button", { name: "Upload signed copy" })).toHaveCount(0);
+    const ownerCopy = await one<{ id: string; digest: string; version_number: number; title: string; file_name: string; size_bytes: number; recorded_by: string }>(client,
+      `SELECT a.id,a.content_sha256 AS digest,a.version_number,d.title,d.file_name,d.size_bytes::int,a.recorded_by
+       FROM public.opportunity_nda_artifacts a JOIN public.opportunity_documents d ON d.id=a.document_id
+       WHERE a.match_id=$1 AND a.artifact_role='repreneur_signed_copy'
+       ORDER BY a.version_number DESC LIMIT 1`, [savedMatch.id]);
+    expect(ownerCopy).toEqual({ id: expect.any(String), digest: manifest.files.repreneurSignedNda.sha256,
+      version_number: 1, title: "QA LIFECYCLE REPRENEUR NDA — SYNTHETIC",
+      file_name: basename(manifest.files.repreneurSignedNda.path), size_bytes: manifest.files.repreneurSignedNda.bytes,
+      recorded_by: fixture.repreneurs.real.email });
+
+    // Staff records a distinct copy received through another channel after the
+    // owner's submission. It becomes the current version without validating it.
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur + "&dealId=" + savedMatch.id);
+    await page.locator("#staff-nda-title").fill("QA STAFF-RECEIVED NDA — SYNTHETIC");
+    await page.locator("#staff-nda-file").setInputFiles(manifest.files.staffReceivedNda.path);
+    await page.locator("#staff-nda-reference").fill("Synthetic received-email reference");
+    await page.getByText("I am Re-New staff recording a copy already signed by", { exact: false }).click();
+    await page.getByRole("button", { name: "Record received PDF" }).click();
+    await expect(page.getByText("Received NDA recorded as staff evidence; staff validation is still required.")).toBeVisible();
+    const receipt = await one<{ artifact_id: string; digest: string; version_number: number; supersedes_artifact_id: string; recorded_by: string; title: string; file_name: string; size_bytes: number; staff_user_id: string; source_kind: string; source_reference: string; validated: number; gate2: number }>(client,
+      `SELECT a.id AS artifact_id,a.content_sha256 AS digest,a.version_number,a.supersedes_artifact_id,
+        a.recorded_by,d.title,d.file_name,d.size_bytes::int,r.staff_user_id,r.source_kind,r.source_reference,
+        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='repreneur_signed_copy_validated') AS validated,
+        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='gate_2_passed') AS gate2
+       FROM public.staff_received_nda_receipts r
+       JOIN public.opportunity_nda_artifacts a ON a.id=r.artifact_id
+       JOIN public.opportunity_documents d ON d.id=a.document_id
+       WHERE r.match_id=$1 ORDER BY r.recorded_at DESC LIMIT 1`, [savedMatch.id]);
+    expect(receipt).toEqual({ artifact_id: expect.any(String), digest: manifest.files.staffReceivedNda.sha256,
+      version_number: 2, supersedes_artifact_id: ownerCopy.id, recorded_by: fixture.staff.email,
+      title: "QA STAFF-RECEIVED NDA — SYNTHETIC", file_name: basename(manifest.files.staffReceivedNda.path),
+      size_bytes: manifest.files.staffReceivedNda.bytes, staff_user_id: fixture.authIds.staffUser,
+      source_kind: "email", source_reference: "Synthetic received-email reference", validated: 0, gate2: 0 });
+    const currentCopy = await one<{ id: string; digest: string; version_number: number }>(client,
+      `SELECT a.id,a.content_sha256 AS digest,a.version_number FROM public.opportunity_nda_artifacts a
+       WHERE a.match_id=$1 AND a.artifact_role='repreneur_signed_copy'
+       ORDER BY a.version_number DESC LIMIT 1`, [savedMatch.id]);
+    expect(currentCopy).toEqual({ id: receipt.artifact_id, digest: manifest.files.staffReceivedNda.sha256, version_number: 2 });
+    await record({ step: "owner upload and attributed staff receipt retained as separate NDA versions", surface: "database",
+      result: "both exact PDF names, byte lengths and hashes; staff actor and email provenance; current version awaits validation and Gate 2" });
 
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await page.getByRole("button", { name: "Validate Re-New copy" }).click();
@@ -1127,7 +1149,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(e7.exact_interaction).toBe(true);
     expect(e7.attachment_snapshot.map((a) => [a.content_sha256, Number(a.size_bytes)])).toEqual([
       [manifest.files.renewSignedNda.sha256, manifest.files.renewSignedNda.bytes],
-      [manifest.files.repreneurSignedNda.sha256, manifest.files.repreneurSignedNda.bytes],
+      [manifest.files.staffReceivedNda.sha256, manifest.files.staffReceivedNda.bytes],
     ]);
     await record({
       step: "canonical NDA gates and signed-copy handoff completed",
