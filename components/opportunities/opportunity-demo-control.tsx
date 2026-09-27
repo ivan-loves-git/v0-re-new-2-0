@@ -96,7 +96,11 @@ export function OpportunityDemoControl({
                 <LockKeyhole aria-hidden="true" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-[min(20rem,calc(100vw-2rem))] space-y-2">
+            <PopoverContent
+              align="start"
+              aria-label="Demo / Real setting locked"
+              className="w-[min(20rem,calc(100vw-2rem))] space-y-2"
+            >
               <p className="text-sm font-semibold">Demo / Real setting locked</p>
               <p className="text-sm text-muted-foreground">
                 This opportunity already has repreneur matches, so it cannot be switched between Demo and Real. You can still edit its details and manage its pursuits.

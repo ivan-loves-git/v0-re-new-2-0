@@ -89,4 +89,15 @@ describe("staff DEMO opportunity classification", () => {
     expect(html).toContain("Mark DEMO")
     expect(html).not.toContain("Demo / Real setting locked")
   })
+
+  it("names the matched explanation dialog for assistive technology", () => {
+    const control = readFileSync(
+      `${platformRoot}/components/opportunities/opportunity-demo-control.tsx`,
+      "utf8",
+    )
+    const popoverContent = control.match(/<PopoverContent\b([^>]*)>/)?.[1]
+
+    expect(popoverContent).toContain('aria-label="Demo / Real setting locked"')
+    expect(control).toContain('<p className="text-sm font-semibold">Demo / Real setting locked</p>')
+  })
 })
