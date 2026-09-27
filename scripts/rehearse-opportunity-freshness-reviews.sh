@@ -20,7 +20,28 @@ psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_fres
 # source_identity_to_verify flag.
 sed -n '/^CREATE OR REPLACE FUNCTION public.ma_opportunity_source_review_required(/,/^\$\$;/p' \
   "$repo_root/scripts/079_provisional_acme_source_foundation.sql" | "${psql[@]}" >/dev/null
+awk '
+  /^CREATE OR REPLACE FUNCTION public\.(reserve|refresh|release)_ma_source_email_send\(/ { inside=1 }
+  inside { print }
+  inside && /^\$\$;/ { inside=0 }
+' "$repo_root/scripts/079_provisional_acme_source_foundation.sql" | "${psql[@]}" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/129_opportunity_freshness_reviews.sql" >/dev/null
+"${psql[@]}" <<'SQL'
+-- The actual ordinary M&A reservation/refresh/release path must remain usable
+-- for an unrelated opportunity, including a synthetic outbound transition.
+BEGIN;
+DO $$ DECLARE v_token uuid; v_interaction uuid := gen_random_uuid(); BEGIN
+  v_token := public.reserve_ma_source_email_send('18700000-0000-4000-8000-00000000000a','staff-1');
+  IF v_token IS NULL OR NOT public.refresh_ma_source_email_send('18700000-0000-4000-8000-00000000000a',v_token) THEN
+    RAISE EXCEPTION 'ordinary_ma_source_reservation_failed'; END IF;
+  INSERT INTO public.ma_interactions(id,opportunity_id,channel,direction,delivery_status,occurred_at)
+    VALUES(v_interaction,'18700000-0000-4000-8000-00000000000a','email','outbound','pending',now());
+  UPDATE public.ma_interactions SET delivery_status='sent' WHERE id=v_interaction;
+  IF NOT public.release_ma_source_email_send('18700000-0000-4000-8000-00000000000a',v_token) THEN
+    RAISE EXCEPTION 'ordinary_ma_source_reservation_not_released'; END IF;
+END $$;
+ROLLBACK;
+SQL
 "${psql[@]}" <<'SQL'
 DO $$ BEGIN
   IF (SELECT count(*) FROM public.opportunity_freshness_candidates(NULL,now(),true,NULL))<>3
@@ -126,6 +147,12 @@ fi
 if "${psql[@]}" -Atc "UPDATE public.ma_interactions SET delivery_status='pending' WHERE id='18700000-0000-4000-8000-0000000000f4'" >/dev/null 2>&1; then
   echo "Existing outbound status changed across grouped send lease" >&2; exit 1
 fi
+if "${psql[@]}" -Atc "SELECT public.reserve_ma_source_email_send('18700000-0000-4000-8000-000000000008','staff-1')" >"$cluster_dir/ma-reserve-lease.out" 2>&1; then
+  echo "Ordinary M&A reservation crossed a grouped member lease" >&2; exit 1
+fi
+if ! grep -Fq 'freshness_member_send_lease_blocks_change' "$cluster_dir/ma-reserve-lease.out"; then
+  echo "Ordinary M&A reservation failed for the wrong reason during a grouped lease" >&2; exit 1
+fi
 wait "$first_pid"
 first_token="$(sed -n '1p' "$cluster_dir/first.out")"
 "${psql[@]}" <<SQL
@@ -183,6 +210,12 @@ fi
 "${psql[@]}" -Atc "UPDATE public.email_templates SET is_active=true WHERE template_key='ma_opportunity_validity_check'" >/dev/null
 second_token="$("${psql[@]}" -Atc "SELECT public.opportunity_freshness_reserve('$second_review',1,'{\"to\":[\"source@example.test\"]}'::jsonb,repeat('b',64),'staff-1')")"
 "${psql[@]}" -Atc "SELECT public.opportunity_freshness_finish('$second_review','$second_token','uncertain',NULL,'Provider timeout','staff-1')" >/dev/null
+if "${psql[@]}" -Atc "SELECT public.reserve_ma_source_email_send('18700000-0000-4000-8000-000000000009','staff-1')" >"$cluster_dir/ma-reserve-uncertain.out" 2>&1; then
+  echo "Ordinary M&A reservation bypassed an uncertain grouped member" >&2; exit 1
+fi
+if ! grep -Fq 'freshness_uncertain_member_blocks_other_send' "$cluster_dir/ma-reserve-uncertain.out"; then
+  echo "Ordinary M&A reservation failed for the wrong reason against uncertain group" >&2; exit 1
+fi
 "${psql[@]}" -Atc "INSERT INTO public.ma_interactions(id,opportunity_id,channel,direction,delivery_status,occurred_at) VALUES('18700000-0000-4000-8000-0000000000e1','18700000-0000-4000-8000-000000000009','email','inbound',NULL,now())" >/dev/null
 "${psql[@]}" -Atc "DO \$\$ BEGIN IF (SELECT state FROM public.staff_email_reviews WHERE id='$second_review')<>'uncertain' THEN RAISE EXCEPTION 'inbound_logging_erased_uncertain_outcome'; END IF; END \$\$" >/dev/null
 "${psql[@]}" -Atc "DELETE FROM public.ma_interactions WHERE id='18700000-0000-4000-8000-0000000000e1'" >/dev/null
@@ -289,4 +322,4 @@ wait "$reserve_first_pid"
 reserve_first_token="$(grep -E -m1 '^[0-9a-f-]{36}$' "$cluster_dir/reserve-first.out")"
 "${psql[@]}" -Atc "SELECT public.opportunity_freshness_finish('$reply_group','$reserve_first_token','sent','provider-accepted-3',NULL,'staff-1')" >/dev/null
 "${psql[@]}" -Atc "SELECT public.opportunity_freshness_record_reply('$review_id','18700000-0000-4000-8000-000000000007','confirmed_open',now(),'Later reply after delivery','staff-1')" >/dev/null
-echo "#187 disposable SQL: source flag, 44/45/legacy, identity, ACL, exact grouped receipt/reply, independent inbound/reply both-order races, source/pursuit, version/recipient drift, discard, template switch and uncertain retry passed"
+echo "#187 disposable SQL: ordinary M&A reserve/refresh/synthetic outbound/release plus grouped-lease/uncertain vetoes, source flag, 44/45/legacy, identity, ACL, grouped receipt/reply, independent inbound/reply races, source/pursuit, version/recipient drift, discard, template switch and uncertain retry passed"

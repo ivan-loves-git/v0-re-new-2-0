@@ -300,7 +300,7 @@ CREATE TRIGGER opportunity_freshness_guard_review_send BEFORE UPDATE OF state ON
 
 CREATE FUNCTION public.opportunity_freshness_guard_source_change()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
-DECLARE v_opportunity_id uuid; v_old_email text;
+DECLARE v_opportunity_id uuid; v_old_email text; v_other_outreach boolean;
 BEGIN
   IF TG_TABLE_NAME='opportunities' THEN
     PERFORM public.opportunity_freshness_assert_mutation_allowed(NEW.id);
@@ -313,9 +313,14 @@ BEGIN
   ELSIF TG_TABLE_NAME='ma_source_email_send_reservations' OR TG_TABLE_NAME='ma_interactions' THEN
     IF TG_OP='UPDATE' THEN PERFORM public.opportunity_freshness_assert_mutation_allowed(OLD.opportunity_id); END IF;
     PERFORM public.opportunity_freshness_assert_mutation_allowed(NEW.opportunity_id);
-    IF (TG_TABLE_NAME='ma_source_email_send_reservations'
-        OR (TG_TABLE_NAME='ma_interactions' AND NEW.channel='email' AND NEW.direction='outbound'))
-      AND EXISTS (
+    -- Reservation rows have no channel/direction. Keep their check separate
+    -- from the interaction-only fields before evaluating the uncertain fence.
+    IF TG_TABLE_NAME='ma_source_email_send_reservations' THEN
+      v_other_outreach := true;
+    ELSE
+      v_other_outreach := NEW.channel='email' AND NEW.direction='outbound';
+    END IF;
+    IF v_other_outreach AND EXISTS (
       SELECT 1 FROM public.opportunity_freshness_members member
       JOIN public.staff_email_reviews review ON review.id=member.review_id
       WHERE member.opportunity_id=NEW.opportunity_id AND review.state='uncertain'

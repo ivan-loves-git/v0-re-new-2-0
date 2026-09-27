@@ -15,7 +15,15 @@ CREATE TABLE public.opportunity_ma_contacts(id uuid PRIMARY KEY, opportunity_id 
 CREATE TABLE public.repreneurs(id uuid PRIMARY KEY, is_demo boolean DEFAULT false);
 CREATE TABLE public.opportunity_matches(id uuid PRIMARY KEY, opportunity_id uuid, repreneur_id uuid, status text);
 CREATE TABLE public.opportunity_pursuit_evidence(id uuid PRIMARY KEY, match_id uuid);
-CREATE TABLE public.ma_source_email_send_reservations(opportunity_id uuid PRIMARY KEY, expires_at timestamptz);
+CREATE TABLE public.ma_source_email_send_reservations(
+  opportunity_id uuid PRIMARY KEY REFERENCES public.opportunities(id),
+  reservation_token uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  source_office_id uuid REFERENCES public.ma_offices(id),
+  actor text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  CHECK (expires_at > created_at)
+);
 CREATE TABLE public.ma_provisional_source_contexts(context_key text PRIMARY KEY, office_id uuid);
 CREATE TABLE public.ma_provisional_source_review_events(id uuid PRIMARY KEY, opportunity_id uuid,
   provisional_office_id uuid, event_kind text, related_assignment_id uuid);
