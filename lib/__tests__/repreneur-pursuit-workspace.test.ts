@@ -25,6 +25,33 @@ const deals: SidebarDeal[] = [
 ]
 
 describe("repreneur pursuit workspace", () => {
+  it("starts in the matched list on mobile and shows a non-selecting desktop prompt in both languages", () => {
+    for (const language of ["en", "fr"] as const) {
+      const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: language },
+        createElement(RepreneurPursuitWorkspace, {
+          opportunity: null, deals, actions: { "own-match": "respond" }, journey: null,
+          responseAsOf: "2026-09-27T00:00:00Z", returnHref: "/portal/pursuits",
+        })))
+      expect(html).toContain('data-wave-workspace="pursuit"')
+      expect(html).toContain('href="/portal/deals/own-match?return=%2Fportal%2Fpursuits"')
+      expect(html).toContain(language === "fr" ? "Mes dossiers Re-New" : "My pursuits")
+      expect(html).toContain(language === "fr" ? "Sélectionnez un dossier" : "Select a pursuit")
+      expect(html).not.toContain("Original approved public description")
+      expect(html).not.toContain("Mark as reviewed")
+    }
+  })
+
+  it("shows an empty workspace without implying that filters hid real matches", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(RepreneurPursuitWorkspace, {
+        opportunity: null, deals: [], actions: {}, journey: null, responseAsOf: "2026-09-27T00:00:00Z",
+        returnHref: "/portal/pursuits",
+      })))
+    expect(html).toContain("No Re-New pursuits are available yet.")
+    expect(html).not.toContain("No pursuits match these filters.")
+    expect(html).not.toContain("Clear filters")
+  })
+
   it("uses the same single-current journey strip for owner and staff preview in both languages", () => {
     const journey: PortalCurrentPursuit = {
       matchId: "own-match", enabled: true, ndaReadyNotified: true, revoked: false,

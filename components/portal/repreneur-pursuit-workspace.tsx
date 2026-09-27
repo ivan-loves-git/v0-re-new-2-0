@@ -37,6 +37,13 @@ function dealName(deal: Pick<RepreneurOpportunityExposure, "public_title">, lang
   return deal.public_title || uiCopy(language, "Confidential acquisition opportunity")
 }
 
+function ownerPursuitListHref(query: string, status: StatusFilter) {
+  const params = new URLSearchParams()
+  if (query) params.set("q", query)
+  if (status !== "all") params.set("status", status)
+  return `/portal/pursuits${params.size ? `?${params}` : ""}`
+}
+
 function workspaceStatus(deal: SidebarDeal): StatusFilter {
   if (deal.match_status === "active_pursuit") return "active"
   if (deal.match_status === "proposed" || (deal.match_status === "interested" && !deal.interest_rejected)) return "awaiting"
@@ -122,7 +129,7 @@ function CriteriaPanel({ criteria }: { criteria: OwnerCriterionComparison[] | un
 }
 
 export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey, responseAsOf, withdrawalPaused = false, initialQuery = "", initialStatus = "all", returnHref = "/portal/deals", staffPreview, staffAssistanceControls, staffDocumentAssistanceControls }: {
-  opportunity: Deal
+  opportunity: Deal | null
   deals: SidebarDeal[]
   actions: Record<string, PortalDealAction>
   journey: PortalCurrentPursuit | null
@@ -140,7 +147,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   const language = useUiLanguage()
   const [query, setQuery] = useState(initialQuery)
   const [status, setStatus] = useState<StatusFilter>(initialStatus)
-  const [mobileListOpen, setMobileListOpen] = useState(false)
+  const [mobileListOpen, setMobileListOpen] = useState(!opportunity)
   const [tab, setTab] = useState("overview")
   const [actionNow, setActionNow] = useState(responseAsOf)
   useEffect(() => {
@@ -160,7 +167,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   const counts = useMemo(() => ({ all: searched.length, active: searched.filter((deal) => workspaceStatus(deal) === "active").length,
     awaiting: searched.filter((deal) => workspaceStatus(deal) === "awaiting").length,
     ended: searched.filter((deal) => workspaceStatus(deal) === "ended").length }), [searched])
-  const selectedId = opportunity.match_id ?? opportunity.opportunity_id
+  const selectedId = opportunity?.match_id ?? opportunity?.opportunity_id ?? null
   const currentIndex = visible.findIndex((deal) => deal.match_id === selectedId)
   const previousDeal = currentIndex > 0 ? visible[currentIndex - 1] : null
   const nextDeal = currentIndex >= 0 && currentIndex < visible.length - 1 ? visible[currentIndex + 1] : null
@@ -178,9 +185,14 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   const listHref = staffPreview
     ? createPortalPreviewHref(staffPreview.repreneurId, undefined, staffPreview.workspaceId, {
         query, status, view: staffPreview.returnView,
-      }) : returnHref
-  const title = dealName(opportunity, language)
-  const selectedAction = opportunity.match_id
+      }) : returnHref === "/portal/pursuits" ? ownerPursuitListHref(query, status) : returnHref
+  useEffect(() => {
+    if (opportunity || window.location.pathname !== listHref.split("?")[0]) return
+    const currentHref = window.location.pathname + window.location.search
+    if (currentHref !== listHref) window.history.replaceState(window.history.state, "", listHref)
+  }, [listHref, opportunity])
+  const title = opportunity ? dealName(opportunity, language) : null
+  const selectedAction = opportunity?.match_id
     ? currentWorkspaceAction(opportunity as SidebarDeal, actions[opportunity.match_id], actionNow)
     : null
   const selectLabel = (deal: SidebarDeal) => deal.match_status === "active_pursuit" && deal.pursuit_stage
@@ -214,11 +226,12 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
             <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{dealName(deal, language)}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{deal.activity || (deal.sector ? sectorUiLabel(deal.sector, language) : copy("Sector to confirm"))}</span><span className="mt-2 flex flex-wrap items-center gap-2 text-xs"><span className="rounded border px-1.5 py-0.5">{selectLabel(deal)}</span>{hasOwnAction(action) ? <span className="font-medium text-primary">● {copy("Your action")}</span> : action === "unknown" ? <span className="text-muted-foreground">{copy("Action status unavailable")}</span> : null}</span></span>
             <ChevronRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted-foreground" />
           </Link>
-        }) : <div className="p-5 text-sm text-muted-foreground"><p>{copy("No pursuits match these filters.")}</p><Button variant="link" className="mt-2 p-0" onClick={() => { setQuery(""); setStatus("all") }}>{copy("Clear filters")}</Button></div>}
+        }) : <div className="p-5 text-sm text-muted-foreground"><p>{copy(deals.length ? "No pursuits match these filters." : "No Re-New pursuits are available yet.")}</p>
+          {deals.length ? <Button variant="link" className="mt-2 p-0" onClick={() => { setQuery(""); setStatus("all") }}>{copy("Clear filters")}</Button> : null}</div>}
       </nav>
       <p className="border-t px-5 py-3 text-xs text-muted-foreground" role="status">{copy("{count} pursuits in this view", { count: visible.length })}</p>
     </aside>
-    <div className={cn("min-w-0 bg-muted/20", mobileListOpen && "hidden lg:block")}>
+    {opportunity ? <div className={cn("min-w-0 bg-muted/20", mobileListOpen && "hidden lg:block")}>
       <div className="flex min-h-16 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-2 text-sm"><Button variant="outline" size="sm" className="lg:hidden" onClick={() => setMobileListOpen(true)}><PanelLeft data-icon="inline-start" />{copy("Pursuits")}</Button><Link href={listHref} className="hidden text-muted-foreground underline-offset-4 hover:underline sm:inline">{copy("My pursuits")}</Link><ChevronRight aria-hidden="true" className="hidden size-4 text-muted-foreground sm:inline" /><span className="truncate font-medium">{title}</span></div>
         <div className="flex shrink-0 gap-1">
@@ -250,6 +263,11 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
           <TabsContent value="journey"><PursuitJourneyHistory opportunity={opportunity} pursuit={journey} /></TabsContent>
         </Tabs>
       </div>
-    </div>
+    </div> : <div className="hidden min-w-0 items-center justify-center bg-muted/20 p-8 lg:flex">
+      <div className="max-w-sm text-center"><h3 className="font-semibold">{copy(deals.length ? "Select a pursuit to see its details." : "No Re-New pursuits are available yet.")}</h3>
+        <p className="mt-2 text-sm text-muted-foreground">{copy(deals.length
+          ? "Choose a Re-New match from the list. Opening it does not mark it as reviewed."
+          : "When Re-New selects an opportunity for you, it will appear here.")}</p></div>
+    </div>}
   </div>
 }

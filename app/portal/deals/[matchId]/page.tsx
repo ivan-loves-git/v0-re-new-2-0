@@ -34,8 +34,10 @@ export default async function PortalDealDetailPage({ params, searchParams }: {
   const status = search.status === "active" || search.status === "awaiting" || search.status === "ended"
     ? search.status : "all"
   const requestedReturn = search.return
-  const returnHref = requestedReturn?.startsWith("/portal/deals?") && !requestedReturn.includes("//")
-    ? requestedReturn : "/portal/deals"
+  const returnHref = requestedReturn === "/portal/pursuits"
+    ? "/portal/pursuits"
+    : requestedReturn?.startsWith("/portal/deals?") && !requestedReturn.includes("//")
+      ? requestedReturn : "/portal/deals"
 
   return <RepreneurPursuitWorkspace
     opportunity={opportunity}

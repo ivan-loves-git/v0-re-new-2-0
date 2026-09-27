@@ -33,7 +33,6 @@ import {
   type PortalPreviewPursuitStatus,
   type PortalPreviewSection,
 } from "@/lib/portal-preview-routes"
-import { projectSelectedReNewPursuits } from "@/lib/portal-preview-pursuits"
 import { isUuid } from "@/lib/uuid"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { currentStaffPortalSelectionToken, parseStaffPortalSelection } from "@/lib/staff-portal-selection"
@@ -106,7 +105,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     match_id: string
     match_status: NonNullable<typeof deal.match_status>
   } => Boolean(deal.match_id && deal.match_status))
-  const actions = selectedRepreneurId && selectedOpportunity
+  const actions = selectedRepreneurId && currentWorkspace && (selectedOpportunity || section === "renew-pursuits")
     ? await readPortalDealActionIndicators(workspaceDeals.map((deal) => deal.match_id), {
         kind: "staff-preview", repreneurId: selectedRepreneurId,
       }) : {}
@@ -120,9 +119,6 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     ? (await createAdminClient().from("opportunities").select("updated_at")
       .eq("id", selectedOpportunity.opportunity_id).maybeSingle()).data?.updated_at ?? null
     : null
-  const renewPursuits = selectedRepreneurId
-    ? projectSelectedReNewPursuits(selectedRepreneurId, opportunityData.opportunities, workspaceId)
-    : []
   const attachmentsByPursuit = externalPursuits.length
     ? await getExternalPursuitAttachmentMap(externalPursuits.map((pursuit) => pursuit.id))
     : {}
@@ -288,7 +284,23 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             />
           </TabsContent>
           <TabsContent value="renew-pursuits">
-            <ExternalPursuitBoard key={`${selectedRepreneurId}:renew`} external={[]} renew={renewPursuits} isStaff readOnly selectedOwnerId={selectedRepreneurId} showExternalBanner={false} />
+            <RepreneurPursuitWorkspace key={`${selectedRepreneurId}:${workspaceId}:renew`} opportunity={null}
+              deals={workspaceDeals.map((deal) => ({
+                match_id: deal.match_id,
+                match_status: deal.match_status,
+                pursuit_stage: deal.pursuit_stage,
+                interest_rejected: deal.interest_rejected,
+                recommendation_expires_at: deal.recommendation_expires_at,
+                public_title: deal.public_title,
+                canonical_sector: deal.canonical_sector,
+                sector: deal.sector,
+                activity: deal.activity,
+                geography_label: deal.geography_label,
+                location: deal.location,
+              }))}
+              actions={actions} journey={null} responseAsOf={new Date().toISOString()}
+              initialQuery={query} initialStatus={status}
+              staffPreview={{ repreneurId: selectedRepreneurId, workspaceId, returnView: "renew-pursuits" }} />
           </TabsContent>
           <TabsContent value="external-pursuits">
             <ExternalPursuitBoard

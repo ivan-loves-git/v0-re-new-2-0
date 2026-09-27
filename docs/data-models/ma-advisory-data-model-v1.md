@@ -1209,6 +1209,21 @@ records the approved v1.0 contract; GitHub Ticket #167 owns release evidence.
 
 ## Repreneur pursuit workspace projection (#188 / Ticket #207)
 
+**Entry navigation correction (#218, 27 September 2026):** The owner
+`/portal/pursuits` entry and the selected-owner staff Portal preview
+`Re-New Pursuits` tab open this same matched list/detail workspace in its
+list-first state. Neither entry silently selects a deal, opens documents,
+records Viewed/Reviewed, or writes a response. On desktop, the list and a
+neutral selection prompt share the workspace; on mobile, the list appears
+first and a selected deal opens its full detail. Search/status and return
+links preserve the Pursuits context, including browser Back/Forward. Owner
+External dossiers have a separate explicit view under Pursuits, retaining
+their existing controls; staff External Pursuits remains its separate tab.
+Deals stays the discovery surface. Entry uses the same current owner/staff
+safe readers and action projection as selected detail, with the same active,
+same-namespace match eligibility below. This is presentation/navigation only:
+no permission, status, evidence, review, data or migration rule changes.
+
 The current `/portal/deals/[matchId]` detail remains a safe match-or-opportunity
 resolver. Its workspace sidebar is a **separate current-owner match projection**:
 `proposed`, `interested`, `withdrawn`, `declined`, `active_pursuit` and `dropped`
@@ -1317,6 +1332,7 @@ retains canonical responses, evidence and current permission rules.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-09-27 | #188 Ticket #218 entry correction | Owner Pursuits and selected-owner staff Re-New Pursuits now open the shared matched list/detail workspace directly, with separate External dossiers and preserved filtered return context. Entry itself opens no detail or personal review marker; business facts, confidentiality and permissions remain unchanged. | GitHub Product Change #188 / Ticket #218 |
 | 2026-09-27 | #188 Ticket #217 approved candidate | Corrected the shared compact strip's sequence/current presentation without changing Full history evidence, dates, stage, document access or stored data. Release verification remains a separate gate. | GitHub Product Change #188 / Ticket #217 |
 | 2026-09-27 | #188 Ticket #207 preview correction | The selected staff Portal preview now renders the released pursuit workspace with selected-owner criteria, progress, Documents and Journey. Staff-only actions and current workspace-bound document routes remain separate from owner state; no migration or historical rewrite. | GitHub Product Change #188 / Ticket #207 |
 | 2026-09-27 | #188 Tickets #207–#208 candidate | Added the owner-scoped pursuit workspace, criteria comparison, current action projection and compact/detailed Journey with explicit unknown history and future context. The candidate changes presentation and allowlisted reads only; release evidence belongs to the exact GitHub PR and production gate. | GitHub Product Change #188 / Tickets #207–#208 |

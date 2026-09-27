@@ -2,7 +2,7 @@
 
 import type React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { BriefcaseBusiness, ListTree, LogOut, UserRound, Waves } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -24,6 +24,15 @@ const navItems = [
 export function PortalShell({ children, userEmail, userName }: PortalShellProps) {
   const u = useUiCopy()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const pursuitDetail = pathname.startsWith("/portal/deals/") && searchParams.get("return") === "/portal/pursuits"
+  const pursuitReturnParams = new URLSearchParams()
+  if (pursuitDetail) {
+    const query = searchParams.get("q")
+    const status = searchParams.get("status")
+    if (query) pursuitReturnParams.set("q", query.slice(0, 120))
+    if (status === "active" || status === "awaiting" || status === "ended") pursuitReturnParams.set("status", status)
+  }
 
   return (
     <div className="min-h-svh bg-background">
@@ -37,10 +46,14 @@ export function PortalShell({ children, userEmail, userName }: PortalShellProps)
           <nav aria-label={u("Portal")} className="flex h-full items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              const active = (pathname === item.href || pathname.startsWith(`${item.href}/`))
+                ? !(pursuitDetail && item.href === "/portal/deals")
+                : pursuitDetail && item.href === "/portal/pursuits"
+              const href = item.href === "/portal/pursuits" && pursuitDetail && pursuitReturnParams.size
+                ? `${item.href}?${pursuitReturnParams}` : item.href
               return (
                 <Button key={item.href} asChild variant="ghost" size="sm" className={cn("relative rounded-none px-2 sm:px-3", active && "text-foreground after:absolute after:inset-x-2 after:-bottom-[13px] after:h-0.5 after:bg-primary")}>
-                  <Link href={item.href} aria-current={active ? "page" : undefined} aria-label={u(item.name)} className={cn("gap-2", active && "font-semibold")}>
+                  <Link href={href} aria-current={active ? "page" : undefined} aria-label={u(item.name)} className={cn("gap-2", active && "font-semibold")}>
                     <Icon data-icon="inline-start" />
                     <span className="hidden sm:inline">{u(item.name)}</span>
                   </Link>
