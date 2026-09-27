@@ -7,6 +7,7 @@ import { preparePursuitHandoff } from "@/lib/pursuit-handoff-delivery"
 import { fixedIntermediaryHandoffCopy, buildPursuitNdaReadyRequest } from "@/lib/pursuit-handoff-copy"
 import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
 import { sameAttachmentSnapshot } from "@/lib/staff-email-review-guard"
+import { sendOpportunityFreshnessReview } from "@/lib/opportunity-freshness-send"
 import { isUuid } from "@/lib/uuid"
 import { revalidatePath } from "next/cache"
 
@@ -14,7 +15,7 @@ const MA_KEYS = new Set([
   "ma_opportunity_validity_check", "ma_request_more_information", "ma_repreneur_interest_feedback",
   "ma_nda_info_memo_request", "ma_process_follow_up",
 ])
-type SourceKind = "ma" | "e4" | "e6" | "e7"
+type SourceKind = "ma" | "e4" | "e6" | "e7" | "freshness"
 
 export interface StaffEmailReview {
   id: string; source_kind: SourceKind; source_operation_id: string; opportunity_id: string;
@@ -39,26 +40,41 @@ async function reviewById(id: string): Promise<StaffEmailReview> {
   return data as StaffEmailReview
 }
 
-export async function listStaffEmailReviews(): Promise<StaffEmailReview[]> {
+export async function listStaffEmailReviews(page = 1, filter: "active" | "all" = "active") {
   await requireStaffAccess()
-  const { data, error } = await createAdminClient().from("staff_email_reviews").select("*")
-    .order("created_at", { ascending: false }).limit(50)
+  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1
+  const pageSize = 25
+  let query = createAdminClient().from("staff_email_reviews").select("*", { count: "exact" })
+  if (filter === "active") query = query.in("state", ["pending", "sending", "uncertain", "failed"])
+  const { data, count, error } = await query.order("created_at", { ascending: false })
+    .order("id", { ascending: false }).range((safePage - 1) * pageSize, safePage * pageSize - 1)
   if (error) throw new Error("The review queue is unavailable.")
-  return (data ?? []) as StaffEmailReview[]
+  return { reviews: (data ?? []) as StaffEmailReview[], total: count ?? 0, page: safePage, pageSize, filter }
 }
 
 export async function getStaffEmailReview(id: string) {
   await requireStaffAccess()
   const review = await reviewById(id)
   const db = createAdminClient()
-  const [{ data, error }, template] = await Promise.all([
+  const [{ data, error }, template, memberResult, replyResult] = await Promise.all([
     db.from("staff_email_review_events").select("id,event_kind,actor,occurred_at,version,detail")
       .eq("review_id", id).order("occurred_at", { ascending: true }).limit(100),
     review.source_kind === "e6" ? Promise.resolve({ data: { is_active: true }, error: null }) :
       db.from("email_templates").select("is_active").eq("template_key", review.template_key).maybeSingle(),
+    review.source_kind === "freshness"
+      ? db.from("opportunity_freshness_members").select("opportunity_id,episode_key,frozen_member").eq("review_id", id).order("opportunity_id")
+      : Promise.resolve({ data: [], error: null }),
+    review.source_kind === "freshness"
+      ? db.from("opportunity_freshness_replies").select("id,opportunity_id,outcome,reply_at,evidence,recorded_by,recorded_at")
+          .eq("review_id", id).order("reply_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ])
-  if (error) throw new Error("The review history is unavailable.")
-  return { review, events: data ?? [], catalogueEnabled: !template.error && template.data?.is_active === true }
+  if (error || memberResult.error || replyResult.error) throw new Error("The review history is unavailable.")
+  return { review, events: data ?? [], catalogueEnabled: !template.error && template.data?.is_active === true,
+    asOf: new Date().toISOString(),
+    members: (memberResult.data ?? []) as Array<{ opportunity_id: string; episode_key: string; frozen_member: Record<string, string | null> }>,
+    replies: (replyResult.data ?? []) as Array<{ id: string; opportunity_id: string; outcome: string; reply_at: string; evidence: string; recorded_by: string; recorded_at: string }>,
+  }
 }
 
 async function persistPreparation(input: {
@@ -141,12 +157,47 @@ export async function preparePursuitEmailReview(matchId: string, type: "e4" | "e
 export async function editStaffEmailReview(id: string, version: number, subject: string, body: string) {
   const { user } = await requireStaffAccess()
   requireId(id)
-  const { error } = await createAdminClient().rpc("staff_email_review_edit", {
-    p_review_id: id, p_version: version, p_subject: subject, p_body_text: body, p_actor: user.id,
-  })
+  const review = await reviewById(id)
+  const { error } = review.source_kind === "freshness"
+    ? await createAdminClient().rpc("opportunity_freshness_edit", {
+      p_review_id: id, p_version: version, p_subject: subject, p_body: body, p_actor: user.id,
+    })
+    : await createAdminClient().rpc("staff_email_review_edit", {
+      p_review_id: id, p_version: version, p_subject: subject, p_body_text: body, p_actor: user.id,
+    })
   if (error) throw new Error("The draft changed or cannot be edited. Refresh before trying again.")
   revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
   return { success: true as const, message: "Review text saved. The template was not changed." }
+}
+
+export async function refreshOpportunityFreshnessReview(id: string, version: number) {
+  const { user } = await requireStaffAccess()
+  requireId(id)
+  const templateVersion = await getMaReviewTemplateVersion("ma_opportunity_validity_check", false)
+  const { error } = await createAdminClient().rpc("opportunity_freshness_refresh", {
+    p_review_id: id, p_version: version, p_template_version: templateVersion, p_actor: user.id,
+  })
+  if (error) throw new Error("A member is no longer eligible or the review changed. Inspect and cancel the whole group if necessary.")
+  revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
+  return { success: true as const, message: "Exact group evidence refreshed; review the unchanged words and new version before sending." }
+}
+
+export async function recordOpportunityFreshnessReply(input: {
+  reviewId: string; opportunityId: string; outcome: "confirmed_open" | "closed" | "paused" | "unclear";
+  replyAt: string; evidence: string;
+}) {
+  const { user } = await requireStaffAccess()
+  requireId(input.reviewId); requireId(input.opportunityId)
+  const { error } = await createAdminClient().rpc("opportunity_freshness_record_reply", {
+    p_review_id: input.reviewId, p_opportunity_id: input.opportunityId,
+    p_outcome: input.outcome, p_reply_at: input.replyAt,
+    p_evidence: input.evidence, p_actor: user.id,
+  })
+  if (error) throw new Error("The exact member reply could not be recorded. Check the sent review and evidence.")
+  revalidatePath(`/emails/review/${input.reviewId}`); revalidatePath("/emails")
+  return { success: true as const, message: input.outcome === "confirmed_open"
+    ? "Confirmed-open evidence recorded for this opportunity only; its 45-day clock restarts from the reply."
+    : "Reply evidence recorded. Opportunity lifecycle did not change automatically." }
 }
 
 export async function cancelStaffEmailReview(id: string, version: number, reason: string) {
@@ -237,6 +288,11 @@ export async function approveAndSendStaffEmailReview(id: string, version: number
   const { user } = await requireStaffAccess()
   const review = await reviewById(id)
   if (review.version !== version) throw new Error("This review changed. Refresh before approving its exact version.")
+  if (review.source_kind === "freshness") {
+    const result = await sendOpportunityFreshnessReview(review, version, user.id)
+    revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
+    return result
+  }
   const payload = await currentAttemptPayload(review)
   const db = createAdminClient()
   const { data: token, error: reserveError } = await db.rpc("staff_email_review_reserve", {

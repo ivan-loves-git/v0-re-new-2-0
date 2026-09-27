@@ -32,4 +32,12 @@ describe("W-103 Relationship Ledger seam", () => {
     expect(ledger).toContain('purpose === "global"')
     expect(ledger).toMatch(/purpose === "global"\s*\? MA_RELATIONSHIP_GLOBAL_ACTIVITY_LIMIT/)
   })
+
+  it("passes the exact positive-confirmation projection into both relationship display paths", () => {
+    expect(globalReader).toContain("readOpportunityFreshnessConfirmations")
+    expect(globalReader).toMatch(/ledger\.activePursuitOpportunityIds,\s*new Date\(\),\s*latestConfirmations/)
+    expect(workspaceReader).toContain("readOpportunityFreshnessConfirmations")
+    expect(workspaceReader).toMatch(/ledger\.activePursuitOpportunityIds,\s*now,\s*latestConfirmations/)
+    expect(workspaceReader).toContain("confirmation: latestConfirmations.get(row.id) ?? null")
+  })
 })

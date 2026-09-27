@@ -11,15 +11,20 @@ import { Mail } from "lucide-react"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 
-export default async function EmailsPage() {
+export default async function EmailsPage({ searchParams }: {
+  searchParams: Promise<{ reviewPage?: string; reviewFilter?: string }>
+}) {
   await connection()
+  const params = await searchParams
+  const reviewPage = Number(params.reviewPage ?? "1")
+  const reviewFilter = params.reviewFilter === "all" ? "all" : "active"
 
   const [stats, logsData, templates, dailyCounts, reviews] = await Promise.all([
     getEmailStats(30),
     getEmailLogs({ limit: 50 }),
     getTemplateSettings(),
     getDailyEmailCounts(14),
-    listStaffEmailReviews(),
+    listStaffEmailReviews(reviewPage, reviewFilter),
   ])
 
   return (

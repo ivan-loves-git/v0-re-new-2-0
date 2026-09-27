@@ -610,6 +610,7 @@ export interface OpportunityWorkSurfaceMatch {
 
 export interface OpportunityWorkSurfaceRecord extends OpportunityWithSource {
   matches: OpportunityWorkSurfaceMatch[]
+  freshness_confirmation?: { id: string; at: string } | null
 }
 
 export interface Opportunity_Insert {

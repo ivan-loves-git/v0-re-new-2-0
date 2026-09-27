@@ -42,7 +42,7 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
                 Opportunity freshness
               </CardTitle>
               <CardDescription>
-                Open opportunities older than {data.staleThresholdDays} days without an active pursuit.
+                Active REAL opportunities reaching {data.staleThresholdDays} days from a source confirmation or recorded inventory age, without an active REAL pursuit.
               </CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -71,7 +71,7 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
                   {formatNumber(staleCount)} {staleCount === 1 ? "opportunity needs" : "opportunities need"} a freshness decision
                 </AlertTitle>
                 <AlertDescription>
-                  Confirm whether to follow up with the source, pause the opportunity, archive it, or move a repreneur into active pursuit.
+                  Review the source context and the staff email draft. An age signal alone does not authorize sending.
                 </AlertDescription>
               </Alert>
 
@@ -101,9 +101,9 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            <span>{reminder.exactDateAdded ?? "No date"}</span>
+                            <span>{reminder.basis === "confirmed_open" ? "Confirmed open" : reminder.exactDateAdded ?? "Older inventory / no exact source day"}</span>
                             <span className="text-xs text-muted-foreground">
-                              Month: {reminder.monthAdded ?? "-"}
+                              {reminder.basis === "confirmed_open" ? `Confirmation: ${reminder.confirmationAt ?? "-"}` : `Recorded month: ${reminder.monthAdded ?? "-"}`}
                             </span>
                           </div>
                         </TableCell>
@@ -127,7 +127,7 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">
-                  Showing the {visibleReminders.length} oldest of {formatNumber(staleCount)} stale opportunities.
+                  Showing the {visibleReminders.length} oldest of {formatNumber(staleCount)} age signals. Source and recipient checks run separately.
                 </p>
                 <Button asChild variant="outline" size="sm">
                   <Link href="/opportunities/find">Review opportunity inventory</Link>
@@ -139,13 +139,13 @@ export function OpportunityFreshnessPanel({ data }: OpportunityFreshnessPanelPro
               <CheckCircle2 />
               <AlertTitle>No stale opportunities found</AlertTitle>
               <AlertDescription>
-                Every dated open opportunity is under the threshold or already has an active pursuit.
+                No active REAL opportunity currently crosses the 45-day confirmation or inventory-age signal without an active REAL pursuit.
               </AlertDescription>
             </Alert>
           )}
 
           <p className="border-t pt-3 text-xs text-muted-foreground">
-            June rule: stale means active, paused, or draft opportunity older than {data.staleThresholdDays} days with no active pursuit.
+            Staff-only age signal. Only an explicit “still open” source reply resets the {data.staleThresholdDays}-day clock; sending does not. Legacy unknown precision remains unknown.
           </p>
         </CardContent>
       </Card>

@@ -89,7 +89,7 @@ describe("deriveMaWorkflowRecommendation", () => {
     expect(recommendation).toBeNull()
   })
 
-  it("recommends a first opportunity freshness check after 90 calendar days", () => {
+  it("recommends a source freshness review after 45 calendar days of recorded age", () => {
     const recommendation = deriveMaWorkflowRecommendation({
       opportunity: {
         ...baseOpportunity,
@@ -103,10 +103,10 @@ describe("deriveMaWorkflowRecommendation", () => {
     })
 
     expect(recommendation?.templateKey).toBe("ma_opportunity_validity_check")
-    expect(recommendation?.title).toBe("3-month opportunity freshness check due")
+    expect(recommendation?.title).toBe("45-day source freshness review due")
   })
 
-  it("recommends a monthly source re-check after the last validity check ages out", () => {
+  it("does not reset the 45-day source clock merely because a validity email was sent", () => {
     const recommendation = deriveMaWorkflowRecommendation({
       opportunity: {
         ...baseOpportunity,
@@ -127,7 +127,15 @@ describe("deriveMaWorkflowRecommendation", () => {
     })
 
     expect(recommendation?.templateKey).toBe("ma_opportunity_validity_check")
-    expect(recommendation?.title).toBe("Monthly M&A source re-check due")
+    expect(recommendation?.title).toBe("45-day source freshness review due")
+  })
+
+  it("uses only an explicit positive reply as the new clock", () => {
+    const recommendation = deriveMaWorkflowRecommendation({
+      opportunity: { ...baseOpportunity, date_added: "2026-01-01" }, activeMatch: null,
+      interactions: [], confirmation: { id: "reply-1", at: "2026-06-01T10:00:00Z" }, now,
+    })
+    expect(recommendation).toBeNull()
   })
 
   it("does not recommend source freshness checks for closed opportunities", () => {

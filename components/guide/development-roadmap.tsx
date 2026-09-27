@@ -26,22 +26,32 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 27, 2026",
+    version: "0.9.80",
+    title: "Review older opportunities with their source",
+    isCompleted: true,
+    events: [
+      { title: "One draft per intermediary contact", type: "feature", description: "After 45 days, WAVE can prepare one unsent review for the exact eligible opportunities linked to the same source contact. Older inventory with uncertain date precision is labelled honestly; no last-confirmed date is invented." },
+      { title: "Staff decide whether to send", type: "decision", description: "Staff can review, edit or discard the grouped message. Sending requires the existing validity-check template to be enabled and every opportunity, source relationship and recipient still to be current. One provider receipt covers the exact group." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
     version: "0.9.79",
     title: "Withdraw an interest before Re-New validates it",
-    isCompleted: false,
+    isCompleted: true,
     events: [
       { title: "Correct an accidental interest without losing history", type: "feature", description: "A repreneur can confirm withdrawal of their current unvalidated interest; Re-New staff can do the same in the selected repreneur workspace with their own identity recorded. The deal shows Withdrawn instead of appearing as an active pursuit or a Decline." },
-      { title: "One decision wins", type: "decision", description: "If Re-New has already validated the pursuit, the normal staff-managed Drop process applies. An earlier alert already in flight remains recorded, while a later eligible interest must be a fresh request. This candidate is awaiting release proof." },
+      { title: "One decision wins", type: "decision", description: "If Re-New has already validated the pursuit, the normal staff-managed Drop process applies. An earlier alert already in flight remains recorded, while a later eligible interest must be a fresh request." },
     ],
   },
   {
     period: "Sep 26, 2026",
     version: "0.9.78",
     title: "Recipient-specific information memoranda",
-    isCompleted: false,
+    isCompleted: true,
     events: [
       { title: "A separate copy for each repreneur", type: "feature", description: "Re-New can require a personalized IM on an opportunity, upload it for the exact active pursuit, and grant it only through the existing NDA and approval steps. Existing IMs stay reusable and unchanged." },
-      { title: "Clear Drop cleanup", type: "decision", description: "Dropping a pursuit removes access immediately and schedules deletion of only that repreneur's private IM copy. Staff can see whether deletion is confirmed or still needs a retry. This candidate is awaiting release proof." },
+      { title: "Clear Drop cleanup", type: "decision", description: "Dropping a pursuit removes access immediately and schedules deletion of only that repreneur's private IM copy. Staff can see whether deletion is confirmed or still needs a retry." },
     ],
   },
   {
