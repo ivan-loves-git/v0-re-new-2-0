@@ -65,12 +65,12 @@ export function StepNeeds({
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ]
     if (!validTypes.includes(file.type)) {
-      setThesisUpload((prev) => ({ ...prev, error: t("errorFileType") }))
+      setThesisUpload((prev) => ({ ...prev, error: "errorFileType" }))
       return
     }
 
     if (file.size > CV_LDC_MAX_FILE_BYTES) {
-      setThesisUpload((prev) => ({ ...prev, error: t("errorFileSize") }))
+      setThesisUpload((prev) => ({ ...prev, error: "errorFileSize" }))
       return
     }
 
@@ -100,7 +100,7 @@ export function StepNeeds({
       setThesisUpload((prev) => ({
         ...prev,
         uploading: false,
-        error: t("errorUpload"),
+        error: "errorUpload",
       }))
     }
   }
@@ -168,7 +168,7 @@ export function StepNeeds({
 
       {/* Q18: Investment Thesis Upload (Optional) */}
       <div className="flex flex-col gap-3">
-        <Label className="text-base font-medium">{t("q18Label")}</Label>
+        <Label htmlFor="thesis-upload" className="text-base font-medium">{t("q18Label")}</Label>
         <p className="text-sm text-muted-foreground">{t("q18HelpText")}</p>
 
         {thesisUpload.url ? (
@@ -177,13 +177,14 @@ export function StepNeeds({
             <span className="flex-1 text-sm truncate">
               {t("documentUploaded")}
             </span>
-            <Button variant="ghost" size="sm" onClick={removeFile}>
+            <Button variant="ghost" size="sm" onClick={removeFile} aria-label={t("removeUploadedDocument")}>
               <X className="size-4" />
             </Button>
           </div>
         ) : (
           <div className="relative">
             <input
+              id="thesis-upload"
               type="file"
               accept=".pdf,.doc,.docx"
               onChange={handleFileChange}
@@ -205,7 +206,7 @@ export function StepNeeds({
           </div>
         )}
         {thesisUpload.error && (
-          <p className="text-sm text-red-500">{thesisUpload.error}</p>
+          <p className="text-sm text-red-500">{t(thesisUpload.error)}</p>
         )}
       </div>
 

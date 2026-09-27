@@ -18,9 +18,9 @@ export function StepBlocC({ data, onChange, onNext, onBack, errors }: Assessment
     onChange({ [questionId]: value } as any)
   }
 
-  const title = language === 'fr' ? 'Auto-evaluation' : 'Self-Assessment'
+  const title = language === 'fr' ? 'Auto-évaluation' : 'Self-Assessment'
   const subtitle = language === 'fr'
-    ? 'Indiquez dans quelle mesure vous etes d\'accord avec chaque affirmation.'
+    ? 'Indiquez dans quelle mesure vous êtes d’accord avec chaque affirmation.'
     : 'Indicate how much you agree with each statement.'
   const nextLabel = language === 'fr' ? 'Continuer' : 'Continue'
   const backLabel = language === 'fr' ? 'Retour' : 'Back'

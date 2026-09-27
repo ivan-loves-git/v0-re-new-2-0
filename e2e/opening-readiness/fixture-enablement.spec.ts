@@ -51,6 +51,7 @@ async function login(
   loginPassword = password,
 ) {
   await page.goto("/auth/login");
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(loginPassword);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();

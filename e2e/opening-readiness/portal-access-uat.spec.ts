@@ -51,6 +51,7 @@ type AccessState = {
 
 async function login(page: Page, email: string, loginPassword = password) {
   await page.goto("/auth/login");
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(loginPassword);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
@@ -147,7 +148,7 @@ async function expectInvalidPortalLink(page: Page, token: string) {
   );
   await expect(
     page.getByRole("heading", {
-      name: "Lien d'acces indisponible",
+      name: "Lien d’accès indisponible",
       exact: true,
     }),
   ).toBeVisible();
@@ -497,7 +498,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
       await setupPage.setViewportSize(viewport);
       await expect(
         setupPage.getByRole("heading", {
-          name: "Creer votre mot de passe",
+          name: "Créez votre mot de passe",
           exact: true,
         }),
       ).toBeVisible();
@@ -509,11 +510,11 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await setupPage.locator("#password").fill(setupPassword);
     await setupPage.locator("#confirmPassword").fill(setupPassword);
     await setupPage
-      .getByRole("button", { name: "Creer mon mot de passe", exact: true })
+      .getByRole("button", { name: "Enregistrer le mot de passe", exact: true })
       .click();
     await expect(
       setupPage.getByRole("heading", {
-        name: "Mot de passe cree",
+        name: "Mot de passe créé",
         exact: true,
       }),
     ).toBeVisible();
@@ -579,7 +580,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await setupPage.goto("/auth/reset-password?intent=portal");
     await expect(
       setupPage.getByRole("heading", {
-        name: "Lien d'acces indisponible",
+        name: "Lien d’accès indisponible",
         exact: true,
       }),
     ).toBeVisible();
@@ -588,7 +589,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await setupPage.reload();
     await expect(
       setupPage.getByRole("heading", {
-        name: "Lien d'acces indisponible",
+        name: "Lien d’accès indisponible",
         exact: true,
       }),
     ).toBeVisible();
@@ -597,7 +598,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await setupPage.goBack();
     await expect(
       setupPage.getByRole("heading", {
-        name: "Lien d'acces indisponible",
+        name: "Lien d’accès indisponible",
         exact: true,
       }),
     ).toBeVisible();
@@ -606,7 +607,7 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
     await setupPage.goForward();
     await expect(
       setupPage.getByRole("heading", {
-        name: "Lien d'acces indisponible",
+        name: "Lien d’accès indisponible",
         exact: true,
       }),
     ).toBeVisible();

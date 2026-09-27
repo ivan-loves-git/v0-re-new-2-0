@@ -19,7 +19,7 @@ export function StepBlocA({ data, onChange, onNext, errors }: AssessmentStepProp
 
   const title = language === 'fr' ? 'Profil de leadership' : 'Leadership Profile'
   const subtitle = language === 'fr'
-    ? 'Pour chaque situation, choisissez l\'affirmation qui vous correspond le mieux. Il n\'y a pas de bonne ou de mauvaise reponse.'
+    ? 'Pour chaque situation, choisissez l’affirmation qui vous correspond le mieux. Il n’y a pas de bonne ou de mauvaise réponse.'
     : 'For each situation, choose the statement that best describes you. There are no right or wrong answers.'
   const nextLabel = language === 'fr' ? 'Continuer' : 'Continue'
 

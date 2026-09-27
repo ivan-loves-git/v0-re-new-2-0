@@ -84,6 +84,7 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
       OR "key" LIKE 'auth:/api/auth/sign-in/email:%'`)
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto("/auth/login")
+    await page.getByRole("button", { name: "English", exact: true }).click()
     await page.locator("#email").fill(fixture.staff.email)
     await page.locator("#password").fill(password!)
     await page.getByRole("button", { name: "Sign In", exact: true }).click()

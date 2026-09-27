@@ -18,8 +18,8 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
 
   if (status === 'not_found') {
     const content = language === 'fr' ? {
-      title: 'Assessment introuvable',
-      description: 'Ce lien n\'est pas valide ou a expire. Veuillez contacter l\'equipe Re-New si vous pensez qu\'il s\'agit d\'une erreur.',
+      title: 'Évaluation introuvable',
+      description: 'Ce lien est invalide ou a expiré. Contactez l’équipe Re-New si vous pensez qu’il s’agit d’une erreur.',
       cta: 'Visiter re-new.team',
     } : {
       title: 'Assessment not found',
@@ -52,8 +52,8 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
 
   if (status === 'completed') {
     const content = language === 'fr' ? {
-      title: 'Assessment deja complete',
-      description: 'Cet assessment a deja ete soumis. Merci pour votre participation !',
+      title: 'Évaluation déjà terminée',
+      description: 'Cette évaluation a déjà été soumise. Merci pour votre participation !',
       cta: 'Visiter re-new.team',
     } : {
       title: 'Assessment already completed',
@@ -85,7 +85,7 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
   }
 
   // Valid assessment — show the form
-  const title = language === 'fr' ? 'Assessment Leadership' : 'Leadership Assessment'
+  const title = language === 'fr' ? 'Évaluation de leadership' : 'Leadership Assessment'
   const subtitle = repreneurName
     ? (language === 'fr' ? `Bienvenue, ${repreneurName}` : `Welcome, ${repreneurName}`)
     : undefined

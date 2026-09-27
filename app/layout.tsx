@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { Toaster } from "sonner"
 import { SafeVercelAnalytics } from "@/components/analytics/safe-vercel-analytics"
 import { WaveTelemetryProvider } from "@/lib/telemetry/provider"
+import { GlobalSkipLink } from "@/components/i18n/global-skip-link"
 import "./globals.css"
 
 import {
@@ -74,9 +75,7 @@ export default function RootLayout({
         className={`${_inter.variable} ${_geistMono.variable} ${_sourceSerif_4.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
-        <a href="#main-content" className="skip-link">
-          Skip to main content
-        </a>
+        <GlobalSkipLink />
         <WaveTelemetryProvider>{children}</WaveTelemetryProvider>
         <Toaster
           position="bottom-right"

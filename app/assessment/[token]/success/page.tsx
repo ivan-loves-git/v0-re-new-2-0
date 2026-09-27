@@ -11,10 +11,10 @@ export default function AssessmentSuccessPage() {
 
   const content = language === 'fr' ? {
     title: 'Merci !',
-    subtitle: 'Vos reponses ont bien ete enregistrees.',
-    description: 'L\'equipe Re-New analysera vos reponses et reviendra vers vous prochainement.',
+    subtitle: 'Vos réponses ont bien été enregistrées.',
+    description: 'L’équipe Re-New analysera vos réponses et reviendra vers vous prochainement.',
     cta: 'Visiter re-new.team',
-    questions: 'Des questions ? Contactez-nous a',
+    questions: 'Des questions ? Contactez-nous à',
   } : {
     title: 'Thank you!',
     subtitle: 'Your responses have been recorded.',

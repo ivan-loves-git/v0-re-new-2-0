@@ -69,6 +69,7 @@ type EvidenceEntry = {
 
 async function login(page: Page, email: string, loginPassword = password) {
   await page.goto("/auth/login");
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(loginPassword);
   const signInResponse = page.waitForResponse(
