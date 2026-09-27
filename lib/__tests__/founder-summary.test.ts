@@ -63,4 +63,14 @@ describe("on-request founder summary contract", () => {
     source.productChanges[0].releaseProof = { productionCommit: "not-a-sha", verifiedAt: "2026-09-26T12:00:00.000Z", proofUrl: "https://github.com/re-new-team/renew-governance/issues/1" }
     expect(() => buildFounderSummary(source)).toThrow(/release proof/)
   })
+
+  it("rejects a release proof later than the checked GitHub facts or report", () => {
+    const source = input()
+    source.productChanges[0].releaseProof!.verifiedAt = "2026-09-27T13:59:00.000Z"
+    expect(() => buildFounderSummary(source)).toThrow(/release proof/)
+    source.githubVerifiedAt = "2026-09-27T13:59:00.000Z"
+    expect(buildFounderSummary(source).outcomes[0].status).toBe("released")
+    source.productChanges[0].releaseProof!.verifiedAt = "2026-09-27T14:00:01.000Z"
+    expect(() => buildFounderSummary(source)).toThrow(/release proof/)
+  })
 })

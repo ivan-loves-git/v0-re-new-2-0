@@ -11,6 +11,7 @@ const id = {
   request: "33333333-3333-4333-8333-333333333333",
   proposal: "44444444-4444-4444-8444-444444444444",
   card: "55555555-5555-4555-8555-555555555555",
+  otherCard: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   run: "66666666-6666-4666-8666-666666666666",
   preview: "88888888-8888-4888-8888-888888888888",
   snapshot: "77777777-7777-4777-8777-777777777777",
@@ -26,7 +27,7 @@ function fixture(): ArchiveSource {
       pdr_feedback: [{ id: "f1", work_card_id: id.card, body: "original feedback" }],
       pdr_goals: [{ id: id.goal, slug: "scale-active-pursuits", title: "Old goal" }],
       pdr_milestones: [{ id: id.milestone, goal_id: id.goal, slug: "old-milestone" }],
-      pdr_proposals: [{ id: id.proposal, original_text: "original wording", conversation: [{ answer: "retained" }], matched_work_card_id: id.card, suggested_goal_id: id.goal }],
+      pdr_proposals: [{ id: id.proposal, original_text: "original wording", conversation: [{ answer: "retained" }], conversion_ref: id.card, matched_work_card_id: id.card, suggested_goal_id: id.goal }],
       pdr_requests: [{ id: id.request, goal_id: id.goal, milestone_id: id.milestone, description: "historical request" }],
       pdr_work_cards: [{ id: id.card, strategic_item_id: id.request, source_proposal_id: id.proposal, reference_number: 12, legacy_codes: ["W-001"] }],
       wave_pdr_governance_capabilities: [{ singleton: true, actor_user_id: "ivan", can_disposition: true }],
@@ -68,6 +69,8 @@ describe("private PDR archive operator seam", () => {
     const retrieved = await retrievePdrRecord(archive, "W-012")
     expect(retrieved.record.id).toBe(id.card)
     expect(retrieved.record.legacy_codes).toEqual(["W-001"])
+    expect((await retrievePdrRecord(archive, "W-001")).record.id).toBe(id.card)
+    expect((await retrievePdrRecord(archive, "pdr:legacy-code/W-001")).record.id).toBe(id.card)
     const proposal = await retrievePdrRecord(archive, `pdr:proposal/${id.proposal}`)
     expect(proposal.record.original_text).toBe("original wording")
     expect(proposal.attachments[0].bytes.toString()).toBe("staff attachment")
@@ -96,6 +99,20 @@ describe("private PDR archive operator seam", () => {
     const missingObject = fixture()
     missingObject.objects = missingObject.objects.filter((item) => item.bucket !== "pdr-intake-attachments")
     await expect(createPdrArchive(root, missingObject)).rejects.toThrow(/storage object/)
+    const convertedToMissingCard = fixture()
+    convertedToMissingCard.tables.pdr_proposals[0].conversion_ref = id.otherCard
+    await expect(createPdrArchive(root, convertedToMissingCard)).rejects.toThrow(/conversion_ref/)
+  })
+
+  it("reports a legacy code collision rather than resolving it to the wrong Work Card", async () => {
+    const root = await privateRoot()
+    const source = fixture()
+    source.tables.pdr_work_cards.push({ id: id.otherCard, strategic_item_id: id.request, reference_number: 1, legacy_codes: [] })
+    const archive = await createPdrArchive(root, source)
+    await expect(retrievePdrRecord(archive, "W-001")).rejects.toThrow(/Ambiguous historical reference/)
+    expect((await retrievePdrRecord(archive, "pdr:legacy-code/W-001")).record.id).toBe(id.card)
+    expect((await retrievePdrRecord(archive, `pdr:work-card/${id.card}`)).record.id).toBe(id.card)
+    expect((await retrievePdrRecord(archive, `pdr:work-card/${id.otherCard}`)).record.id).toBe(id.otherCard)
   })
 
   it("rejects a saved screening record whose governance snapshot is absent or mismatched", async () => {

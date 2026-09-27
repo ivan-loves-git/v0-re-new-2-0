@@ -6,20 +6,23 @@
  */
 import { assertPrivatePdrArchiveRoot, createPdrArchive, extractPdrObject, extractPdrRecord, PDR_ARCHIVE_BUCKETS, PDR_ARCHIVE_TABLES, retrievePdrRecord, verifyPdrArchive, type ArchiveSource } from "../lib/pdr-archive"
 import { pdrArchiveSourceQuery } from "../lib/pdr-archive-source-query"
+import { validatePdrArchiveSourceConfig } from "../lib/pdr-archive-source-config"
 
 function flag(name: string) {
   const index = process.argv.indexOf(name)
   return index < 0 ? null : process.argv[index + 1] ?? null
 }
 
-async function readSource(): Promise<ArchiveSource> {
+async function readSource(expectedProjectRef: string): Promise<ArchiveSource> {
   const databaseUrl = process.env.PDR_ARCHIVE_DATABASE_URL
   const supabaseUrl = process.env.PDR_ARCHIVE_SUPABASE_URL
   const serviceRoleKey = process.env.PDR_ARCHIVE_SERVICE_ROLE_KEY
+  const trustedPgCaPem = process.env.PDR_ARCHIVE_PG_CA_PEM
   if (!databaseUrl || !supabaseUrl || !serviceRoleKey) throw new Error("Approved archive credentials are unavailable")
+  const sourceTarget = validatePdrArchiveSourceConfig({ expectedProjectRef, databaseUrl, supabaseUrl, serviceRoleKey, trustedPgCaPem })
   const [{ default: pg }, { createClient }] = await Promise.all([import("pg"), import("@supabase/supabase-js")])
-  const database = new pg.Client({ connectionString: databaseUrl })
-  const storage = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  const database = new pg.Client({ connectionString: sourceTarget.connectionString, ssl: sourceTarget.ssl })
+  const storage = createClient(sourceTarget.supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
   await database.connect()
   try {
     const selectTable = async (name: (typeof PDR_ARCHIVE_TABLES)[number]) => {
@@ -97,13 +100,14 @@ async function main() {
   }
   if (command === "export") {
     const destination = flag("--dest")
-    if (!destination || flag("--confirm-live-export") !== "issue-214-authorized" || flag("--source-frozen") !== "yes") {
-      throw new Error("Live export requires a private destination, separate authority and source freeze")
+    const expectedProjectRef = flag("--expected-project-ref")
+    if (!destination || !expectedProjectRef || flag("--confirm-live-export") !== "issue-214-authorized" || flag("--source-frozen") !== "yes") {
+      throw new Error("Live export requires a private destination, expected project, separate authority and source freeze")
     }
     await assertPrivatePdrArchiveRoot(destination)
     // The confirmation flags are operational guardrails, never a grant of
     // authority. The operator must first verify Ivan's separate live approval.
-    const source = await readSource()
+    const source = await readSource(expectedProjectRef)
     const archive = await createPdrArchive(destination, source)
     console.log(JSON.stringify({ archive, verification: await verifyPdrArchive(archive) }, null, 2))
     return

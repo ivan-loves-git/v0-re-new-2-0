@@ -56,7 +56,11 @@ export function buildFounderSummary(input: FounderSummaryInput) {
     seen.add(item.number)
     if (item.closedAt && !validDate(item.closedAt)) throw new Error("Product Change closure date is invalid")
     if (item.reopenedAt && !validDate(item.reopenedAt)) throw new Error("Product Change reopened date is invalid")
-    if (item.releaseProof && (!/^[0-9a-f]{40}$/.test(item.releaseProof.productionCommit) || !validDate(item.releaseProof.verifiedAt) || !item.releaseProof.proofUrl.startsWith(`${item.url}#issuecomment-`))) {
+    if (item.releaseProof && (!/^[0-9a-f]{40}$/.test(item.releaseProof.productionCommit) ||
+      !validDate(item.releaseProof.verifiedAt) ||
+      Date.parse(item.releaseProof.verifiedAt) > Date.parse(input.githubVerifiedAt) ||
+      Date.parse(item.releaseProof.verifiedAt) > Date.parse(input.reportAt) ||
+      !item.releaseProof.proofUrl.startsWith(`${item.url}#issuecomment-`))) {
       throw new Error("Product Change release proof is invalid")
     }
     const ticketProgress = ticketsByParent.get(item.number) ?? { closed: 0, open: 0 }

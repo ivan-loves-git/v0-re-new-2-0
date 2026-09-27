@@ -67,10 +67,11 @@ function requiredTables(tables: ArchiveSource["tables"]) {
 }
 
 function indexFor(tables: ArchiveSource["tables"]) {
-  const index: Record<string, { table: Table; id: string }> = {}
+  const index = Object.create(null) as Record<string, { table: Table; id: string }[]>
   const add = (reference: string, table: Table, id: string) => {
-    if (index[reference]) throw new Error(`Duplicate archive reference ${reference}`)
-    index[reference] = { table, id }
+    const matches = index[reference] ?? []
+    if (!matches.some((match) => match.table === table && match.id === id)) matches.push({ table, id })
+    index[reference] = matches
   }
   const specs: { table: Table; kind: string }[] = [
     { table: "pdr_goals", kind: "goal" }, { table: "pdr_milestones", kind: "milestone" },
@@ -89,6 +90,11 @@ function indexFor(tables: ArchiveSource["tables"]) {
         const number = Number(row.reference_number)
         if (!Number.isSafeInteger(number) || number <= 0) throw new Error("Work Card reference_number is invalid")
         add(`W-${String(number).padStart(3, "0")}`, table, id)
+        if (!Array.isArray(row.legacy_codes) || row.legacy_codes.some((code) => typeof code !== "string" || !code)) throw new Error("Work Card legacy_codes are invalid")
+        for (const code of row.legacy_codes as string[]) {
+          add(`pdr:legacy-code/${code}`, table, id)
+          if (/^W-\d{1,6}$/.test(code) && Number(code.slice(2)) > 0) add(code, table, id)
+        }
       }
     }
   }
@@ -113,6 +119,7 @@ function validateRelationships(tables: ArchiveSource["tables"], objects: { bucke
     ["pdr_milestones", "goal_id", "pdr_goals"],
     ["pdr_proposals", "matched_proposal_id", "pdr_proposals"],
     ["pdr_proposals", "matched_work_card_id", "pdr_work_cards"],
+    ["pdr_proposals", "conversion_ref", "pdr_work_cards"],
     ["pdr_proposals", "suggested_bundle_id", "pdr_requests"],
     ["pdr_proposals", "suggested_goal_id", "pdr_goals"],
     ["pdr_proposals", "suggested_milestone_id", "pdr_milestones"],
@@ -269,8 +276,10 @@ export async function verifyPdrArchive(archivePath: string) {
 
 export async function retrievePdrRecord(archivePath: string, reference: string) {
   const { tables, objects, index } = await readArchive(archivePath)
-  const target = index[reference]
-  if (!target) throw new Error("Historical reference not found")
+  const matches = index[reference]
+  if (!matches?.length) throw new Error("Historical reference not found")
+  if (matches.length > 1) throw new Error("Ambiguous historical reference; use the original UUID")
+  const target = matches[0]
   const record = tables[target.table].find((row) => String(row.id) === target.id)
   if (!record) throw new Error("Indexed historical record is missing")
   const attachments = tables.wave_pdr_history_attachments
