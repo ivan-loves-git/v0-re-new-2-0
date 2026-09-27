@@ -1,5 +1,6 @@
-import type { ReactElement, ReactNode } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { createElement } from "react"
+import { renderToStaticMarkup } from "react-dom/server"
+import { describe, expect, it } from "vitest"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import {
@@ -12,6 +13,7 @@ import {
   EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS,
   filterRepreneurDeals,
 } from "@/lib/utils/repreneur-deal-discovery"
+import { LanguageProvider } from "@/lib/i18n/language-context"
 
 const component = readFileSync(
   join(process.cwd(), "components/opportunities/repreneur-opportunity-list.tsx"),
@@ -24,36 +26,36 @@ describe("repreneur Deal Flow discovery controls", () => {
     expect(component).toContain("opportunity.geography_node_id")
     expect(component).toContain('filters[key].includes(option.value)')
     expect(component).toContain("opportunity.canonical_sector")
-    expect(component).toContain('aria-label="Minimum revenue"')
-    expect(component).toContain('aria-label="Maximum revenue"')
-    expect(component).toContain('aria-label="Minimum EBITDA margin"')
-    expect(component).toContain('aria-label="Minimum employees"')
-    expect(component).toContain('aria-label="Maximum employees"')
+    expect(component).toContain('aria-label={u("Minimum revenue")}')
+    expect(component).toContain('aria-label={u("Maximum revenue")}')
+    expect(component).toContain('aria-label={u("Minimum EBITDA margin")}')
+    expect(component).toContain('aria-label={u("Minimum employees")}')
+    expect(component).toContain('aria-label={u("Maximum employees")}')
     expect(component).toContain("Search title, teaser")
     expect(component).toContain("Confidential acquisition opportunity")
     expect(component).not.toContain("getOpportunityMatchRecommendationLabel")
     expect(component).not.toContain('aria-label={`Position')
   })
 
-  it("keeps clear and reset actions available when only numeric filters are active", () => {
-    const onClearFilters = vi.fn()
-    const onReset = vi.fn()
-    const tree = DealRangeFilters({
-      filters: { ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS, revenueMin: "1" },
-      onChange: vi.fn(),
-      onClearFilters,
-      onReset,
-    })
-
-    const clearButton = findByAriaLabel(tree, "Clear Deal Flow filters")
-    const resetButton = findByAriaLabel(tree, "Reset Deal Flow search and filters")
-
-    expect(clearButton).toBeTruthy()
-    expect(resetButton).toBeTruthy()
-    clearButton?.props.onClick?.()
-    resetButton?.props.onClick?.()
-    expect(onClearFilters).toHaveBeenCalledOnce()
-    expect(onReset).toHaveBeenCalledOnce()
+  it("renders clear and reset controls for numeric-only filters in both interface languages", () => {
+    const render = (language: "fr" | "en", revenueMin: string) => renderToStaticMarkup(
+      createElement(LanguageProvider, { initialLanguage: language }, createElement(DealRangeFilters, {
+        filters: { ...EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS, revenueMin },
+        onChange: () => {}, onClearFilters: () => {}, onReset: () => {},
+      })),
+    )
+    const english = render("en", "1")
+    const french = render("fr", "1")
+    expect(english).toContain('aria-label="Clear Deal Flow filters"')
+    expect(english).toContain('aria-label="Reset Deal Flow search and filters"')
+    expect(french).toContain('aria-label="Effacer les filtres des opportunités"')
+    expect(french).toContain('aria-label="Réinitialiser la recherche et les filtres"')
+    expect(french).toContain('aria-label="Chiffre d’affaires minimum"')
+    expect(french).toContain('placeholder="Min."')
+    expect(english).toContain('placeholder="Min"')
+    expect(render("fr", "")).not.toContain('aria-label="Effacer les filtres des opportunités"')
+    expect(component).toContain('onClick={onClearFilters}')
+    expect(component).toContain('onClick={onReset}')
   })
 
   it("uses one canonical geography label per node instead of legacy locations", () => {
@@ -80,8 +82,11 @@ describe("repreneur Deal Flow discovery controls", () => {
       { value: "fr", label: "France" },
       { value: "west", label: "Grand Ouest" },
       { value: "idf-macro", label: "Île-de-France", equivalentValues: ["idf-region"] },
-      { value: "bretagne", label: "Bretagne" },
+      { value: "bretagne", label: "Brittany" },
     ])
+    expect(canonicalGeographyFilterOptions([
+      { ...deal(), geography_node_id: "bretagne", geography_label: "Bretagne" },
+    ], "fr")).toEqual([{ value: "bretagne", label: "Bretagne" }])
   })
 
   it("restores either old IDF selection as the one current option and drops stale IDs", () => {
@@ -161,22 +166,4 @@ function deal() {
     is_staff_recommended: false,
     is_outside_current_criteria: false,
   }
-}
-
-function findByAriaLabel(
-  node: ReactNode,
-  ariaLabel: string,
-): ReactElement<{ "aria-label"?: string; children?: ReactNode; onClick?: () => void }> | null {
-  if (!node || typeof node !== "object") return null
-  if (Array.isArray(node)) {
-    for (const child of node) {
-      const found = findByAriaLabel(child, ariaLabel)
-      if (found) return found
-    }
-    return null
-  }
-
-  const element = node as ReactElement<{ "aria-label"?: string; children?: ReactNode; onClick?: () => void }>
-  if (element.props?.["aria-label"] === ariaLabel) return element
-  return findByAriaLabel(element.props?.children, ariaLabel)
 }

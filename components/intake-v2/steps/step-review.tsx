@@ -301,12 +301,10 @@ export function StepReview({
         <CardContent className="text-sm space-y-3">
           {data.q11_priority_choice && (
             <div>
-              <div className="text-muted-foreground text-xs">Pour vous la reprise est</div>
+              <div className="text-muted-foreground text-xs">{t('priorityChoiceQuestion')}</div>
               <div className="mt-1">
                 <Badge variant="secondary">
-                  {data.q11_priority_choice === 'preferred'
-                    ? "Mon option préférentielle de carrière"
-                    : "Une option parmi d'autres"}
+                  {t(data.q11_priority_choice === 'preferred' ? 'priorityChoicePreferred' : 'priorityChoiceOther')}
                 </Badge>
               </div>
             </div>

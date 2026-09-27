@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
   devices,
   expect,
@@ -69,6 +69,7 @@ type EvidenceEntry = {
 
 async function login(page: Page, email: string, loginPassword = password) {
   await page.goto("/auth/login");
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(loginPassword);
   const signInResponse = page.waitForResponse(
@@ -182,6 +183,10 @@ async function expectPreview(
       encodeURIComponent(opportunityId),
   );
   if (visible) {
+    // This older lifecycle scenario asserts English copy; preview language is
+    // now an independent staff-browser choice and defaults to French.
+    await page.getByRole("group", { name: "Interface language" })
+      .getByRole("button", { name: "English", exact: true }).click();
     await expect(
       page
         .locator("#main-content")
@@ -771,7 +776,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.getByRole("option").filter({ hasText: fixture.repreneurs.real.email }).click();
     await expect(page).toHaveURL(new RegExp("repreneurId=" + fixture.ids.realRepreneur));
     await staleTab.getByRole("button", { name: "Save attributed staff edit" }).click();
-    await expect(staleTab.getByText(/selected staff workspace changed/i)).toBeVisible();
+    await expect(staleTab.getByText("The selected staff workspace changed. Refresh and try again.", { exact: true })).toBeVisible();
     expect((await one<{ revenue: number; changes: number }>(client,
       `SELECT target_revenue_min_meur::double precision AS revenue,
         (SELECT count(*)::int FROM public.staff_assisted_profile_changes WHERE repreneur_id=$1) AS changes
@@ -931,15 +936,19 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     ).toBeVisible();
     const memo = await one<{
       id: string;
+      title: string;
+      file_name: string;
       size_bytes: string;
       content_sha256: string;
       recipient_match_id: string;
       recipient_repreneur_id: string;
     }>(
       client,
-      "SELECT document.id,document.size_bytes::text,intent.content_sha256,document.recipient_match_id::text,document.recipient_repreneur_id::text FROM public.opportunity_documents document JOIN public.private_upload_intents intent ON intent.bucket_id=document.storage_bucket AND intent.storage_path=document.storage_path AND intent.status='finalized' WHERE document.opportunity_id=$1 AND document.document_type='deal_book'",
+      "SELECT document.id,document.title,document.file_name,document.size_bytes::text,intent.content_sha256,document.recipient_match_id::text,document.recipient_repreneur_id::text FROM public.opportunity_documents document JOIN public.private_upload_intents intent ON intent.bucket_id=document.storage_bucket AND intent.storage_path=document.storage_path AND intent.status='finalized' WHERE document.opportunity_id=$1 AND document.document_type='deal_book'",
       [desktopOpportunityId],
     );
+    expect(memo.title).toBe("QA LIFECYCLE RECIPIENT IM — SYNTHETIC");
+    expect(memo.file_name).toBe(basename(manifest.files.informationMemorandum.path));
     expect(memo.recipient_match_id).toBe(savedMatch.id);
     expect(memo.recipient_repreneur_id).toBe(fixture.ids.realRepreneur);
     expect(Number(memo.size_bytes)).toBe(
@@ -1218,6 +1227,52 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(createHash("sha256").update(memoBytes).digest("hex")).toBe(
       manifest.files.informationMemorandum.sha256,
     );
+    const documentIdentity = { title: memo.title, file_name: memo.file_name, size_bytes: memo.size_bytes };
+    const { rows: previousUiLanguage } = await client.query<{ language: string }>(
+      "SELECT language FROM public.repreneur_ui_preferences WHERE user_id=$1",
+      [fixture.repreneurs.real.userId],
+    );
+    expect(previousUiLanguage.length).toBeLessThanOrEqual(1);
+    try {
+      for (const language of [
+        { button: "Français", link: "Télécharger la note d’information", code: "fr" },
+        { button: "English", link: "Download IM", code: "en" },
+      ]) {
+        await realPage.getByRole("button", { name: language.button, exact: true }).click();
+        await expect(realPage.getByRole("link", { name: language.link })).toHaveAttribute("href", memoHref!);
+        await expect.poll(async () => {
+          const { rows } = await client.query<{ language: string }>(
+            "SELECT language FROM public.repreneur_ui_preferences WHERE user_id=$1",
+            [fixture.repreneurs.real.userId],
+          );
+          return rows[0]?.language ?? null;
+        }).toBe(language.code);
+        const afterSwitch = await realPage.request.get(baseURL + memoHref!);
+        expect(afterSwitch.status()).toBe(200);
+        expect(afterSwitch.headers()["cache-control"]).toBe("private, no-store");
+        expect(await afterSwitch.body()).toEqual(memoBytes);
+        const unchangedDocument = await one<{ title: string; file_name: string; size_bytes: string }>(
+          client,
+          "SELECT title,file_name,size_bytes::text FROM public.opportunity_documents WHERE id=$1",
+          [memo.id],
+        );
+        expect(unchangedDocument).toEqual(documentIdentity);
+      }
+    } finally {
+      if (previousUiLanguage[0]) {
+        await client.query(
+          "INSERT INTO public.repreneur_ui_preferences (user_id,language) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET language=EXCLUDED.language",
+          [fixture.repreneurs.real.userId, previousUiLanguage[0].language],
+        );
+      } else {
+        await client.query("DELETE FROM public.repreneur_ui_preferences WHERE user_id=$1", [fixture.repreneurs.real.userId]);
+      }
+    }
+    await record({
+      step: "owner switched FR/EN while retaining the exact granted IM",
+      surface: "storage",
+      result: "nonempty original title and filename, private bytes and owner download remained unchanged; QA language preference restored",
+    });
 
     anonymousContext = await browser.newContext({ baseURL });
     const anonymousPage = await anonymousContext.newPage();

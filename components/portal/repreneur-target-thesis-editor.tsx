@@ -21,6 +21,12 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import { formatDisplayDate } from "@/lib/utils/display-date-time"
+import { useUiLanguage } from "@/components/i18n/ui-text"
+import { uiCopy, uiCopyWith } from "@/lib/i18n/ui-copy"
+import { displayLocale } from "@/lib/i18n/ui-language"
+import { thesisOptionUiLabel } from "@/lib/i18n/canonical-labels"
+import { publicThesisValidationError } from "@/lib/i18n/form-outcomes"
+import type { Language } from "@/lib/i18n/translations"
 import {
   CV_LDC_MAX_FILE_BYTES,
   CV_LDC_MAX_FILE_LABEL,
@@ -35,6 +41,7 @@ import {
   certifyMyProfileContribution,
   updateMyTargetThesis,
   type ProfileContribution,
+  type StaffTargetThesisSaveFailure,
   type TargetThesisInput,
 } from "@/lib/actions/repreneur-profile"
 
@@ -130,6 +137,7 @@ function SelectionGroup({
   values,
   options,
   legacyValues,
+  language,
   onChange,
 }: {
   id: string
@@ -137,6 +145,7 @@ function SelectionGroup({
   values: string[]
   options: ReadonlyArray<{ value: string; label: string }>
   legacyValues: string[]
+  language: Language
   onChange: (values: string[]) => void
 }) {
   return (
@@ -151,7 +160,7 @@ function SelectionGroup({
               onCheckedChange={() => onChange(toggleValue(values, option.value))}
             />
             <Label htmlFor={`${id}-${option.value}`} className="cursor-pointer text-sm font-normal">
-              {option.label}
+              {thesisOptionUiLabel(option.value, option.label, language)}
             </Label>
           </div>
         ))}
@@ -163,7 +172,7 @@ function SelectionGroup({
               onCheckedChange={() => onChange(toggleValue(values, value))}
             />
             <Label htmlFor={`${id}-legacy-${index}`} className="cursor-pointer text-sm font-normal">
-              {value} (existing selection)
+              {value} ({uiCopy(language, "Existing selection").toLowerCase()})
             </Label>
           </div>
         ))}
@@ -184,7 +193,7 @@ export function RepreneurTargetThesisEditor({
   staffAssistanceName,
 }: {
   repreneur: TargetThesisProfile
-  onSave?: (input: TargetThesisInput) => Promise<void>
+  onSave?: (input: TargetThesisInput) => Promise<void | StaffTargetThesisSaveFailure>
   successMessage?: string
   triggerLabel?: string
   title?: string
@@ -194,6 +203,9 @@ export function RepreneurTargetThesisEditor({
   staffAssistanceName?: string
 }) {
   const router = useRouter()
+  const selectedLanguage = useUiLanguage()
+  const language: Language = staffAssistanceName ? "en" : selectedLanguage
+  const u = (key: Parameters<typeof uiCopy>[1]) => uiCopy(language, key)
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState<Draft>(() => initialDraft(repreneur))
   const [staffConfirmed, setStaffConfirmed] = useState(false)
@@ -217,18 +229,24 @@ export function RepreneurTargetThesisEditor({
     }
     const validationMessage = targetThesisInputValidationMessage(input)
     if (validationMessage) {
-      toast.error(validationMessage)
+      toast.error(staffAssistanceName ? validationMessage : publicThesisValidationError(validationMessage, language))
       return
     }
 
     startTransition(async () => {
       try {
-        await (onSave ?? updateMyTargetThesis)(input)
-        toast.success(successMessage)
+        const failure = await (onSave ?? updateMyTargetThesis)(input)
+        if (failure) {
+          toast.error(failure.code === "staff_workspace_changed"
+            ? "The selected staff workspace changed. Refresh and try again."
+            : "The selected profile changed or this staff edit could not be saved. Refresh and try again.")
+          return
+        }
+        toast.success(staffAssistanceName ? successMessage : u("Target thesis updated. Your deal matching has been refreshed."))
         setOpen(false)
         router.refresh()
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : errorMessage)
+      } catch {
+        toast.error(staffAssistanceName ? errorMessage : u("Could not update your target thesis."))
       }
     })
   }
@@ -245,18 +263,19 @@ export function RepreneurTargetThesisEditor({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Pencil data-icon="inline-start" />
-          {triggerLabel}
+          {staffAssistanceName ? triggerLabel : u("Edit thesis")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
+      <DialogContent lang={language} closeLabel={uiCopy(language, "Close")} className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{staffAssistanceName ? title : u("Update your target thesis")}</DialogTitle>
+          <DialogDescription>{staffAssistanceName ? description : u("Keep the criteria Re-New uses to surface relevant opportunities current. Your readiness milestones remain managed by Re-New.")}</DialogDescription>
         </DialogHeader>
         <div className="flex-1 space-y-6 overflow-y-auto pr-1">
           <SelectionGroup
             id="target-sector"
-            label="Sectors"
+            label={u("Sectors")}
+            language={language}
             values={draft.q13_target_sectors_v2}
             options={WHEN_QUESTIONS.q13.options}
             legacyValues={legacyTargetThesisValues(draft.q13_target_sectors_v2, WHEN_QUESTIONS.q13.options, "sector")}
@@ -264,7 +283,8 @@ export function RepreneurTargetThesisEditor({
           />
           <SelectionGroup
             id="target-geography"
-            label="Geography"
+            label={u("Geography")}
+            language={language}
             values={draft.q12_geo_zones}
             options={WHEN_QUESTIONS.q12.options}
             legacyValues={legacyTargetThesisValues(draft.q12_geo_zones, WHEN_QUESTIONS.q12.options, "geography")}
@@ -272,7 +292,8 @@ export function RepreneurTargetThesisEditor({
           />
           <SelectionGroup
             id="target-deal-size"
-            label="Deal size"
+            label={u("Deal size")}
+            language={language}
             values={draft.q14_deal_size}
             options={WHEN_QUESTIONS.q14.options}
             legacyValues={legacyTargetThesisValues(draft.q14_deal_size, WHEN_QUESTIONS.q14.options)}
@@ -280,7 +301,7 @@ export function RepreneurTargetThesisEditor({
           />
 
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Investment capacity</legend>
+            <legend className="text-sm font-medium">{u("Investment capacity")}</legend>
             <RadioGroup
               value={draft.q16_equity}
               onValueChange={(q16_equity) => setDraft((current) => ({ ...current, q16_equity }))}
@@ -290,7 +311,7 @@ export function RepreneurTargetThesisEditor({
                 <div key={option.value} className="flex min-h-8 items-center gap-2">
                   <RadioGroupItem value={option.value} id={`target-equity-${option.value}`} />
                   <Label htmlFor={`target-equity-${option.value}`} className="cursor-pointer text-sm font-normal">
-                    {option.label}
+                    {thesisOptionUiLabel(option.value, option.label, language)}
                   </Label>
                 </div>
               ))}
@@ -299,7 +320,7 @@ export function RepreneurTargetThesisEditor({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="target-revenue-min">Revenue range, minimum (M€)</Label>
+              <Label htmlFor="target-revenue-min">{u("Revenue range, minimum (M€)")}</Label>
               <Input
                 id="target-revenue-min"
                 type="number"
@@ -311,7 +332,7 @@ export function RepreneurTargetThesisEditor({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target-revenue-max">Revenue range, maximum (M€)</Label>
+              <Label htmlFor="target-revenue-max">{u("Revenue range, maximum (M€)")}</Label>
               <Input
                 id="target-revenue-max"
                 type="number"
@@ -323,15 +344,15 @@ export function RepreneurTargetThesisEditor({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target-ebitda-absolute-min">EBITDA range, minimum (k€)</Label>
+              <Label htmlFor="target-ebitda-absolute-min">{u("EBITDA range, minimum (k€)")}</Label>
               <Input id="target-ebitda-absolute-min" type="number" min="0" step="0.01" inputMode="decimal" value={draft.target_ebitda_min_keur} onChange={(event) => setDraft((current) => ({ ...current, target_ebitda_min_keur: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target-ebitda-absolute-max">EBITDA range, maximum (k€)</Label>
+              <Label htmlFor="target-ebitda-absolute-max">{u("EBITDA range, maximum (k€)")}</Label>
               <Input id="target-ebitda-absolute-max" type="number" min="0" step="0.01" inputMode="decimal" value={draft.target_ebitda_max_keur} onChange={(event) => setDraft((current) => ({ ...current, target_ebitda_max_keur: event.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target-ebitda-min">Minimum EBITDA margin (%)</Label>
+              <Label htmlFor="target-ebitda-min">{u("Minimum EBITDA margin (%)")}</Label>
               <Input
                 id="target-ebitda-min"
                 type="number"
@@ -344,7 +365,7 @@ export function RepreneurTargetThesisEditor({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target-staff-min">Staff-size minimum</Label>
+              <Label htmlFor="target-staff-min">{u("Staff-size minimum")}</Label>
               <Input
                 id="target-staff-min"
                 type="number"
@@ -356,7 +377,7 @@ export function RepreneurTargetThesisEditor({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target-staff-max">Staff-size maximum</Label>
+              <Label htmlFor="target-staff-max">{u("Staff-size maximum")}</Label>
               <Input
                 id="target-staff-max"
                 type="number"
@@ -375,11 +396,11 @@ export function RepreneurTargetThesisEditor({
         </label> : null}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
-            Cancel
+            {u("Cancel")}
           </Button>
           <Button type="button" onClick={save} disabled={isPending || Boolean(staffAssistanceName && !staffConfirmed)}>
             {isPending && <Loader2 data-icon="inline-start" className="animate-spin" />}
-            {saveLabel}
+            {staffAssistanceName ? saveLabel : u("Save target thesis")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -387,29 +408,31 @@ export function RepreneurTargetThesisEditor({
   )
 }
 
-function dateLabel(value: string | null | undefined) {
+function dateLabel(value: string | null | undefined, language: Language) {
   if (!value) return null
-  return formatDisplayDate(value, "en-GB")
+  return formatDisplayDate(value, displayLocale(language))
 }
 
 export function RepreneurProfileContributions({ repreneur, readOnly = false }: { repreneur: ProfileContributionsProfile; readOnly?: boolean }) {
+  const language = useUiLanguage()
+  const u = (key: Parameters<typeof uiCopy>[1]) => uiCopy(language, key)
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [pendingContribution, setPendingContribution] = useState<ProfileContribution | null>(null)
   const ldcStaffValidated = Boolean(repreneur.ms_ldc_validated)
   const advisoryStaffValidated = Boolean(repreneur.ms_advisory_team || repreneur.ms_advisory_team_identified)
-  const ldcCertificationDate = dateLabel(repreneur.ldc_self_certified_at)
-  const advisoryCertificationDate = dateLabel(repreneur.advisory_team_self_certified_at)
+  const ldcCertificationDate = dateLabel(repreneur.ldc_self_certified_at, language)
+  const advisoryCertificationDate = dateLabel(repreneur.advisory_team_self_certified_at, language)
 
   const certify = async (item: ProfileContribution) => {
     setPendingContribution(item)
     try {
       await certifyMyProfileContribution(item)
-      toast.success(item === "ldc" ? "Lettre de cadrage certified as current." : "Advisory team declaration recorded.")
+      toast.success(u(item === "ldc" ? "Lettre de cadrage certified as current." : "Advisory team declaration recorded."))
       router.refresh()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not record your declaration.")
+    } catch {
+      toast.error(u("Could not record your declaration."))
     } finally {
       setPendingContribution(null)
     }
@@ -418,11 +441,11 @@ export function RepreneurProfileContributions({ repreneur, readOnly = false }: {
   const uploadLdc = async (file: File) => {
     const extension = file.name.split(".").pop()?.toLowerCase()
     if (!extension || !["pdf", "doc", "docx"].includes(extension)) {
-      toast.error("Upload a PDF or Word document.")
+      toast.error(u("Upload a PDF or Word document."))
       return
     }
     if (file.size > CV_LDC_MAX_FILE_BYTES) {
-      toast.error(`The document must not exceed ${CV_LDC_MAX_FILE_LABEL}.`)
+      toast.error(uiCopyWith(language, "The document must not exceed {size}.", { size: CV_LDC_MAX_FILE_LABEL }))
       return
     }
 
@@ -433,10 +456,10 @@ export function RepreneurProfileContributions({ repreneur, readOnly = false }: {
         resourceId: repreneur.id,
         metadata: { document_type: "ldc" },
       })
-      toast.success("Lettre de cadrage added and certified as current.")
+      toast.success(u("Lettre de cadrage added and certified as current."))
       router.refresh()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not upload your Lettre de cadrage.")
+    } catch {
+      toast.error(u("Could not upload your Lettre de cadrage."))
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ""
@@ -459,38 +482,38 @@ export function RepreneurProfileContributions({ repreneur, readOnly = false }: {
         <div className="flex min-w-0 items-start gap-3">
           <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <div className="space-y-1">
-            <p className="text-sm font-medium">Lettre de cadrage</p>
+            <p className="text-sm font-medium">{u("Lettre de cadrage")}</p>
             <p className="text-xs text-muted-foreground">
               {ldcStaffValidated
-                ? "Validated by Re-New. Changes are managed with the team."
+                ? u("Validated by Re-New. Changes are managed with the team.")
                 : repreneur.ldc_url
                   ? ldcCertificationDate
-                    ? `Certified as current on ${ldcCertificationDate}.`
-                    : "Document added. Certify it when it is current."
-                  : "Add your current document when it is ready."}
+                    ? uiCopyWith(language, "Certified as current on {date}.", { date: ldcCertificationDate })
+                    : u("Document added. Certify it when it is current.")
+                  : u("Add your current document when it is ready.")}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {ldcStaffValidated && <Badge variant="outline">Validated by Re-New</Badge>}
+          {ldcStaffValidated && <Badge variant="outline">{u("Validated by Re-New")}</Badge>}
           {repreneur.ldc_url && (
             <Button asChild size="sm" variant="outline">
               <a href={`/api/repreneurs/${encodeURIComponent(repreneur.id)}/documents/ldc`} target="_blank" rel="noreferrer">
                 <ExternalLink data-icon="inline-start" />
-                View
+                {u("View")}
               </a>
             </Button>
           )}
           {!readOnly && !ldcStaffValidated && !repreneur.ldc_url && (
             <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
               {isUploading ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <Upload data-icon="inline-start" />}
-              Add document
+              {u("Add document")}
             </Button>
           )}
           {!readOnly && !ldcStaffValidated && repreneur.ldc_url && !ldcCertificationDate && (
             <Button size="sm" onClick={() => void certify("ldc")} disabled={pendingContribution !== null}>
               {pendingContribution === "ldc" && <Loader2 data-icon="inline-start" className="animate-spin" />}
-              Certify as current
+              {u("Certify as current")}
             </Button>
           )}
         </div>
@@ -500,22 +523,22 @@ export function RepreneurProfileContributions({ repreneur, readOnly = false }: {
         <div className="flex min-w-0 items-start gap-3">
           <UsersRound className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
           <div className="space-y-1">
-            <p className="text-sm font-medium">Advisory team</p>
+            <p className="text-sm font-medium">{u("Advisory team")}</p>
             <p className="text-xs text-muted-foreground">
               {advisoryStaffValidated
-                ? "Validated by Re-New. This readiness item remains managed by the team."
+                ? u("Validated by Re-New. This readiness item remains managed by the team.")
                 : advisoryCertificationDate
-                  ? `Declared on ${advisoryCertificationDate}. Re-New can review it when needed.`
-                  : "Let Re-New know when your legal, accounting, or M&A advisors are in place."}
+                  ? uiCopyWith(language, "Declared on {date}. Re-New can review it when needed.", { date: advisoryCertificationDate })
+                  : u("Let Re-New know when your legal, accounting, or M&A advisors are in place.")}
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {advisoryStaffValidated && <Badge variant="outline">Validated by Re-New</Badge>}
+          {advisoryStaffValidated && <Badge variant="outline">{u("Validated by Re-New")}</Badge>}
           {!readOnly && !advisoryCertificationDate && !advisoryStaffValidated && (
             <Button size="sm" onClick={() => void certify("advisory_team")} disabled={pendingContribution !== null}>
               {pendingContribution === "advisory_team" ? <Loader2 data-icon="inline-start" className="animate-spin" /> : <CheckCircle2 data-icon="inline-start" />}
-              My advisory team is in place
+              {u("My advisory team is in place")}
             </Button>
           )}
         </div>

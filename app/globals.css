@@ -285,6 +285,10 @@
     @apply fixed left-3 top-3 z-[100] -translate-y-20 rounded-md bg-foreground px-3 py-2 text-sm font-semibold text-background shadow-lg transition-transform focus:translate-y-0;
   }
 
+  body:has([data-localized-skip-link]) > [data-root-skip-link] {
+    display: none;
+  }
+
   @keyframes wave-success-confirm {
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }

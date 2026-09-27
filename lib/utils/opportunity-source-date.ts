@@ -14,18 +14,18 @@ function parseDateOnly(value: string | null | undefined) {
 export function formatOpportunitySourceDate(
   value: string | null | undefined,
   precision: OpportunitySourceDatePrecision,
-  options: { fallback?: string } = {},
+  options: { fallback?: string; locale?: "fr-FR" | "en-GB" } = {},
 ) {
   const date = parseDateOnly(value)
   if (!date) return options.fallback ?? "-"
   if (precision === "month") {
-    return new Intl.DateTimeFormat("fr-FR", {
+    return new Intl.DateTimeFormat(options.locale ?? "fr-FR", {
       month: "long",
       year: "numeric",
       timeZone: "UTC",
     }).format(date)
   }
-  return new Intl.DateTimeFormat("fr-FR", {
+  return new Intl.DateTimeFormat(options.locale ?? "fr-FR", {
     day: "2-digit",
     month: "short",
     year: "numeric",

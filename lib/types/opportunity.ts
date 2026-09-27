@@ -948,6 +948,8 @@ export interface RepreneurOpportunityExposure {
   date_added?: string | null
   /** Server-formatted; the staff-only precision enum is never serialized to the portal. */
   date_added_display?: string
+  /** Same source precision, preformatted for an interface-only EN switch. */
+  date_added_display_en?: string
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
@@ -998,6 +1000,8 @@ export interface RepreneurDealFlowOpportunity {
   date_added?: string | null
   /** Server-formatted; the staff-only precision enum is never serialized to the portal. */
   date_added_display?: string
+  /** Same source precision, preformatted for an interface-only EN switch. */
+  date_added_display_en?: string
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null

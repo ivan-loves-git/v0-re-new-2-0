@@ -19,7 +19,7 @@ export function StepBlocB({ data, onChange, onNext, onBack, errors }: Assessment
 
   const title = language === 'fr' ? 'Mises en situation' : 'Situational Scenarios'
   const subtitle = language === 'fr'
-    ? 'Pour chaque situation, choisissez la reaction qui vous semble la plus adaptee.'
+    ? 'Pour chaque situation, choisissez la réaction qui vous semble la plus adaptée.'
     : 'For each situation, choose the response that seems most appropriate to you.'
   const nextLabel = language === 'fr' ? 'Continuer' : 'Continue'
   const backLabel = language === 'fr' ? 'Retour' : 'Back'

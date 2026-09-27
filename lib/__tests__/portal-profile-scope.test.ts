@@ -94,7 +94,7 @@ describe("repreneur portal profile scope", () => {
     expect(dealList).not.toContain("opportunity.internal_notes")
     expect(dealList).toContain("View detail")
     expect(profileSummary).toContain("View detail")
-    expect(dealList).toContain('Added {opportunity.date_added_display ?? "-"}')
+    expect(dealList).toContain("opportunity.date_added_display_en ?? opportunity.date_added_display")
     expect(dealList).toContain("opportunity.match_id ?? opportunity.opportunity_id")
     expect(profileSummary).toContain("Date added")
   })
@@ -203,6 +203,7 @@ describe("repreneur portal profile scope", () => {
       portalOpportunities.indexOf("async function updateMyOpportunityResponse"),
     )
     const dealsPage = source("app/portal/deals/page.tsx")
+    const dealsContent = source("components/portal/portal-deals-content.tsx")
 
     expect(dealFlowProjection).toContain("const statefulDeals = matchedOpportunities")
     expect(dealFlowProjection).toContain('const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")')
@@ -214,8 +215,9 @@ describe("repreneur portal profile scope", () => {
     )
     expect(dealFlowProjection).not.toContain("const liveDeals = automaticMatching.complete ?")
     expect(detailGetter).not.toContain("if (!thesisCompleteness.complete) return null")
-    expect(dealsPage).toContain("Your current Re-New selections remain available")
-    expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
+    expect(dealsPage).toContain("<PortalDealsContent result={result} sort={sort} />")
+    expect(dealsContent).toContain("Your current Re-New selections remain available")
+    expect(dealsContent).toContain('href="/portal/profile#target-thesis"')
   })
 
   it("uses staff-only client and valid-email selection without invitation, offer or score gates", () => {

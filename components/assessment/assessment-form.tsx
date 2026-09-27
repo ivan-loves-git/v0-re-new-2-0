@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Progress } from '@/components/ui/progress'
 import { useLanguage } from '@/lib/i18n/language-context'
+import { publicAssessmentError } from '@/lib/i18n/form-outcomes'
 import { ASSESSMENT_STEPS } from '@/lib/config/leadership-assessment'
 import { submitAssessment } from '@/lib/actions/leadership-assessment'
 import { StepBlocA, StepBlocB, StepBlocC, StepReview } from './steps'
@@ -188,7 +189,7 @@ export function AssessmentForm({ token, repreneurName }: AssessmentFormProps) {
       {state.submitResult?.error && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md">
           <p className="text-sm text-red-700 dark:text-red-300">
-            {state.submitResult.error}
+            {publicAssessmentError(state.submitResult.error, language)}
           </p>
         </div>
       )}

@@ -13,6 +13,8 @@ describe("opportunity source-date precision", () => {
     expect(formatOpportunitySourceDate("2026-01-01", "month")).toBe(
       "janvier 2026",
     )
+    expect(formatOpportunitySourceDate("2026-01-01", "month", { locale: "en-GB" })).toBe("January 2026")
+    expect(formatOpportunitySourceDate("2026-01-01", "day", { locale: "en-GB" })).toContain("1 Jan 2026")
     expect(dayLevelOpportunityDate("2026-01-01", "month")).toBeNull()
   })
 
