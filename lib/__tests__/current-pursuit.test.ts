@@ -16,6 +16,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 import {
   readPortalCurrentPursuit,
+  readPortalDealActionIndicators,
   readStaffCurrentPursuit,
   resolvePortalPursuitResource,
 } from "@/lib/data/current-pursuit"
@@ -180,7 +181,7 @@ function query(result: Result) {
       return Promise.resolve(result).then(resolve, reject)
     },
   }
-  for (const method of ["select", "eq", "is", "order"] as const) {
+  for (const method of ["select", "eq", "is", "order", "in"] as const) {
     builder[method] = vi.fn(() => builder)
   }
   builder.limit = vi.fn(() => Promise.resolve(result))
@@ -189,6 +190,9 @@ function query(result: Result) {
 }
 
 function setupCurrentPursuit(options: {
+  artifactReadError?: boolean
+  artifacts?: unknown
+  authorizedTemplate?: Result
   canonicalAccess?: Result
   currentDispatchId?: string | null
   currentGate1Id?: string | null
@@ -220,7 +224,7 @@ function setupCurrentPursuit(options: {
     }
     if (table === "opportunity_nda_artifacts") {
       const result = artifactRead++ === 0
-        ? { data: artifacts, error: null }
+        ? options.artifactReadError ? { data: null, error: { message: "artifact read unavailable" } } : { data: options.artifacts ?? artifacts, error: null }
         : {
             data: [{
               id: "template-current",
@@ -260,6 +264,9 @@ function setupCurrentPursuit(options: {
     if (name === "journey_repreneur_can_access_confidential") {
       return Promise.resolve(options.canonicalAccess ?? { data: true, error: null })
     }
+    if (name === "journey_repreneur_authorized_template") {
+      return Promise.resolve(options.authorizedTemplate ?? { data: [{ document_id: "template-document" }], error: null })
+    }
     throw new Error(`Unexpected RPC: ${name}`)
   })
   mocks.createAdminClient.mockReturnValue({ from, rpc })
@@ -271,6 +278,25 @@ describe("current pursuit reads", () => {
     vi.clearAllMocks()
     mocks.requirePortalAccess.mockResolvedValue({ repreneurId: "repreneur-1" })
     mocks.requireStaffAccess.mockResolvedValue({ role: "staff" })
+  })
+
+  it("projects only current owner proposals as response actions, with expiry and namespace fences", async () => {
+    const matchRows = [
+      { id: "unclocked", status: "proposed", recommendation_expires_at: null, opportunity_id: "o1", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
+      { id: "expired", status: "proposed", recommendation_expires_at: "2020-01-01T00:00:00Z", opportunity_id: "o2", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
+      { id: "pending", status: "interested", recommendation_expires_at: null, opportunity_id: "o3", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
+      { id: "positioned-elsewhere", status: "proposed", recommendation_expires_at: null, opportunity_id: "o4", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
+      { id: "cross-namespace", status: "proposed", recommendation_expires_at: null, opportunity_id: "o5", opportunity: { status: "active", is_demo: true }, repreneur: { is_demo: false } },
+      { id: "inactive", status: "proposed", recommendation_expires_at: null, opportunity_id: "o6", opportunity: { status: "paused", is_demo: false }, repreneur: { is_demo: false } },
+    ]
+    const listQuery = query({ data: matchRows, error: null })
+    const from = vi.fn(() => listQuery)
+    mocks.createAdminClient.mockReturnValue({ from })
+
+    const result = await readPortalDealActionIndicators(matchRows.map((row) => row.id))
+    expect(listQuery.eq).toHaveBeenCalledWith("repreneur_id", "repreneur-1")
+    expect(from).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ unclocked: "respond", expired: null, pending: null, "positioned-elsewhere": "respond" })
   })
 
   it("returns the complete current staff workspace after staff access", async () => {
@@ -316,10 +342,7 @@ describe("current pursuit reads", () => {
     expect(portalResult).toEqual({
       matchId: "match-1",
       enabled: true,
-      gate1Passed: true,
       ndaReadyNotified: true,
-      gate2Passed: true,
-      dispatched: true,
       confidentialGrant: {
         informationMemoDocumentId: "memo-1",
         grantedAt: "2026-08-07T09:00:00.000Z",
@@ -330,13 +353,24 @@ describe("current pursuit reads", () => {
         },
       },
       revoked: false,
-      evidenceRequired: false,
+      projectionUnavailable: false,
+      action: null,
+      signedCopyState: "validated",
+      sourceDisclosureCurrent: true,
+      history: {
+        currentCycleRecorded: true,
+        previousCycleEnded: false,
+        ndaReadyNoticeRecorded: true,
+        currentSubmissionRecorded: true,
+        accessEnded: false,
+      },
     })
     const serialized = JSON.stringify(portalResult)
     expect(serialized).not.toContain("alice@example.test")
     expect(serialized).not.toContain("firm-secret")
     expect(serialized).not.toContain("contact-secret")
     expect(serialized).not.toContain("entries")
+    expect(serialized).not.toMatch(/gate1Passed|gate2Passed|dispatched|evidenceRequired|actor|metadata|artifact/)
   })
 
   it("allows DEMO-to-DEMO pursuits in both portal and staff preview", async () => {
@@ -469,7 +503,95 @@ describe("current pursuit reads", () => {
       viewer: { kind: "portal" },
     })
 
-    expect(result?.confidentialGrant).toBeNull()
+    if (options.match?.data && (options.match.data as { opportunity?: { status?: string } }).opportunity?.status === "paused") {
+      expect(result).toBeNull()
+    } else {
+      expect(result?.confidentialGrant).toBeNull()
+    }
+  })
+
+  it("never presents an unreadable signed-copy artifact as a fresh signing request", async () => {
+    setupCurrentPursuit({
+      artifactReadError: true,
+      currentGate2Id: null,
+      currentDispatchId: null,
+      canonicalAccess: { data: false, error: null },
+    })
+    const result = await readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } })
+    expect(result).toMatchObject({
+      projectionUnavailable: true,
+      action: "unknown",
+      signedCopyState: "unknown",
+      confidentialGrant: null,
+      history: { currentSubmissionRecorded: false, ndaReadyNoticeRecorded: false },
+    })
+  })
+
+  it("separates a reopened current cycle from old notice, artifact and IM access", async () => {
+    const prior = [
+      { ...evidence[0], id: "prior-cycle" },
+      { ...evidence[5], id: "prior-e6", metadata: { upstream_evidence_id: "prior-gate" } },
+      { ...evidence[0], id: "prior-drop", event_type: "dropped" as const },
+      { ...evidence[0], id: "reopened", event_type: "reopened" as const },
+      { ...evidence[0], id: "current-cycle" },
+    ]
+    setupCurrentPursuit({ evidence: prior, currentGate1Id: null, currentGate2Id: null,
+      currentDispatchId: null, canonicalAccess: { data: false, error: null } })
+    const result = await readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } })
+    expect(result).toMatchObject({
+      action: null,
+      confidentialGrant: null,
+      history: {
+        currentCycleRecorded: true,
+        previousCycleEnded: true,
+        ndaReadyNoticeRecorded: false,
+        currentSubmissionRecorded: false,
+      },
+    })
+  })
+
+  it("permits a fresh current E6 signing request after reopen without restoring the old grant", async () => {
+    const later = "2026-08-10T09:00:00.000Z"
+    const reopened = [
+      { ...evidence[0], id: "prior-cycle" },
+      { ...evidence[0], id: "prior-drop", event_type: "dropped" as const, recorded_at: "2026-08-08T09:00:00.000Z" },
+      { ...evidence[0], id: "reopened", event_type: "reopened" as const, recorded_at: "2026-08-09T09:00:00.000Z" },
+      { ...evidence[0], id: "current-cycle", recorded_at: later },
+      { ...evidence[4], id: "new-gate", recorded_at: "2026-08-10T10:00:00.000Z" },
+      { ...evidence[5], id: "new-e6", metadata: { upstream_evidence_id: "new-gate" }, recorded_at: "2026-08-10T11:00:00.000Z" },
+    ]
+    const { rpc } = setupCurrentPursuit({ evidence: reopened, currentGate1Id: "new-gate", currentGate2Id: null,
+      currentDispatchId: null, grant: { ...grant, revoked_at: "2026-08-08T09:00:00.000Z" },
+      canonicalAccess: { data: false, error: null } })
+    const result = await readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } })
+    expect(result).toMatchObject({
+      action: "sign_nda", signedCopyState: "not_submitted", revoked: false,
+      confidentialGrant: null, sourceDisclosureCurrent: false,
+      history: { previousCycleEnded: true, ndaReadyNoticeRecorded: true, currentSubmissionRecorded: false, accessEnded: false },
+    })
+    expect(rpc.mock.calls.some(([name]) => name === "journey_repreneur_can_access_confidential")).toBe(false)
+  })
+
+  it("requires the current E6 notice and authorized template for an own signing action", async () => {
+    const beforeNotice = evidence.filter((entry) => entry.event_type !== "e6_nda_ready_notified")
+    setupCurrentPursuit({ evidence: beforeNotice, artifacts: [], currentGate2Id: null, grant: null })
+    await expect(readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } }))
+      .resolves.toMatchObject({ action: null, signedCopyState: "unknown" })
+
+    setupCurrentPursuit({ evidence: evidence.slice(0, 6), artifacts: [], currentGate2Id: null, grant: null,
+      authorizedTemplate: { data: [], error: null } })
+    await expect(readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } }))
+      .resolves.toMatchObject({ action: null, signedCopyState: "unknown" })
+
+    setupCurrentPursuit({ evidence: evidence.slice(0, 6), artifacts: [], currentGate2Id: null, grant: null })
+    await expect(readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } }))
+      .resolves.toMatchObject({ action: "sign_nda", signedCopyState: "not_submitted" })
+  })
+
+  it("shows a current submitted copy as awaiting validation without a new action", async () => {
+    setupCurrentPursuit({ evidence: evidence.slice(0, 6), currentGate2Id: null, grant: null })
+    await expect(readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } }))
+      .resolves.toMatchObject({ action: null, signedCopyState: "awaiting_validation" })
   })
 
   it("allows a new grant action when an earlier grant is no longer canonically live", async () => {

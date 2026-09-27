@@ -1,8 +1,31 @@
 import { describe, expect, it } from "vitest"
 import {
   calculateOpportunityMatchScore,
+  compareOwnerOpportunityCriteria,
   MATCHING_V2_CONFIG,
 } from "../opportunity-match-scoring"
+
+describe("owner-visible current criteria", () => {
+  it("reuses canonical per-criterion outcomes without a score or private reasons", () => {
+    const comparison = compareOwnerOpportunityCriteria(repreneur, opportunity)
+    expect(comparison).toEqual({
+      sector: "within_target", geography: "within_target", revenue: "within_target",
+      ebitda: "within_target", margin: "within_target", team: "within_target",
+    })
+    expect(JSON.stringify(comparison)).not.toMatch(/score|reason|path|weight/)
+  })
+
+  it("distinguishes outside target, missing facts and an unspecified target", () => {
+    const comparison = compareOwnerOpportunityCriteria(
+      { ...repreneur, target_staff_size_min: null, target_staff_size_max: null },
+      { ...opportunity, revenue_meur: 300, ebitda_keur: null },
+    )
+    expect(comparison.revenue).toBe("outside_target")
+    expect(comparison.ebitda).toBe("unknown")
+    expect(comparison.margin).toBe("unknown")
+    expect(comparison.team).toBe("not_specified")
+  })
+})
 
 const repreneur = {
   is_demo: false,

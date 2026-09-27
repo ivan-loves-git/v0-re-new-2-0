@@ -48,7 +48,7 @@ export function PortalDealsContent({
           </Button>
         </AlertDescription>
       </Alert> : null}
-      <RepreneurOpportunityList repreneur={repreneur} opportunities={deals} />
+      <RepreneurOpportunityList repreneur={repreneur} opportunities={deals} returnSort={sort === "relevance" ? undefined : sort} />
     </section>
   </div>
 }

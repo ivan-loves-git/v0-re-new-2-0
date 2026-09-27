@@ -46,6 +46,7 @@ interface RepreneurOpportunityListProps {
   detailLabel?: string
   emptyDescription?: string
   readOnly?: boolean
+  returnSort?: string
 }
 
 function opportunityTitle(opportunity: RepreneurOpportunityListItem, language: Language) {
@@ -444,6 +445,7 @@ export function RepreneurOpportunityList({
   detailLabel = "View detail",
   emptyDescription,
   readOnly = false,
+  returnSort,
 }: RepreneurOpportunityListProps) {
   const u = useUiCopy()
   const language = useUiLanguage()
@@ -538,9 +540,13 @@ export function RepreneurOpportunityList({
     )
   }
 
-  const detailHref = (opportunity: RepreneurOpportunityListItem) =>
-    detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id] ??
-    `/portal/deals/${opportunity.match_id ?? opportunity.opportunity_id}`
+  const detailHref = (opportunity: RepreneurOpportunityListItem) => {
+    const key = opportunity.match_id ?? opportunity.opportunity_id
+    const supplied = detailHrefByOpportunityId?.[key]
+    if (supplied) return supplied
+    const from = returnSort ? `?return=${encodeURIComponent(`/portal/deals?sort=${encodeURIComponent(returnSort)}`)}` : ""
+    return `/portal/deals/${key}${from}`
+  }
   const reviewOrderUnavailable = !readOnly && [...sections.recommended, ...sections.live]
     .some((opportunity) => opportunity.personal_review == null)
 

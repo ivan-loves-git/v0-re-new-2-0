@@ -12,7 +12,9 @@ import {
   safeRepreneurTeaserSummary,
 } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
-import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
+import { calculateOpportunityMatchScore, compareOwnerOpportunityCriteria } from "@/lib/utils/opportunity-match-scoring"
+import { canonicalTargetThesisValues, targetThesisLabels } from "@/lib/repreneur-target-thesis"
+import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
 import {
   loadMatchingGeographyContext,
@@ -36,6 +38,7 @@ import type {
   RepreneurDealFlowOpportunity,
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
+  OwnerCriterionComparison,
 } from "@/lib/types/opportunity"
 
 const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "withdrawn", "declined", "active_pursuit", "dropped"]
@@ -302,6 +305,44 @@ function withDealBucket(
 
 function isDefined<T>(value: T | null): value is T {
   return value !== null
+}
+
+function selection(value: string | string[] | null | undefined) {
+  return Array.isArray(value) ? value : value ? [value] : []
+}
+
+async function ownerCriteriaForDeal(
+  supabase: ReturnType<typeof createAdminClient>,
+  repreneur: RepreneurDealFlowProfile,
+  opportunity: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity,
+): Promise<OwnerCriterionComparison[]> {
+  const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
+  const ownerWithGeography = withMatchingGeographyTargets(repreneur, geography)
+  const dealWithGeography = withMatchingGeography(opportunity, geography)
+  const outcomes = compareOwnerOpportunityCriteria(ownerWithGeography, dealWithGeography)
+  const geoValues = selection(repreneur.q12_geo_zones).length
+    ? selection(repreneur.q12_geo_zones) : selection(repreneur.target_location)
+  const sectorValues = selection(repreneur.q13_target_sectors_v2).length
+    ? selection(repreneur.q13_target_sectors_v2) : selection(repreneur.sector_preferences)
+  const targetGeographies = targetThesisLabels(
+    canonicalTargetThesisValues(geoValues, WHEN_QUESTIONS.q12.options, "geography"),
+    WHEN_QUESTIONS.q12.options,
+  )
+  const targetSectors = targetThesisLabels(
+    canonicalTargetThesisValues(sectorValues, WHEN_QUESTIONS.q13.options, "sector"),
+    WHEN_QUESTIONS.q13.options,
+  )
+  const range = (min: number | null | undefined, max: number | null | undefined) => ({ min: min ?? null, max: max ?? null })
+  const margin = opportunity.revenue_meur != null && opportunity.revenue_meur > 0 && opportunity.ebitda_keur != null
+    ? (opportunity.ebitda_keur / (opportunity.revenue_meur * 1000)) * 100 : null
+  return [
+    { key: "sector", outcome: outcomes.sector, target: targetSectors, actual: opportunity.sector ?? opportunity.activity ?? null },
+    { key: "geography", outcome: outcomes.geography, target: targetGeographies, actual: opportunity.geography_label ?? opportunity.location ?? null },
+    { key: "revenue", outcome: outcomes.revenue, target: range(repreneur.target_revenue_min_meur, repreneur.target_revenue_max_meur), actual: opportunity.revenue_meur ?? null },
+    { key: "ebitda", outcome: outcomes.ebitda, target: range(repreneur.target_ebitda_min_keur, repreneur.target_ebitda_max_keur), actual: opportunity.ebitda_keur ?? null },
+    { key: "margin", outcome: outcomes.margin, target: repreneur.target_ebitda_margin_min_pct ?? null, actual: Number.isFinite(margin) ? margin : null },
+    { key: "team", outcome: outcomes.team, target: range(repreneur.target_staff_size_min, repreneur.target_staff_size_max), actual: opportunity.headcount ?? null },
+  ]
 }
 
 function toDealFlowOpportunity(
@@ -834,7 +875,11 @@ export async function getMyRepreneurOpportunity(
       outcome: "success",
     })
     const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
-    return { ...result, personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null }
+    return {
+      ...result,
+      personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null,
+      criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result),
+    }
   }
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
@@ -869,5 +914,9 @@ export async function getMyRepreneurOpportunity(
     outcome: "success",
   })
   const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
-  return { ...result, personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null }
+  return {
+    ...result,
+    personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null,
+    criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result),
+  }
 }

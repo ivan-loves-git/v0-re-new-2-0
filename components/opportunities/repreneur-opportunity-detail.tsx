@@ -28,6 +28,7 @@ type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDe
 
 interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityDetailItem
+  mode?: "all" | "heading" | "overview" | "metrics" | "response" | "description" | "documents"
   readOnly?: boolean
   withdrawalPaused?: boolean
   journey?: PortalCurrentPursuit | null
@@ -65,6 +66,7 @@ function canRespond(status: RepreneurOpportunityDetailItem["match_status"]) {
 
 export function RepreneurOpportunityDetail({
   opportunity,
+  mode = "all",
   readOnly = false,
   withdrawalPaused = false,
   journey,
@@ -100,7 +102,7 @@ export function RepreneurOpportunityDetail({
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="relative flex flex-col gap-3 border-b pb-5">
+      {(mode === "all" || mode === "heading") && <header className="relative flex flex-col gap-3 border-b pb-5">
         <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
           {opportunity.match_status ? (
@@ -137,9 +139,9 @@ export function RepreneurOpportunityDetail({
           </div>
           {opportunity.pursuit_stage_provenance === "staff_confirmed_history" ? <p className="mt-2 text-xs text-muted-foreground">{copy("This progress was confirmed by Re-New from the existing process. Document checks and access remain separate.")}</p> : null}
         </div>
-      </header>
+      </header>}
 
-      {(opportunity.match_status || canExpressUnassignedInterest) ? <Card>
+      {(mode === "all" || mode === "overview" || mode === "response") && (opportunity.match_status || canExpressUnassignedInterest) ? <Card className="order-1">
         <CardHeader>
           <CardTitle>{copy(canExpressUnassignedInterest ? "Express interest" : readOnly ? "Response" : "Your response")}</CardTitle>
           <CardDescription>
@@ -264,8 +266,8 @@ export function RepreneurOpportunityDetail({
         </CardContent>
       </Card> : null}
 
-      {opportunity.match_status === "active_pursuit" && (
-        <Card>
+      {(mode === "all" || mode === "documents") && opportunity.match_status === "active_pursuit" && (
+        <Card className="order-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="size-5" />
@@ -277,40 +279,47 @@ export function RepreneurOpportunityDetail({
             {!memoAvailable && (
               <Alert>
                 <FileText />
-                <AlertTitle>{copy(journey?.gate1Passed ? "Information memorandum locked" : "Confidential documents locked")}</AlertTitle>
+                <AlertTitle>{copy(journey?.ndaReadyNotified ? "Information memorandum locked" : "Confidential documents locked")}</AlertTitle>
                 <AlertDescription>
                   {!journey?.enabled
                     ? copy("The confidential journey is not enabled for this opportunity. Re-New will tell you when the next action is available.")
                     : journey.revoked
                       ? copy("Confidential access has been revoked for this pursuit.")
                       : journey.ndaReadyNotified
-                        ? copy("Your NDA is ready. Upload your signed copy for Re-New review. The Information Memorandum remains locked until the signed NDA handoff and staff approval are complete.")
+                        ? copy(journey.signedCopyState === "not_submitted"
+                            ? "Your NDA is ready. Upload your signed copy for Re-New review. The Information Memorandum remains locked until the signed NDA handoff and staff approval are complete."
+                            : journey.signedCopyState === "awaiting_validation"
+                              ? "Your signed NDA has been received and is awaiting Re-New validation. The Information Memorandum remains locked."
+                              : journey.signedCopyState === "validated"
+                                ? "Your signed NDA has been validated. The Information Memorandum remains locked until Re-New grants access."
+                                : "The signed NDA status is unavailable. The Information Memorandum remains locked. Re-New will tell you when the next action is available.")
                         : copy("Re-New is preparing your NDA. We will notify you when it is ready to download and sign.")}
                 </AlertDescription>
               </Alert>
             )}
 
-            {journey?.enabled && journey.ndaReadyNotified && !journey.revoked ? <>
-              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{copy("NDA template")}</p><p className="text-xs text-muted-foreground">{copy("Use this exact validated template for your signed copy.")}</p></div>{ndaTemplateHref ? <Button asChild variant="outline" size="sm"><a href={ndaTemplateHref}><Download data-icon="inline-start" />{copy("Download template")}</a></Button> : null}</div>
+            {journey?.enabled && journey.ndaReadyNotified && journey.signedCopyState !== "unknown" && !journey.revoked ? <>
+              <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{copy("NDA template")}</p><p className="text-xs text-muted-foreground">{copy(journey.signedCopyState === "not_submitted" ? "Use this exact validated template for your signed copy." : "This validated NDA template remains available for reference.")}</p></div>{ndaTemplateHref ? <Button asChild variant="outline" size="sm"><a href={ndaTemplateHref}><Download data-icon="inline-start" />{copy("Download template")}</a></Button> : null}</div>
               {readOnly ? staffDocumentAssistanceControls : null}
-              {!journey.gate2Passed && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
+              {journey.signedCopyState === "awaiting_validation" ? <p role="status" className="text-sm text-muted-foreground">{copy("Your signed NDA has been received for staff validation.")}</p> : null}
+              {journey.signedCopyState === "not_submitted" && !readOnly && opportunity.match_id ? <RepreneurNdaSignatureUpload matchId={opportunity.match_id} /> : null}
             </> : null}
 
             {memoAvailable && journey?.confidentialGrant ? <>
-              <div className="rounded-md border p-3">
+              {journey.confidentialGrant.source ? <div className="rounded-md border p-3">
                 <p className="font-medium">{copy("Disclosed source")}</p>
                 <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
                   <div><dt className="text-xs text-muted-foreground">{copy("Firm and office")}</dt><dd>{journey.confidentialGrant.source.firmName} · {journey.confidentialGrant.source.officeName}</dd></div>
                   <div><dt className="text-xs text-muted-foreground">{copy(journey.confidentialGrant.source.contactNames.length === 1 ? "Named contact" : "Named contacts")}</dt><dd>{journey.confidentialGrant.source.contactNames.join(", ")}</dd></div>
                 </dl>
-              </div>
+              </div> : null}
               <div className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{copy("Information memorandum (IM)")}</p><p className="text-xs text-muted-foreground">{copy("This exact IM was explicitly granted to this pursuit.")}</p></div>{informationMemorandumHref ? <Button asChild variant="outline" size="sm"><a href={informationMemorandumHref}><Download data-icon="inline-start" />{copy("Download IM")}</a></Button> : null}</div>
             </> : null}
           </CardContent>
         </Card>
       )}
 
-      <div className="grid overflow-hidden rounded-lg border bg-card sm:grid-cols-2 md:grid-cols-4">
+      {(mode === "all" || mode === "overview" || mode === "metrics") && <div className="order-0 grid overflow-hidden rounded-lg border bg-card sm:grid-cols-2 md:grid-cols-4">
         <Card className="rounded-none border-0 border-b py-4 md:border-b-0 md:border-r">
           <CardHeader className="pb-2">
             <CardDescription>{copy("Revenue")}</CardDescription>
@@ -335,9 +344,9 @@ export function RepreneurOpportunityDetail({
             <CardTitle>{opportunity.headcount_range ?? opportunity.headcount ?? "-"}</CardTitle>
           </CardHeader>
         </Card>
-      </div>
+      </div>}
 
-      <Card>
+      {(mode === "all" || mode === "overview" || mode === "description") && <Card className="order-2">
         <CardHeader>
           <CardTitle>{copy("Opportunity")}</CardTitle>
           <CardDescription>{[opportunity.sector, opportunity.activity].filter(Boolean).join(" / ") || copy("Sector to confirm")}</CardDescription>
@@ -347,7 +356,7 @@ export function RepreneurOpportunityDetail({
             {opportunity.teaser_summary || copy("Anonymized opportunity details are being prepared.")}
           </p>
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   )
 }
