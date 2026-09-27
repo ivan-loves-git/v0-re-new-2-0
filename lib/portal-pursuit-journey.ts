@@ -50,7 +50,8 @@ export function buildPortalJourneyProgress(
   pursuit: PortalCurrentPursuit | null,
 ): PortalJourneyProgressStep[] {
   const steps = buildPortalJourneyView(opportunity, pursuit)
-  const currentIndex = steps.reduce((latest, step, index) => step.state === "current" ? index : latest, -1)
+  const terminalStage = opportunity.pursuit_stage === "closed" || opportunity.pursuit_stage === "dropped"
+  const currentIndex = terminalStage ? -1 : steps.reduce((latest, step, index) => step.state === "current" ? index : latest, -1)
   return steps.map((step, index) => ({
     ...step,
     position: currentIndex < 0 ? "unavailable" : index < currentIndex ? "earlier" : index === currentIndex ? "current" : "ahead",

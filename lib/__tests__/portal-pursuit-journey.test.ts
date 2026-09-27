@@ -56,6 +56,24 @@ describe("owner-safe pursuit journey", () => {
     expect(progress.find((step) => step.key === "closing")?.state).toBe("future")
   })
 
+  it.each(["closed", "dropped"] as const)("does not mark terminal %s progress from an NDA request or IM grant", (pursuit_stage) => {
+    const terminal = { ...opportunity, pursuit_stage }
+    const granted: PortalCurrentPursuit = {
+      ...pursuit, action: null,
+      confidentialGrant: { informationMemoDocumentId: "exact-im", grantedAt: "2026-09-26T10:00:00Z", source: null },
+    }
+    for (const [key, projection] of [["nda_ready", pursuit], ["memo", granted]] as const) {
+      const history = buildPortalJourneyView(terminal, projection)
+      const progress = buildPortalJourneyProgress(terminal, projection)
+      expect(history.find((step) => step.key === key)?.state).toBe("current")
+      expect(progress).toEqual(history.map((step) => ({ ...step, position: "unavailable" })))
+      expect(progress.find((step) => step.key === "closing")?.state).toBe("future")
+      const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+        createElement(PursuitJourneyProgress, { opportunity: terminal, pursuit: projection, onFullHistory: () => undefined })))
+      expect(html).not.toContain('aria-current="step"')
+    }
+  })
+
   it("keeps the current business position when documents are unavailable", () => {
     const progress = buildPortalJourneyProgress({ ...opportunity, pursuit_stage: "info_memo_received" }, {
       ...pursuit, action: null, projectionUnavailable: true, confidentialGrant: null,
