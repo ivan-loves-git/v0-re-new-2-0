@@ -174,6 +174,9 @@ test("French-first locale is account-scoped, live, and separate from staff previ
 
     await firstPage.goto("/portal/pursuits")
     await expect(firstPage.getByRole("heading", { name: "Vos dossiers de reprise" })).toBeVisible()
+    await expect(firstPage.locator('[data-wave-workspace="pursuit"]')).toBeVisible()
+    await firstPage.getByRole("link", { name: "Dossiers externes", exact: true }).click()
+    await expect(firstPage).toHaveURL(/\/portal\/pursuits\?view=external/)
     await firstPage.getByRole("textbox", { name: "Rechercher des dossiers" }).fill("QA DRAFT — NEVER SUBMIT")
     const beforePursuitSwitch = await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)
     await firstPage.getByRole("button", { name: "Nouveau dossier externe" }).click()
