@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 export const GOVERNANCE_SOURCE_REPOSITORY = "re-new-team/renew-governance";
-export const GOVERNANCE_PROJECTION_SCHEMA_VERSION = 1;
+export const GOVERNANCE_PROJECTION_SCHEMA_VERSION = 2;
 export type GovernanceIssueKind =
   | "Product Change"
   | "Decision"
@@ -21,6 +21,34 @@ export type DecisionState =
   | "Decided"
   | "Superseded"
   | null;
+export type ClosureDisposition =
+  | "completed"
+  | "cancelled"
+  | "superseded"
+  | "unknown"
+  | null;
+export type FounderReleaseEvidence =
+  | { state: "not_released" }
+  | {
+      state: "verified";
+      commit: string;
+      releasedAt: string;
+      verifiedAt: string;
+      proofUrl: string;
+    };
+export interface FounderReportingSource {
+  disposition?: "cancelled" | "superseded";
+  release?: FounderReleaseEvidence;
+  summary?: { text: string; approvalUrl: string };
+  evidenceRevision: string;
+}
+export interface FounderReportingProjection {
+  closedAt: string | null;
+  closureDisposition: ClosureDisposition;
+  release: FounderReleaseEvidence | null;
+  founderSummary: { text: string; approvalUrl: string } | null;
+  evidenceRevision: string | null;
+}
 export interface GithubMarker {
   kind?: GovernanceIssueKind;
   publication?: "manual" | "direct-github";
@@ -55,6 +83,8 @@ export interface GithubIssueFact {
   repository?: string;
   kind?: GovernanceIssueKind;
   state: "OPEN" | "CLOSED";
+  closedAt?: string | null;
+  stateReason?: "COMPLETED" | "NOT_PLANNED" | "REOPENED" | null;
   projectStatus?: string | null;
   decisionState?: string | null;
   updatedAt: string;
@@ -65,6 +95,7 @@ export interface GithubIssueFact {
   dependencies?: { number: number; repository: string }[];
   pullRequests?: { url: string; state: string }[];
   marker?: GithubMarker;
+  founderReporting?: FounderReportingSource;
 }
 export interface LegacyExclusion {
   number: number;
@@ -170,9 +201,11 @@ export interface SafeGovernanceIssue {
     decisionNumber: number | null;
     temporaryException: boolean;
   };
+  /** Present only on Product Changes in v2; absent from all v1 snapshots. */
+  reporting?: FounderReportingProjection;
 }
 export interface GovernanceProjection {
-  schemaVersion: typeof GOVERNANCE_PROJECTION_SCHEMA_VERSION;
+  schemaVersion: 1 | typeof GOVERNANCE_PROJECTION_SCHEMA_VERSION;
   sourceRepository: typeof GOVERNANCE_SOURCE_REPOSITORY;
   sourceCommit: string;
   registryRevision: string;

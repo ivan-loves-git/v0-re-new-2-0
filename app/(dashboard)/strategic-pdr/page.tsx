@@ -9,6 +9,7 @@ import { requireStaffAccess } from "@/lib/access-control";
 import { type GovernanceProvenance, type SafeGovernanceIssue } from "@/lib/governance-projection/model";
 import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness";
 import { readCurrentGovernanceProjection } from "@/lib/governance-projection/server";
+import { childProgress, summarizeFounderWork } from "@/lib/governance-projection/founder-summary";
 import { listHistoricalPdrWorkCards, listPdrRequestHistory } from "@/lib/pdr/intake-server";
 import { parseHistoricalWorkCardReference, resolveHistoricalWorkCardReference } from "@/lib/pdr/historical-card-reference";
 import { redirect } from "next/navigation";
@@ -19,7 +20,8 @@ function displayDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+    timeZone: "UTC",
+  }).format(new Date(value)) + " UTC";
 }
 
 function deliveryTone(status: SafeGovernanceIssue["projectStatus"]) {
@@ -54,7 +56,28 @@ function ProductChangeTitle({ issue }: { issue: SafeGovernanceIssue }) {
   return <h3 className="font-medium leading-snug">{issue.title}</h3>;
 }
 
+function ProductChangeOutcome({ issue }: { issue: SafeGovernanceIssue }) {
+  const reporting = issue.reporting;
+  const disposition = reporting?.closureDisposition;
+  const release = reporting?.release;
+  const state = disposition === "completed"
+    ? release?.state === "verified" ? `Completed scope · verified in production ${displayDate(release.verifiedAt)}`
+      : release?.state === "not_released" ? "Completed scope · not released to production"
+      : "Completed scope · production release unverified"
+    : disposition === "cancelled" ? "Cancelled scope"
+    : disposition === "superseded" ? "Superseded scope"
+    : issue.state === "OPEN" ? release?.state === "verified" ? "Scope open · earlier production release verified" : "Scope open"
+    : "Closure outcome unverified";
+  return <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-sm">
+    <p className="font-medium">{state}</p>
+    {reporting?.founderSummary ? <p>{reporting.founderSummary.text}</p>
+      : release?.state === "verified" ? <p className="text-muted-foreground">An approved founder summary is not recorded for this release.</p>
+      : null}
+  </div>;
+}
+
 function ProductChangeCard({ issue, linkedIssues }: { issue: SafeGovernanceIssue; linkedIssues: SafeGovernanceIssue[] }) {
+  const progress = childProgress(issue, linkedIssues);
   return (
     <article className="space-y-3 rounded-lg border bg-background p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -68,15 +91,16 @@ function ProductChangeCard({ issue, linkedIssues }: { issue: SafeGovernanceIssue
         </div>
         <IssueActions issue={issue} />
       </div>
+      <ProductChangeOutcome issue={issue} />
       <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div><dt className="wave-micro-label">Owner</dt><dd>{issue.assigneeLogins.length ? issue.assigneeLogins.join(", ") : "Unassigned"}</dd></div>
         <div><dt className="wave-micro-label">Dependencies</dt><dd>{issue.dependencyNumbers.length ? issue.dependencyNumbers.map((item) => `#${item}`).join(", ") : "None recorded"}</dd></div>
-        <div><dt className="wave-micro-label">Delivery</dt><dd>{linkedIssues.length ? `${linkedIssues.length} linked ticket${linkedIssues.length === 1 ? "" : "s"}` : "No linked tickets"}</dd></div>
-        <div><dt className="wave-micro-label">Updated</dt><dd>{displayDate(issue.updatedAt)}</dd></div>
+        <div><dt className="wave-micro-label">Child progress</dt><dd>{progress.total ? `${progress.done} of ${progress.total} Tickets/Bugs done` : "No linked Tickets/Bugs"}</dd></div>
+        <div><dt className="wave-micro-label">Scope closed</dt><dd>{issue.reporting?.closedAt ? displayDate(issue.reporting.closedAt) : issue.state === "CLOSED" ? "Date unverified" : "Open"}</dd></div>
       </dl>
       {linkedIssues.length ? (
         <div className="border-t pt-3">
-          <p className="wave-micro-label mb-2">Delivery tickets</p>
+          <p className="wave-micro-label mb-2">Ticket and Bug detail</p>
           <ul className="space-y-2 text-sm">
             {linkedIssues.map((child) => (
               <li key={child.number} className="flex flex-wrap items-center justify-between gap-2">
@@ -111,9 +135,10 @@ export default async function StrategicPdrPage({ searchParams }: { searchParams:
     return <div className="space-y-6"><header className="space-y-2"><p className="wave-micro-label">Strategic PDR</p><h1 className="text-2xl font-semibold">Strategy, delivery and requests</h1></header><Card className="border-destructive/40"><CardHeader><CardTitle>Governance projection unavailable</CardTitle><CardDescription>GitHub is the delivery authority. Its last validated projection is not available in WAVE, so no strategy or delivery relationship is shown.</CardDescription></CardHeader><CardContent><Button asChild variant="outline"><a href={GOVERNANCE_PROJECT_URL} target="_blank" rel="noreferrer">Open GitHub delivery board <ExternalLink className="size-3.5" /></a></Button></CardContent></Card></div>;
   }
 
-  const { projection } = current;
-  const isStale = isGovernanceProjectionStale(projection.snapshotAt);
+  const { projection, lastValidatedAt } = current;
+  const isStale = isGovernanceProjectionStale(lastValidatedAt);
   const productChanges = projection.issues.filter((issue) => issue.kind === "Product Change");
+  const work = summarizeFounderWork(projection);
   const childrenByParent = new Map<number, SafeGovernanceIssue[]>();
   for (const issue of projection.issues) {
     if ((issue.kind === "Ticket" || issue.kind === "Bug") && issue.parentNumber !== null) {
@@ -130,17 +155,18 @@ export default async function StrategicPdrPage({ searchParams }: { searchParams:
         <div className="space-y-2"><p className="wave-micro-label">Strategic PDR</p><h1 className="text-2xl font-semibold">Strategy, delivery and requests</h1><p className="max-w-3xl text-sm text-muted-foreground">WAVE holds request intake and the readable strategic view. GitHub is the authoritative place for current product decisions, delivery status and discussion.</p></div>
         <Button asChild variant="outline"><a href={GOVERNANCE_PROJECT_URL} target="_blank" rel="noreferrer">Open delivery board <ExternalLink className="size-3.5" /></a></Button>
       </div>
-      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground"><span>GitHub revision <code>{projection.sourceCommit.slice(0, 12)}</code></span><span>Registry {projection.registryRevision}</span><span><RefreshCw className="mr-1 inline size-3" />Refreshed {displayDate(projection.snapshotAt)}</span></div>
-      {isStale ? <p className="rounded-md border border-amber-500/40 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">This WAVE projection is stale. Check GitHub before making a delivery decision.</p> : null}
+      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground"><span>Registry source commit <code>{projection.sourceCommit.slice(0, 12)}</code></span><span>Registry {projection.registryRevision}</span><span>Snapshot created {displayDate(projection.snapshotAt)}</span><span><RefreshCw className="mr-1 inline size-3" />Last successful GitHub validation {displayDate(lastValidatedAt)}</span></div>
+      {isStale ? <p className="rounded-md border border-amber-500/40 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">This WAVE projection has not been successfully validated against GitHub in more than 24 hours. Check GitHub before making a delivery decision. A failed refresh does not change the last successful validation time above.</p> : null}
     </header>
 
     <section className="space-y-4" aria-labelledby="strategy-heading">
-      <div><p className="wave-micro-label">Strategy</p><h2 id="strategy-heading" className="text-xl font-semibold">Goal to outcome milestone to Product Change</h2></div>
+      <div><p className="wave-micro-label">Strategy</p><h2 id="strategy-heading" className="text-xl font-semibold">Accepted goals and outcomes</h2><p className="text-sm text-muted-foreground">Outcome Milestones and KPI definitions come from the accepted Strategy Registry. Product release does not establish business achievement.</p></div>
+      <Card><CardHeader><CardTitle>Completed work in this snapshot</CardTitle><CardDescription>Product Changes are counted once. Ticket and Bug progress appears inside each change.</CardDescription></CardHeader><CardContent className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4"><div><p className="wave-micro-label">Completed scope</p><p className="text-2xl font-semibold">{work.completed}</p></div><div><p className="wave-micro-label">Verified in production</p><p className="text-2xl font-semibold">{work.verifiedProduction}</p></div><div><p className="wave-micro-label">Closed, not released</p><p className="text-2xl font-semibold">{work.closedUnreleased}</p></div><div><p className="wave-micro-label">Closure needs evidence</p><p className="text-2xl font-semibold">{work.unverifiedClosures}</p></div><p className="sm:col-span-2 lg:col-span-4 text-muted-foreground">{work.releaseUnknown} completed scope record{work.releaseUnknown === 1 ? " has" : "s have"} no verified release fact. {work.cancelled} cancelled and {work.superseded} superseded changes are outside completed totals.</p></CardContent></Card>
       <div className="space-y-4">
         {projection.registry.goals.map((goal) => {
           const milestones = projection.registry.milestones.filter((item) => item.goalId === goal.id && item.lifecycle === "active");
           return <Card key={goal.id}><CardHeader><CardTitle>{goal.id} · {goal.title}</CardTitle><CardDescription>{goal.statement}</CardDescription></CardHeader><CardContent className="space-y-5">
-            <div className="grid gap-3 lg:grid-cols-2">{goal.kpiIds.map((kpiId) => { const kpi = projection.registry.kpis.find((item) => item.id === kpiId); return kpi ? <div key={kpi.id} className="rounded-md border p-3"><p className="wave-micro-label">{kpi.id} · KPI</p><p className="font-medium">{kpi.title}</p><p className="mt-1 text-sm text-muted-foreground">Actual: unavailable{ kpi.target.value !== null ? ` · target: ${kpi.target.value} ${kpi.unit}` : " · target: unavailable" }</p></div> : null })}</div>
+            <div className="grid gap-3 lg:grid-cols-2">{goal.kpiIds.map((kpiId) => { const kpi = projection.registry.kpis.find((item) => item.id === kpiId); return kpi ? <div key={kpi.id} className="rounded-md border p-3"><p className="wave-micro-label">{kpi.id} · KPI</p><p className="font-medium">{kpi.title}</p><p className="mt-1 text-sm text-muted-foreground">Definition: {kpi.definitionStatus === "accepted" ? "accepted" : "needs approval"} · Actual: unavailable · {kpi.definitionStatus === "accepted" && kpi.target.status === "accepted" && kpi.target.value !== null ? `Accepted target: ${kpi.target.value} ${kpi.unit}` : kpi.target.status === "proposed" ? "Target proposed, not approved" : "Target unavailable"}</p></div> : null })}</div>
             {milestones.map((milestone) => { const changes = productChanges.filter((item) => item.placement.goalId === goal.id && item.placement.milestoneId === milestone.id); return <div key={milestone.id} className="space-y-3 border-t pt-5"><div><p className="wave-micro-label">Outcome milestone · {milestone.id} · {milestone.outcomeState.replaceAll("_", " ")}</p><h3 className="font-medium">{milestone.title}</h3><p className="text-sm text-muted-foreground">{milestone.outcome}</p></div>{changes.length ? changes.map((issue) => <ProductChangeCard key={issue.number} issue={issue} linkedIssues={childrenByParent.get(issue.number) ?? []} />) : <p className="text-sm text-muted-foreground">No current Product Change is mapped to this milestone in the validated projection.</p>}</div> })}
           </CardContent></Card>
         })}

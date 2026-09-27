@@ -6,6 +6,8 @@ import {
 import { refreshGovernanceProjection } from "@/lib/governance-projection/refresh";
 import { createGovernanceProjection } from "@/lib/governance-projection/normalize";
 import { createProjectionOperatorAdapters } from "@/lib/governance-projection/operator-adapters";
+import { isGovernanceProjectionStale } from "@/lib/governance-projection/freshness";
+import { parseFounderReportingMarker } from "@/lib/governance-projection/founder-reporting-marker";
 
 const repo = "re-new-team/renew-governance";
 const source = (): GovernanceSourceModel => ({
@@ -31,6 +33,59 @@ const adapters = () => ({
 });
 
 describe("governance projection refresh seam", () => {
+  it("requires separate exact evidence review before applying a verified release", async () => {
+    const input = adapters();
+    const reported = source();
+    reported.issues.push({
+      number: 23, title: "Completed scope", url: `https://github.com/${repo}/issues/23`, repository: repo,
+      kind: "Product Change", state: "CLOSED", closedAt: "2026-08-30T00:00:00.000Z", stateReason: "COMPLETED",
+      projectStatus: "Done", updatedAt: "2026-08-30T00:00:00.000Z",
+      founderReporting: parseFounderReportingMarker(`<!-- renew-founder-reporting\nschema: 1\nrelease:\n  state: verified\n  commit: ${"b".repeat(40)}\n  released_at: 2026-08-30T00:00:00.000Z\n  verified_at: 2026-08-30T00:01:00.000Z\n  proof_url: https://github.com/${repo}/issues/23#issuecomment-456\n-->`, 23),
+    });
+    input.collect.mockResolvedValue(reported);
+    const preview = await refreshGovernanceProjection(input, { apply: false });
+    expect(preview.evidenceReview).toEqual([expect.objectContaining({ productChange: 23, releaseState: "verified", proofUrl: `https://github.com/${repo}/issues/23#issuecomment-456` })]);
+    await expect(refreshGovernanceProjection(input, { apply: true, confirm: preview.confirmation })).rejects.toThrow("evidence review confirmation");
+    expect(input.currentDigest).not.toHaveBeenCalled();
+    input.readback.mockResolvedValue(preview.digest);
+    await expect(refreshGovernanceProjection(input, { apply: true, confirm: preview.confirmation, evidenceChecked: preview.digest })).resolves.toMatchObject({ applied: true });
+  });
+
+  it("accepts a strategy-only revision, preserves last-good freshness on failure, then recovers", async () => {
+    const first = source();
+    const second = structuredClone(first);
+    second.sourceCommit = "b".repeat(40);
+    second.registry.revision = "2026-09-27-strategy-2";
+    second.snapshotAt = "2026-09-27T00:00:00.000Z";
+    second.retrievedAt = "2026-09-27T00:00:00.000Z";
+    second.issues[1].marker!.approval_keys = ["strategy-registry:2026-09-27-strategy-2"];
+    const firstProjection = createGovernanceProjection(first);
+    let selected = governanceProjectionDigest(firstProjection);
+    let lastValidatedAt = first.retrievedAt;
+    let fail = true;
+    const input = {
+      collect: vi.fn(async () => second),
+      currentDigest: vi.fn(async () => selected),
+      apply: vi.fn(async ({ digest }: { digest: string }) => {
+        if (fail) throw new Error("snapshot apply failed");
+        selected = digest;
+        lastValidatedAt = second.retrievedAt;
+        return { digest, applied: true };
+      }),
+      readback: vi.fn(async () => selected),
+    };
+    const preview = await refreshGovernanceProjection(input, { apply: false });
+    expect(preview.evidenceReview).toEqual([]);
+    expect(preview.digest).not.toBe(selected);
+    await expect(refreshGovernanceProjection(input, { apply: true, confirm: preview.confirmation })).rejects.toThrow("snapshot apply failed");
+    expect(selected).toBe(governanceProjectionDigest(firstProjection));
+    expect(lastValidatedAt).toBe(first.retrievedAt);
+    expect(isGovernanceProjectionStale(lastValidatedAt, Date.parse(lastValidatedAt) + 25 * 60 * 60 * 1000)).toBe(true);
+    fail = false;
+    await expect(refreshGovernanceProjection(input, { apply: true, confirm: preview.confirmation })).resolves.toMatchObject({ applied: true, digest: preview.digest });
+    expect(selected).toBe(preview.digest);
+    expect(lastValidatedAt).toBe(second.retrievedAt);
+  });
   it("dry-runs collection only", async () => {
     const input = adapters();
     const receipt = await refreshGovernanceProjection(input, { apply: false });

@@ -52,7 +52,7 @@ import { generateStrategicPdrScreening, saveStrategicPdrScreening } from "@/lib/
 import { PdrScreeningOutputError } from "@/lib/ai/pdr-screening-output-error"
 
 function form(extra: Record<string, string> = {}) { const value = new FormData(); value.set("request_id", requestId); for (const [key, item] of Object.entries(extra)) value.set(key, item); return value }
-function current(snapshotAt = "2026-08-30T00:00:00.000Z") { return { state: "available", snapshotId, digest: "a".repeat(64), projection: { registryRevision: "r1", snapshotAt, registry: { goals: [{ id: "G-001" }], milestones: [{ id: "M-001", goalId: "G-001", lifecycle: "active" }] }, issues: [{ number: 12, kind: "Product Change" }] } } }
+function current(lastValidatedAt = "2026-08-30T00:00:00.000Z") { return { state: "available", snapshotId, digest: "a".repeat(64), lastValidatedAt, projection: { registryRevision: "r1", snapshotAt: "2026-08-30T00:00:00.000Z", registry: { goals: [{ id: "G-001" }], milestones: [{ id: "M-001", goalId: "G-001", lifecycle: "active" }] }, issues: [{ number: 12, kind: "Product Change" }] } } }
 function request(overrides: Record<string, unknown> = {}) { return { id: requestId, title: "Useful request", originalText: "Original wording must stay only in the canonical request.", provenance: "proposal", intakeProvenance: "wave_staff_v1", requester: { actor: "Staff", userId: "staff-user" }, screening: { status: "draft" }, disposition: { kind: null }, ...overrides } }
 
 beforeEach(() => {

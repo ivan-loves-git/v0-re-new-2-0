@@ -2878,17 +2878,17 @@ export function DevelopmentRoadmap() {
       <div>
         <h2 className="text-xl font-semibold text-foreground">Development Roadmap</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          The complete journey of Wave — from first idea to production
+          Selected historical WAVE development notes. This static archive does not show current delivery or production status.
         </p>
       </div>
 
       {/* Stats summary */}
       <WaveSegmentedSummary>
         {[
-          [roadmapEvents.length, "Milestones"],
-          [productUpdates, "Product updates"],
-          [uxImprovements, "UX improvements"],
-          [validationWork, "QA / audits"],
+          [roadmapEvents.length, "Archive periods"],
+          [productUpdates, "Recorded product updates"],
+          [uxImprovements, "Recorded UX changes"],
+          [validationWork, "Recorded QA / audits"],
         ].map(([value, label]) => (
           <WaveSegmentedMetric key={label} value={value} label={label} />
         ))}
@@ -2924,7 +2924,7 @@ export function DevelopmentRoadmap() {
                       {period.title}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {period.events.length} updates
+                      {period.events.length} archived updates
                       {period.version && (
                         <span className="ml-2 text-[10px] font-mono text-muted-foreground">v{period.version}</span>
                       )}
@@ -2971,7 +2971,7 @@ export function DevelopmentRoadmap() {
       <div className="text-center text-sm text-muted-foreground pt-4 border-t">
         <p className="flex items-center justify-center gap-2">
           <Rocket className="size-4 text-blue-500" />
-          {totalEvents} roadmap updates captured from first idea to the current production build
+          {totalEvents} editorial updates in this historical archive. Check the Strategic PDR and GitHub for current delivery.
         </p>
       </div>
     </div>

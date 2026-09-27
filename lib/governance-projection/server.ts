@@ -14,6 +14,7 @@ export type CurrentGovernanceProjection =
       snapshotId: string;
       digest: string;
       projection: GovernanceProjection;
+      lastValidatedAt: string;
     };
 
 /*function isProjection(value: unknown): value is GovernanceProjection {
@@ -61,7 +62,7 @@ export async function readCurrentGovernanceProjection(): Promise<CurrentGovernan
   const { data, error } = await client
     .from("wave_governance_projection_current_read")
     .select(
-      "snapshot_id, snapshot_digest, payload, validation, retrieved_at, snapshot_at",
+      "snapshot_id, snapshot_digest, payload, validation, retrieved_at, snapshot_at, last_validated_at",
     )
     .eq("projection_key", "current")
     .maybeSingle();
@@ -71,7 +72,10 @@ export async function readCurrentGovernanceProjection(): Promise<CurrentGovernan
   if (
     !projection ||
     typeof data.snapshot_digest !== "string" ||
-    governanceProjectionDigest(projection) !== data.snapshot_digest
+    governanceProjectionDigest(projection) !== data.snapshot_digest ||
+    typeof data.last_validated_at !== "string" ||
+    !Number.isFinite(Date.parse(data.last_validated_at)) ||
+    Date.parse(data.last_validated_at) < Date.parse(projection.retrievedAt)
   )
     return { state: "unavailable", reason: "read_failed" };
   return {
@@ -79,5 +83,6 @@ export async function readCurrentGovernanceProjection(): Promise<CurrentGovernan
     snapshotId: data.snapshot_id as string,
     digest: data.snapshot_digest as string,
     projection,
+    lastValidatedAt: new Date(data.last_validated_at).toISOString(),
   };
 }
