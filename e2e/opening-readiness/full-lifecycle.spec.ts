@@ -1141,6 +1141,13 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(staffEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
     await expect(staffEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
     await page.goForward();
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&returnView=renew-pursuits/);
+
+    // The existing selected-detail history check starts from an unfiltered
+    // direct detail, independently of the filtered-entry Back check above.
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur + "&dealId=" + savedMatch.id);
+    await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    await expect(page).not.toHaveURL(/(?:q|status)=/);
     const staffWorkspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
     await expect(staffWorkspace).toHaveCount(1);
     await page.getByRole("group", { name: "Interface language" }).getByRole("button", { name: "English", exact: true }).click();
