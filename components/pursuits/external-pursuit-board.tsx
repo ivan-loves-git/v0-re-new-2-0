@@ -66,21 +66,15 @@ import {
   type ExternalPursuitInput,
   type ExternalPursuitStage,
 } from "@/lib/types/external-pursuit"
-import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
+import { externalPursuitDueState } from "@/lib/utils/external-pursuit-due-state"
 import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
 import type { MaOfficeIntakeOffice, OpportunityGeographyOption } from "@/lib/types/opportunity"
-
-const STAGE_LABELS: Record<ExternalPursuitStage, string> = {
-  identified: "Identified",
-  contact_qualification: "Contact / qualification",
-  information: "Information",
-  meetings: "Meetings",
-  negotiation: "Negotiation",
-  loi: "LOI",
-  due_diligence_financing: "DD / financing",
-  completed: "Completed",
-  dropped_archived: "Dropped / archived",
-}
+import { useUiLanguage } from "@/components/i18n/ui-text"
+import { uiCopy, uiCopyWith, type UiCopyKey } from "@/lib/i18n/ui-copy"
+import { displayLocale } from "@/lib/i18n/ui-language"
+import type { Language } from "@/lib/i18n/translations"
+import { canonicalJourneyUiLabel, pursuitAvailabilityUiLabel, pursuitDueUiLabel, pursuitStageUiLabel } from "@/lib/i18n/pursuit-labels"
+import { publicPursuitOutcome } from "@/lib/i18n/pursuit-outcomes"
 
 type Draft = Required<Pick<ExternalPursuitInput, "title">> & Omit<ExternalPursuitInput, "title">
 type Confirmation = { kind: "request" | "fulfill"; record: ExternalPursuitBoardRecord }
@@ -113,13 +107,15 @@ function inputNumber(value: string) {
   return value === "" ? null : Number(value)
 }
 
-function externalDetailParts(record: ExternalPursuitBoardRecord) {
+function externalDetailParts(record: ExternalPursuitBoardRecord, language: Language) {
+  const copy = (key: UiCopyKey) => uiCopy(language, key)
+  const number = (value: number) => new Intl.NumberFormat(displayLocale(language), { maximumFractionDigits: 1 }).format(value)
   return [
-    record.targetCompany ? `Target: ${record.targetCompany}` : null,
-    record.sourceChannel ? `Source channel: ${record.sourceChannel}` : null,
-    record.revenueMeur === null ? null : `Revenue: ${record.revenueMeur} M€`,
-    record.ebitdaKeur === null ? null : `EBITDA: ${record.ebitdaKeur} K€`,
-    record.headcount === null ? null : `Headcount: ${record.headcount}`,
+    record.targetCompany ? `${copy("Target:")} ${record.targetCompany}` : null,
+    record.sourceChannel ? `${copy("Source channel:")} ${record.sourceChannel}` : null,
+    record.revenueMeur === null ? null : `${copy("Revenue:")} ${number(record.revenueMeur)} M€`,
+    record.ebitdaKeur === null ? null : `${copy("EBITDA:")} ${number(record.ebitdaKeur)} K€`,
+    record.headcount === null ? null : `${copy("Headcount:")} ${number(record.headcount)}`,
   ].filter((detail): detail is string => Boolean(detail))
 }
 
@@ -154,6 +150,15 @@ export function ExternalPursuitBoard({
   conversionOfficeOptions?: MaOfficeIntakeOffice[]
   conversionGeographyOptions?: OpportunityGeographyOption[]
 }) {
+  const presentationLanguage = useUiLanguage()
+  const actionLanguage: Language = isStaff ? "en" : presentationLanguage
+  const view = (key: UiCopyKey, values?: Record<string, string | number>) =>
+    values ? uiCopyWith(presentationLanguage, key, values) : uiCopy(presentationLanguage, key)
+  const action = (key: UiCopyKey, values?: Record<string, string | number>) =>
+    values ? uiCopyWith(actionLanguage, key, values) : uiCopy(actionLanguage, key)
+  const actionOutcome = (message: unknown, fallback: UiCopyKey) =>
+    isStaff && typeof message === "string" ? message : publicPursuitOutcome(message, actionLanguage, fallback)
+  const managerCopy = isStaff && !readOnly ? action : view
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<ExternalPursuitBoardRecord | null>(null)
   const [draft, setDraft] = useState<Draft>(blankDraft)
@@ -277,7 +282,7 @@ export function ExternalPursuitBoard({
     let snapshot = submissionSnapshotRef.current
     if (!snapshot) {
       if (!draft.title.trim()) {
-        toast.error("Add a title before saving.")
+        toast.error(action("Add a title before saving."))
         return
       }
       if (isStaff && !editing && !ownerId) {
@@ -291,7 +296,7 @@ export function ExternalPursuitBoard({
           contact.clientId,
           "Add a name or organisation, or clear this contact row.",
         ])))
-        toast.error("Complete the highlighted contact rows before saving.")
+        toast.error(action("Complete the highlighted contact rows before saving."))
         return
       }
 
@@ -323,13 +328,13 @@ export function ExternalPursuitBoard({
         if (!result.success || !result.pursuitId) {
           if (result.retryExact) {
             setRecoveryRequired(true)
-            toast.error("The save result is unclear. Retry this unchanged save to recover it safely.")
+            toast.error(action("The save result is unclear. Retry this unchanged save to recover it safely."))
             return
           }
           // A confirmed validation/database rejection did not accept a parent,
           // so this payload may be edited and submitted with a fresh key.
           resetSubmissionRecovery()
-          toast.error(result.message)
+          toast.error(actionOutcome(result.message, "Could not save this dossier. Please try again."))
           return
         }
 
@@ -344,26 +349,26 @@ export function ExternalPursuitBoard({
           )
           if (!contactResult.success) {
             setRecoveryRequired(true)
-            toast.error(contactResult.message)
+            toast.error(actionOutcome(contactResult.message, "Could not save contact."))
             return
           }
         }
 
         captureExternalPursuitCompleted(isStaff ? "staff" : "repreneur", exactSnapshot.pursuitId ? "update" : "submit")
-        toast.success(result.message)
+        toast.success(actionOutcome(result.message, "External Pursuit updated."))
         resetSubmissionRecovery()
         setOpen(false)
         window.location.reload()
       } catch {
         setRecoveryRequired(true)
-        toast.error("The save could not be confirmed. Retry to recover the same operation safely.")
+        toast.error(action("The save could not be confirmed. Retry to recover the same operation safely."))
       }
     })
   }
 
   function changeEditorOpen(nextOpen: boolean) {
     if (!nextOpen && submissionSnapshotRef.current) {
-      toast.error("Finish the unchanged save recovery before closing this editor.")
+      toast.error(action("Finish the unchanged save recovery before closing this editor."))
       return
     }
     setOpen(nextOpen)
@@ -382,14 +387,14 @@ export function ExternalPursuitBoard({
           ? await moveSelectedExternalPursuitStage(selectedOwnerId, selectedOwnerToken, record.id, stage, idempotencyKey)
           : await moveExternalPursuitStage(record.id, stage, idempotencyKey)
         if (!result.success) {
-          toast.error(result.message)
+          toast.error(actionOutcome(result.message, "Could not change the stage. Please try again."))
           return
         }
         captureExternalPursuitCompleted(isStaff ? "staff" : "repreneur", "update")
-        toast.success("Stage updated.")
+        toast.success(action("Stage updated."))
         window.location.reload()
       } catch {
-        toast.error("The stage move could not be confirmed. Retry to recover the same operation safely.")
+        toast.error(action("The stage move could not be confirmed. Retry to recover the same operation safely."))
       }
     })
   }
@@ -407,14 +412,14 @@ export function ExternalPursuitBoard({
           ? await requestExternalPursuitDeletion(record.id, idempotencyKey)
           : await fulfillExternalPursuitDeletion(record.id, idempotencyKey)
         if (!result.success) {
-          toast.error(result.message)
+          toast.error(actionOutcome(result.message, kind === "request" ? "Could not request deletion." : "Could not complete deletion."))
           return
         }
         captureExternalPursuitCompleted(isStaff ? "staff" : "repreneur", "delete")
-        toast.success(result.message)
+        toast.success(actionOutcome(result.message, kind === "request" ? "Deletion requested." : "Could not complete deletion."))
         window.location.reload()
       } catch {
-        toast.error("The deletion action could not be confirmed. Retry to recover the same operation safely.")
+        toast.error(action("The deletion action could not be confirmed. Retry to recover the same operation safely."))
       }
     })
   }
@@ -422,11 +427,11 @@ export function ExternalPursuitBoard({
   return (
     <div className="space-y-5">
       {showExternalBanner && <Alert>
-        <AlertTitle>External pursuits are private dossiers</AlertTitle>
+        <AlertTitle>{view("External pursuits are private dossiers")}</AlertTitle>
         <AlertDescription>
           {isStaff
             ? "External pursuits are private dossiers for their owner and authorised Re-New staff. They are separate from Re-New Deal Flow."
-            : "External pursuits are private dossiers for you and authorised Re-New staff. They are separate from Re-New Deal Flow."}
+            : view("External pursuits are private dossiers for you and authorised Re-New staff. They are separate from Re-New Deal Flow.")}
         </AlertDescription>
       </Alert>}
       {selectedOwnerId && !readOnly ? <p className="text-sm font-medium">Acting as Re-New staff for {selectedOwnerName ?? "the selected repreneur"}. Changes are attributed to your staff account, not to the owner.</p> : null}
@@ -434,24 +439,24 @@ export function ExternalPursuitBoard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {readOnly
-            ? "Selected-owner pursuits retain their separate Re-New journey and external dossier rules."
-            : "Re-New cards are a read-only view of the canonical journey. External cards remain independent dossiers."}
+            ? view("Selected-owner pursuits retain their separate Re-New journey and external dossier rules.")
+            : view("Re-New cards are a read-only view of the canonical journey. External cards remain independent dossiers.")}
         </p>
         {!readOnly ? <Button className="w-full sm:w-auto" onClick={openCreate}>
           <Plus data-icon="inline-start" />
-          New external pursuit
+          {action("New external pursuit")}
         </Button> : null}
       </div>
 
       <Input
-        aria-label="Search pursuits"
+        aria-label={view("Search pursuits")}
         className="max-w-md"
-        placeholder="Search pursuits"
+        placeholder={view("Search pursuits")}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
 
-      <section aria-label="Pursuit board" className="grid gap-4 lg:flex lg:overflow-x-auto lg:pb-2">
+      <section aria-label={view("Pursuit board")} className="grid gap-4 lg:flex lg:overflow-x-auto lg:pb-2">
         {EXTERNAL_PURSUIT_STAGES.map((stage) => {
           const needle = query.trim().toLowerCase()
           const cards = [
@@ -461,8 +466,8 @@ export function ExternalPursuitBoard({
           return (
             <Card key={stage} className="min-w-0 shadow-none lg:w-80 lg:flex-none">
               <CardHeader className="border-b px-4 py-3">
-                <CardTitle className="text-sm">{STAGE_LABELS[stage]}</CardTitle>
-                <CardDescription>{cards.length} item{cards.length === 1 ? "" : "s"}</CardDescription>
+                <CardTitle className="text-sm">{pursuitStageUiLabel(stage, presentationLanguage)}</CardTitle>
+                <CardDescription>{view(cards.length === 1 ? "{count} item" : "{count} items", { count: cards.length })}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 p-3">
                 {cards.length > 0 ? cards.map((record) => (
@@ -483,7 +488,7 @@ export function ExternalPursuitBoard({
                         onFulfill={(selected) => setConfirmation({ kind: "fulfill", record: selected })}
                       />
                     )
-                )) : <p className="py-3 text-center text-sm text-muted-foreground">No pursuits</p>}
+                )) : <p className="py-3 text-center text-sm text-muted-foreground">{view("No pursuits")}</p>}
               </CardContent>
             </Card>
           )
@@ -493,16 +498,16 @@ export function ExternalPursuitBoard({
       <Dialog open={open} onOpenChange={changeEditorOpen}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit external pursuit" : "New external pursuit"}</DialogTitle>
+            <DialogTitle>{action(editing ? "Edit external pursuit" : "New external pursuit")}</DialogTitle>
             <DialogDescription>
-              {editing ? "Only this standalone dossier changes." : "Start with a title; add external context only when it is useful."}
+              {action(editing ? "Only this standalone dossier changes." : "Start with a title; add external context only when it is useful.")}
             </DialogDescription>
           </DialogHeader>
           {recoveryRequired ? (
             <Alert>
-              <AlertTitle>Retry the unchanged save</AlertTitle>
+              <AlertTitle>{action("Retry the unchanged save")}</AlertTitle>
               <AlertDescription>
-                Part of this save may already exist. Fields are locked so the same dossier and contact payload can recover without losing edits or creating duplicates. Make further changes after this exact retry completes and the board reloads.
+                {action("Part of this save may already exist. Fields are locked so the same dossier and contact payload can recover without losing edits or creating duplicates. Make further changes after this exact retry completes and the board reloads.")}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -519,7 +524,7 @@ export function ExternalPursuitBoard({
                 </Select>
               </Field>
             ) : null}
-            <Field id="external-pursuit-title" label="Title">
+            <Field id="external-pursuit-title" label={action("Title")}>
               <Input
                 id="external-pursuit-title"
                 autoFocus
@@ -527,12 +532,13 @@ export function ExternalPursuitBoard({
                 onChange={(event) => patch("title", event.target.value)}
               />
             </Field>
-            <Field id="external-pursuit-availability" label="Availability">
+            <Field id="external-pursuit-availability" label={action("Availability")}>
               <AvailabilitySelect
                 id="external-pursuit-availability"
-                ariaLabel="Availability"
+                ariaLabel={action("Availability")}
                 value={draft.availability ?? "unknown"}
                 onValueChange={(value) => patch("availability", value)}
+                language={actionLanguage}
               />
             </Field>
             <Button
@@ -543,34 +549,34 @@ export function ExternalPursuitBoard({
               aria-expanded={advanced}
               onClick={() => setAdvanced((value) => !value)}
             >
-              {advanced ? "Hide optional context" : "Add optional context"}
+              {action(advanced ? "Hide optional context" : "Add optional context")}
             </Button>
             {advanced ? (
               <div id="external-pursuit-optional-context" className="grid gap-4 sm:grid-cols-2">
-                <Field id="external-pursuit-url" label="External URL">
+                <Field id="external-pursuit-url" label={action("External URL")}>
                   <Input id="external-pursuit-url" type="url" value={draft.externalUrl ?? ""} onChange={(event) => patch("externalUrl", event.target.value || null)} />
                 </Field>
-                <Field id="external-pursuit-company" label="Target company">
+                <Field id="external-pursuit-company" label={action("Target company")}>
                   <Input id="external-pursuit-company" value={draft.targetCompany ?? ""} onChange={(event) => patch("targetCompany", event.target.value || null)} />
                 </Field>
-                <Field id="external-pursuit-source-channel" label="Descriptive source channel">
+                <Field id="external-pursuit-source-channel" label={action("Descriptive source channel")}>
                   <Input id="external-pursuit-source-channel" value={draft.sourceChannel ?? ""} onChange={(event) => patch("sourceChannel", event.target.value || null)} />
                 </Field>
-                <Field id="external-pursuit-revenue" label="Revenue (M€)">
+                <Field id="external-pursuit-revenue" label={action("Revenue (M€)")}>
                   <Input id="external-pursuit-revenue" type="number" min="0" step="0.1" value={draft.revenueMeur ?? ""} onChange={(event) => patch("revenueMeur", inputNumber(event.target.value))} />
                 </Field>
-                <Field id="external-pursuit-ebitda" label="EBITDA (K€)">
+                <Field id="external-pursuit-ebitda" label={action("EBITDA (K€)")}>
                   <Input id="external-pursuit-ebitda" type="number" min="0" step="1" value={draft.ebitdaKeur ?? ""} onChange={(event) => patch("ebitdaKeur", inputNumber(event.target.value))} />
                 </Field>
-                <Field id="external-pursuit-headcount" label="Headcount">
+                <Field id="external-pursuit-headcount" label={action("Headcount")}>
                   <Input id="external-pursuit-headcount" type="number" min="0" step="1" value={draft.headcount ?? ""} onChange={(event) => patch("headcount", inputNumber(event.target.value))} />
                 </Field>
               </div>
             ) : null}
             <div className="space-y-3">
               <div>
-                <p className="text-sm font-medium">Contacts</p>
-                <p className="text-xs text-muted-foreground">Repeatable external contacts. They never create Re-New contact records.</p>
+                <p className="text-sm font-medium">{action("Contacts")}</p>
+                <p className="text-xs text-muted-foreground">{action("Repeatable external contacts. They never create Re-New contact records.")}</p>
               </div>
               {contacts.map((contact, index) => {
                 const errorId = `external-contact-error-${contact.clientId}`
@@ -578,25 +584,25 @@ export function ExternalPursuitBoard({
                 const describedBy = error ? errorId : undefined
                 return (
                   <div className="grid gap-2 rounded-md border p-3 sm:grid-cols-2" key={contact.clientId}>
-                    <Input aria-label={`Contact ${index + 1} name`} aria-invalid={Boolean(error)} aria-describedby={describedBy} placeholder="Name" value={contact.name ?? ""} onChange={(event) => patchContact(contact.clientId, "name", event.target.value)} />
-                    <Input aria-label={`Contact ${index + 1} organisation`} aria-invalid={Boolean(error)} aria-describedby={describedBy} placeholder="Organisation" value={contact.organisation ?? ""} onChange={(event) => patchContact(contact.clientId, "organisation", event.target.value)} />
-                    <Input aria-label={`Contact ${index + 1} role`} placeholder="Role" value={contact.roleTitle ?? ""} onChange={(event) => patchContact(contact.clientId, "roleTitle", event.target.value)} />
-                    <Input aria-label={`Contact ${index + 1} email`} type="email" placeholder="Email" value={contact.email ?? ""} onChange={(event) => patchContact(contact.clientId, "email", event.target.value)} />
-                    <Input aria-label={`Contact ${index + 1} phone`} type="tel" placeholder="Phone" value={contact.phone ?? ""} onChange={(event) => patchContact(contact.clientId, "phone", event.target.value)} />
-                    {error ? <p id={errorId} role="alert" className="text-xs text-destructive sm:col-span-2">{error}</p> : null}
+                    <Input aria-label={action("Contact {number} name", { number: index + 1 })} aria-invalid={Boolean(error)} aria-describedby={describedBy} placeholder={action("Name")} value={contact.name ?? ""} onChange={(event) => patchContact(contact.clientId, "name", event.target.value)} />
+                    <Input aria-label={action("Contact {number} organisation", { number: index + 1 })} aria-invalid={Boolean(error)} aria-describedby={describedBy} placeholder={action("Organisation")} value={contact.organisation ?? ""} onChange={(event) => patchContact(contact.clientId, "organisation", event.target.value)} />
+                    <Input aria-label={action("Contact {number} role", { number: index + 1 })} placeholder={action("Role")} value={contact.roleTitle ?? ""} onChange={(event) => patchContact(contact.clientId, "roleTitle", event.target.value)} />
+                    <Input aria-label={action("Contact {number} email", { number: index + 1 })} type="email" placeholder={action("Email")} value={contact.email ?? ""} onChange={(event) => patchContact(contact.clientId, "email", event.target.value)} />
+                    <Input aria-label={action("Contact {number} phone", { number: index + 1 })} type="tel" placeholder={action("Phone")} value={contact.phone ?? ""} onChange={(event) => patchContact(contact.clientId, "phone", event.target.value)} />
+                    {error ? <p id={errorId} role="alert" className="text-xs text-destructive sm:col-span-2">{action("Add a name or organisation, or clear this contact row.")}</p> : null}
                   </div>
                 )
               })}
               <Button type="button" variant="outline" size="sm" onClick={() => setContacts((current) => [...current, newContactDraft()])}>
                 <Plus data-icon="inline-start" />
-                Add contact
+                {action("Add contact")}
               </Button>
             </div>
           </fieldset>
           <DialogFooter>
-            <Button type="button" variant="outline" disabled={editorLocked} onClick={() => changeEditorOpen(false)}>Cancel</Button>
+            <Button type="button" variant="outline" disabled={editorLocked} onClick={() => changeEditorOpen(false)}>{action("Cancel")}</Button>
             <Button type="button" disabled={pending} onClick={submit}>
-              {pending ? "Saving…" : recoveryRequired ? "Retry unchanged save" : editing ? "Save changes" : "Create pursuit"}
+              {action(pending ? "Saving…" : recoveryRequired ? "Retry unchanged save" : editing ? "Save changes" : "Create pursuit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -604,7 +610,7 @@ export function ExternalPursuitBoard({
 
       <Dialog open={Boolean(managing)} onOpenChange={(nextOpen) => {
         if (!nextOpen && managerLocked) {
-          toast.error("Finish the exact follow-up save recovery before closing this view.")
+          toast.error(action("Finish the exact follow-up save recovery before closing this view."))
           return
         }
         if (!nextOpen) {
@@ -614,9 +620,9 @@ export function ExternalPursuitBoard({
       }}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{managing?.title ?? "External pursuit"}</DialogTitle>
+            <DialogTitle>{managing?.title ?? managerCopy("External pursuit")}</DialogTitle>
             <DialogDescription>
-              Follow-up and private files belong only to this external dossier. They never become Re-New Gate, matching or opportunity evidence.
+              {managerCopy("Follow-up and private files belong only to this external dossier. They never become Re-New Gate, matching or opportunity evidence.")}
             </DialogDescription>
           </DialogHeader>
           {managing ? (
@@ -641,16 +647,16 @@ export function ExternalPursuitBoard({
               ) : (
                 <Card className="shadow-none">
                   <CardHeader>
-                    <CardTitle className="text-base">Follow-up review</CardTitle>
+                    <CardTitle className="text-base">{managerCopy("Follow-up review")}</CardTitle>
                     <CardDescription>{readOnly
-                      ? "Selected-owner context is visible here; staff assistance actions require their own attributed controls."
-                      : "This deletion request is locked. Staff can review the last saved state before fulfilment."}</CardDescription>
+                      ? managerCopy("Selected-owner context is visible here; staff assistance actions require their own attributed controls.")
+                      : managerCopy("This deletion request is locked. Staff can review the last saved state before fulfilment.")}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
-                    <p><span className="font-medium">Next action:</span> {managing.nextAction || "Not recorded"}</p>
-                    <p><span className="font-medium">Responsible:</span> {managing.responsibleParty === "staff" ? "Re-New staff" : managing.responsibleParty === "owner" ? "Owner" : "Not recorded"}</p>
-                    <p><span className="font-medium">Due:</span> {externalPursuitDueStateLabel(externalPursuitDueState(managing.dueAt))}</p>
-                    <p><span className="font-medium">Shared notes:</span> {managing.sharedNotes || "Not recorded"}</p>
+                    <p><span className="font-medium">{managerCopy("Next action:")}</span> {managing.nextAction || managerCopy("Not recorded")}</p>
+                    <p><span className="font-medium">{managerCopy("Responsible:")}</span> {managing.responsibleParty === "staff" ? managerCopy("Re-New staff") : managing.responsibleParty === "owner" ? managerCopy("Owner") : managerCopy("Not recorded")}</p>
+                    <p><span className="font-medium">{managerCopy("Due:")}</span> {pursuitDueUiLabel(externalPursuitDueState(managing.dueAt), isStaff && !readOnly ? actionLanguage : presentationLanguage)}</p>
+                    <p><span className="font-medium">{managerCopy("Shared notes:")}</span> {managing.sharedNotes || managerCopy("Not recorded")}</p>
                     {readOnly ? <PendingContacts contacts={managing.contacts} /> : null}
                     {isStaff && !readOnly && !selectedOwnerId ? <p><span className="font-medium">Staff-only notes:</span> {managing.staffInternalNotes || "Not recorded"}</p> : null}
                   </CardContent>
@@ -659,8 +665,8 @@ export function ExternalPursuitBoard({
               {managerCanConfirm ? (
                 <Card className="shadow-none">
                   <CardHeader>
-                    <CardTitle className="text-base">Confirm current status</CardTitle>
-                    <CardDescription>Use this only after checking that this external dossier is still current. It updates freshness evidence, not the dossier itself.</CardDescription>
+                    <CardTitle className="text-base">{managerCopy("Confirm current status")}</CardTitle>
+                    <CardDescription>{managerCopy("Use this only after checking that this external dossier is still current. It updates freshness evidence, not the dossier itself.")}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ExternalPursuitConfirmCurrentButton
@@ -704,22 +710,22 @@ export function ExternalPursuitBoard({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmation?.kind === "fulfill" ? `Permanently delete “${confirmation.record.title}”?` : `Request deletion of “${confirmation?.record.title}”?`}
+              {confirmation?.kind === "fulfill" ? `Permanently delete “${confirmation.record.title}”?` : action("Request deletion of “{title}”?", { title: confirmation?.record.title ?? "" })}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmation?.kind === "fulfill"
                 ? "This staff action irreversibly purges the dossier, contacts and ordinary audit after your review. Only the minimal deletion tombstone remains."
-                : "The dossier will immediately disappear from your board and remain visible to authorised Re-New staff until they review and fulfil the request."}
+                : action("The dossier will immediately disappear from your board and remain visible to authorised Re-New staff until they review and fulfil the request.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{action("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={pending}
               onClick={confirmDeletion}
             >
-              {confirmation?.kind === "fulfill" ? "Permanently delete" : "Request deletion"}
+              {confirmation?.kind === "fulfill" ? "Permanently delete" : action("Request deletion")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -737,17 +743,19 @@ function StageSelect({
   ariaLabel,
   value,
   onValueChange,
+  language = "en",
 }: {
   id: string
   ariaLabel: string
   value: ExternalPursuitStage
   onValueChange: (value: ExternalPursuitStage) => void
+  language?: Language
 }) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger id={id} aria-label={ariaLabel}><SelectValue /></SelectTrigger>
       <SelectContent>
-        {EXTERNAL_PURSUIT_STAGES.map((stage) => <SelectItem key={stage} value={stage}>{STAGE_LABELS[stage]}</SelectItem>)}
+        {EXTERNAL_PURSUIT_STAGES.map((stage) => <SelectItem key={stage} value={stage}>{pursuitStageUiLabel(stage, language)}</SelectItem>)}
       </SelectContent>
     </Select>
   )
@@ -758,11 +766,13 @@ function AvailabilitySelect({
   ariaLabel,
   value,
   onValueChange,
+  language = "en",
 }: {
   id: string
   ariaLabel: string
   value: ExternalPursuitAvailability
   onValueChange: (value: ExternalPursuitAvailability) => void
+  language?: Language
 }) {
   return (
     <Select value={value} onValueChange={onValueChange}>
@@ -770,7 +780,7 @@ function AvailabilitySelect({
       <SelectContent>
         {EXTERNAL_PURSUIT_AVAILABILITY.map((availability) => (
           <SelectItem key={availability} value={availability}>
-            {availability[0].toUpperCase() + availability.slice(1)}
+            {pursuitAvailabilityUiLabel(availability, language)}
           </SelectItem>
         ))}
       </SelectContent>
@@ -779,24 +789,28 @@ function AvailabilitySelect({
 }
 
 function ReNewCard({ record, isStaff }: { record: ReNewPursuitBoardRecord; isStaff: boolean }) {
+  const language = useUiLanguage()
+  const view = (key: UiCopyKey, values?: Record<string, string | number>) =>
+    values ? uiCopyWith(language, key, values) : uiCopy(language, key)
   return (
     <article className="space-y-2 rounded-md border bg-muted/25 p-3">
-      <Badge variant="outline">Re-New · read-only</Badge>
+      <Badge variant="outline">{view("Re-New · read-only")}</Badge>
       <h3 className="font-medium leading-snug">{record.title}</h3>
-      <p className="text-xs text-muted-foreground">Canonical journey: {record.canonicalJourney.replaceAll("_", " ")}</p>
-      {record.stageProvenance === "staff_confirmed_history" ? <p className="text-xs text-muted-foreground">Progress confirmed by Re-New. Document access remains separately verified.</p> : null}
+      <p className="text-xs text-muted-foreground">{view("Canonical journey: {journey}", { journey: canonicalJourneyUiLabel(record.canonicalJourney, language) })}</p>
+      {record.stageProvenance === "staff_confirmed_history" ? <p className="text-xs text-muted-foreground">{view("Progress confirmed by Re-New. Document access remains separately verified.")}</p> : null}
       <Button asChild variant="link" size="sm" className="h-auto p-0">
-        <Link href={record.href}>{isStaff ? "Open canonical journey" : "See opportunity"} <ExternalLink data-icon="inline-end" /></Link>
+        <Link href={record.href}>{view(isStaff ? "Open canonical journey" : "See opportunity")} <ExternalLink data-icon="inline-end" /></Link>
       </Button>
     </article>
   )
 }
 
 function PendingContacts({ contacts }: { contacts: ExternalPursuitContactInput[] }) {
-  if (contacts.length === 0) return <p className="text-xs text-muted-foreground">Contacts not added</p>
+  const language = useUiLanguage()
+  if (contacts.length === 0) return <p className="text-xs text-muted-foreground">{uiCopy(language, "Contacts not added")}</p>
   return (
     <div className="space-y-1 text-xs">
-      <p className="font-medium">Contacts</p>
+      <p className="font-medium">{uiCopy(language, "Contacts")}</p>
       <ul className="space-y-1 text-muted-foreground">
         {contacts.map((contact) => (
           <li key={contact.id}>
@@ -831,8 +845,14 @@ function ExternalCard({
   onDelete: (record: ExternalPursuitBoardRecord) => void
   onFulfill: (record: ExternalPursuitBoardRecord) => void
 }) {
+  const presentationLanguage = useUiLanguage()
+  const controlLanguage: Language = isStaff ? "en" : presentationLanguage
+  const view = (key: UiCopyKey, values?: Record<string, string | number>) =>
+    values ? uiCopyWith(presentationLanguage, key, values) : uiCopy(presentationLanguage, key)
+  const control = (key: UiCopyKey, values?: Record<string, string | number>) =>
+    values ? uiCopyWith(controlLanguage, key, values) : uiCopy(controlLanguage, key)
   const deleteRequested = record.deletionStatus === "delete_requested"
-  const details = externalDetailParts(record)
+  const details = externalDetailParts(record, presentationLanguage)
   const hasOptionalDetails = details.length > 0 || Boolean(record.externalUrl)
   const stageId = `external-pursuit-stage-${record.id}`
   const dueState = externalPursuitDueState(record.dueAt)
@@ -840,57 +860,58 @@ function ExternalCard({
   return (
     <article className="space-y-3 rounded-md border bg-card p-3">
       <div className="flex items-start justify-between gap-2">
-        <Badge variant="secondary">External</Badge>
+        <Badge variant="secondary">{view("External")}</Badge>
         {isStaff && record.ownerName ? <span className="text-xs text-muted-foreground">{record.ownerName}</span> : null}
       </div>
       <h3 className="font-medium leading-snug">{record.title}</h3>
-      <p className="text-xs text-muted-foreground">Availability: {record.availability}</p>
+      <p className="text-xs text-muted-foreground">{view("Availability: {availability}", { availability: presentationLanguage === "fr" ? pursuitAvailabilityUiLabel(record.availability, presentationLanguage) : record.availability })}</p>
       <div className="flex flex-wrap gap-2">
-        <Badge variant="outline"><CalendarClock className="size-3" /> {externalPursuitDueStateLabel(dueState)}</Badge>
-        <Badge variant="outline"><Paperclip className="size-3" /> Private files</Badge>
+        <Badge variant="outline"><CalendarClock className="size-3" /> {pursuitDueUiLabel(dueState, presentationLanguage)}</Badge>
+        <Badge variant="outline"><Paperclip className="size-3" /> {view("Private files")}</Badge>
       </div>
-      {record.nextAction ? <p className="text-xs"><span className="font-medium">Next:</span> {record.nextAction}</p> : null}
+      {record.nextAction ? <p className="text-xs"><span className="font-medium">{view("Next:")}</span> {record.nextAction}</p> : null}
       {hasOptionalDetails ? (
         <div className="space-y-1 text-xs text-muted-foreground">
           {details.length > 0 ? <p>{details.join(" · ")}</p> : null}
           {record.externalUrl ? (
             <a className="inline-flex items-center gap-1 underline" href={record.externalUrl} rel="noreferrer" target="_blank">
-              Open external link <ExternalLink className="size-3" />
+              {view("Open external link")} <ExternalLink className="size-3" />
             </a>
           ) : null}
         </div>
-      ) : <p className="text-xs text-muted-foreground">Optional details not added</p>}
+      ) : <p className="text-xs text-muted-foreground">{view("Optional details not added")}</p>}
       <p className="text-xs text-muted-foreground">
-        {record.contacts.length === 0 ? "Contacts not added" : `${record.contacts.length} contact${record.contacts.length === 1 ? "" : "s"}`}
+        {record.contacts.length === 0 ? view("Contacts not added") : view(record.contacts.length === 1 ? "{count} contact" : "{count} contacts", { count: record.contacts.length })}
       </p>
 
       {readOnly ? (
-        <Button size="sm" variant="outline" onClick={() => onManage(record)}>View dossier and files</Button>
+        <Button size="sm" variant="outline" onClick={() => onManage(record)}>{view("View dossier and files")}</Button>
       ) : deleteRequested ? (
         <>
           <p className="text-sm text-warning">{allowStaffFulfillDeletion
             ? "Deletion requested. Staff can review the dossier and fulfil the purge."
-            : "Deletion requested. This dossier is locked in the selected-owner portal view."}</p>
+            : view("Deletion requested. This dossier is locked in the selected-owner portal view.")}</p>
           {isStaff ? <PendingContacts contacts={record.contacts} /> : null}
         </>
       ) : (
         <>
           <div className="grid gap-1">
-            <Label htmlFor={stageId} className="text-xs text-muted-foreground">Move stage</Label>
+            <Label htmlFor={stageId} className="text-xs text-muted-foreground">{control("Move stage")}</Label>
             <StageSelect
               id={stageId}
-              ariaLabel={`Move ${record.title} stage`}
+              ariaLabel={control("Move {title} stage", { title: record.title })}
               value={record.stage}
               onValueChange={(stage) => onMove(record, stage)}
+              language={controlLanguage}
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" disabled={pending} onClick={() => onEdit(record)}>Edit</Button>
-            <Button size="sm" variant="outline" disabled={pending} onClick={() => onManage(record)}>Follow-up &amp; files</Button>
+            <Button size="sm" variant="outline" disabled={pending} onClick={() => onEdit(record)}>{control("Edit")}</Button>
+            <Button size="sm" variant="outline" disabled={pending} onClick={() => onManage(record)}>{control("Follow-up & files")}</Button>
             {!isStaff ? (
               <Button size="sm" variant="ghost" disabled={pending} onClick={() => onDelete(record)}>
                 <Trash2 data-icon="inline-start" />
-                Request deletion
+                {control("Request deletion")}
               </Button>
             ) : null}
           </div>

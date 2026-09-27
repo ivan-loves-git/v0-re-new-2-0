@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
+import { uiCopy } from "@/lib/i18n/ui-copy"
 
 function source(relativePath: string) {
   return fs.readFileSync(path.join(process.cwd(), relativePath), "utf8")
@@ -26,7 +27,10 @@ describe("password reset page contract", () => {
   })
 
   it("uses one privacy-safe recovery state for bad or consumed links", () => {
-    expect(form).toContain("invalide, a expire ou a deja ete utilise")
+    const message = "This password reset link is invalid, expired, or has already been used. Request a new link to continue."
+    expect(form).toContain(`u(portalSetup ? "This access link is invalid, expired, or already used. Request a new link to continue." : "${message}")`)
+    expect(uiCopy("fr", message)).toContain("invalide, expiré ou déjà utilisé")
+    expect(uiCopy("en", message)).toBe(message)
     expect(form).toContain(
       'const recoveryHref = portalSetup\n    ? "/auth/forgot-password?intent=portal"',
     )
@@ -49,7 +53,9 @@ describe("password reset page contract", () => {
     expect(form).toContain('cache: "no-store"')
     expect(form).toContain('referrerPolicy: "no-referrer"')
     expect(form).toContain('result.error.code === "INVALID_TOKEN"')
-    expect(form).toContain("Impossible de terminer maintenant")
+    const failure = "We couldn't finish the password reset. Please try again in a moment."
+    expect(form).toContain(`setError("${failure}")`)
+    expect(uiCopy("fr", failure)).toContain("Impossible de terminer la réinitialisation")
     expect(form).not.toContain("result.error.message")
   })
 
@@ -58,7 +64,9 @@ describe("password reset page contract", () => {
     expect(recovery).toContain(
       'redirectTo: portalSetup\n          ? "/auth/reset-password?intent=portal"',
     )
-    expect(recovery).toContain("Si cette adresse est associee")
+    const receipt = "If this address is linked to Re-New access, a new link has been sent."
+    expect(recovery).toContain(`u(portalSetup ? "${receipt}"`)
+    expect(uiCopy("fr", receipt)).toContain("Si cette adresse est liée à un accès Re-New")
     expect(recovery).not.toContain("result.error.message")
     expect(recovery).not.toContain("err?.message")
   })

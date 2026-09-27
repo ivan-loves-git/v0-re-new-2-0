@@ -77,6 +77,23 @@ if [[ -f "$working_dir/pursuit-handoffs.json" ]]; then
      e8: {memoApproval: (.e8.memoApproval|flag), completed: (.e8.completed|flag)}}' "$working_dir/pursuit-handoffs.json")
 fi
 
+language_summary='null'
+if [[ -f "$working_dir/repreneur-ui-language.json" ]]; then
+  language_summary=$(jq -ce '
+    def flag: if type == "boolean" then . else error("expected aggregate boolean") end;
+    {
+      defaultFrench: (.defaultFrench|flag),
+      accountPrecedenceAcrossContexts: (.accountPrecedenceAcrossContexts|flag),
+      accountIsolation: (.accountIsolation|flag),
+      livePortalSwitch: (.livePortalSwitch|flag),
+      publicFormAndFileRetained: (.publicFormAndFileRetained|flag),
+      resetTokenRetained: (.resetTokenRetained|flag),
+      previewNoCustomerWrite: (.previewNoCustomerWrite|flag),
+      staffChromeEnglish: (.staffChromeEnglish|flag),
+      desktopAndMobile: (.desktopAndMobile|flag)
+    }' "$working_dir/repreneur-ui-language.json")
+fi
+
 teardown_summary='null'
 if [[ -f "$working_dir/teardown.json" ]]; then
   teardown_summary=$(jq -ce '
@@ -104,5 +121,6 @@ jq -n \
   --argjson access "$access_summary" \
   --argjson teardown "$teardown_summary" \
   --argjson handoffs "$handoff_summary" \
-  '{releaseSha: $releaseSha, artifactPolicy: "aggregate-safe allowlist only", accessUat: $access, pursuitHandoffs: $handoffs, teardown: $teardown}' \
+  --argjson language "$language_summary" \
+  '{releaseSha: $releaseSha, artifactPolicy: "aggregate-safe allowlist only", accessUat: $access, pursuitHandoffs: $handoffs, uiLanguage: $language, teardown: $teardown}' \
   > "$published_dir/aggregate-summary.json"

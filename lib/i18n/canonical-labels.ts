@@ -63,7 +63,9 @@ export function sectorUiLabel(value: string, language: Language) {
 }
 
 export function geographyUiLabel(value: string, language: Language) {
-  return geography[value]?.[language] ?? value
+  return geography[value]?.[language]
+    ?? Object.values(geography).find((entry) => entry.fr === value || entry.en === value)?.[language]
+    ?? value
 }
 
 export function milestoneUiLabel(key: string, originalEnglish: string, language: Language) {

@@ -21,6 +21,7 @@ vi.mock("@/lib/actions/external-pursuit-attachments", () => ({
 import { ExternalPursuitBoard } from "@/components/pursuits/external-pursuit-board"
 import { StaffPursuitsWorkspace } from "@/components/pursuits/staff-pursuits-workspace"
 import type { ExternalPursuitBoardRecord } from "@/lib/types/external-pursuit"
+import { LanguageProvider } from "@/lib/i18n/language-context"
 
 function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursuitBoardRecord {
   return {
@@ -49,6 +50,35 @@ function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursu
 }
 
 describe("ExternalPursuitBoard component", () => {
+  it("localizes the owner board while keeping original dossier text and stable stage values", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "fr" },
+      createElement(ExternalPursuitBoard, {
+        external: [external({ title: "Original Dossier", nextAction: "Original next action" })],
+        renew: [], isStaff: false,
+      }),
+    ))
+    expect(html).toContain("Vos dossiers de reprise externes sont privés")
+    expect(html).toContain("Identifiée")
+    expect(html).toContain("Original Dossier")
+    expect(html).toContain("Original next action")
+    expect(html).toContain('aria-label="Changer l’étape de Original Dossier"')
+    expect(html).toContain("Aucun dossier")
+  })
+
+  it("localizes previewed dossier facts while staff assistance controls remain English", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "fr", scope: "preview" },
+      createElement(ExternalPursuitBoard, {
+        external: [external({ title: "Original Dossier" })],
+        renew: [], isStaff: true, selectedOwnerId: "owner-1", selectedOwnerToken: "synthetic-token",
+      }),
+    ))
+    expect(html).toContain("Identifiée")
+    expect(html).toContain("Disponibilité : Disponibilité inconnue")
+    expect(html).toContain("Original Dossier")
+    expect(html).toContain('aria-label="Move Original Dossier stage"')
+    expect(html).toContain(">Edit</button>")
+  })
+
   it("retains the External workspace and its canonical context alongside the default staff macro-board", () => {
     const html = renderToStaticMarkup(createElement(StaffPursuitsWorkspace, {
       external: [external({})], renew: [],

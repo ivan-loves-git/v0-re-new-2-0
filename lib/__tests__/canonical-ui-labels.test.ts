@@ -12,6 +12,7 @@ describe("canonical display labels", () => {
     expect(sectorUiLabel("Custom niche", "fr")).toBe("Custom niche")
     expect(sectorUiLabel("Custom niche", "en")).toBe("Custom niche")
     expect(geographyUiLabel("Custom region", "en")).toBe("Custom region")
+    expect(geographyUiLabel("Bretagne", "en")).toBe("Brittany")
     expect(thesisOptionUiLabel("legacy", "Original custom label", "en")).toBe("Original custom label")
   })
 })

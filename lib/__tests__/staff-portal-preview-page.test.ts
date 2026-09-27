@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   listExternal: vi.fn(),
   getAttachments: vi.fn(),
   readJourney: vi.fn(),
+  previewLanguage: vi.fn(),
 }))
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
@@ -23,6 +24,7 @@ vi.mock("@/lib/actions/external-pursuit-attachments", () => ({
   getExternalPursuitAttachmentMap: mocks.getAttachments,
 }))
 vi.mock("@/lib/data/current-pursuit", () => ({ readPortalCurrentPursuit: mocks.readJourney }))
+vi.mock("@/lib/i18n/server-language", () => ({ previewUiLanguage: mocks.previewLanguage }))
 
 import StaffPortalPreviewPage from "@/app/(dashboard)/portal-preview/page"
 
@@ -41,6 +43,7 @@ describe("staff Tools portal page", () => {
     mocks.listExternal.mockResolvedValue([])
     mocks.getAttachments.mockResolvedValue({})
     mocks.readJourney.mockResolvedValue(null)
+    mocks.previewLanguage.mockResolvedValue("en")
   })
 
   it("shows the exact selected person's deal count and authenticated staff identity", async () => {
@@ -63,5 +66,20 @@ describe("staff Tools portal page", () => {
     expect(html).toContain("Repreneur not found")
     expect(mocks.listOpportunities).not.toHaveBeenCalled()
     expect(mocks.readJourney).not.toHaveBeenCalled()
+  })
+
+  it("shows a French customer subtree while staff identity and preview chrome remain English", async () => {
+    mocks.previewLanguage.mockResolvedValue("fr")
+    const page = await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId }) })
+    const html = renderToStaticMarkup(page)
+    expect(html).toContain("Portal preview")
+    expect(html).toContain("Signed in as staff: Staff Person")
+    expect(html).toContain('class="contents" lang="fr"')
+    expect(html).toContain("Customer-content preview language")
+    expect(html).toContain("Opportunités disponibles")
+    expect(html).toContain('>Deals</button>')
+    expect(html).toContain('>Profile</button>')
+    expect(html).not.toContain('>Opportunités</button>')
+    expect(html).toContain("Safe live one")
   })
 })

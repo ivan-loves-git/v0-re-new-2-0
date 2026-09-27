@@ -168,6 +168,11 @@ function normalizeExposure(
       opportunity.date_added,
       opportunity.date_added_precision,
     ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
+    ),
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)

@@ -34,7 +34,7 @@ import { useUiCopy, useUiLanguage } from "@/components/i18n/ui-text"
 import { uiCopy, type UiCopyKey } from "@/lib/i18n/ui-copy"
 import { displayLocale } from "@/lib/i18n/ui-language"
 import { matchStatusUiLabel } from "@/lib/i18n/deal-labels"
-import { sectorUiLabel } from "@/lib/i18n/canonical-labels"
+import { geographyUiLabel, sectorUiLabel } from "@/lib/i18n/canonical-labels"
 import type { Language } from "@/lib/i18n/translations"
 
 type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
@@ -144,12 +144,13 @@ export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportun
     .map(({ value, label, nodeLevel, parentLabel, equivalentValues }) => {
       const isDuplicate = duplicateLabels.has(label.trim().toLocaleLowerCase("fr-FR"))
       const aliases = equivalentValues?.length ? { equivalentValues } : {}
-      if (!isDuplicate) return { value, label, ...aliases }
+      const displayLabel = geographyUiLabel(label, language)
+      if (!isDuplicate) return { value, label: displayLabel, ...aliases }
       const context = nodeLevel
-        ? parentLabel ? `${levelLabel[nodeLevel]} · ${parentLabel}` : levelLabel[nodeLevel]
-        : parentLabel ? `Parent · ${parentLabel}` : null
-      if (!context) return { value, label, ...aliases }
-      return { value, label: `${label} — ${context}`, ...aliases }
+        ? parentLabel ? `${levelLabel[nodeLevel]} · ${geographyUiLabel(parentLabel, language)}` : levelLabel[nodeLevel]
+        : parentLabel ? `Parent · ${geographyUiLabel(parentLabel, language)}` : null
+      if (!context) return { value, label: displayLabel, ...aliases }
+      return { value, label: `${displayLabel} — ${context}`, ...aliases }
     })
 }
 
@@ -233,8 +234,8 @@ export function DealRangeFilters({
         <fieldset className="grid gap-1.5">
           <legend className="text-xs font-medium text-muted-foreground">{u("Revenue (M EUR)")}</legend>
           <div className="grid grid-cols-2 gap-2">
-            <Input aria-label={u("Minimum revenue")} inputMode="decimal" min="0" type="number" value={filters.revenueMin} onChange={(event) => onChange("revenueMin", event.target.value)} placeholder="Min" />
-            <Input aria-label={u("Maximum revenue")} inputMode="decimal" min="0" type="number" value={filters.revenueMax} onChange={(event) => onChange("revenueMax", event.target.value)} placeholder="Max" />
+            <Input aria-label={u("Minimum revenue")} inputMode="decimal" min="0" type="number" value={filters.revenueMin} onChange={(event) => onChange("revenueMin", event.target.value)} placeholder={u("Min")} />
+            <Input aria-label={u("Maximum revenue")} inputMode="decimal" min="0" type="number" value={filters.revenueMax} onChange={(event) => onChange("revenueMax", event.target.value)} placeholder={u("Max")} />
           </div>
         </fieldset>
         <label className="grid gap-1.5">
@@ -244,8 +245,8 @@ export function DealRangeFilters({
         <fieldset className="grid gap-1.5">
           <legend className="text-xs font-medium text-muted-foreground">{u("Employees")}</legend>
           <div className="grid grid-cols-2 gap-2">
-            <Input aria-label={u("Minimum employees")} inputMode="numeric" min="0" type="number" value={filters.employeesMin} onChange={(event) => onChange("employeesMin", event.target.value)} placeholder="Min" />
-            <Input aria-label={u("Maximum employees")} inputMode="numeric" min="0" type="number" value={filters.employeesMax} onChange={(event) => onChange("employeesMax", event.target.value)} placeholder="Max" />
+            <Input aria-label={u("Minimum employees")} inputMode="numeric" min="0" type="number" value={filters.employeesMin} onChange={(event) => onChange("employeesMin", event.target.value)} placeholder={u("Min")} />
+            <Input aria-label={u("Maximum employees")} inputMode="numeric" min="0" type="number" value={filters.employeesMax} onChange={(event) => onChange("employeesMax", event.target.value)} placeholder={u("Max")} />
           </div>
         </fieldset>
       </div>

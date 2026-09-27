@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const boundary = vi.hoisted(() => ({
   browserValue: "en" as string | null,
+  previewValue: null as string | null,
   rows: new Map<string, string>(),
   from: vi.fn(),
 }))
@@ -9,7 +10,9 @@ const boundary = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}))
 vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => name === "renew-language" && boundary.browserValue
-    ? { value: boundary.browserValue } : undefined }),
+    ? { value: boundary.browserValue }
+    : name === "renew-preview-language" && boundary.previewValue
+      ? { value: boundary.previewValue } : undefined }),
 }))
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
@@ -17,11 +20,12 @@ vi.mock("@/lib/supabase/admin", () => ({
   }),
 }))
 
-import { anonymousUiLanguage, resolvedRepreneurUiLanguage } from "@/lib/i18n/server-language"
+import { anonymousUiLanguage, previewUiLanguage, resolvedRepreneurUiLanguage } from "@/lib/i18n/server-language"
 
 describe("server-resolved repreneur language", () => {
   beforeEach(() => {
     boundary.browserValue = "en"
+    boundary.previewValue = null
     boundary.rows = new Map()
     boundary.from.mockReset()
     boundary.from.mockImplementation(() => ({
@@ -49,5 +53,15 @@ describe("server-resolved repreneur language", () => {
     expect(await resolvedRepreneurUiLanguage("auth-user-b")).toEqual({
       accountLanguage: null, language: "fr",
     })
+  })
+
+  it("resolves preview independently without reading an account preference", async () => {
+    boundary.previewValue = "fr"
+    expect(await previewUiLanguage()).toBe("fr")
+    boundary.previewValue = "en"
+    expect(await previewUiLanguage()).toBe("en")
+    boundary.previewValue = null
+    expect(await previewUiLanguage()).toBe("fr")
+    expect(boundary.from).not.toHaveBeenCalled()
   })
 })
