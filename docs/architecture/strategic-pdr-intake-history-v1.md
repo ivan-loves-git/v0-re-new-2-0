@@ -1,5 +1,7 @@
 # Strategic PDR intake and history v1
 
+> **Historical contract.** [Decision #210](https://github.com/re-new-team/renew-governance/issues/210) supersedes this active intake model. The #212 build candidate removes the WAVE application surfaces; [the retirement and archive contract](strategic-pdr-retirement-v1.md) owns the proposed replacement. Production activation and real archive proof remain held by #214. Do not run the cutover commands below as current delivery instructions.
+
 Ticket #43 keeps PDR-owned evidence inside authenticated WAVE without making
 PDR a delivery system again. GitHub remains the authority for Product Changes,
 Decisions, Tickets, discussion and delivery state.

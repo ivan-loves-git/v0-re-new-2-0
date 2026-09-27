@@ -15,9 +15,9 @@ import { startWaveAiRun } from "@/lib/ai/ledger"
 
 const base = {
   actorUserId: "staff-user",
-  feature: "pdr_screening" as const,
-  workflow: "pdr_screening_preview",
-  surface: "/strategic-pdr/requests",
+  feature: "email_draft" as const,
+  workflow: "draft",
+  surface: "/emails",
 }
 
 beforeEach(() => { state.payloads = [] })
@@ -28,8 +28,4 @@ describe("WAVE AI ledger reasoning effort", () => {
     expect(state.payloads).toEqual([expect.objectContaining({ reasoning_effort: "max" })])
   })
 
-  it("records an explicit PDR-scoped effort instead of the global default", async () => {
-    await startWaveAiRun({ ...base, reasoningEffort: "low" })
-    expect(state.payloads).toEqual([expect.objectContaining({ reasoning_effort: "low" })])
-  })
 })
