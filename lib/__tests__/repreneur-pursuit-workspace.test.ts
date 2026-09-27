@@ -2,7 +2,7 @@ import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 import { LanguageProvider } from "@/lib/i18n/language-context"
-import { RepreneurPursuitWorkspace, currentWorkspaceAction, filterWorkspaceDeals, type SidebarDeal } from "@/components/portal/repreneur-pursuit-workspace"
+import { RepreneurPursuitWorkspace, currentWorkspaceAction, filterWorkspaceDeals, nextWorkspaceResponseRefreshDelay, type SidebarDeal } from "@/components/portal/repreneur-pursuit-workspace"
 import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity"
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
@@ -37,6 +37,15 @@ describe("repreneur pursuit workspace", () => {
     expect(currentWorkspaceAction(timed, "respond", "2026-09-27T11:59:59Z")).toBe("respond")
     expect(currentWorkspaceAction(timed, "respond", "2026-09-27T12:00:00Z")).toBeNull()
     expect(currentWorkspaceAction(timed, null, "2026-09-27T11:59:59Z")).toBeNull()
+  })
+
+  it("does not extend a proposal window when same-route refreshed props rerun the timer", () => {
+    const timed = { ...deals[0], recommendation_expires_at: "2026-09-27T12:00:00Z" }
+    const actionSnapshot = "2026-09-27T11:00:00Z"
+    const actions = { "own-match": "respond" as const }
+    expect(nextWorkspaceResponseRefreshDelay([timed], actions, actionSnapshot, Date.parse("2026-09-27T11:30:00Z"))).toBe(30 * 60_000 + 20)
+    expect(nextWorkspaceResponseRefreshDelay([timed], actions, actionSnapshot, Date.parse("2026-09-27T12:00:01Z"))).toBe(0)
+    expect(nextWorkspaceResponseRefreshDelay([timed], {}, actionSnapshot, Date.parse("2026-09-27T11:30:00Z"))).toBeNull()
   })
 
   it("renders the selected safe detail, current action and approved original text", () => {

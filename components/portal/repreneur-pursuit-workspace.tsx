@@ -41,6 +41,17 @@ export function currentWorkspaceAction(deal: SidebarDeal, action: PortalDealActi
     ? null : action ?? null
 }
 
+export function nextWorkspaceResponseRefreshDelay(
+  deals: SidebarDeal[], actions: Record<string, PortalDealAction>, actionNow: string, currentTime: number,
+): number | null {
+  const nextExpiry = deals.reduce((earliest, deal) => {
+    if (actions[deal.match_id] !== "respond" || !deal.recommendation_expires_at) return earliest
+    const expiry = Date.parse(deal.recommendation_expires_at)
+    return Number.isFinite(expiry) && expiry > Date.parse(actionNow) ? Math.min(earliest, expiry) : earliest
+  }, Infinity)
+  return Number.isFinite(nextExpiry) ? Math.max(0, nextExpiry - currentTime + 20) : null
+}
+
 export function filterWorkspaceDeals<T extends SidebarDeal>(deals: T[], query: string, status: StatusFilter): T[] {
   const needle = query.trim().toLowerCase()
   return deals.filter((deal) => {
@@ -129,13 +140,9 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
     return () => document.removeEventListener("visibilitychange", onVisibility)
   }, [])
   useEffect(() => {
-    const nextExpiry = deals.reduce((earliest, deal) => {
-      if (actions[deal.match_id] !== "respond" || !deal.recommendation_expires_at) return earliest
-      const expiry = Date.parse(deal.recommendation_expires_at)
-      return Number.isFinite(expiry) && expiry > Date.parse(actionNow) ? Math.min(earliest, expiry) : earliest
-    }, Infinity)
-    if (!Number.isFinite(nextExpiry)) return
-    const timer = window.setTimeout(() => setActionNow(new Date().toISOString()), Math.max(0, nextExpiry - Date.parse(actionNow) + 20))
+    const delay = nextWorkspaceResponseRefreshDelay(deals, actions, actionNow, Date.now())
+    if (delay === null) return
+    const timer = window.setTimeout(() => setActionNow(new Date().toISOString()), delay)
     return () => window.clearTimeout(timer)
   }, [actionNow, actions, deals])
   const searched = useMemo(() => filterWorkspaceDeals(deals, query, "all"), [deals, query])
