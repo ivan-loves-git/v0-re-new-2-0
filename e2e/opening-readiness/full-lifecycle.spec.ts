@@ -1113,7 +1113,11 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       .getByRole("link", { name: /QA LIFECYCLE REAL/ }).click();
     await realPage.goBack();
     await realPage.goForward();
-    await realPage.getByRole("link", { name: "My pursuits", exact: true }).click();
+    await expect(realPage).toHaveURL(new RegExp(`/portal/deals/${savedMatch.id}`));
+    const returnedOwnerDetail = realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      .filter({ has: realPage.getByRole("heading", { level: 1, name: desktopTitle, exact: true }) });
+    await expect(returnedOwnerDetail).toHaveCount(1);
+    await returnedOwnerDetail.getByRole("link", { name: "My pursuits", exact: true }).click({ noWaitAfter: true });
     await expect(realPage).toHaveURL(/\/portal\/pursuits\?q=QA\+LIFECYCLE\+REAL&status=active/);
     await realPage.setViewportSize({ width: 390, height: 844 });
     await expect(realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')

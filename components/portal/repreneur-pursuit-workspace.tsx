@@ -182,15 +182,36 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
     const suffix = params.toString()
     return `/portal/deals/${deal.match_id}${suffix ? `?${suffix}` : ""}`
   }
-  const listHref = staffPreview
+  const listHrefFor = (nextQuery: string, nextStatus: StatusFilter) => staffPreview
     ? createPortalPreviewHref(staffPreview.repreneurId, undefined, staffPreview.workspaceId, {
-        query, status, view: staffPreview.returnView,
-      }) : returnHref === "/portal/pursuits" ? ownerPursuitListHref(query, status) : returnHref
+        query: nextQuery, status: nextStatus, view: staffPreview.returnView,
+      }) : returnHref === "/portal/pursuits" ? ownerPursuitListHref(nextQuery, nextStatus) : returnHref
+  const listHref = listHrefFor(query, status)
+  const updateFilters = (nextQuery: string, nextStatus: StatusFilter) => {
+    setQuery(nextQuery)
+    setStatus(nextStatus)
+    if (opportunity) return
+    const nextHref = listHrefFor(nextQuery, nextStatus)
+    if (window.location.pathname === nextHref.split("?")[0]
+      && window.location.pathname + window.location.search !== nextHref) {
+      window.history.replaceState(window.history.state, "", nextHref)
+    }
+  }
   useEffect(() => {
-    if (opportunity || window.location.pathname !== listHref.split("?")[0]) return
-    const currentHref = window.location.pathname + window.location.search
-    if (currentHref !== listHref) window.history.replaceState(window.history.state, "", listHref)
-  }, [listHref, opportunity])
+    if (opportunity) return
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search)
+      const urlQuery = (params.get("q") ?? "").slice(0, 120)
+      const rawStatus = params.get("status")
+      const urlStatus: StatusFilter = rawStatus === "active" || rawStatus === "awaiting" || rawStatus === "ended"
+        ? rawStatus : "all"
+      setQuery(urlQuery)
+      setStatus(urlStatus)
+    }
+    syncFromUrl()
+    window.addEventListener("popstate", syncFromUrl)
+    return () => window.removeEventListener("popstate", syncFromUrl)
+  }, [opportunity])
   const title = opportunity ? dealName(opportunity, language) : null
   const selectedAction = opportunity?.match_id
     ? currentWorkspaceAction(opportunity as SidebarDeal, actions[opportunity.match_id], actionNow)
@@ -206,11 +227,11 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   }
 
   return <div className="overflow-hidden rounded-lg border bg-card lg:grid lg:min-h-[calc(100svh-11rem)] lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]" data-wave-workspace="pursuit">
-    <aside className={cn("border-r bg-card lg:flex lg:min-h-0 lg:flex-col", mobileListOpen ? "block" : "hidden")} aria-label={copy("My pursuits")}>
+    <aside className={cn("border-r bg-card lg:flex lg:min-h-0 lg:flex-col", !opportunity || mobileListOpen ? "block" : "hidden")} aria-label={copy("My pursuits")}>
       <div className="space-y-4 border-b p-5">
         <div><h2 className="text-xl font-semibold tracking-tight">{copy("My pursuits")}</h2><p className="mt-1 text-xs text-muted-foreground">{copy("Your Re-New matches and current discussions.")}</p></div>
-        <div className="relative"><Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label={copy("Search pursuits")} placeholder={copy("Search pursuits")} value={query} onChange={(event) => setQuery(event.target.value)} className="pl-9" /></div>
-        <select aria-label={copy("Pursuit status")} value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)} className="min-h-11 w-full rounded-md border bg-background px-3 text-sm">
+        <div className="relative"><Search aria-hidden="true" className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label={copy("Search pursuits")} placeholder={copy("Search pursuits")} value={query} onChange={(event) => updateFilters(event.target.value, status)} className="pl-9" /></div>
+        <select aria-label={copy("Pursuit status")} value={status} onChange={(event) => updateFilters(query, event.target.value as StatusFilter)} className="min-h-11 w-full rounded-md border bg-background px-3 text-sm">
           <option value="all">{copy("All pursuits")} · {counts.all}</option>
           <option value="active">{copy("Active pursuits")} · {counts.active}</option>
           <option value="awaiting">{copy("Awaiting response or review")} · {counts.awaiting}</option>
@@ -227,7 +248,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
             <ChevronRight aria-hidden="true" className="mt-1 size-4 shrink-0 text-muted-foreground" />
           </Link>
         }) : <div className="p-5 text-sm text-muted-foreground"><p>{copy(deals.length ? "No pursuits match these filters." : "No Re-New pursuits are available yet.")}</p>
-          {deals.length ? <Button variant="link" className="mt-2 p-0" onClick={() => { setQuery(""); setStatus("all") }}>{copy("Clear filters")}</Button> : null}</div>}
+          {deals.length ? <Button variant="link" className="mt-2 p-0" onClick={() => updateFilters("", "all")}>{copy("Clear filters")}</Button> : null}</div>}
       </nav>
       <p className="border-t px-5 py-3 text-xs text-muted-foreground" role="status">{copy("{count} pursuits in this view", { count: visible.length })}</p>
     </aside>
