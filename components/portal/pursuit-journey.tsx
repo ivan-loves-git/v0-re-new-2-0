@@ -1,13 +1,13 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useId, useRef, useState } from "react"
 import { ArrowRight, Check, Circle, CircleDot, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { WaveMicroLabel } from "@/components/wave/visual-foundations"
 import { useUiCopy, useUiLanguage } from "@/components/i18n/ui-text"
 import { displayLocale } from "@/lib/i18n/ui-language"
-import { buildPortalJourneyView, type JourneyStepState, type PortalJourneyViewStep } from "@/lib/portal-pursuit-journey"
+import { buildPortalJourneyProgress, buildPortalJourneyView, type JourneyPosition, type JourneyStepState, type PortalJourneyViewStep } from "@/lib/portal-pursuit-journey"
 import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 import type { RepreneurDealFlowOpportunity } from "@/lib/types/opportunity"
 import { cn } from "@/lib/utils"
@@ -62,7 +62,8 @@ export function PursuitJourneyProgress({ opportunity, pursuit, onFullHistory }: 
   onFullHistory: () => void
 }) {
   const { copy, stateLabel, dateLabel, description } = useJourneyWords()
-  const steps = buildPortalJourneyView(opportunity, pursuit)
+  const steps = buildPortalJourneyProgress(opportunity, pursuit)
+  const progressHelpId = useId()
   const [openStep, setOpenStep] = useState<string | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pointerOpening = useRef(false)
@@ -70,26 +71,36 @@ export function PursuitJourneyProgress({ opportunity, pursuit, onFullHistory }: 
   const queueClose = () => { cancelClose(); closeTimer.current = setTimeout(() => setOpenStep(null), 160) }
   const pointerDown = () => { pointerOpening.current = true; setTimeout(() => { pointerOpening.current = false }, 0) }
   const focusOpen = (key: string) => { if (!pointerOpening.current) setOpenStep(key) }
-  const recorded = steps.filter((step) => step.state === "recorded").length
+  const current = steps.find((step) => step.position === "current")
+  const outcome = outcomeLabel(opportunity, copy)
+  const positionLabel = (position: JourneyPosition) => position === "current" ? copy("Current step")
+    : position === "earlier" ? copy("Earlier in the journey")
+    : position === "ahead" ? copy("Ahead in the journey") : copy("Position not established")
   const phases = [
     { key: "interest", label: "Interest" }, { key: "confidentiality", label: "NDA & memo" },
     { key: "assessment", label: "Assessment" }, { key: "transaction", label: "Transaction" },
   ] as const
-  const segmentTone = (state: JourneyStepState) => cn("block h-1.5 w-full rounded-[2px]", state === "recorded" && "bg-primary", state === "current" && "border border-primary bg-background", state === "unknown" && "bg-muted-foreground/25", state === "future" && "bg-muted-foreground/20", state === "outcome" && "bg-amber-500")
-  return <section className="min-w-0" aria-label={copy("Journey")} data-wave-progress>
+  const segmentTone = (position: JourneyPosition) => cn("block h-1.5 w-full rounded-[2px]",
+    position === "earlier" && "bg-primary",
+    position === "current" && "bg-primary ring-2 ring-primary ring-offset-2 ring-offset-background",
+    (position === "ahead" || position === "unavailable") && "bg-muted-foreground/25")
+  return <section className="min-w-0" aria-label={copy("Journey")} aria-describedby={progressHelpId} data-wave-progress>
     <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs">
-      <div className="flex items-center gap-2"><span className="font-semibold text-foreground">{copy("Journey")}</span><span className="text-muted-foreground">{copy("Recorded milestones: {count}", { count: recorded })}</span></div>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1"><span className="font-semibold text-foreground">{copy("Journey")}</span><span className="text-muted-foreground">{current ? `${copy("Current step")}: ${copy(current.label)}` : outcome ?? copy("Position not established")}</span></div>
       <Button variant="link" size="sm" className="h-9 px-0 text-xs font-semibold" onClick={onFullHistory}>{copy("Full history")}<ArrowRight data-icon="inline-end" /></Button>
     </div>
+    <p id={progressHelpId} className="sr-only">{copy("Blue segments show your position in the journey, not verified completion of earlier steps. See Full history for recorded evidence.")}</p>
     <div className="hidden gap-1 xl:flex" role="group" aria-label={copy("Journey")}>
       {steps.map((step) => <Popover key={step.key} open={openStep === step.key} onOpenChange={(open) => setOpenStep(open ? step.key : null)}>
         <PopoverTrigger asChild>
-          <button type="button" className={cn("flex h-11 min-w-11 flex-1 items-center rounded-sm border-0 p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2", step.state === "current" && "bg-primary/15", step.state === "outcome" && "bg-amber-100 dark:bg-amber-950")} aria-label={`${copy(step.label)}: ${stateLabel(step.state)}`} onPointerEnter={(event) => { if (event.pointerType === "mouse") { cancelClose(); setOpenStep(step.key) } }} onPointerLeave={(event) => { if (event.pointerType === "mouse") queueClose() }} onPointerDown={pointerDown} onFocus={() => focusOpen(step.key)} onClick={(event) => { if (openStep === step.key) event.preventDefault() }}>
-            <span className={segmentTone(step.state)} />
+          <button type="button" className="flex h-11 min-w-0 flex-1 items-center rounded-sm border-0 bg-transparent p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label={`${copy(step.label)}: ${positionLabel(step.position)}`} aria-current={step.position === "current" ? "step" : undefined} data-journey-position={step.position} onPointerEnter={(event) => { if (event.pointerType === "mouse") { cancelClose(); setOpenStep(step.key) } }} onPointerLeave={(event) => { if (event.pointerType === "mouse") queueClose() }} onPointerDown={pointerDown} onFocus={() => focusOpen(step.key)} onClick={(event) => { if (openStep === step.key) event.preventDefault() }}>
+            <span className={segmentTone(step.position)} />
           </button>
         </PopoverTrigger>
         <PopoverContent align="center" className="w-[min(19rem,calc(100vw-2rem))] p-4" onOpenAutoFocus={(event) => event.preventDefault()} onMouseEnter={cancelClose} onMouseLeave={queueClose}>
           <p className="text-sm font-semibold">{copy(step.label)}</p>
+          <p className="mt-1 text-xs font-medium">{positionLabel(step.position)}</p>
+          {step.position === "earlier" && step.state === "unknown" ? <p className="mt-2 text-xs text-muted-foreground">{copy("Earlier in the process does not mean its completion was recorded.")}</p> : null}
           <p className="mt-1 text-xs font-medium text-primary">{stateLabel(step.state)} · {dateLabel(step.date)}</p>
           <p className="mt-2 text-sm leading-5 text-muted-foreground">{description(step, opportunity, pursuit)}</p>
           <Button size="sm" variant="link" className="mt-2 h-9 px-0" onClick={() => { setOpenStep(null); onFullHistory() }}>{copy("Full history")}<ArrowRight data-icon="inline-end" /></Button>
@@ -100,13 +111,13 @@ export function PursuitJourneyProgress({ opportunity, pursuit, onFullHistory }: 
       {phases.map((phase) => <span key={phase.key} className="min-w-0 wrap-break-word">{copy(phase.label)}</span>)}
     </div>
     <div className="xl:hidden">
-      <div className="flex gap-1 py-2" aria-hidden="true">{steps.map((step) => <span key={step.key} className={segmentTone(step.state)} />)}</div>
+      <div className="flex gap-1 py-2" aria-hidden="true">{steps.map((step) => <span key={step.key} className={segmentTone(step.position)} />)}</div>
       <div className="grid grid-cols-4 gap-1" role="group" aria-label={copy("Journey")}>
         {phases.map((phase) => <Popover key={phase.key} open={openStep === `phase-${phase.key}`} onOpenChange={(open) => setOpenStep(open ? `phase-${phase.key}` : null)}>
           <PopoverTrigger asChild><button type="button" className="min-h-11 min-w-0 rounded-md px-1 py-2 text-left text-[11px] leading-4 text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={`${copy(phase.label)}: ${copy("Journey")}`} onPointerDown={pointerDown} onFocus={() => focusOpen(`phase-${phase.key}`)} onClick={(event) => { if (openStep === `phase-${phase.key}`) event.preventDefault() }}>{copy(phase.label)}</button></PopoverTrigger>
           <PopoverContent align="center" className="max-h-[70svh] w-[min(21rem,calc(100vw-2rem))] overflow-y-auto p-4" onOpenAutoFocus={(event) => event.preventDefault()}>
             <p className="text-sm font-semibold">{copy(phase.label)}</p>
-            <div className="mt-2 divide-y">{steps.filter((step) => step.phase === phase.key).map((step) => <div key={step.key} className="py-3"><p className="text-sm font-medium">{copy(step.label)}</p><p className="mt-1 text-xs text-primary">{stateLabel(step.state)} · {dateLabel(step.date)}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{description(step, opportunity, pursuit)}</p></div>)}</div>
+            <div className="mt-2 divide-y">{steps.filter((step) => step.phase === phase.key).map((step) => <div key={step.key} className="py-3"><p className="text-sm font-medium">{copy(step.label)}</p><p className="mt-1 text-xs font-medium">{positionLabel(step.position)}</p><p className="mt-1 text-xs text-primary">{stateLabel(step.state)} · {dateLabel(step.date)}</p>{step.position === "earlier" && step.state === "unknown" ? <p className="mt-1 text-xs text-muted-foreground">{copy("Earlier in the process does not mean its completion was recorded.")}</p> : null}<p className="mt-1 text-xs leading-5 text-muted-foreground">{description(step, opportunity, pursuit)}</p></div>)}</div>
             <Button size="sm" variant="link" className="mt-2 h-11 px-0" onClick={() => { setOpenStep(null); onFullHistory() }}>{copy("Full history")}<ArrowRight data-icon="inline-end" /></Button>
           </PopoverContent>
         </Popover>)}
