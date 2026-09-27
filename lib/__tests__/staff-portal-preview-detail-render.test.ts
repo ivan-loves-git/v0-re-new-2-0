@@ -17,6 +17,7 @@ const opportunity: RepreneurDealFlowOpportunity = {
 const journey: PortalCurrentPursuit = {
   matchId: "match-1", enabled: true, ndaReadyNotified: true, revoked: false,
   projectionUnavailable: false, action: null, signedCopyState: "validated", sourceDisclosureCurrent: true,
+  history: { currentCycleRecorded: true, previousCycleEnded: false, ndaReadyNoticeRecorded: true, currentSubmissionRecorded: true, accessEnded: false },
   confidentialGrant: {
     informationMemoDocumentId: "memo-1", grantedAt: "2026-09-23T10:00:00Z",
     source: { firmName: "Disclosed firm", officeName: "Disclosed office", contactNames: ["Disclosed contact"] },

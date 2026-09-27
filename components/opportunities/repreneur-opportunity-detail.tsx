@@ -28,7 +28,7 @@ type RepreneurOpportunityDetailItem = RepreneurOpportunityExposure | RepreneurDe
 
 interface RepreneurOpportunityDetailProps {
   opportunity: RepreneurOpportunityDetailItem
-  mode?: "all" | "heading" | "overview" | "documents"
+  mode?: "all" | "heading" | "overview" | "metrics" | "response" | "description" | "documents"
   readOnly?: boolean
   withdrawalPaused?: boolean
   journey?: PortalCurrentPursuit | null
@@ -141,7 +141,7 @@ export function RepreneurOpportunityDetail({
         </div>
       </header>}
 
-      {(mode === "all" || mode === "overview") && (opportunity.match_status || canExpressUnassignedInterest) ? <Card className="order-1">
+      {(mode === "all" || mode === "overview" || mode === "response") && (opportunity.match_status || canExpressUnassignedInterest) ? <Card className="order-1">
         <CardHeader>
           <CardTitle>{copy(canExpressUnassignedInterest ? "Express interest" : readOnly ? "Response" : "Your response")}</CardTitle>
           <CardDescription>
@@ -313,7 +313,7 @@ export function RepreneurOpportunityDetail({
         </Card>
       )}
 
-      {(mode === "all" || mode === "overview") && <div className="order-0 grid overflow-hidden rounded-lg border bg-card sm:grid-cols-2 md:grid-cols-4">
+      {(mode === "all" || mode === "overview" || mode === "metrics") && <div className="order-0 grid overflow-hidden rounded-lg border bg-card sm:grid-cols-2 md:grid-cols-4">
         <Card className="rounded-none border-0 border-b py-4 md:border-b-0 md:border-r">
           <CardHeader className="pb-2">
             <CardDescription>{copy("Revenue")}</CardDescription>
@@ -340,7 +340,7 @@ export function RepreneurOpportunityDetail({
         </Card>
       </div>}
 
-      {(mode === "all" || mode === "overview") && <Card className="order-2">
+      {(mode === "all" || mode === "overview" || mode === "description") && <Card className="order-2">
         <CardHeader>
           <CardTitle>{copy("Opportunity")}</CardTitle>
           <CardDescription>{[opportunity.sector, opportunity.activity].filter(Boolean).join(" / ") || copy("Sector to confirm")}</CardDescription>

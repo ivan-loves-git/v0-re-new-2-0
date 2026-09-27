@@ -1247,10 +1247,48 @@ precision, all four financial/team metrics, response/withdrawal/reinterest,
 Viewed/Reviewed and exact document controls. Original business and file content
 is never translated by the FR/EN interface switch.
 
+### Owner-safe Journey mapping (#188 / Ticket #208)
+
+The compact map is process context, not transaction completion. The detail
+projects `history.currentCycleRecorded`, `previousCycleEnded`,
+`ndaReadyNoticeRecorded`, `currentSubmissionRecorded` and `accessEnded` as
+Booleans only after the exact owner, active opportunity, same-namespace and
+current-pursuit reads succeed. These are derived server-side from the latest
+canonical `mutual_interest_validated` cycle boundary, a prior `dropped` cycle,
+the current E6 notice bound to current Gate 1, a current repreneur artifact
+recorded no earlier than that notice, and the current confidential grant's
+revoked/expired result. A failed evidence, artifact, template, grant or resolver
+read makes the projection unavailable; it does not turn missing evidence into a
+new request. No raw event, event ID, artifact ID, staff actor or metadata enters
+this history object.
+
+| Displayed consequence | Exact portal-safe source and date rule |
+| --- | --- |
+| Proposal | Current own `proposed` match and existing response expiry. An absent expiry is explicitly unclocked; no invitation date is inferred. |
+| Own response | Existing owner-visible `interest_expressed_at` for the current interested or active response. Withdrawn, rejected, declined and dropped remain distinct outcomes; the withdrawn token is not a current interest or a dated withdrawal milestone. |
+| Interest confirmed | Active-pursuit status with current-cycle evidence where present. The internal validation actor and timestamp remain private. An imported stage with no current event has unknown confirmation history. |
+| NDA ready | Current E6 notice and current authorized template for the signing action. The Boolean notice consequence is visible; no Gate 1 or internal notice timestamp is serialized. |
+| Signed copy submitted | Only the current-cycle artifact receipt after current E6; `awaiting_validation` is separate from validation. No raw artifact, hash, internal validation date or Gate 2 is projected. Failed artifact reads yield unknown. |
+| NDA signed operating stage | Exact current `pursuit_stage=nda_signed` with safe `staff_confirmed_history` provenance where applicable. It grants no document and supplies no signature date. |
+| IM available or access ended | Exact live grant and its existing owner-visible `grantedAt` / current revoked-or-expired consequence. The exact document route still rechecks its database predicate. Source names additionally require the current disclosure predicate; a historical grant, operating `info_memo_received` stage or prior cycle never grants. Availability is not evidence of reading. |
+| Q&A, intermediary meeting, seller meeting, LOI | Only the exact current operating stage. No question, appointment, attendance, LOI acceptance or stage date is inferred; staff-confirmed historical provenance is labelled. |
+| Valuation, audits, financing, closing | Explanatory future context only. `closed`, `completed`, opportunity closure and Drop cannot produce acquisition-success milestones or new portal inventory. |
+
+The history view labels absent dates as not recorded and separates prior-cycle
+context from current-cycle permissions. It does not calculate waiting time from
+`updated_at`, stage update time or import time. Its owner-safe role labels are
+limited to `Re-New` for current notice/confirmation/access consequences; the
+own response and submission have no actor label because staff assistance may
+have performed them. No staff identity, raw
+evidence, private notes, workbook history, source relationship history or
+future event capture is added. Rollback restores the previous presentation and
+retains canonical responses, evidence and current permission rules.
+
 ## Change log
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-09-27 | #188 Tickets #207–#208 candidate | Added the owner-scoped pursuit workspace, criteria comparison, current action projection and compact/detailed Journey with explicit unknown history and future context. The candidate changes presentation and allowlisted reads only; release evidence belongs to the exact GitHub PR and production gate. | GitHub Product Change #188 / Tickets #207–#208 |
 | 2026-09-27 | #133 Tickets #200–#202 held build | Added the optional account-owned FR/EN UI preference candidate, browser continuity and French-first access/intake/assessment/profile, opportunity and pursuit copy with separate staff-preview choice. The migration and combined #133 release remain unapplied and unshipped. | GitHub Product Change #133 / Decision #199 / Tickets #200–#202; migration `20260927120000` |
 | 2026-09-27 | #187 ordinary-source-send regression correction | The grouped freshness mutation fence distinguishes source-email reservation rows from interaction rows before reading interaction-only fields. Ordinary M&A source reservation/refresh, synthetic outbound evidence transition and release remain usable when no freshness member conflicts, while a sending lease or uncertain grouped outcome still blocks competing source email. The change fixes a candidate integration regression; no production migration or customer send is asserted. | GitHub Product Change #187 / Ticket #205; migration 129 and disposable rehearsal of migration 079 reservation functions |
 | 2026-09-27 | #187 candidate review hardening | Kept the independent opportunity source-verification flag separate from the provisional-source helper; a flagged REAL active member cannot enter a draft or pass send revalidation. Inbound interaction writes and exact source replies now share the all-member send lease, while genuine evidence after a lease does not erase uncertain provider truth. Global and office/firm stale indicators use the exact positive-reply projection, and the review detail distinguishes no, partial and complete member responses. All proofs are synthetic; no production migration, customer send or template switch is asserted. | GitHub Product Change #187 / Ticket #205; migration 129 and disposable independent-session rehearsal |

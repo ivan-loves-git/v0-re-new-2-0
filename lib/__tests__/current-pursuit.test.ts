@@ -357,6 +357,13 @@ describe("current pursuit reads", () => {
       action: null,
       signedCopyState: "validated",
       sourceDisclosureCurrent: true,
+      history: {
+        currentCycleRecorded: true,
+        previousCycleEnded: false,
+        ndaReadyNoticeRecorded: true,
+        currentSubmissionRecorded: true,
+        accessEnded: false,
+      },
     })
     const serialized = JSON.stringify(portalResult)
     expect(serialized).not.toContain("alice@example.test")
@@ -516,6 +523,30 @@ describe("current pursuit reads", () => {
       action: "unknown",
       signedCopyState: "unknown",
       confidentialGrant: null,
+      history: { currentSubmissionRecorded: false, ndaReadyNoticeRecorded: false },
+    })
+  })
+
+  it("separates a reopened current cycle from old notice, artifact and IM access", async () => {
+    const prior = [
+      { ...evidence[0], id: "prior-cycle" },
+      { ...evidence[5], id: "prior-e6", metadata: { upstream_evidence_id: "prior-gate" } },
+      { ...evidence[0], id: "prior-drop", event_type: "dropped" as const },
+      { ...evidence[0], id: "reopened", event_type: "reopened" as const },
+      { ...evidence[0], id: "current-cycle" },
+    ]
+    setupCurrentPursuit({ evidence: prior, currentGate1Id: null, currentGate2Id: null,
+      currentDispatchId: null, canonicalAccess: { data: false, error: null } })
+    const result = await readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } })
+    expect(result).toMatchObject({
+      action: null,
+      confidentialGrant: null,
+      history: {
+        currentCycleRecorded: true,
+        previousCycleEnded: true,
+        ndaReadyNoticeRecorded: false,
+        currentSubmissionRecorded: false,
+      },
     })
   })
 

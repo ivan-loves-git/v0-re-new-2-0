@@ -99,6 +99,14 @@ export interface PortalCurrentPursuit {
   signedCopyState: "not_submitted" | "awaiting_validation" | "validated" | "unknown"
   /** Separate from the exact IM predicate. */
   sourceDisclosureCurrent: boolean
+  /** Allowlisted owner-visible consequences. No raw event, actor, gate or artifact is serialized. */
+  history: {
+    currentCycleRecorded: boolean
+    previousCycleEnded: boolean
+    ndaReadyNoticeRecorded: boolean
+    currentSubmissionRecorded: boolean
+    accessEnded: boolean
+  }
 }
 
 export type PortalPursuitViewer =
@@ -416,6 +424,14 @@ function toPortalCurrentPursuit(
     : pursuit.gate2Passed ? "validated" as const
     : pursuit.currentSignedCopySubmitted ? "awaiting_validation" as const
     : "not_submitted" as const
+  const currentCycleIndex = pursuit.currentCycleId
+    ? pursuit.entries.findIndex((entry) => entry.id === pursuit.currentCycleId)
+    : -1
+  const previousCycleEnded = currentCycleIndex > 0 && pursuit.entries
+    .slice(0, currentCycleIndex)
+    .some((entry) => entry.event_type === "dropped")
+  const currentHistoryReadable = !pursuit.projectionUnavailable && pursuit.status === "active_pursuit"
+    && pursuit.opportunityStatus === "active" && pursuit.enabled
 
   return {
     matchId: pursuit.matchId,
@@ -429,6 +445,13 @@ function toPortalCurrentPursuit(
     action: pursuit.projectionUnavailable ? "unknown" : readyToSign && signedCopyState === "not_submitted" ? "sign_nda" : null,
     signedCopyState,
     sourceDisclosureCurrent,
+    history: {
+      currentCycleRecorded: currentHistoryReadable && currentCycleIndex >= 0,
+      previousCycleEnded: currentHistoryReadable && previousCycleEnded,
+      ndaReadyNoticeRecorded: currentHistoryReadable && pursuit.ndaReadyNotified,
+      currentSubmissionRecorded: currentHistoryReadable && pursuit.currentSignedCopySubmitted,
+      accessEnded: !pursuit.projectionUnavailable && pursuit.revoked,
+    },
   }
 }
 

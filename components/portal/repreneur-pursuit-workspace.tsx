@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, ChevronLeft, ChevronRight, Search, PanelLeft } from "lucide-react"
+import { ChevronLeft, ChevronRight, Search, PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RepreneurOpportunityDetail } from "@/components/opportunities/repreneur-opportunity-detail"
+import { PursuitJourneyHistory, PursuitJourneyProgress } from "@/components/portal/pursuit-journey"
 import { SectorArtwork } from "@/components/portal/sector-artwork"
 import { useUiCopy, useUiLanguage } from "@/components/i18n/ui-text"
 import { uiCopy } from "@/lib/i18n/ui-copy"
@@ -128,6 +129,11 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
     ? pursuitStageUiLabel(deal.pursuit_stage, language)
     : deal.match_status ? matchStatusUiLabel(deal.match_status, language) : copy("Live Opportunity")
 
+  const fullHistory = () => {
+    setTab("journey")
+    window.requestAnimationFrame(() => document.getElementById("journey-view")?.scrollIntoView({ behavior: "smooth", block: "start" }))
+  }
+
   return <div className="overflow-hidden rounded-lg border bg-card lg:grid lg:min-h-[calc(100svh-11rem)] lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)]" data-wave-workspace="pursuit">
     <aside className={cn("border-r bg-card lg:flex lg:min-h-0 lg:flex-col", mobileListOpen ? "block" : "hidden")} aria-label={copy("My pursuits")}>
       <div className="space-y-4 border-b p-5">
@@ -155,12 +161,12 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
     </aside>
     <div className={cn("min-w-0 bg-muted/20", mobileListOpen && "hidden lg:block")}>
       <div className="flex min-h-16 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-2 text-sm"><Button variant="outline" size="sm" className="lg:hidden" onClick={() => setMobileListOpen(true)}><PanelLeft data-icon="inline-start" />{copy("Pursuits")}</Button><span className="hidden text-muted-foreground sm:inline">{copy("My pursuits")}</span><ChevronRight aria-hidden="true" className="hidden size-4 text-muted-foreground sm:inline" /><span className="truncate font-medium">{title}</span></div>
+        <div className="flex min-w-0 items-center gap-2 text-sm"><Button variant="outline" size="sm" className="lg:hidden" onClick={() => setMobileListOpen(true)}><PanelLeft data-icon="inline-start" />{copy("Pursuits")}</Button><Link href={returnHref} className="hidden text-muted-foreground underline-offset-4 hover:underline sm:inline">{copy("My pursuits")}</Link><ChevronRight aria-hidden="true" className="hidden size-4 text-muted-foreground sm:inline" /><span className="truncate font-medium">{title}</span></div>
         <div className="flex shrink-0 gap-1"><Button asChild variant="ghost" size="icon" aria-label={copy("Previous pursuit")} disabled={currentIndex <= 0}><Link href={currentIndex > 0 ? hrefFor(visible[currentIndex - 1]) : "#"}><ChevronLeft /></Link></Button><Button asChild variant="ghost" size="icon" aria-label={copy("Next pursuit")} disabled={currentIndex < 0 || currentIndex >= visible.length - 1}><Link href={currentIndex >= 0 && currentIndex < visible.length - 1 ? hrefFor(visible[currentIndex + 1]) : "#"}><ChevronRight /></Link></Button></div>
       </div>
-      <div className="mx-auto flex max-w-4xl flex-col gap-7 px-4 py-6 sm:px-7 sm:py-8">
-        <Button asChild variant="ghost" className="w-fit px-0 text-muted-foreground"><Link href={returnHref}><ArrowLeft data-icon="inline-start" />{copy("Back to deals")}</Link></Button>
+      <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 sm:px-7 sm:py-8">
         <div className="flex items-start gap-4"><SectorArtwork sector={opportunity.canonical_sector ?? opportunity.sector} large action={hasOwnAction(opportunity.match_id ? actions[opportunity.match_id] : null)} /><div className="min-w-0 flex-1"><RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="heading" /></div></div>
+        <PursuitJourneyProgress opportunity={opportunity} pursuit={journey} onFullHistory={fullHistory} />
         <Tabs value={tab} onValueChange={setTab} className="min-w-0 gap-5">
           <TabsList aria-label={copy("Pursuit information")} className="max-w-full justify-start gap-5 overflow-x-auto sm:gap-7">
             <TabsTrigger value="overview" className="min-h-11 flex-none">{copy("Overview")}</TabsTrigger>
@@ -169,13 +175,15 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
             <TabsTrigger value="journey" className="min-h-11 flex-none">{copy("Journey")}</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-5">
+            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="metrics" />
             {opportunity.match_id && actions[opportunity.match_id] === "sign_nda" ? <section className="rounded-lg border border-primary/30 bg-card p-5"><p className="text-xs font-semibold text-primary">{copy("Your action")}</p><h2 className="mt-2 font-semibold">{copy("Your signed NDA is needed")}</h2><p className="mt-2 text-sm text-muted-foreground">{copy("Download the current template, sign it and submit your copy for Re-New review.")}</p><Button className="mt-4" onClick={() => setTab("documents")}>{copy("Open documents")}</Button></section> : null}
             {opportunity.match_id && actions[opportunity.match_id] === "unknown" ? <p role="status" className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">{copy("Action status is unavailable right now. Refresh before relying on this view.")}</p> : null}
-            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} withdrawalPaused={withdrawalPaused} mode="overview" />
+            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} withdrawalPaused={withdrawalPaused} mode="response" />
+            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="description" />
           </TabsContent>
           <TabsContent value="criteria"><CriteriaPanel criteria={opportunity.criteria_comparison} /></TabsContent>
           <TabsContent value="documents">{opportunity.match_status === "active_pursuit" ? <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="documents" /> : <section className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">{copy("Confidential documents become available only in an authorized active pursuit.")}</section>}</TabsContent>
-          <TabsContent value="journey"><div className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">{copy("Journey details are being prepared.")}</div></TabsContent>
+          <TabsContent value="journey"><PursuitJourneyHistory opportunity={opportunity} pursuit={journey} /></TabsContent>
         </Tabs>
       </div>
     </div>
