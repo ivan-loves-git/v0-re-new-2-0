@@ -440,7 +440,9 @@ export function ExternalPursuitBoard({
         <p className="text-sm text-muted-foreground">
           {readOnly
             ? view("Selected-owner pursuits retain their separate Re-New journey and external dossier rules.")
-            : view("Re-New cards are a read-only view of the canonical journey. External cards remain independent dossiers.")}
+            : renew.length
+              ? view("Re-New cards are a read-only view of the canonical journey. External cards remain independent dossiers.")
+              : view("External dossiers remain separate from Re-New pursuits.")}
         </p>
         {!readOnly ? <Button className="w-full sm:w-auto" onClick={openCreate}>
           <Plus data-icon="inline-start" />

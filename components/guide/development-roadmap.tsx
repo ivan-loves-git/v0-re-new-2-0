@@ -26,6 +26,16 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 27, 2026",
+    version: "0.9.85",
+    title: "Pursuits now opens the right workspace",
+    isCompleted: true,
+    events: [
+      { title: "Start with your Re-New matches", type: "fix", description: "Pursuits now opens the matched-deal list and its full detail workspace instead of the old board. Re-New staff see the same experience when previewing a selected repreneur; opening the list alone changes no reading marker or deal." },
+      { title: "Keep external dossiers separate", type: "feature", description: "Independent External Pursuits retain their own clearly labelled view and existing controls. Deal discovery stays in Deals." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
     version: "0.9.84",
     title: "A clearer step in every deal journey",
     isCompleted: true,

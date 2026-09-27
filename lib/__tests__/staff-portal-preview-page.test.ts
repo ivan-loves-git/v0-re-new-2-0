@@ -101,6 +101,22 @@ describe("staff Tools portal page", () => {
     expect(mocks.readActions).toHaveBeenCalledWith([matchId, otherMatchId], { kind: "staff-preview", repreneurId: ownerId })
   })
 
+  it("opens the selected owner's matched list workspace from Re-New Pursuits without selecting a deal", async () => {
+    mocks.listOpportunities.mockResolvedValue({ repreneur: { id: ownerId, is_demo: false }, opportunities: [
+      { match_id: matchId, match_status: "proposed", opportunity_id: "00000000-0000-4000-8000-000000000011", public_title: "Selected-owner pursuit", visible_documents: [], updated_at: "2026-09-27T08:00:00Z" },
+      { match_id: null, match_status: null, opportunity_id: "00000000-0000-4000-8000-000000000012", public_title: "Discovery only", visible_documents: [], updated_at: "2026-09-27T08:00:00Z" },
+    ] })
+
+    const page = await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId, workspaceId, view: "renew-pursuits" }) })
+    const html = renderToStaticMarkup(page)
+
+    expect(html).toContain('data-wave-workspace="pursuit"')
+    expect(html).toContain("Selected-owner pursuit")
+    expect(html).not.toContain("Discovery only")
+    expect(html).toContain(`href="/portal-preview?repreneurId=${ownerId}&amp;dealId=${matchId}&amp;workspaceId=${workspaceId}&amp;returnView=renew-pursuits"`)
+    expect(mocks.readActions).toHaveBeenCalledWith([matchId], { kind: "staff-preview", repreneurId: ownerId })
+  })
+
   it("denies a stale staff workspace without rendering a selected deal or actions", async () => {
     mocks.listOpportunities.mockResolvedValue({ repreneur: { id: ownerId }, opportunities: [
       { match_id: matchId, match_status: "active_pursuit", opportunity_id: "00000000-0000-4000-8000-000000000011", public_title: "No longer selected", visible_documents: [] },
