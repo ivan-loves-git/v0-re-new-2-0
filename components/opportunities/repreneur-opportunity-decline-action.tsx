@@ -6,6 +6,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { declineMyOpportunity } from "@/lib/actions/repreneur-opportunity-responses"
+import { useUiCopy, useUiLanguage } from "@/components/i18n/ui-text"
+import { declineReasonUiLabel } from "@/lib/i18n/deal-labels"
+import { publicDealOutcome } from "@/lib/i18n/deal-outcomes"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   type OpportunityDeclineReasonCategory,
@@ -31,6 +34,8 @@ export function RepreneurOpportunityDeclineAction({
   initialReasons,
   initialDetails,
 }: RepreneurOpportunityDeclineActionProps) {
+  const language = useUiLanguage()
+  const copy = useUiCopy()
   const [state, formAction, pending] = useActionState(
     declineMyOpportunity.bind(null, matchId),
     INITIAL_REPRENEUR_OPPORTUNITY_DECLINE_STATE,
@@ -78,29 +83,29 @@ export function RepreneurOpportunityDeclineAction({
         disabled={pending}
       >
         <XCircle data-icon="inline-start" />
-        Not a fit
+        {copy("Not a fit")}
       </Button>
       {isExpanded ? (
         <div id={disclosureId} className="mt-3">
           <form action={formAction} className="rounded-lg border p-4" data-wave-action="decline" data-wave-workflow="portal_deals">
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">Tell Re-New why this is not a fit</p>
+          <p className="text-sm font-medium">{copy("Tell Re-New why this is not a fit")}</p>
           <p className="text-sm text-muted-foreground">
-            Select at least one reason and add a brief rationale so Re-New can improve future recommendations.
+            {copy("Select at least one reason and add a brief rationale so Re-New can improve future recommendations.")}
           </p>
         </div>
 
         {state.status === "error" ? (
           <Alert variant="destructive">
             <CircleAlert />
-            <AlertTitle>Response not saved</AlertTitle>
-            <AlertDescription>{state.message}</AlertDescription>
+            <AlertTitle>{copy("Response not saved")}</AlertTitle>
+            <AlertDescription>{publicDealOutcome(state.message, language, "We could not save your response right now. Please try again.")}</AlertDescription>
           </Alert>
         ) : null}
 
         <fieldset className="grid gap-3 sm:grid-cols-2">
-          <legend className="sr-only">Reasons this opportunity is not a fit</legend>
+          <legend className="sr-only">{copy("Reasons this opportunity is not a fit")}</legend>
           {OPPORTUNITY_DECLINE_REASON_OPTIONS.map((option) => (
             <label key={option.value} className="flex items-start gap-2 text-sm">
               <input
@@ -112,13 +117,13 @@ export function RepreneurOpportunityDeclineAction({
                 onChange={(event) => setReason(option.value, event.target.checked)}
                 className="mt-1 size-4 rounded border-border"
               />
-              <span>{option.label}</span>
+              <span>{declineReasonUiLabel(option.value, language)}</span>
             </label>
           ))}
         </fieldset>
 
         <label className="flex flex-col gap-2 text-sm">
-          <span className="font-medium">Why is this not a fit? (required)</span>
+          <span className="font-medium">{copy("Why is this not a fit? (required)")}</span>
           <textarea
             name="decline_reason_text"
             value={details}
@@ -126,17 +131,17 @@ export function RepreneurOpportunityDeclineAction({
             required
             rows={3}
             className="min-h-20 rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="Briefly explain why this opportunity is not a fit."
+            placeholder={copy("Briefly explain why this opportunity is not a fit.")}
           />
         </label>
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="ghost" onClick={closeDisclosure} disabled={pending}>
-            Cancel
+            {copy("Cancel")}
           </Button>
           <Button type="submit" variant="outline" disabled={!canSubmit || pending}>
             {pending ? <Spinner data-icon="inline-start" /> : <XCircle data-icon="inline-start" />}
-            {pending ? "Saving response..." : "Confirm not a fit"}
+            {copy(pending ? "Saving response..." : "Confirm not a fit")}
           </Button>
         </div>
       </div>

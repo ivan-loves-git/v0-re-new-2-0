@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import { partitionPersonalReviews } from "@/lib/utils/repreneur-personal-review"
 import { PersonalReviewHint, RepreneurPersonalReviewControl } from "@/components/opportunities/repreneur-personal-review"
-import { DealOrderInfo, DEAL_SECTION_ORDER } from "@/components/opportunities/deal-order-info"
+import { DealOrderInfo } from "@/components/opportunities/deal-order-info"
 import Link from "next/link"
 import { ArrowRight, BriefcaseBusiness, CalendarDays, MapPin } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -16,7 +16,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  getOpportunityMatchStatusLabel,
   type RepreneurDealFlowOpportunity,
   type RepreneurOpportunityExposure,
   type RepreneurOpportunityProfile,
@@ -31,6 +30,12 @@ import {
 } from "@/lib/utils/repreneur-deal-discovery"
 import { displayRepreneurOpportunityGeography } from "@/lib/utils/repreneur-opportunity-geography"
 import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
+import { useUiCopy, useUiLanguage } from "@/components/i18n/ui-text"
+import { uiCopy, type UiCopyKey } from "@/lib/i18n/ui-copy"
+import { displayLocale } from "@/lib/i18n/ui-language"
+import { matchStatusUiLabel } from "@/lib/i18n/deal-labels"
+import { sectorUiLabel } from "@/lib/i18n/canonical-labels"
+import type { Language } from "@/lib/i18n/translations"
 
 type RepreneurOpportunityListItem = RepreneurOpportunityExposure | RepreneurDealFlowOpportunity
 
@@ -43,26 +48,26 @@ interface RepreneurOpportunityListProps {
   readOnly?: boolean
 }
 
-function opportunityTitle(opportunity: RepreneurOpportunityListItem) {
-  return opportunity.public_title || "Confidential acquisition opportunity"
+function opportunityTitle(opportunity: RepreneurOpportunityListItem, language: Language) {
+  return opportunity.public_title || uiCopy(language, "Confidential acquisition opportunity")
 }
 
-function formatNumber(value: number | null | undefined, suffix: string) {
+function formatNumber(value: number | null | undefined, suffix: string, language: Language) {
   if (value === null || value === undefined) return "—"
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(value)} ${suffix}`
+  return `${new Intl.NumberFormat(displayLocale(language), { maximumFractionDigits: 1 }).format(value)} ${suffix}`
 }
 
-function formatEbitdaMargin(opportunity: RepreneurOpportunityListItem) {
+function formatEbitdaMargin(opportunity: RepreneurOpportunityListItem, language: Language) {
   const margin = getEbitdaMarginPercentage(opportunity)
   if (margin === null) return "—"
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(margin)}%`
+  return `${new Intl.NumberFormat(displayLocale(language), { maximumFractionDigits: 1 }).format(margin)}%`
 }
 
-function formatRecommendationDeadline(expiresAt: string | null | undefined) {
+function formatRecommendationDeadline(expiresAt: string | null | undefined, language: Language) {
   if (!expiresAt) return null
   const value = new Date(expiresAt)
   if (Number.isNaN(value.getTime())) return null
-  return new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris", timeZoneName: "short" }).format(value)
+  return new Intl.DateTimeFormat(displayLocale(language), { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris", timeZoneName: "short" }).format(value)
 }
 
 function filterOptions(
@@ -84,7 +89,7 @@ export function canonicalSectorFilterOptions(opportunities: RepreneurOpportunity
   return filterOptions(opportunities, (opportunity) => opportunity.canonical_sector)
 }
 
-export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportunityListItem[]) {
+export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportunityListItem[], language: Language = "en") {
   const optionsByNodeId = new Map<string, {
     value: string
     label: string
@@ -122,7 +127,9 @@ export function canonicalGeographyFilterOptions(opportunities: RepreneurOpportun
       .filter((label, index, labels) => labels.indexOf(label) !== index),
   )
   const levelRank = { country: 0, macro_zone: 1, region: 2 } as const
-  const levelLabel = { country: "Country", macro_zone: "Macro-zone", region: "Region" } as const
+  const levelLabel = language === "fr"
+    ? { country: "Pays", macro_zone: "Macro-zone", region: "Région" }
+    : { country: "Country", macro_zone: "Macro-zone", region: "Region" }
   const collator = new Intl.Collator("fr-FR", { sensitivity: "base" })
 
   return options
@@ -184,6 +191,7 @@ function DealDiscoveryToolbar({
   totalCount: number
   preferencesEnabled: boolean
 }) {
+  const u = useUiCopy()
   const picker = (key: "geography" | "sector", label: string, options: { value: string; label: string }[]) => (
     <Popover>
       <PopoverTrigger asChild>
@@ -196,7 +204,7 @@ function DealDiscoveryToolbar({
       </PopoverContent>
     </Popover>
   )
-  return <section className="rounded-lg border bg-card p-3" aria-label="Deal flow filters"><div className="flex flex-col gap-3 lg:flex-row lg:items-center"><Input aria-label="Search deal flow" value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search title, teaser, reference, geography or sector" className="lg:max-w-sm" /><div className="flex flex-wrap gap-2">{picker("geography", "Geography", geographyOptions)}{picker("sector", "Sectors", sectorOptions)}<Button type="button" variant="ghost" size="sm" onClick={onClear}>Clear filters</Button></div></div><p className="mt-3 border-t pt-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{resultCount}</span> deals filtered from {totalCount}. {preferencesEnabled ? "Geography and sector choices are saved in this browser only." : "Staff preview does not read or save repreneur preferences."}</p></section>
+  return <section className="rounded-lg border bg-card p-3" aria-label={u("Deal flow filters")}><div className="flex flex-col gap-3 lg:flex-row lg:items-center"><Input aria-label={u("Search deal flow")} value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder={u("Search title, teaser, reference, geography or sector")} className="lg:max-w-sm" /><div className="flex flex-wrap gap-2">{picker("geography", u("Geography"), geographyOptions)}{picker("sector", u("Sectors"), sectorOptions)}<Button type="button" variant="ghost" size="sm" onClick={onClear}>{u("Clear filters")}</Button></div></div><p className="mt-3 border-t pt-2 text-xs text-muted-foreground">{u("{resultCount} deals filtered from {totalCount}.", { resultCount, totalCount })} {preferencesEnabled ? u("Geography and sector choices are saved in this browser only.") : u("Staff preview does not read or save repreneur preferences.")}</p></section>
 }
 
 export function DealRangeFilters({
@@ -210,6 +218,7 @@ export function DealRangeFilters({
   onClearFilters: () => void
   onReset: () => void
 }) {
+  const u = useUiCopy()
   const hasNumericFilters = [
     filters.revenueMin,
     filters.revenueMax,
@@ -222,28 +231,28 @@ export function DealRangeFilters({
     <div className="space-y-3 rounded-lg border bg-muted/20 p-3 text-sm">
       <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr_1.5fr]">
         <fieldset className="grid gap-1.5">
-          <legend className="text-xs font-medium text-muted-foreground">Revenue (M EUR)</legend>
+          <legend className="text-xs font-medium text-muted-foreground">{u("Revenue (M EUR)")}</legend>
           <div className="grid grid-cols-2 gap-2">
-            <Input aria-label="Minimum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMin} onChange={(event) => onChange("revenueMin", event.target.value)} placeholder="Min" />
-            <Input aria-label="Maximum revenue" inputMode="decimal" min="0" type="number" value={filters.revenueMax} onChange={(event) => onChange("revenueMax", event.target.value)} placeholder="Max" />
+            <Input aria-label={u("Minimum revenue")} inputMode="decimal" min="0" type="number" value={filters.revenueMin} onChange={(event) => onChange("revenueMin", event.target.value)} placeholder="Min" />
+            <Input aria-label={u("Maximum revenue")} inputMode="decimal" min="0" type="number" value={filters.revenueMax} onChange={(event) => onChange("revenueMax", event.target.value)} placeholder="Max" />
           </div>
         </fieldset>
         <label className="grid gap-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Minimum EBITDA margin</span>
-          <Input aria-label="Minimum EBITDA margin" inputMode="decimal" min="0" type="number" value={filters.ebitdaMarginMin} onChange={(event) => onChange("ebitdaMarginMin", event.target.value)} placeholder="%" />
+          <span className="text-xs font-medium text-muted-foreground">{u("Minimum EBITDA margin")}</span>
+          <Input aria-label={u("Minimum EBITDA margin")} inputMode="decimal" min="0" type="number" value={filters.ebitdaMarginMin} onChange={(event) => onChange("ebitdaMarginMin", event.target.value)} placeholder="%" />
         </label>
         <fieldset className="grid gap-1.5">
-          <legend className="text-xs font-medium text-muted-foreground">Employees</legend>
+          <legend className="text-xs font-medium text-muted-foreground">{u("Employees")}</legend>
           <div className="grid grid-cols-2 gap-2">
-            <Input aria-label="Minimum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMin} onChange={(event) => onChange("employeesMin", event.target.value)} placeholder="Min" />
-            <Input aria-label="Maximum employees" inputMode="numeric" min="0" type="number" value={filters.employeesMax} onChange={(event) => onChange("employeesMax", event.target.value)} placeholder="Max" />
+            <Input aria-label={u("Minimum employees")} inputMode="numeric" min="0" type="number" value={filters.employeesMin} onChange={(event) => onChange("employeesMin", event.target.value)} placeholder="Min" />
+            <Input aria-label={u("Maximum employees")} inputMode="numeric" min="0" type="number" value={filters.employeesMax} onChange={(event) => onChange("employeesMax", event.target.value)} placeholder="Max" />
           </div>
         </fieldset>
       </div>
       {hasNumericFilters ? (
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="ghost" size="sm" aria-label="Clear Deal Flow filters" onClick={onClearFilters}>Clear filters</Button>
-          <Button type="button" variant="ghost" size="sm" aria-label="Reset Deal Flow search and filters" onClick={onReset}>Reset all</Button>
+          <Button type="button" variant="ghost" size="sm" aria-label={u("Clear Deal Flow filters")} onClick={onClearFilters}>{u("Clear filters")}</Button>
+          <Button type="button" variant="ghost" size="sm" aria-label={u("Reset Deal Flow search and filters")} onClick={onReset}>{u("Reset all")}</Button>
         </div>
       ) : null}
     </div>
@@ -263,6 +272,8 @@ function DealCard({
   readOnly: boolean
   compact?: boolean
 }) {
+  const u = useUiCopy()
+  const language = useUiLanguage()
   const detailLink = useRef<HTMLAnchorElement>(null)
   const restoreFocus = useRef(false)
   useEffect(() => {
@@ -276,7 +287,7 @@ function DealCard({
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
   const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && !opportunity.interest_expressed_at
   const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
-  const responseDeadline = responsePending ? formatRecommendationDeadline(opportunity.recommendation_expires_at) : null
+  const responseDeadline = responsePending ? formatRecommendationDeadline(opportunity.recommendation_expires_at, language) : null
 
   return (
     <Card className="rounded-lg border bg-card py-0 shadow-none">
@@ -289,49 +300,49 @@ function DealCard({
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-          {staffRecommended && !isDeclined && opportunity.match_status !== "withdrawn" && !opportunity.interest_rejected ? <Badge variant="secondary">Selected by Re-New</Badge> : null}
-          {lockedForAnotherRepreneur ? <Badge variant="outline">Someone is already positioned</Badge> : null}
-          {opportunity.match_status === "interested" ? <Badge variant="outline">{opportunity.interest_rejected ? "Interest not selected by Re-New" : "Interest sent, awaiting Re-New validation"}</Badge> : null}
-          {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">Active pursuit</Badge> : null}
-          {opportunity.match_status && opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" ? <Badge variant="outline">{getOpportunityMatchStatusLabel(opportunity.match_status)}</Badge> : null}
-          {responseExpired ? <Badge variant="outline">Response window expired</Badge> : null}
+          {staffRecommended && !isDeclined && opportunity.match_status !== "withdrawn" && !opportunity.interest_rejected ? <Badge variant="secondary">{u("Selected by Re-New")}</Badge> : null}
+          {lockedForAnotherRepreneur ? <Badge variant="outline">{u("Someone is already positioned")}</Badge> : null}
+          {opportunity.match_status === "interested" ? <Badge variant="outline">{opportunity.interest_rejected ? u("Interest not selected by Re-New") : u("Interest sent, awaiting Re-New validation")}</Badge> : null}
+          {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">{u("Active pursuit")}</Badge> : null}
+          {opportunity.match_status && opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" ? <Badge variant="outline">{matchStatusUiLabel(opportunity.match_status, language)}</Badge> : null}
+          {responseExpired ? <Badge variant="outline">{u("Response window expired")}</Badge> : null}
           </div>
           <div className="mt-2 flex min-w-0 flex-col gap-1">
-            <p className="truncate text-base font-semibold tracking-tight">{opportunityTitle(opportunity)}</p>
+            <p className="truncate text-base font-semibold tracking-tight">{opportunityTitle(opportunity, language)}</p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <MapPin className="size-4" />
-              {displayRepreneurOpportunityGeography(opportunity.location)}
+              {displayRepreneurOpportunityGeography(opportunity.location, language)}
             </span>
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="size-4" />
-              Added {opportunity.date_added_display ?? "-"}
+              {u("Added {date}", { date: (language === "fr" ? opportunity.date_added_display : opportunity.date_added_display_en ?? opportunity.date_added_display) ?? "-" })}
             </span>
             </div>
           </div>
           {opportunity.teaser_summary ? <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{opportunity.teaser_summary}</p> : null}
           {!compact ? <dl className="mt-3 grid grid-cols-2 border-y py-2.5 text-sm sm:grid-cols-4">
             <div className="min-w-0 border-r pr-3 sm:px-3 sm:first:pl-0">
-              <WaveMicroLabel asChild><dt>Revenue</dt></WaveMicroLabel>
-              <dd className="mt-1 font-medium">{formatNumber(opportunity.revenue_meur, "M EUR")}</dd>
+              <WaveMicroLabel asChild><dt>{u("Revenue")}</dt></WaveMicroLabel>
+              <dd className="mt-1 font-medium">{formatNumber(opportunity.revenue_meur, "M EUR", language)}</dd>
             </div>
             <div className="min-w-0 pl-3 sm:border-r sm:px-3">
-              <WaveMicroLabel asChild><dt>EBITDA</dt></WaveMicroLabel>
-              <dd className="mt-1 font-medium">{formatNumber(opportunity.ebitda_keur, "K EUR")}</dd>
+              <WaveMicroLabel asChild><dt>{u("EBITDA")}</dt></WaveMicroLabel>
+              <dd className="mt-1 font-medium">{formatNumber(opportunity.ebitda_keur, "K EUR", language)}</dd>
             </div>
             <div className="mt-3 min-w-0 border-r pr-3 sm:mt-0 sm:px-3">
-              <WaveMicroLabel asChild><dt>Margin</dt></WaveMicroLabel>
-              <dd className="mt-1 font-medium">{formatEbitdaMargin(opportunity)}</dd>
+              <WaveMicroLabel asChild><dt>{u("Margin")}</dt></WaveMicroLabel>
+              <dd className="mt-1 font-medium">{formatEbitdaMargin(opportunity, language)}</dd>
             </div>
             <div className="mt-3 min-w-0 pl-3 sm:mt-0 sm:px-3 sm:pr-0">
-              <WaveMicroLabel asChild><dt>Team</dt></WaveMicroLabel>
+              <WaveMicroLabel asChild><dt>{u("Team")}</dt></WaveMicroLabel>
               <dd className="mt-1 font-medium">{opportunity.headcount_range ?? opportunity.headcount ?? "—"}</dd>
             </div>
           </dl> : null}
           <p className="mt-2 text-xs text-muted-foreground">
-            {opportunity.sector ?? opportunity.activity ?? "Sector to confirm"}
+            {opportunity.sector ?? opportunity.activity ?? u("Sector to confirm")}
           </p>
-          {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{responseExpired ? "Response window expired" : "Respond by"}: {responseDeadline}</p> : null}
+          {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{u(responseExpired ? "Response window expired: {date}" : "Respond by: {date}", { date: responseDeadline })}</p> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3 lg:items-end">
           {!readOnly ? <PersonalReviewHint state={opportunity.personal_review} /> : null}
@@ -340,11 +351,11 @@ function DealCard({
             opportunityId={opportunity.opportunity_id} initialState={opportunity.personal_review}
             onUndo={() => { restoreFocus.current = true }}
           /> : null}
-          {isDeclined ? <p className="text-sm text-muted-foreground">You can reconsider this deal from its detail page.</p> : null}
+          {isDeclined ? <p className="text-sm text-muted-foreground">{u("You can reconsider this deal from its detail page.")}</p> : null}
           {detailHref ? (
             <Button asChild variant="outline" className="w-full lg:w-auto">
               <Link ref={detailLink} href={detailHref}>
-                {isDeclined ? "Review and reconsider" : detailLabel}
+                {isDeclined ? u("Review and reconsider") : detailLabel === "View detail" || detailLabel === "Preview detail" ? u(detailLabel) : detailLabel}
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>
@@ -366,14 +377,15 @@ export function DealSection({
   compact,
 }: {
   sectionKey: "recommended" | "declined" | "in-progress" | "live-opportunities"
-  title: string
-  description: string
+  title: UiCopyKey
+  description: UiCopyKey
   opportunities: RepreneurDealDiscoveryOpportunity[]
   detailHrefForOpportunity: (opportunity: RepreneurOpportunityListItem) => string | null
   detailLabel: string
   readOnly: boolean
   compact?: boolean
 }) {
+  const u = useUiCopy()
   if (opportunities.length === 0) return null
 
   const headingId = `deal-section-${sectionKey}`
@@ -390,22 +402,22 @@ export function DealSection({
     <section className="flex flex-col gap-3 border-t pt-5" aria-labelledby={headingId}>
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h2 id={headingId} className="text-base font-semibold tracking-tight">{title}</h2>
-          <span className="text-xs tabular-nums text-muted-foreground" aria-label={`${opportunities.length} ${opportunities.length === 1 ? "deal" : "deals"}`}>{opportunities.length}</span>
-          <DealOrderInfo label={`About ${title} ordering`}>
-            <p>{rationale}</p>
-            {reviewOrdering ? <p className="mt-2">Not reviewed first, reviewed below. Your existing order is kept inside each group.</p> : null}
-            {reviewEligible && !groups.available ? <p className="mt-2">Review order is unavailable right now. Your existing deal order is shown.</p> : null}
-            <p className="mt-2">Overall order: {DEAL_SECTION_ORDER}</p>
+          <h2 id={headingId} className="text-base font-semibold tracking-tight">{u(title)}</h2>
+          <span className="text-xs tabular-nums text-muted-foreground" aria-label={`${opportunities.length} ${u(opportunities.length === 1 ? "deal" : "deals")}`}>{opportunities.length}</span>
+          <DealOrderInfo label={u("About {title} ordering", { title: u(title) })}>
+            <p>{u(rationale)}</p>
+            {reviewOrdering ? <p className="mt-2">{u("Not reviewed first, reviewed below. Your existing order is kept inside each group.")}</p> : null}
+            {reviewEligible && !groups.available ? <p className="mt-2">{u("Review order is unavailable right now. Your existing deal order is shown.")}</p> : null}
+            <p className="mt-2">{u("Overall order: {order}", { order: u("Recommended → In Progress → Live Opportunities → Declined") })}</p>
           </DealOrderInfo>
         </div>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-sm text-muted-foreground">{u(description)}</p>
       </div>
       <div className="grid gap-3">
         {ordered.map((opportunity, index) => (
           <Fragment key={opportunity.match_id ?? opportunity.opportunity_id}>
           {reviewOrdering && groups.reviewed.length > 0 && index === groups.unreviewed.length ? <div className="flex items-center gap-3 pt-2">
-            <h3 className="shrink-0 text-xs font-medium text-muted-foreground">Reviewed · {groups.reviewed.length}</h3>
+            <h3 className="shrink-0 text-xs font-medium text-muted-foreground">{u("Reviewed · {count}", { count: groups.reviewed.length })}</h3>
             <span className="h-px flex-1 bg-border" aria-hidden="true" />
           </div> : null}
           <DealCard
@@ -431,6 +443,8 @@ export function RepreneurOpportunityList({
   emptyDescription,
   readOnly = false,
 }: RepreneurOpportunityListProps) {
+  const u = useUiCopy()
+  const language = useUiLanguage()
   const [search, setSearch] = useState("")
   const [filters, setFilters] = useState<RepreneurDealDiscoveryFilters>(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS)
   const [loadedPreferenceKey, setLoadedPreferenceKey] = useState<string | null>(null)
@@ -441,6 +455,8 @@ export function RepreneurOpportunityList({
   }, [])
   const geographyOptions = useMemo(() => canonicalGeographyFilterOptions(opportunities), [opportunities])
   const sectorOptions = useMemo(() => canonicalSectorFilterOptions(opportunities), [opportunities])
+  const displayGeographyOptions = useMemo(() => canonicalGeographyFilterOptions(opportunities, language), [opportunities, language])
+  const displaySectorOptions = useMemo(() => sectorOptions.map((option) => ({ ...option, label: sectorUiLabel(option.label, language) })), [sectorOptions, language])
   const preferenceKey = repreneur && !readOnly && typeof repreneur.is_demo === "boolean"
     ? `${PREFERENCE_NAMESPACE}:${repreneur.is_demo ? "DEMO" : "REAL"}:${repreneur.id}`
     : null
@@ -502,8 +518,8 @@ export function RepreneurOpportunityList({
     return (
       <Alert>
         <BriefcaseBusiness />
-        <AlertTitle>No linked repreneur profile</AlertTitle>
-        <AlertDescription>No opportunity data is available for this login.</AlertDescription>
+        <AlertTitle>{u("No linked repreneur profile")}</AlertTitle>
+        <AlertDescription>{u("No opportunity data is available for this login.")}</AlertDescription>
       </Alert>
     )
   }
@@ -512,9 +528,9 @@ export function RepreneurOpportunityList({
     return (
       <Alert>
         <BriefcaseBusiness />
-        <AlertTitle>No opportunities available</AlertTitle>
+        <AlertTitle>{u("No opportunities available")}</AlertTitle>
         <AlertDescription>
-          {emptyDescription ?? `There are no opportunities for ${repreneur.first_name} at the moment.`}
+          {emptyDescription ?? u("There are no opportunities for {name} at the moment.", { name: repreneur.first_name })}
         </AlertDescription>
       </Alert>
     )
@@ -531,8 +547,8 @@ export function RepreneurOpportunityList({
       <DealDiscoveryToolbar
         search={search}
         onSearchChange={setSearch}
-        geographyOptions={geographyOptions}
-        sectorOptions={sectorOptions}
+        geographyOptions={displayGeographyOptions}
+        sectorOptions={displaySectorOptions}
         filters={filters}
         onTaxonomyChange={(key, values) => setFilters((current) => ({ ...current, [key]: values }))}
         onClear={() => { setSearch(""); setFilters(EMPTY_REPRENEUR_DEAL_DISCOVERY_FILTERS) }}
@@ -553,19 +569,19 @@ export function RepreneurOpportunityList({
       {filteredOpportunities.length === 0 ? (
         <Alert>
           <BriefcaseBusiness />
-          <AlertTitle>No deals match these criteria</AlertTitle>
-          <AlertDescription>Clear a filter or try another search term to see the rest of your available deals.</AlertDescription>
+          <AlertTitle>{u("No deals match these criteria")}</AlertTitle>
+          <AlertDescription>{u("Clear a filter or try another search term to see the rest of your available deals.")}</AlertDescription>
         </Alert>
       ) : (
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <p>Recommended → In Progress → Live Opportunities → Declined</p>
-            <DealOrderInfo label="How your deal list is ordered">
-              <p>Re-New selections first, then ongoing discussions, other live deals and declined deals.</p>
+            <p>{u("Recommended → In Progress → Live Opportunities → Declined")}</p>
+            <DealOrderInfo label={u("How your deal list is ordered")}>
+              <p>{u("Re-New selections first, then ongoing discussions, other live deals and declined deals.")}</p>
               {!readOnly ? <><p className="mt-2">{reviewOrderUnavailable
-                ? "Where review status is available, Reviewed deals move down within Recommended and Live Opportunities. Sections with unavailable review status keep their existing order."
-                : "Reviewed deals move down within Recommended and Live Opportunities."} Opening a detail only marks it Viewed and does not move it.</p>
-              <p className="mt-2">Not yet viewed means no opening recorded since tracking began. It does not mean newly published. Reviewed means finished for now, not a response or confirmation that you read later updates.</p></> : null}
+                ? u("Where review status is available, Reviewed deals move down within Recommended and Live Opportunities. Sections with unavailable review status keep their existing order.")
+                : u("Reviewed deals move down within Recommended and Live Opportunities.")} {u("Opening a detail only marks it Viewed and does not move it.")}</p>
+              <p className="mt-2">{u("Not yet viewed means no opening recorded since tracking began. It does not mean newly published. Reviewed means finished for now, not a response or confirmation that you read later updates.")}</p></> : null}
             </DealOrderInfo>
           </div>
           <DealSection sectionKey="recommended" title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />

@@ -157,6 +157,11 @@ function normalizeExposure(
       opportunity.date_added,
       opportunity.date_added_precision,
     ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
+    ),
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
@@ -335,6 +340,11 @@ function toDealFlowOpportunity(
       opportunity.date_added,
       opportunity.date_added_precision,
     ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
+    ),
     updated_at: opportunity.updated_at,
     is_staff_recommended: false,
     is_outside_current_criteria: relevance.recommendation === "not_fit",
@@ -376,6 +386,11 @@ function toNeutralDealFlowOpportunity(
       opportunity.date_added,
       opportunity.date_added_precision,
     ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
+    ),
     updated_at: opportunity.updated_at,
     is_staff_recommended: false,
     is_outside_current_criteria: false,
@@ -413,6 +428,7 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
     date_added_display: opportunity.date_added_display,
+    date_added_display_en: opportunity.date_added_display_en,
     decline_reason_categories: opportunity.decline_reason_categories,
     decline_reason_text: opportunity.decline_reason_text,
     interest_expressed_at: opportunity.interest_expressed_at,

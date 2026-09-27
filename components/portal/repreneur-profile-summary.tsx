@@ -190,7 +190,7 @@ function DealGroup({
                     </div>
                     <div className="flex flex-col gap-1">
                       <WaveMicroLabel asChild><dt>{u("Date added")}</dt></WaveMicroLabel>
-                      <dd className="text-foreground">{opportunity.date_added_display ?? "-"}</dd>
+                      <dd className="text-foreground">{(language === "fr" ? opportunity.date_added_display : opportunity.date_added_display_en ?? opportunity.date_added_display) ?? "-"}</dd>
                     </div>
                   </dl>
                   <p className="line-clamp-2 text-muted-foreground">

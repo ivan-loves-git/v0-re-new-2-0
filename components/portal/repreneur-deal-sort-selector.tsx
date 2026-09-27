@@ -6,12 +6,14 @@ import {
   REPRENEUR_DEAL_SORT_OPTIONS,
   type RepreneurDealSort,
 } from "@/lib/utils/repreneur-deal-flow"
+import { useUiCopy } from "@/components/i18n/ui-text"
 
 interface RepreneurDealSortSelectorProps {
   value: RepreneurDealSort
 }
 
 export function RepreneurDealSortSelector({ value }: RepreneurDealSortSelectorProps) {
+  const u = useUiCopy()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -29,15 +31,15 @@ export function RepreneurDealSortSelector({ value }: RepreneurDealSortSelectorPr
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">Sort by</span>
+      <span className="text-sm text-muted-foreground">{u("Sort by")}</span>
       <Select value={value} onValueChange={(nextValue) => handleValueChange(nextValue as RepreneurDealSort)}>
-        <SelectTrigger aria-label="Sort deal flow" size="sm" className="min-w-36">
+        <SelectTrigger aria-label={u("Sort deal flow")} size="sm" className="min-w-36">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {REPRENEUR_DEAL_SORT_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              {option.label}
+              {u(option.label)}
             </SelectItem>
           ))}
         </SelectContent>
