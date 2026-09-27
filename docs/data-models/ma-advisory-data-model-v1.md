@@ -1218,6 +1218,18 @@ the sidebar. Discovery-only detail does not become a pursuit; the existing
 Deals buckets, sorting, filters, review markers and External Pursuits remain
 separate. Navigation alone writes no response, stage or Reviewed marker.
 
+The staff `/portal-preview` selected-deal route uses this same list/detail,
+criteria, action-indicator and Journey presentation from the selected
+repreneur's safe readers. Its adapter uses staff-preview links and the current
+staff workspace selection; it never borrows an owner session, records Viewed or
+Reviewed, or writes the repreneur's language choice. Attributed staff response,
+withdrawal and received-NDA controls remain separate from owner actions.
+Preview document links carry the selected owner, workspace ID and page-issued
+generation; downloads reject an old A link even after an A–B–A switch, then recheck the exact
+current NDA-template or IM grant. A stale selection grants neither a detail
+action nor a document. Original content, private evidence, and REAL/DEMO
+visibility rules are unchanged.
+
 The sidebar sends only match ID, public title, safe sector/activity/geography,
 status and operating stage to the client. Its `respond` indicator is calculated
 on the server from a current own `proposed` match, Active opportunity and an
@@ -1292,6 +1304,7 @@ retains canonical responses, evidence and current permission rules.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-09-27 | #188 Ticket #207 preview correction | The selected staff Portal preview now renders the released pursuit workspace with selected-owner criteria, progress, Documents and Journey. Staff-only actions and current workspace-bound document routes remain separate from owner state; no migration or historical rewrite. | GitHub Product Change #188 / Ticket #207 |
 | 2026-09-27 | #188 Tickets #207–#208 candidate | Added the owner-scoped pursuit workspace, criteria comparison, current action projection and compact/detailed Journey with explicit unknown history and future context. The candidate changes presentation and allowlisted reads only; release evidence belongs to the exact GitHub PR and production gate. | GitHub Product Change #188 / Tickets #207–#208 |
 | 2026-09-27 | #133 Tickets #200–#202 held build | Added the optional account-owned FR/EN UI preference candidate, browser continuity and French-first access/intake/assessment/profile, opportunity and pursuit copy with separate staff-preview choice. The migration and combined #133 release remain unapplied and unshipped. | GitHub Product Change #133 / Decision #199 / Tickets #200–#202; migration `20260927120000` |
 | 2026-09-27 | #187 ordinary-source-send regression correction | The grouped freshness mutation fence distinguishes source-email reservation rows from interaction rows before reading interaction-only fields. Ordinary M&A source reservation/refresh, synthetic outbound evidence transition and release remain usable when no freshness member conflicts, while a sending lease or uncertain grouped outcome still blocks competing source email. The change fixes a candidate integration regression; no production migration or customer send is asserted. | GitHub Product Change #187 / Ticket #205; migration 129 and disposable rehearsal of migration 079 reservation functions |

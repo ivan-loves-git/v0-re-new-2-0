@@ -284,7 +284,7 @@ describe("repreneur portal profile scope", () => {
 
     expect(staffPreview).toContain('"active_pursuit", "dropped"')
     expect(normalizePreview).not.toContain('opportunity.repreneur_exposure === "staff_only"')
-    expect(staffPreview).toContain("listStaffPreviewRepreneurDealFlow(repreneurId)")
+    expect(staffPreview).toContain('listStaffPreviewRepreneurDealFlow(repreneurId, "relevance", selectedDealId)')
     expect(portalOpportunities).toContain('supabase.rpc("w164_repreneur_live_inventory"')
     expect(opportunityList).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped"')
   })

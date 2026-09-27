@@ -26,6 +26,15 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 27, 2026",
+    version: "0.9.83",
+    title: "Staff can preview the same deal workspace",
+    isCompleted: true,
+    events: [
+      { title: "Correct the selected-deal preview", type: "fix", description: "Tools now shows the same deal list, criteria, documents and journey when staff preview a selected repreneur. Staff assistance stays attributed to staff, and previewing never changes the repreneur's reading markers or language choice." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
     version: "0.9.82",
     title: "Follow every Re-New deal in one workspace",
     isCompleted: true,

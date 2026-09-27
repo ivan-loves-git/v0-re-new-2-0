@@ -1,15 +1,12 @@
-import Link from "next/link"
-import { ArrowLeft, Eye, ShieldCheck } from "lucide-react"
+import { Eye, ShieldCheck } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { TabsContent } from "@/components/ui/tabs"
 import { PreviewLanguageScope, StaffEnglishBoundary } from "@/components/i18n/preview-language-scope"
-import { UiText } from "@/components/i18n/ui-text"
 import { StaffPortalPreviewAreas } from "@/components/repreneurs/staff-portal-preview-areas"
 import { previewUiLanguage } from "@/lib/i18n/server-language"
-import { RepreneurOpportunityDetail } from "@/components/opportunities/repreneur-opportunity-detail"
+import { RepreneurPursuitWorkspace } from "@/components/portal/repreneur-pursuit-workspace"
 import { RepreneurOpportunityList } from "@/components/opportunities/repreneur-opportunity-list"
 import { RepreneurProfileSummary } from "@/components/portal/repreneur-profile-summary"
 import { StaffPortalPreviewSelector } from "@/components/repreneurs/staff-portal-preview-selector"
@@ -27,18 +24,19 @@ import {
   listStaffPortalPreviewOptions,
 } from "@/lib/actions/repreneur-portal-preview"
 import { requireStaffAccess } from "@/lib/access-control"
-import { readPortalCurrentPursuit } from "@/lib/data/current-pursuit"
+import { readPortalCurrentPursuit, readPortalDealActionIndicators } from "@/lib/data/current-pursuit"
 import {
   createPortalPreviewDealHrefMap,
   createPortalPreviewDocumentHref,
   createPortalPreviewHref,
   resolvePortalPreviewRepreneur,
+  type PortalPreviewPursuitStatus,
   type PortalPreviewSection,
 } from "@/lib/portal-preview-routes"
 import { projectSelectedReNewPursuits } from "@/lib/portal-preview-pursuits"
 import { isUuid } from "@/lib/uuid"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { currentStaffPortalSelectionToken } from "@/lib/staff-portal-selection"
+import { currentStaffPortalSelectionToken, parseStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { interestWithdrawalOperationsPaused } from "@/lib/interest-withdrawal-operations"
 
 interface StaffPortalPreviewPageProps {
@@ -48,6 +46,9 @@ interface StaffPortalPreviewPageProps {
     matchId?: string
     view?: string
     workspaceId?: string
+    q?: string
+    status?: string
+    returnView?: string
   }>
 }
 
@@ -69,11 +70,23 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   const section: PortalPreviewSection = params.view === "profile" || params.view === "renew-pursuits" || params.view === "external-pursuits"
     ? params.view
     : "deals"
+  const status: PortalPreviewPursuitStatus = params.status === "active" || params.status === "awaiting" || params.status === "ended"
+    ? params.status : "all"
+  const query = typeof params.q === "string" ? params.q.slice(0, 120) : ""
+  const returnView: PortalPreviewSection = params.returnView === "profile" || params.returnView === "renew-pursuits" || params.returnView === "external-pursuits"
+    ? params.returnView : "deals"
+  const selectedOwnerToken = selectedRepreneurId
+    ? await currentStaffPortalSelectionToken(workspaceId ?? undefined, selectedRepreneurId, access.user.id) : null
+  const selectedOwnerSelection = selectedOwnerToken && selectedRepreneurId
+    ? parseStaffPortalSelection(selectedOwnerToken, selectedRepreneurId, access.user.id) : null
+  const currentWorkspace = !workspaceId || Boolean(selectedOwnerToken)
 
   const [profileData, opportunityData, externalPursuits] = selectedRepreneurId
     ? await Promise.all([
         section === "profile" ? getStaffPortalPreviewProfile(selectedRepreneurId) : Promise.resolve({ repreneur: null }),
-        listStaffPortalPreviewOpportunities(selectedRepreneurId),
+        selectedDealId
+          ? listStaffPortalPreviewOpportunities(selectedRepreneurId, selectedDealId)
+          : listStaffPortalPreviewOpportunities(selectedRepreneurId),
         section === "external-pursuits" ? listStaffPortalPreviewExternalPursuits(selectedRepreneurId) : Promise.resolve([]),
       ])
     : [
@@ -82,38 +95,38 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         [],
       ]
 
-  const selectedOpportunity = selectedDealId
+  const selectedOpportunity = currentWorkspace && selectedDealId
     ? opportunityData.opportunities.find((opportunity) => opportunity.match_id === selectedDealId || opportunity.opportunity_id === selectedDealId) ?? null
     : null
   const detailHrefByOpportunityId = selectedRepreneurId
-    ? createPortalPreviewDealHrefMap(
-        selectedRepreneurId,
-        opportunityData.opportunities.map((opportunity) => ({
-          opportunityId: opportunity.opportunity_id,
-          matchId: opportunity.match_id,
-        })),
-        workspaceId,
-      )
-    : {}
+    ? createPortalPreviewDealHrefMap(selectedRepreneurId, opportunityData.opportunities.map((opportunity) => ({
+        opportunityId: opportunity.opportunity_id, matchId: opportunity.match_id,
+      })), workspaceId, { returnView: section }) : {}
+  const workspaceDeals = opportunityData.opportunities.filter((deal): deal is typeof deal & {
+    match_id: string
+    match_status: NonNullable<typeof deal.match_status>
+  } => Boolean(deal.match_id && deal.match_status))
+  const actions = selectedRepreneurId && selectedOpportunity
+    ? await readPortalDealActionIndicators(workspaceDeals.map((deal) => deal.match_id), {
+        kind: "staff-preview", repreneurId: selectedRepreneurId,
+      }) : {}
   const previewJourney = selectedRepreneurId && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
     ? await readPortalCurrentPursuit({
         matchId: selectedOpportunity.match_id,
         viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId },
       })
     : null
-  const opportunityUpdatedAt = selectedOpportunity
+  const opportunityUpdatedAt = selectedOpportunity && selectedOwnerToken
     ? (await createAdminClient().from("opportunities").select("updated_at")
       .eq("id", selectedOpportunity.opportunity_id).maybeSingle()).data?.updated_at ?? null
     : null
   const renewPursuits = selectedRepreneurId
-    ? projectSelectedReNewPursuits(selectedRepreneurId, opportunityData.opportunities)
+    ? projectSelectedReNewPursuits(selectedRepreneurId, opportunityData.opportunities, workspaceId)
     : []
   const attachmentsByPursuit = externalPursuits.length
     ? await getExternalPursuitAttachmentMap(externalPursuits.map((pursuit) => pursuit.id))
     : {}
   const staffName = access.user.name?.trim() || access.user.email
-  const selectedOwnerToken = selectedRepreneurId
-    ? await currentStaffPortalSelectionToken(workspaceId ?? undefined, selectedRepreneurId, access.user.id) : null
 
   return (
     <div className="space-y-6">
@@ -180,19 +193,44 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
 
       <PreviewLanguageScope initialLanguage={previewLanguage}>
       {selectedRepreneurId && selectedDealId && selectedOpportunity && (
-        <div className="flex flex-col gap-6">
-          <StaffEnglishBoundary><Button asChild variant="ghost" className="w-fit">
-            <Link href={createPortalPreviewHref(selectedRepreneurId, undefined, workspaceId)}>
-              <ArrowLeft data-icon="inline-start" />
-              <UiText text="Back to preview" />
-            </Link>
-          </Button></StaffEnglishBoundary>
-          <RepreneurOpportunityDetail
-            opportunity={selectedOpportunity}
-            readOnly
-            withdrawalPaused={interestWithdrawalOperationsPaused()}
-            journey={previewJourney}
-            staffAssistanceControls={opportunityUpdatedAt && selectedOption && selectedOwnerToken ? <StaffEnglishBoundary><StaffOpportunityResponseControls
+        <RepreneurPursuitWorkspace
+          key={JSON.stringify([selectedRepreneurId, workspaceId, selectedDealId, query, status, returnView])}
+          opportunity={selectedOpportunity}
+          deals={workspaceDeals.map((deal) => ({
+            match_id: deal.match_id,
+            match_status: deal.match_status,
+            pursuit_stage: deal.pursuit_stage,
+            interest_rejected: deal.interest_rejected,
+            recommendation_expires_at: deal.recommendation_expires_at,
+            public_title: deal.public_title,
+            canonical_sector: deal.canonical_sector,
+            sector: deal.sector,
+            activity: deal.activity,
+            geography_label: deal.geography_label,
+            location: deal.location,
+          }))}
+          actions={actions}
+          journey={previewJourney}
+          responseAsOf={new Date().toISOString()}
+          withdrawalPaused={interestWithdrawalOperationsPaused()}
+          initialQuery={query}
+          initialStatus={status}
+          returnHref={createPortalPreviewHref(selectedRepreneurId, undefined, workspaceId, { query, status, view: returnView })}
+          staffPreview={{
+            repreneurId: selectedRepreneurId,
+            workspaceId,
+            returnView,
+            documentHrefs: selectedOpportunity.match_id && workspaceId && selectedOwnerSelection ? {
+              ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }, workspaceId, selectedOwnerSelection.generation),
+              ...(previewJourney?.confidentialGrant ? {
+                informationMemorandum: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, {
+                  kind: "information-memorandum",
+                  documentId: previewJourney.confidentialGrant.informationMemoDocumentId,
+                }, workspaceId, selectedOwnerSelection.generation),
+              } : {}),
+            } : undefined,
+          }}
+          staffAssistanceControls={opportunityUpdatedAt && selectedOption && selectedOwnerToken ? <StaffEnglishBoundary key="staff-response"><StaffOpportunityResponseControls
               selectionToken={selectedOwnerToken}
               repreneurId={selectedOption.id}
               repreneurName={selectedOption.name}
@@ -207,25 +245,15 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               recommendationExpiresAt={selectedOpportunity.recommendation_expires_at}
               withdrawalPaused={interestWithdrawalOperationsPaused()}
             /></StaffEnglishBoundary> : null}
-            staffDocumentAssistanceControls={selectedOption && selectedOwnerToken && selectedOpportunity.match_id
+          staffDocumentAssistanceControls={selectedOption && selectedOwnerToken && selectedOpportunity.match_id
               && previewJourney?.enabled && previewJourney.ndaReadyNotified
               && !previewJourney.revoked && (previewJourney.signedCopyState === "not_submitted" || previewJourney.signedCopyState === "awaiting_validation")
-              ? <StaffEnglishBoundary><StaffReceivedNdaUpload matchId={selectedOpportunity.match_id} selectionToken={selectedOwnerToken}
+              ? <StaffEnglishBoundary key="staff-document"><StaffReceivedNdaUpload matchId={selectedOpportunity.match_id} selectionToken={selectedOwnerToken}
                   repreneurId={selectedOption.id} repreneurName={selectedOption.name} /></StaffEnglishBoundary> : null}
-            documentHrefs={selectedOpportunity.match_id ? {
-              ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }),
-              ...(previewJourney?.confidentialGrant ? {
-                informationMemorandum: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, {
-                  kind: "information-memorandum",
-                  documentId: previewJourney.confidentialGrant.informationMemoDocumentId,
-                }),
-              } : {}),
-            } : undefined}
-          />
-        </div>
+        />
       )}
 
-      {selectedRepreneurId && selectedDealId && !selectedOpportunity && (
+      {selectedRepreneurId && selectedDealId && currentWorkspace && !selectedOpportunity && (
         <Alert>
           <Eye />
           <AlertTitle>Deal not visible in portal preview</AlertTitle>
@@ -233,7 +261,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         </Alert>
       )}
 
-      {selectedRepreneurId && !selectedDealId && !invalidDealSelection && (
+      {selectedRepreneurId && currentWorkspace && !selectedDealId && !invalidDealSelection && (
         <StaffPortalPreviewTabs key={selectedRepreneurId} repreneurId={selectedRepreneurId} workspaceId={workspaceId} section={section}>
           <StaffEnglishBoundary><div className="overflow-x-auto">
             <StaffPortalPreviewAreas />

@@ -5,6 +5,8 @@ import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { withRecipientImPursuitLock } from "@/lib/recipient-im-download-lock"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { isCurrentStaffPortalSelectionGeneration } from "@/lib/staff-portal-selection"
+import { isUuid } from "@/lib/uuid"
 import {
   privateStorageDownloadError,
   proxyPrivateSignedStorageDownload,
@@ -27,14 +29,22 @@ export async function GET(
     }
 
     const repreneurId = request.nextUrl.searchParams.get("repreneurId")
-    if (!repreneurId) {
+    const workspaceId = request.nextUrl.searchParams.get("workspaceId")
+    const selectionGeneration = request.nextUrl.searchParams.get("selectionGeneration")
+    if (!repreneurId || !workspaceId || !selectionGeneration) {
       trace.failure("validation_failed")
-      return privateStorageDownloadError("Missing repreneurId", 400)
+      return privateStorageDownloadError("Missing staff preview selection", 400)
     }
 
     const { matchId, documentId } = (await context.params) as {
       matchId: string
       documentId: string
+    }
+    if (!isUuid(repreneurId) || !isUuid(matchId) || !isUuid(documentId) || !isUuid(workspaceId)
+      || !isUuid(selectionGeneration)
+      || !await isCurrentStaffPortalSelectionGeneration(workspaceId, repreneurId, access.user.id, selectionGeneration)) {
+      trace.failure("authorization_denied")
+      return privateStorageDownloadError("Not found", 404)
     }
     const authorized = await resolvePortalPursuitResource({
       matchId,

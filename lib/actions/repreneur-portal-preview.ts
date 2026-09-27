@@ -462,12 +462,12 @@ export async function getStaffPortalPreviewProfile(repreneurId: string): Promise
   return { repreneur: normalizePortalRepreneurProfile(repreneur) }
 }
 
-export async function listStaffPortalPreviewOpportunities(repreneurId: string): Promise<{
+export async function listStaffPortalPreviewOpportunities(repreneurId: string, selectedDealId?: string | null): Promise<{
   repreneur: RepreneurOpportunityProfile | null
   opportunities: RepreneurDealFlowOpportunity[]
 }> {
   await requireStaffAccess()
-  const result = await listStaffPreviewRepreneurDealFlow(repreneurId)
+  const result = await listStaffPreviewRepreneurDealFlow(repreneurId, "relevance", selectedDealId)
   return { repreneur: result.repreneur, opportunities: result.deals }
 }
 
@@ -478,6 +478,6 @@ export async function getStaffPortalPreviewOpportunity(
   await requireStaffAccess()
   if (!isUuid(repreneurId) || !isUuid(dealId)) return null
 
-  const result = await listStaffPreviewRepreneurDealFlow(repreneurId)
+  const result = await listStaffPreviewRepreneurDealFlow(repreneurId, "relevance", dealId)
   return result.deals.find((deal) => deal.match_id === dealId || deal.opportunity_id === dealId) ?? null
 }

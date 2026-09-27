@@ -461,8 +461,11 @@ function toPortalCurrentPursuit(
 }
 
 /** Authoritative, same-owner projection for the workspace's small per-deal indicator. */
-export async function readPortalDealActionIndicators(matchIds: string[]): Promise<Record<string, PortalDealAction>> {
-  const viewer = await resolveViewer({ kind: "portal" })
+export async function readPortalDealActionIndicators(
+  matchIds: string[],
+  requestedViewer: PortalPursuitViewer = { kind: "portal" },
+): Promise<Record<string, PortalDealAction>> {
+  const viewer = await resolveViewer(requestedViewer)
   if (!viewer.repreneurId || matchIds.length === 0) return {}
   const supabase = createAdminClient()
   const { data, error } = await supabase.from("opportunity_matches")

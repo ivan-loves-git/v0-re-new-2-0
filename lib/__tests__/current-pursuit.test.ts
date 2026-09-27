@@ -299,6 +299,23 @@ describe("current pursuit reads", () => {
     expect(result).toEqual({ unclocked: "respond", expired: null, pending: null, "positioned-elsewhere": "respond" })
   })
 
+  it("projects staff-preview indicators only for the selected owner without a portal session", async () => {
+    const listQuery = query({ data: [
+      { id: "selected-match", status: "proposed", recommendation_expires_at: null, opportunity_id: "o1", opportunity: { status: "active", is_demo: true }, repreneur: { is_demo: true } },
+      { id: "wrong-namespace", status: "proposed", recommendation_expires_at: null, opportunity_id: "o2", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: true } },
+    ], error: null })
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => listQuery) })
+
+    const actions = await readPortalDealActionIndicators(["selected-match", "wrong-namespace", "other-owner-match"], {
+      kind: "staff-preview", repreneurId: "selected-owner",
+    })
+
+    expect(listQuery.eq).toHaveBeenCalledWith("repreneur_id", "selected-owner")
+    expect(mocks.requireStaffAccess).toHaveBeenCalledOnce()
+    expect(mocks.requirePortalAccess).not.toHaveBeenCalled()
+    expect(actions).toEqual({ "selected-match": "respond" })
+  })
+
   it("returns the complete current staff workspace after staff access", async () => {
     setupCurrentPursuit()
 
