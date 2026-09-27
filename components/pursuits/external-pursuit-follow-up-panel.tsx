@@ -23,7 +23,7 @@ import {
   type FollowUpAttempt,
 } from "@/lib/external-pursuit-follow-up"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
-import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
+import { externalPursuitDueState } from "@/lib/utils/external-pursuit-due-state"
 import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
 import { useUiLanguage } from "@/components/i18n/ui-text"
 import { uiCopy, type UiCopyKey } from "@/lib/i18n/ui-copy"
@@ -186,7 +186,7 @@ export function ExternalPursuitFollowUpPanel({
             <div className="flex gap-2">
               <Select value={responsibleParty} onValueChange={(value) => setResponsibleParty(value as ExternalPursuitResponsibleParty)} disabled={controlsLocked}>
                 <SelectTrigger id={`${prefix}-responsible-party`} className="w-full"><SelectValue placeholder={copy("Choose responsibility")} /></SelectTrigger>
-                <SelectContent>
+                <SelectContent lang={language}>
                   <SelectItem value="owner">{copy("Owner")}</SelectItem>
                   <SelectItem value="staff">{copy("Re-New staff")}</SelectItem>
                 </SelectContent>
@@ -202,7 +202,7 @@ export function ExternalPursuitFollowUpPanel({
             <Label htmlFor={`${prefix}-availability`}>{copy("Availability")}</Label>
             <Select value={availability} onValueChange={(value) => setAvailability(value as ExternalPursuitAvailability)} disabled={controlsLocked}>
               <SelectTrigger id={`${prefix}-availability`} className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{EXTERNAL_PURSUIT_AVAILABILITY.map((value) => <SelectItem key={value} value={value}>{pursuitAvailabilityUiLabel(value, language)}</SelectItem>)}</SelectContent>
+              <SelectContent lang={language}>{EXTERNAL_PURSUIT_AVAILABILITY.map((value) => <SelectItem key={value} value={value}>{pursuitAvailabilityUiLabel(value, language)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>

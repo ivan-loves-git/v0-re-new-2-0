@@ -1,5 +1,5 @@
 -- #133 / conceptual migration 128. Optional, account-owned UI preference.
--- This held candidate is additive; there is intentionally no backfill.
+-- Additive only; no historical account-preference backfill.
 CREATE TABLE public.repreneur_ui_preferences (
   user_id TEXT PRIMARY KEY REFERENCES public."user"(id) ON DELETE CASCADE,
   language TEXT NOT NULL CHECK (language IN ('fr', 'en'))

@@ -6,7 +6,7 @@ import {
   REPRENEUR_DEAL_SORT_OPTIONS,
   type RepreneurDealSort,
 } from "@/lib/utils/repreneur-deal-flow"
-import { useUiCopy } from "@/components/i18n/ui-text"
+import { useUiCopy, useUiLanguage } from "@/components/i18n/ui-text"
 
 interface RepreneurDealSortSelectorProps {
   value: RepreneurDealSort
@@ -14,6 +14,7 @@ interface RepreneurDealSortSelectorProps {
 
 export function RepreneurDealSortSelector({ value }: RepreneurDealSortSelectorProps) {
   const u = useUiCopy()
+  const language = useUiLanguage()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -36,7 +37,7 @@ export function RepreneurDealSortSelector({ value }: RepreneurDealSortSelectorPr
         <SelectTrigger aria-label={u("Sort deal flow")} size="sm" className="min-w-36">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent lang={language}>
           {REPRENEUR_DEAL_SORT_OPTIONS.map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {u(option.label)}

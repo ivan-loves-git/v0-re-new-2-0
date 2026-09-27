@@ -9,7 +9,7 @@ export default async function AssessmentLayout({
   children: React.ReactNode
 }) {
   return (
-    <LanguageProvider initialLanguage={await anonymousUiLanguage()}>
+    <LanguageProvider initialLanguage={await anonymousUiLanguage()} showSkipLink>
       {children}
     </LanguageProvider>
   )

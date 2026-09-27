@@ -11,9 +11,9 @@ export function PreviewLanguageScope({ initialLanguage, children }: {
   children: ReactNode
 }) {
   return <LanguageProvider scope="preview" initialLanguage={initialLanguage}>
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-end gap-1" lang="en">
       <p className="text-xs font-medium">Customer-content preview language</p>
-      <LanguageToggle />
+      <LanguageToggle chromeLanguage="en" />
       <p className="text-xs text-muted-foreground">Preview only. This does not change the repreneur&apos;s account preference.</p>
     </div>
     {children}

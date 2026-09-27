@@ -32,7 +32,7 @@ export function InterestWithdrawalControl({ staff, onConfirm }: {
       <AlertDialogTrigger asChild>
         <Button type="button" variant="outline" disabled={pending}>{copy("Withdraw interest")}</Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent lang={language}>
         <AlertDialogHeader>
           <AlertDialogTitle>{copy("Withdraw this interest?")}</AlertDialogTitle>
           <AlertDialogDescription>

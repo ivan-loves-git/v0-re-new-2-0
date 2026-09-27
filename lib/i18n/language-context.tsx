@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { saveMyUiLanguage } from '@/lib/actions/repreneur-ui-language'
+import { GlobalSkipLink } from '@/components/i18n/global-skip-link'
 import { type Language, t, type TranslationKey } from './translations'
 import {
   PREVIEW_LANGUAGE_COOKIE,
@@ -36,11 +37,13 @@ export function LanguageProvider({
   initialLanguage = 'fr',
   accountLanguage = null,
   scope = 'anonymous',
+  showSkipLink = false,
 }: {
   children?: ReactNode
   initialLanguage?: Language
   accountLanguage?: Language | null
   scope?: LanguageScope
+  showSkipLink?: boolean
 }) {
   const [language, setLanguageState] = useState<Language>(initialLanguage)
   const [saving, setSaving] = useState(false)
@@ -93,7 +96,10 @@ export function LanguageProvider({
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, saving, saveError, t: (key) => t(key, language) }}>
-      <div className="contents" lang={language}>{children}</div>
+      <div className="contents" lang={language}>
+        {showSkipLink ? <GlobalSkipLink language={language} localized /> : null}
+        {children}
+      </div>
     </LanguageContext.Provider>
   )
 }

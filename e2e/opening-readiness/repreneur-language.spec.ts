@@ -46,6 +46,22 @@ async function accountLanguage(client: Client, userId: string) {
   return rows[0]?.language ?? null
 }
 
+async function ownerState(client: Client, repreneurId: string, opportunityId: string) {
+  const [matches, interestEvents, external, review, documents] = await Promise.all([
+    client.query<{ id: string; status: string; updated_at: string }>(
+      "SELECT id,status,updated_at::text FROM public.opportunity_matches WHERE repreneur_id=$1 ORDER BY id", [repreneurId]),
+    client.query<{ id: string }>(
+      "SELECT e.id FROM public.opportunity_interest_events e JOIN public.opportunity_matches m ON m.id=e.match_id WHERE m.repreneur_id=$1 ORDER BY e.id", [repreneurId]),
+    client.query<{ id: string; title: string; stage: string }>(
+      "SELECT id,title,stage FROM public.external_pursuits WHERE owner_repreneur_id=$1 ORDER BY id", [repreneurId]),
+    client.query<{ first_viewed_at: string; reviewed: boolean }>(
+      "SELECT first_viewed_at::text,reviewed FROM public.repreneur_opportunity_review_state WHERE repreneur_id=$1 AND opportunity_id=$2", [repreneurId, opportunityId]),
+    client.query<{ id: string; title: string; file_name: string }>(
+      "SELECT id,title,file_name FROM public.opportunity_documents WHERE opportunity_id=$1 ORDER BY id", [opportunityId]),
+  ])
+  return { matches: matches.rows, interestEvents: interestEvents.rows, external: external.rows, review: review.rows, documents: documents.rows }
+}
+
 test("French-first locale is account-scoped, live, and separate from staff preview", async ({ browser }) => {
   test.setTimeout(240_000)
   const client = new Client({ connectionString: databaseUrl.toString() })
@@ -84,6 +100,86 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     await expect.poll(() => accountLanguage(client, fixture.repreneurs.real.userId)).toBe("fr")
     await expect(firstPage.locator("html")).toHaveAttribute("lang", "fr")
 
+    // Filters and canonical content stay in place through live language changes.
+    const originalTitle = "QA OPENING REAL — SYNTHETIC"
+    const originalTeaser = "Synthetic opening fixture"
+    const { rows: originalContent } = await client.query<{
+      public_title: string; teaser_summary: string; description: string; sector: string; location: string
+    }>("SELECT public_title,teaser_summary,description,sector,location FROM public.opportunities WHERE id=$1", [fixture.ids.realOpportunity])
+    expect(originalContent).toEqual([{
+      public_title: originalTitle, teaser_summary: originalTeaser,
+      description: "QA OPENING REAL SYNTHETIC — NEVER COMMERCIAL", sector: "Tech & Digital", location: "France",
+    }])
+    const beforeListSwitch = await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)
+    const search = firstPage.getByRole("textbox", { name: "Rechercher parmi les opportunités" })
+    await search.fill("QA OPENING REAL")
+    await firstPage.getByRole("button", { name: "Zone géographique", exact: true }).click()
+    const geography = firstPage.locator('[data-slot="popover-content"]')
+    await expect(geography).toHaveAttribute("lang", "fr")
+    await firstPage.keyboard.press("Escape")
+    await firstPage.getByRole("button", { name: "Secteurs", exact: true }).click()
+    const sectors = firstPage.locator('[data-slot="popover-content"]')
+    await sectors.getByRole("checkbox", { name: "Tech & Digital" }).check()
+    await firstPage.keyboard.press("Escape")
+    await expect(firstPage.getByRole("button", { name: "Secteurs (1)" })).toBeVisible()
+    await expect(firstPage.getByText(originalTitle, { exact: true })).toBeVisible()
+    await expect(firstPage.getByText(originalTeaser, { exact: true })).toBeVisible()
+    const detailHref = await firstPage.getByRole("link", { name: "Voir le détail" }).first().getAttribute("href")
+    expect(detailHref).toBe(`/portal/deals/${fixture.ids.realOpportunity}`)
+    await firstPage.getByRole("button", { name: "English", exact: true }).click()
+    await expect(firstPage.getByRole("textbox", { name: "Search deal flow" })).toHaveValue("QA OPENING REAL")
+    await expect(firstPage.getByRole("button", { name: "Sectors (1)" })).toBeVisible()
+    await expect(firstPage.getByText(originalTitle, { exact: true })).toBeVisible()
+    await expect(firstPage.getByText(originalTeaser, { exact: true })).toBeVisible()
+    expect(await firstPage.getByRole("link", { name: "View detail" }).first().getAttribute("href")).toBe(detailHref)
+    await firstPage.getByRole("button", { name: "Français", exact: true }).click()
+    await expect(firstPage.getByRole("textbox", { name: "Rechercher parmi les opportunités" })).toHaveValue("QA OPENING REAL")
+    expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(beforeListSwitch)
+
+    await firstPage.getByRole("link", { name: "Voir le détail" }).first().click()
+    await expect(firstPage.getByRole("heading", { name: originalTitle })).toBeVisible()
+    await expect(firstPage.getByText(originalTeaser, { exact: true })).toBeVisible()
+    await expect(firstPage.getByText("QA OPENING REAL SYNTHETIC — NEVER COMMERCIAL")).toHaveCount(0)
+    await expect(firstPage.getByText("Indiquez à Re-New si vous souhaitez explorer cette opportunité.")).toBeVisible()
+    await expect.poll(async () => (await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).review.length).toBe(1)
+    const beforeDetailSwitch = await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)
+    await firstPage.getByRole("button", { name: "English", exact: true }).click()
+    await expect(firstPage.getByText("Tell Re-New whether this opportunity should be explored further.")).toBeVisible()
+    await expect(firstPage.getByRole("heading", { name: originalTitle })).toBeVisible()
+    await expect(firstPage.getByText(originalTeaser, { exact: true })).toBeVisible()
+    await firstPage.getByRole("button", { name: "Français", exact: true }).click()
+    expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(beforeDetailSwitch)
+    expect((await client.query("SELECT public_title,teaser_summary,description,sector,location FROM public.opportunities WHERE id=$1", [fixture.ids.realOpportunity])).rows).toEqual(originalContent)
+
+    await firstPage.goto("/portal/pursuits")
+    await expect(firstPage.getByRole("heading", { name: "Vos dossiers de reprise" })).toBeVisible()
+    await firstPage.getByRole("textbox", { name: "Rechercher des dossiers" }).fill("QA DRAFT — NEVER SUBMIT")
+    const beforePursuitSwitch = await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)
+    await firstPage.getByRole("button", { name: "Nouveau dossier externe" }).click()
+    const editor = firstPage.locator('[data-slot="dialog-content"]')
+    await expect(editor).toHaveAttribute("lang", "fr")
+    await expect(editor.getByRole("heading", { name: "Nouveau dossier externe" })).toBeVisible()
+    await editor.locator("#external-pursuit-title").fill("QA DRAFT — NEVER SUBMIT")
+    await editor.locator("#external-pursuit-availability").click()
+    await expect(firstPage.locator('[data-slot="select-content"]')).toHaveAttribute("lang", "fr")
+    await expect(firstPage.getByRole("option", { name: "Disponibilité inconnue" })).toBeVisible()
+    await firstPage.keyboard.press("Escape")
+    // The modal masks the header from pointer/keyboard interaction. Invoke its
+    // real button handler to prove a locale update cannot remount the open draft.
+    await firstPage.locator('header button[aria-label="English"]').evaluate((button: HTMLButtonElement) => button.click())
+    await expect(editor).toHaveAttribute("lang", "en")
+    await expect(editor.locator("#external-pursuit-title")).toHaveValue("QA DRAFT — NEVER SUBMIT")
+    await expect(firstPage.locator('input[aria-label="Search pursuits"]')).toHaveValue("QA DRAFT — NEVER SUBMIT")
+    await editor.locator("#external-pursuit-availability").click()
+    await expect(firstPage.locator('[data-slot="select-content"]')).toHaveAttribute("lang", "en")
+    await expect(firstPage.getByRole("option", { name: "Availability unknown" })).toBeVisible()
+    await firstPage.keyboard.press("Escape")
+    await firstPage.keyboard.press("Escape")
+    await expect(editor).toHaveCount(0)
+    expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(beforePursuitSwitch)
+    await firstPage.getByRole("button", { name: "Français", exact: true }).click()
+    await expect(firstPage.getByRole("textbox", { name: "Rechercher des dossiers" })).toHaveValue("QA DRAFT — NEVER SUBMIT")
+
     const second = await browser.newContext({
       viewport: { width: 390, height: 844 },
       extraHTTPHeaders: { "x-forwarded-for": "203.0.113.221" },
@@ -101,8 +197,11 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     await secondPage.getByRole("button", { name: "English", exact: true }).click()
     await expect(secondPage.getByRole("heading", { name: "Your deals", exact: true })).toBeVisible()
     await expect.poll(() => accountLanguage(client, fixture.repreneurs.real.userId)).toBe("en")
+    await secondPage.goto("/portal/pursuits")
+    await expect(secondPage.getByRole("heading", { name: "Your pursuits" })).toBeVisible()
+    expect(await secondPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await firstPage.reload()
-    await expect(firstPage.getByRole("heading", { name: "Your deals", exact: true })).toBeVisible()
+    await expect(firstPage.getByRole("heading", { name: "Your pursuits", exact: true })).toBeVisible()
 
     // This browser still carries its prior choice, but a second account has no row.
     await firstPage.goto("/auth/logout")
@@ -120,21 +219,39 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     const staffPage = await staff.newPage()
     await login(staffPage, fixture.staff.email)
     await expect(staffPage).toHaveURL(/\/dashboard_re/)
+    const previewBefore = await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)
     await staffPage.goto(`/portal-preview?repreneurId=${fixture.repreneurs.real.id}`)
     await expect(staffPage.getByRole("heading", { name: "Portal preview", exact: true })).toBeVisible()
     await staffPage.getByRole("button", { name: "English", exact: true }).click()
     await staffPage.getByRole("button", { name: "Français", exact: true }).click()
     await expect(staffPage.getByText("Customer-content preview language")).toBeVisible()
+    await expect(staffPage.getByText("Customer-content preview language").locator("..")).toHaveAttribute("lang", "en")
+    await expect(staffPage.getByRole("group", { name: "Interface language" })).toContainText("FR")
+    await expect(staffPage.getByText("Interface only. Original content, documents and emails may remain in their original language.")).toBeVisible()
     await expect(staffPage.locator("html")).toHaveAttribute("lang", "en")
     await expect(staffPage.getByRole("tab", { name: "Deals", exact: true })).toBeVisible()
     await expect(staffPage.getByText("Recommandées → En cours → Opportunités disponibles → Écartées", { exact: true })).toBeVisible()
     await expect(staffPage.getByText("QA OPENING REAL — SYNTHETIC", { exact: true }).first()).toBeVisible()
+    expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(previewBefore)
+    await staffPage.getByRole("button", { name: "Comment vos opportunités sont classées" }).click()
+    await expect(staffPage.locator('[data-slot="popover-content"]')).toHaveAttribute("lang", "fr")
+    await staffPage.keyboard.press("Escape")
+    expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(previewBefore)
     expect(await accountLanguage(client, fixture.repreneurs.real.userId)).toBe("en")
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       await staffPage.setViewportSize(viewport)
       await expect(staffPage.getByRole("heading", { name: "Portal preview", exact: true })).toBeVisible()
       await expect(staffPage.getByRole("tab", { name: "Deals", exact: true })).toBeVisible()
     }
+
+    const noScript = await browser.newContext({ javaScriptEnabled: false })
+    contexts.push(noScript)
+    const noScriptPage = await noScript.newPage()
+    await noScriptPage.goto("/auth/login")
+    await expect(noScriptPage.locator('[data-localized-skip-link]')).toHaveText("Aller au contenu principal")
+    await expect(noScriptPage.locator('[data-localized-skip-link]')).toHaveAttribute("lang", "fr")
+    await expect(noScriptPage.locator('[data-root-skip-link]')).toBeHidden()
+    await expect(noScriptPage.getByRole("button", { name: "Se connecter" })).toBeVisible()
 
     // Public file, token, and form state survive a locale-only re-render.
     const publicContext = await browser.newContext({
@@ -174,8 +291,10 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     await writeFile(join(runnerTemp, "opening-readiness-evidence", "repreneur-ui-language.json"),
       JSON.stringify({
         defaultFrench: true, accountPrecedenceAcrossContexts: true, accountIsolation: true,
-        livePortalSwitch: true, publicFormAndFileRetained: true, resetTokenRetained: true,
-        previewNoCustomerWrite: true, staffChromeEnglish: true, desktopAndMobile: true,
+        livePortalSwitch: true, filtersAndCanonicalContentRetained: true, detailAndPursuitDialogBothLanguages: true,
+        noBusinessMutationOnSwitch: true, publicFormAndFileRetained: true, resetTokenRetained: true,
+        previewNoCustomerWrite: true, staffChromeEnglish: true, portalDialogLanguageScoped: true,
+        noScriptFrenchSkipLink: true, desktopAndMobile: true,
       }) + "\n")
   } finally {
     releasePreflight()

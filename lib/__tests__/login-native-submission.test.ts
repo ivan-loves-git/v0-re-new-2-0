@@ -7,6 +7,7 @@ vi.mock("@/lib/actions/waitlist", () => ({ submitWaitlistRequest: vi.fn() }))
 vi.mock("@/lib/telemetry/runtime", () => ({ captureWaveEvent: vi.fn() }))
 
 import LoginPage from "@/app/auth/login/page"
+import { GlobalSkipLink } from "@/components/i18n/global-skip-link"
 import { LanguageProvider } from "@/lib/i18n/language-context"
 
 function renderLogin() {
@@ -27,5 +28,17 @@ describe("login before hydration", () => {
     const submit = html.match(/<button\b[^>]*type="submit"[^>]*>/)?.[0]
 
     expect(submit).toContain('disabled=""')
+  })
+
+  it("renders the French skip link with French login before hydration while staff keeps English", () => {
+    const french = renderToStaticMarkup(createElement(LanguageProvider,
+      { initialLanguage: "fr", showSkipLink: true }, createElement(LoginPage)))
+    const staff = renderToStaticMarkup(createElement(GlobalSkipLink))
+
+    expect(french).toContain('lang="fr" data-localized-skip-link=""')
+    expect(french).toContain("Aller au contenu principal")
+    expect(french).toContain("Se connecter")
+    expect(staff).toContain('lang="en" data-root-skip-link=""')
+    expect(staff).toContain("Skip to main content")
   })
 })

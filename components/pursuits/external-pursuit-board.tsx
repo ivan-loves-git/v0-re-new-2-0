@@ -496,7 +496,7 @@ export function ExternalPursuitBoard({
       </section>
 
       <Dialog open={open} onOpenChange={changeEditorOpen}>
-        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent lang={actionLanguage} closeLabel={action("Close")} className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{action(editing ? "Edit external pursuit" : "New external pursuit")}</DialogTitle>
             <DialogDescription>
@@ -518,7 +518,7 @@ export function ExternalPursuitBoard({
                   <SelectTrigger id="external-pursuit-owner" aria-label="Owner">
                     <SelectValue placeholder="Choose owner" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent lang={actionLanguage}>
                     {owners.map((owner) => <SelectItem key={owner.id} value={owner.id}>{owner.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -618,7 +618,7 @@ export function ExternalPursuitBoard({
           setManagerOperationLocks(new Map())
         }
       }}>
-        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent lang={isStaff && !readOnly ? actionLanguage : presentationLanguage} closeLabel={managerCopy("Close")} className="max-h-[90svh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{managing?.title ?? managerCopy("External pursuit")}</DialogTitle>
             <DialogDescription>
@@ -707,7 +707,7 @@ export function ExternalPursuitBoard({
       </Dialog>
 
       <AlertDialog open={Boolean(confirmation)} onOpenChange={(nextOpen) => { if (!nextOpen) setConfirmation(null) }}>
-        <AlertDialogContent>
+        <AlertDialogContent lang={actionLanguage}>
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirmation?.kind === "fulfill" ? `Permanently delete “${confirmation.record.title}”?` : action("Request deletion of “{title}”?", { title: confirmation?.record.title ?? "" })}
@@ -754,7 +754,7 @@ function StageSelect({
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger id={id} aria-label={ariaLabel}><SelectValue /></SelectTrigger>
-      <SelectContent>
+      <SelectContent lang={language}>
         {EXTERNAL_PURSUIT_STAGES.map((stage) => <SelectItem key={stage} value={stage}>{pursuitStageUiLabel(stage, language)}</SelectItem>)}
       </SelectContent>
     </Select>
@@ -777,7 +777,7 @@ function AvailabilitySelect({
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger id={id} aria-label={ariaLabel}><SelectValue /></SelectTrigger>
-      <SelectContent>
+      <SelectContent lang={language}>
         {EXTERNAL_PURSUIT_AVAILABILITY.map((availability) => (
           <SelectItem key={availability} value={availability}>
             {pursuitAvailabilityUiLabel(availability, language)}
@@ -864,7 +864,7 @@ function ExternalCard({
         {isStaff && record.ownerName ? <span className="text-xs text-muted-foreground">{record.ownerName}</span> : null}
       </div>
       <h3 className="font-medium leading-snug">{record.title}</h3>
-      <p className="text-xs text-muted-foreground">{view("Availability: {availability}", { availability: presentationLanguage === "fr" ? pursuitAvailabilityUiLabel(record.availability, presentationLanguage) : record.availability })}</p>
+      <p className="text-xs text-muted-foreground">{view("Availability: {availability}", { availability: pursuitAvailabilityUiLabel(record.availability, presentationLanguage) })}</p>
       <div className="flex flex-wrap gap-2">
         <Badge variant="outline"><CalendarClock className="size-3" /> {pursuitDueUiLabel(dueState, presentationLanguage)}</Badge>
         <Badge variant="outline"><Paperclip className="size-3" /> {view("Private files")}</Badge>

@@ -50,8 +50,11 @@ type AccessState = {
 };
 
 async function login(page: Page, email: string, loginPassword = password) {
+  // This pre-localization access journey asserts English UI. Resolve its
+  // browser language before SSR instead of waiting on a language-toggle click.
+  await page.context().addCookies([{ name: "renew-language", value: "en", url: "http://127.0.0.1:3000" }]);
   await page.goto("/auth/login");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Sign In", exact: true })).toBeVisible();
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(loginPassword);
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
@@ -575,6 +578,8 @@ test("staff portal-access confirmations have safe exactly-once consequences and 
         repreneur.userId,
       ],
     );
+    // The recovery copy below is deliberately checked in French.
+    await setupPage.context().addCookies([{ name: "renew-language", value: "fr", url: "http://127.0.0.1:3000" }]);
     await expectInvalidPortalLink(setupPage, expiredToken);
     await expectInvalidPortalLink(setupPage, "invalid");
     await setupPage.goto("/auth/reset-password?intent=portal");

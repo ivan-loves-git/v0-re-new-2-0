@@ -65,6 +65,19 @@ describe("ExternalPursuitBoard component", () => {
     expect(html).toContain("Aucun dossier")
   })
 
+  it("shows controlled English availability labels to the owner", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(ExternalPursuitBoard, {
+        external: [external({ availability: "unknown" }), external({ id: "external-2", availability: "limited" })],
+        renew: [], isStaff: false,
+      }),
+    ))
+    expect(html).toContain("Availability: Availability unknown")
+    expect(html).toContain("Availability: Limited availability")
+    expect(html).not.toContain("Availability: unknown")
+    expect(html).not.toContain("Availability: limited")
+  })
+
   it("localizes previewed dossier facts while staff assistance controls remain English", () => {
     const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "fr", scope: "preview" },
       createElement(ExternalPursuitBoard, {
@@ -112,7 +125,7 @@ describe("ExternalPursuitBoard component", () => {
     expect(html).toContain("They are separate from Re-New Deal Flow")
     expect(html).toContain("External")
     expect(html).toContain("Re-New · read-only")
-    expect(html).toContain("Availability: unknown")
+    expect(html).toContain("Availability: Availability unknown")
     expect(html).toContain("Optional details not added")
     expect(html).toContain("Contacts not added")
     expect(html).toContain("aria-label=\"Move Independent target stage\"")

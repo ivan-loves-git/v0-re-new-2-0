@@ -183,6 +183,10 @@ async function expectPreview(
       encodeURIComponent(opportunityId),
   );
   if (visible) {
+    // This older lifecycle scenario asserts English copy; preview language is
+    // now an independent staff-browser choice and defaults to French.
+    await page.getByRole("group", { name: "Interface language" })
+      .getByRole("button", { name: "English", exact: true }).click();
     await expect(
       page
         .locator("#main-content")

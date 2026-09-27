@@ -193,12 +193,13 @@ function DealDiscoveryToolbar({
   preferencesEnabled: boolean
 }) {
   const u = useUiCopy()
+  const language = useUiLanguage()
   const picker = (key: "geography" | "sector", label: string, options: { value: string; label: string }[]) => (
     <Popover>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" size="sm">{label} {filters[key].length ? `(${filters[key].length})` : ""}</Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="max-h-80 w-72 overflow-y-auto">
+      <PopoverContent align="start" lang={language} className="max-h-80 w-72 overflow-y-auto">
         <fieldset className="grid gap-2"><legend className="text-sm font-medium">{label}</legend>
           {options.map((option) => <div key={option.value} className="flex items-center gap-2"><Checkbox id={`${key}-${option.value}`} checked={filters[key].includes(option.value)} onCheckedChange={() => onTaxonomyChange(key, toggleValue(filters[key], option.value))} /><Label htmlFor={`${key}-${option.value}`} className="font-normal">{option.label}</Label></div>)}
         </fieldset>

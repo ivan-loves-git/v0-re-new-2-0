@@ -29,7 +29,7 @@ async function PortalGate({
         userId={getOpaqueTelemetryUserId(user.id)}
         role="repreneur"
       />
-      <LanguageProvider key={user.id} initialLanguage={language} accountLanguage={accountLanguage} scope="account">
+      <LanguageProvider key={user.id} initialLanguage={language} accountLanguage={accountLanguage} scope="account" showSkipLink>
         <PortalShell userEmail={user.email} userName={user.name}>
           {children}
         </PortalShell>

@@ -259,7 +259,7 @@ export function RepreneurTargetThesisEditor({
           {staffAssistanceName ? triggerLabel : u("Edit thesis")}
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
+      <DialogContent lang={language} closeLabel={uiCopy(language, "Close")} className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>{staffAssistanceName ? title : u("Update your target thesis")}</DialogTitle>
           <DialogDescription>{staffAssistanceName ? description : u("Keep the criteria Re-New uses to surface relevant opportunities current. Your readiness milestones remain managed by Re-New.")}</DialogDescription>

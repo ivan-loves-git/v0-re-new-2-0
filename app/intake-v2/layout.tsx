@@ -9,7 +9,7 @@ export default async function IntakeV2Layout({
   children: React.ReactNode
 }) {
   return (
-    <LanguageProvider initialLanguage={await anonymousUiLanguage()}>
+    <LanguageProvider initialLanguage={await anonymousUiLanguage()} showSkipLink>
       {children}
     </LanguageProvider>
   )

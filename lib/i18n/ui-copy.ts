@@ -3,6 +3,7 @@ import type { Language } from "./translations"
 // English identifiers keep the existing UI corpus reviewable next to its French wording.
 // Only interface copy belongs here. Never pass user, opportunity, document, or legal text.
 export const uiFrench = {
+  "Close": "Fermer",
   "Interface language": "Langue de l’interface",
   "Interface only. Original content, documents and emails may remain in their original language.": "Ce choix concerne uniquement l’interface. Les contenus, documents et e-mails peuvent conserver leur langue d’origine.",
   "Could not save your language. Please try again.": "Impossible d’enregistrer la langue. Réessayez.",

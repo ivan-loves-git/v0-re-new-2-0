@@ -9,7 +9,7 @@ export default async function WelcomeLayout({
   children: React.ReactNode
 }) {
   return (
-    <LanguageProvider initialLanguage={await anonymousUiLanguage()}>
+    <LanguageProvider initialLanguage={await anonymousUiLanguage()} showSkipLink>
       {children}
     </LanguageProvider>
   )
