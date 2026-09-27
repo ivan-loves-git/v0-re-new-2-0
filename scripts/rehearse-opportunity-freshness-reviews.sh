@@ -15,6 +15,11 @@ trap cleanup EXIT
 psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_freshness_admin -d renew_freshness_rehearsal)
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/opportunity-freshness-fixture.sql" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/121_staff_email_review_queue.sql" >/dev/null
+# Use migration 079's real helper body, not a permissive duplicate that could
+# accidentally conflate its provisional-source review with the independent
+# source_identity_to_verify flag.
+sed -n '/^CREATE OR REPLACE FUNCTION public.ma_opportunity_source_review_required(/,/^\$\$;/p' \
+  "$repo_root/scripts/079_provisional_acme_source_foundation.sql" | "${psql[@]}" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/129_opportunity_freshness_reviews.sql" >/dev/null
 "${psql[@]}" <<'SQL'
 DO $$ BEGIN
@@ -45,9 +50,33 @@ DO $$ BEGIN IF EXISTS (SELECT 1 FROM public.opportunity_freshness_candidates(NUL
   WHERE candidate->>'opportunity_id'='18700000-0000-4000-8000-000000000007') THEN RAISE EXCEPTION 'demo_opportunity_eligible'; END IF; END $$;
 ROLLBACK;
 BEGIN;
-UPDATE public.opportunities SET source_identity_to_verify=true WHERE id='18700000-0000-4000-8000-000000000007';
-DO $$ BEGIN IF EXISTS (SELECT 1 FROM public.opportunity_freshness_candidates(NULL,now(),true,NULL) candidate
-  WHERE candidate->>'opportunity_id'='18700000-0000-4000-8000-000000000007') THEN RAISE EXCEPTION 'unverified_source_eligible'; END IF; END $$;
+DO $$ DECLARE v_member jsonb; v_blocked boolean := false; BEGIN
+  SELECT candidate INTO v_member FROM public.opportunity_freshness_candidates(NULL,now(),true,NULL) candidate
+    WHERE candidate->>'opportunity_id'='18700000-0000-4000-8000-000000000007';
+  UPDATE public.opportunities SET source_identity_to_verify=true WHERE id='18700000-0000-4000-8000-000000000007';
+  IF public.ma_opportunity_source_review_required('18700000-0000-4000-8000-000000000007') THEN
+    RAISE EXCEPTION 'real_079_helper_was_conflated_with_source_identity_flag'; END IF;
+  IF EXISTS (SELECT 1 FROM public.opportunity_freshness_candidates(NULL,now(),true,NULL) candidate
+    WHERE candidate->>'opportunity_id'='18700000-0000-4000-8000-000000000007') THEN
+    RAISE EXCEPTION 'unverified_source_eligible'; END IF;
+  BEGIN
+    PERFORM public.opportunity_freshness_prepare(
+      '18700000-0000-4000-8000-000000000003',jsonb_build_array(v_member),'Subject','Body','copy-v1');
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM<>'freshness_members_changed_before_preparation' THEN RAISE; END IF;
+    v_blocked := true;
+  END;
+  IF NOT v_blocked THEN RAISE EXCEPTION 'unverified_source_draft_was_prepared'; END IF;
+END $$;
+ROLLBACK;
+BEGIN;
+INSERT INTO public.ma_provisional_source_contexts VALUES('acme_co_paris','18700000-0000-4000-8000-000000000002');
+DO $$ BEGIN
+ IF NOT public.ma_opportunity_source_review_required('18700000-0000-4000-8000-000000000007') THEN
+   RAISE EXCEPTION 'real_079_provisional_source_review_not_exercised'; END IF;
+ IF EXISTS (SELECT 1 FROM public.opportunity_freshness_candidates(NULL,now(),true,NULL)) THEN
+   RAISE EXCEPTION 'provisional_source_office_eligible'; END IF;
+END $$;
 ROLLBACK;
 BEGIN;
 INSERT INTO public.ma_interactions(id,opportunity_id,channel,direction,delivery_status,occurred_at)
@@ -154,6 +183,9 @@ fi
 "${psql[@]}" -Atc "UPDATE public.email_templates SET is_active=true WHERE template_key='ma_opportunity_validity_check'" >/dev/null
 second_token="$("${psql[@]}" -Atc "SELECT public.opportunity_freshness_reserve('$second_review',1,'{\"to\":[\"source@example.test\"]}'::jsonb,repeat('b',64),'staff-1')")"
 "${psql[@]}" -Atc "SELECT public.opportunity_freshness_finish('$second_review','$second_token','uncertain',NULL,'Provider timeout','staff-1')" >/dev/null
+"${psql[@]}" -Atc "INSERT INTO public.ma_interactions(id,opportunity_id,channel,direction,delivery_status,occurred_at) VALUES('18700000-0000-4000-8000-0000000000e1','18700000-0000-4000-8000-000000000009','email','inbound',NULL,now())" >/dev/null
+"${psql[@]}" -Atc "DO \$\$ BEGIN IF (SELECT state FROM public.staff_email_reviews WHERE id='$second_review')<>'uncertain' THEN RAISE EXCEPTION 'inbound_logging_erased_uncertain_outcome'; END IF; END \$\$" >/dev/null
+"${psql[@]}" -Atc "DELETE FROM public.ma_interactions WHERE id='18700000-0000-4000-8000-0000000000e1'" >/dev/null
 if "${psql[@]}" -Atc "SELECT public.opportunity_freshness_reserve('$second_review',3,'{\"to\":[\"source@example.test\"]}'::jsonb,repeat('b',64),'staff-1')" >/dev/null 2>&1; then
   echo "Uncertain review ignored two-minute lease" >&2; exit 1
 fi
@@ -208,4 +240,53 @@ DO $$ BEGIN
  THEN RAISE EXCEPTION 'discarded_episode_resurrected'; END IF;
 END $$;
 SQL
-echo "#187 disposable SQL: 44/45/legacy, identity, ACL, grouped receipt, exact reply, independent generation/source/pursuit races, version/recipient drift, discard, template switch and uncertain retry passed"
+
+# Historical exact reply on the earlier sent review makes only that member
+# due again. This synthetic time shift is confined to the disposable cluster.
+"${psql[@]}" -Atc "UPDATE public.staff_email_reviews SET approved_at=now()-interval '50 days', attempted_at=now()-interval '50 days', outcome_at=now()-interval '50 days' WHERE id='$review_id'" >/dev/null
+"${psql[@]}" -Atc "UPDATE public.opportunity_freshness_deliveries SET attempted_at=now()-interval '50 days', finalized_at=now()-interval '50 days' WHERE review_id='$review_id'" >/dev/null
+"${psql[@]}" -Atc "UPDATE public.opportunity_freshness_replies SET reply_at=now()-interval '46 days' WHERE review_id='$review_id' AND opportunity_id='18700000-0000-4000-8000-000000000007'" >/dev/null
+reply_group="$("${psql[@]}" -Atc "SELECT public.opportunity_freshness_prepare('18700000-0000-4000-8000-000000000003',(SELECT jsonb_agg(candidate ORDER BY candidate->>'opportunity_id') FROM public.opportunity_freshness_candidates('18700000-0000-4000-8000-000000000003',now(),true,NULL) candidate),'Subject','Body','copy-v1')")"
+"${psql[@]}" -Atc "UPDATE public.opportunities SET source_identity_to_verify=true WHERE id='18700000-0000-4000-8000-000000000007'" >/dev/null
+if "${psql[@]}" -Atc "SELECT public.opportunity_freshness_reserve('$reply_group',1,'{\"to\":[\"updated@example.test\"]}'::jsonb,repeat('d',64),'staff-1')" >/dev/null 2>&1; then
+  echo "Source verification flag changed after draft but send was still reserved" >&2; exit 1
+fi
+"${psql[@]}" -Atc "UPDATE public.opportunities SET source_identity_to_verify=false WHERE id='18700000-0000-4000-8000-000000000007'" >/dev/null
+
+# Inbound-first: the logging transaction owns the member lock; reserve waits
+# for its commit, then vetoes the whole group before any provider operation.
+"${psql[@]}" -Atc "BEGIN; INSERT INTO public.ma_interactions(id,opportunity_id,channel,direction,delivery_status,occurred_at) VALUES('18700000-0000-4000-8000-0000000000e2','18700000-0000-4000-8000-000000000007','email','inbound',NULL,now()); SELECT pg_sleep(1); COMMIT" >"$cluster_dir/inbound-first.out" 2>&1 &
+inbound_first_pid=$!
+sleep 0.2
+if "${psql[@]}" -Atc "SELECT public.opportunity_freshness_reserve('$reply_group',1,'{\"to\":[\"updated@example.test\"]}'::jsonb,repeat('d',64),'staff-1')" >/dev/null 2>&1; then
+  echo "Inbound-first independent session did not veto grouped send" >&2; exit 1
+fi
+wait "$inbound_first_pid"
+"${psql[@]}" -Atc "DELETE FROM public.ma_interactions WHERE id='18700000-0000-4000-8000-0000000000e2'" >/dev/null
+
+# Reply-first: a new exact reply on the earlier sent review wins the same lock.
+"${psql[@]}" -Atc "BEGIN; SELECT public.opportunity_freshness_record_reply('$review_id','18700000-0000-4000-8000-000000000007','confirmed_open',now(),'Concurrent source reply first','staff-1'); SELECT pg_sleep(1); COMMIT" >"$cluster_dir/reply-first.out" 2>&1 &
+reply_first_pid=$!
+sleep 0.2
+if "${psql[@]}" -Atc "SELECT public.opportunity_freshness_reserve('$reply_group',1,'{\"to\":[\"updated@example.test\"]}'::jsonb,repeat('d',64),'staff-1')" >/dev/null 2>&1; then
+  echo "Reply-first independent session did not veto grouped send" >&2; exit 1
+fi
+wait "$reply_first_pid"
+"${psql[@]}" -Atc "DELETE FROM public.opportunity_freshness_replies WHERE review_id='$review_id' AND evidence='Concurrent source reply first'" >/dev/null
+
+# Reservation-first: both real inbound logging and recording a later reply
+# against the earlier sent review must wait, then be rejected during the lease.
+"${psql[@]}" -Atc "BEGIN; SELECT public.opportunity_freshness_reserve('$reply_group',1,'{\"to\":[\"updated@example.test\"]}'::jsonb,repeat('d',64),'staff-1'); SELECT pg_sleep(1); COMMIT" >"$cluster_dir/reserve-first.out" 2>&1 &
+reserve_first_pid=$!
+sleep 0.2
+if "${psql[@]}" -Atc "INSERT INTO public.ma_interactions(id,opportunity_id,channel,direction,delivery_status,occurred_at) VALUES('18700000-0000-4000-8000-0000000000e3','18700000-0000-4000-8000-000000000007','email','inbound',NULL,now())" >/dev/null 2>&1; then
+  echo "Inbound logging crossed a reserved provider lease" >&2; exit 1
+fi
+if "${psql[@]}" -Atc "SELECT public.opportunity_freshness_record_reply('$review_id','18700000-0000-4000-8000-000000000007','confirmed_open',now(),'Later reply during reserved group','staff-1')" >/dev/null 2>&1; then
+  echo "Later exact reply crossed a reserved provider lease" >&2; exit 1
+fi
+wait "$reserve_first_pid"
+reserve_first_token="$(rg -m1 '^[0-9a-f-]{36}$' "$cluster_dir/reserve-first.out")"
+"${psql[@]}" -Atc "SELECT public.opportunity_freshness_finish('$reply_group','$reserve_first_token','sent','provider-accepted-3',NULL,'staff-1')" >/dev/null
+"${psql[@]}" -Atc "SELECT public.opportunity_freshness_record_reply('$review_id','18700000-0000-4000-8000-000000000007','confirmed_open',now(),'Later reply after delivery','staff-1')" >/dev/null
+echo "#187 disposable SQL: source flag, 44/45/legacy, identity, ACL, exact grouped receipt/reply, independent inbound/reply both-order races, source/pursuit, version/recipient drift, discard, template switch and uncertain retry passed"

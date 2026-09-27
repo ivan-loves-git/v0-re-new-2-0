@@ -42,6 +42,17 @@ describe("grouped staff-reviewed provider boundary", () => {
     expect(m.send).not.toHaveBeenCalled()
   })
 
+  it.each(["recent inbound interaction", "later exact source reply"])(
+    "does not call the provider when %s wins before reservation",
+    async (cause) => {
+      m.rpc.mockImplementation(async (name) => ({ data: null,
+        error: name === "opportunity_freshness_reserve" ? { message: `freshness_member_drift_requires_review: ${cause}` } : null }))
+      await expect(sendOpportunityFreshnessReview(review, 3, "staff-1")).rejects.toThrow("whole group")
+      expect(m.send).not.toHaveBeenCalled()
+      expect(m.rpc).not.toHaveBeenCalledWith("opportunity_freshness_assert_current", expect.anything())
+    },
+  )
+
   it("preserves uncertainty when a retry encounters a provider rejection", async () => {
     m.send.mockResolvedValue({ data: null, error: { name: "validation_error", message: "Rejected" } })
     const result = await sendOpportunityFreshnessReview({ ...review, state: "uncertain" }, 3, "staff-2")

@@ -41,6 +41,9 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
   const sendable = review.state === "pending" || review.state === "uncertain" || review.state === "sending" ||
     (review.state === "failed" && review.source_kind !== "ma")
   const cancellable = review.state === "pending" || review.state === "failed"
+  const answeredMembers = new Set(initial.replies.map((reply) => reply.opportunity_id))
+  const answeredCount = initial.members.filter((member) => answeredMembers.has(member.opportunity_id)).length
+  const allMembersAnswered = initial.members.length > 0 && answeredCount === initial.members.length
 
   function run(action: () => Promise<{ message: string; success?: boolean }>) {
     setError("")
@@ -95,7 +98,10 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
         <div className="flex flex-col gap-2"><Label htmlFor="review-body">Message</Label><Textarea id="review-body" rows={13} value={body} readOnly={!editable} onChange={(event) => setBody(event.target.value)} /></div>
         {review.attachment_snapshot.length ? <div className="flex flex-col gap-2"><p className="font-medium">Fixed signed attachments</p>{review.attachment_snapshot.map((item) => <p key={item.artifact_id} className="break-all rounded-md border p-2 text-xs">{item.file_name} · {item.mime_type} · {item.size_bytes} bytes · SHA-256 {item.content_sha256}<br />Artifact {item.artifact_id} · Document {item.document_id}</p>)}</div> : null}
         {review.attempted_at ? <Alert><AlertTitle>Delivery evidence</AlertTitle><AlertDescription>Approved by {review.approved_by} at {time(review.approved_at)}. Attempted {time(review.attempted_at)}. Outcome {time(review.outcome_at)}. {review.provider_message_id ? `Provider receipt ${review.provider_message_id}. ` : ""}{review.delivery_evidence_id ? `Canonical evidence ${review.delivery_evidence_id}. ` : ""}{review.delivery_error ?? ""}{review.state === "sent" ? " Sent means accepted by the provider, not delivered or read." : ""}</AlertDescription></Alert> : null}
-        {review.source_kind === "freshness" && review.state === "sent" && review.outcome_at ? <Alert><AlertTitle>Awaiting source response</AlertTitle><AlertDescription>Accepted {Math.max(0, Math.floor((new Date(initial.asOf).getTime() - new Date(review.outcome_at).getTime()) / 86_400_000))} days ago. {review.approved_by} owns follow-up. No automatic chase or deadline is created.</AlertDescription></Alert> : null}
+        {review.source_kind === "freshness" && review.state === "sent" && review.outcome_at ? <Alert>
+          <AlertTitle>{allMembersAnswered ? "All source responses recorded" : answeredCount > 0 ? "Source response partially recorded" : "Awaiting source response"}</AlertTitle>
+          <AlertDescription>{answeredCount} of {initial.members.length} member{initial.members.length === 1 ? "" : "s"} answered. {allMembersAnswered ? "" : `Accepted ${Math.max(0, Math.floor((new Date(initial.asOf).getTime() - new Date(review.outcome_at).getTime()) / 86_400_000))} days ago. `}{review.approved_by} owns follow-up. No automatic chase or deadline is created.</AlertDescription>
+        </Alert> : null}
         {review.cancelled_at ? <Alert><AlertTitle>Cancelled</AlertTitle><AlertDescription>{review.cancel_reason} · {review.cancelled_by} · {time(review.cancelled_at)}</AlertDescription></Alert> : null}
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2">

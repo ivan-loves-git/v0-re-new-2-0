@@ -92,3 +92,40 @@ describe("staff email review timestamps", () => {
     expect(serverHtml).toBe(browserHtml)
   })
 })
+
+describe("grouped freshness response coverage", () => {
+  const member = (opportunityId: string) => ({
+    opportunity_id: opportunityId,
+    episode_key: "initial",
+    frozen_member: { reference: opportunityId, title: opportunityId, firm_name: "Atlas", office_name: "Paris",
+      basis: "recorded_source_day", date_added: "2026-01-01", source_office_id: "office",
+      affiliation_id: "affiliation", contact_link_id: "link" },
+  })
+  const freshnessReview = { ...review, source_kind: "freshness" as const, outcome_at: "2026-09-24T18:03:00.000Z" }
+  const members = [member("opportunity-a"), member("opportunity-b")]
+  const reply = (opportunityId: string) => ({ id: `reply-${opportunityId}`, opportunity_id: opportunityId,
+    outcome: "confirmed_open", reply_at: "2026-09-24T18:30:00.000Z", evidence: "Source replied", recorded_by: "staff-id",
+    recorded_at: "2026-09-24T18:31:00.000Z" })
+
+  it("shows no responses as awaiting the whole group", () => {
+    const html = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members, replies: [] } }))
+    expect(html).toContain("Awaiting source response")
+    expect(html).toContain("0 of 2 members answered")
+  })
+
+  it("shows partial exact-member coverage", () => {
+    const html = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members, replies: [reply("opportunity-a")] } }))
+    expect(html).toContain("Source response partially recorded")
+    expect(html).toContain("1 of 2 members answered")
+  })
+
+  it("stops claiming a response is awaited when every member replied, including a single-member group", () => {
+    const two = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members, replies: [reply("opportunity-a"), reply("opportunity-b")] } }))
+    const one = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members: members.slice(0, 1), replies: [reply("opportunity-a")] } }))
+    expect(two).toContain("All source responses recorded")
+    expect(two).toContain("2 of 2 members answered")
+    expect(one).toContain("1 of 1 member answered")
+    expect(two).not.toContain("Awaiting source response")
+    expect(one).not.toContain("days ago")
+  })
+})

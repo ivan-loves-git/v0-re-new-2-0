@@ -88,6 +88,7 @@ WITH linked AS (
     AND affiliation.office_id=o.source_office_id AND affiliation.is_active AND affiliation.ended_at IS NULL
   JOIN public.ma_contacts contact ON contact.id=affiliation.contact_id
   WHERE o.status='active' AND NOT o.is_demo
+    AND o.source_identity_to_verify IS NOT TRUE
     AND NOT public.ma_opportunity_source_review_required(o.id)
     AND NOT EXISTS (
       SELECT 1 FROM public.opportunity_matches match
@@ -312,7 +313,9 @@ BEGIN
   ELSIF TG_TABLE_NAME='ma_source_email_send_reservations' OR TG_TABLE_NAME='ma_interactions' THEN
     IF TG_OP='UPDATE' THEN PERFORM public.opportunity_freshness_assert_mutation_allowed(OLD.opportunity_id); END IF;
     PERFORM public.opportunity_freshness_assert_mutation_allowed(NEW.opportunity_id);
-    IF EXISTS (
+    IF (TG_TABLE_NAME='ma_source_email_send_reservations'
+        OR (TG_TABLE_NAME='ma_interactions' AND NEW.channel='email' AND NEW.direction='outbound'))
+      AND EXISTS (
       SELECT 1 FROM public.opportunity_freshness_members member
       JOIN public.staff_email_reviews review ON review.id=member.review_id
       WHERE member.opportunity_id=NEW.opportunity_id AND review.state='uncertain'
@@ -375,8 +378,8 @@ CREATE TRIGGER opportunity_freshness_guard_repreneur BEFORE UPDATE OF is_demo
   ON public.repreneurs FOR EACH ROW EXECUTE FUNCTION public.opportunity_freshness_guard_source_change();
 CREATE TRIGGER opportunity_freshness_guard_other_reservation BEFORE INSERT OR UPDATE ON public.ma_source_email_send_reservations
   FOR EACH ROW EXECUTE FUNCTION public.opportunity_freshness_guard_source_change();
-CREATE TRIGGER opportunity_freshness_guard_other_outreach BEFORE INSERT OR UPDATE OF delivery_status,opportunity_id,occurred_at ON public.ma_interactions
-  FOR EACH ROW WHEN (NEW.channel='email' AND NEW.direction='outbound')
+CREATE TRIGGER opportunity_freshness_guard_other_outreach BEFORE INSERT OR UPDATE OF delivery_status,opportunity_id,occurred_at,channel,direction ON public.ma_interactions
+  FOR EACH ROW WHEN (NEW.direction='inbound' OR (NEW.channel='email' AND NEW.direction='outbound'))
   EXECUTE FUNCTION public.opportunity_freshness_guard_source_change();
 
 CREATE FUNCTION public.opportunity_freshness_guard_template_change()
@@ -516,6 +519,9 @@ CREATE FUNCTION public.opportunity_freshness_record_reply(
 DECLARE v_review public.staff_email_reviews%ROWTYPE; v_member public.opportunity_freshness_members%ROWTYPE; v_id uuid;
 BEGIN
   PERFORM public.staff_email_review_assert_actor(p_actor);
+  -- A reply against an earlier sent review may race a new episode's send.
+  -- Serialize it with all-member reservation before checking/recording truth.
+  PERFORM public.opportunity_freshness_assert_mutation_allowed(p_opportunity_id);
   SELECT * INTO v_review FROM public.staff_email_reviews WHERE id=p_review_id;
   SELECT * INTO v_member FROM public.opportunity_freshness_members
     WHERE review_id=p_review_id AND opportunity_id=p_opportunity_id;

@@ -16,6 +16,10 @@ CREATE TABLE public.repreneurs(id uuid PRIMARY KEY, is_demo boolean DEFAULT fals
 CREATE TABLE public.opportunity_matches(id uuid PRIMARY KEY, opportunity_id uuid, repreneur_id uuid, status text);
 CREATE TABLE public.opportunity_pursuit_evidence(id uuid PRIMARY KEY, match_id uuid);
 CREATE TABLE public.ma_source_email_send_reservations(opportunity_id uuid PRIMARY KEY, expires_at timestamptz);
+CREATE TABLE public.ma_provisional_source_contexts(context_key text PRIMARY KEY, office_id uuid);
+CREATE TABLE public.ma_provisional_source_review_events(id uuid PRIMARY KEY, opportunity_id uuid,
+  provisional_office_id uuid, event_kind text, related_assignment_id uuid);
+CREATE FUNCTION public.assert_ma_provisional_source_context_integrity() RETURNS void LANGUAGE plpgsql AS $$ BEGIN END $$;
 CREATE TABLE public.ma_interactions(id uuid PRIMARY KEY, opportunity_id uuid, channel text, direction text,
   delivery_status text, occurred_at timestamptz, client_operation_key uuid, template_key text,
   recipient_email_snapshot text, title text, body_markdown text, provider_message_id text,
@@ -26,9 +30,8 @@ CREATE TABLE public.opportunity_pursuit_handoff_deliveries(id uuid PRIMARY KEY, 
 CREATE TABLE public."user"(id text PRIMARY KEY,email text);
 CREATE TABLE public.app_user_roles(user_id text,email text,role text);
 CREATE TABLE public.email_templates(template_key text PRIMARY KEY,is_active boolean,subject text,body_markdown text,body_editable boolean DEFAULT true);
-CREATE FUNCTION public.ma_opportunity_source_review_required(uuid) RETURNS boolean LANGUAGE sql AS $$
-  SELECT coalesce((SELECT source_identity_to_verify FROM public.opportunities WHERE id=$1),false)
-$$;
+-- The actual source-review helper is loaded from migration 079 by the
+-- rehearsal runner. It never inspects source_identity_to_verify.
 CREATE FUNCTION public.ma_contact_email_is_allowed(uuid,uuid,public.ma_contact_email_purpose)
 RETURNS boolean LANGUAGE sql STABLE AS $$
   SELECT EXISTS(SELECT 1 FROM public.ma_contacts WHERE id=$1 AND status='active' AND NOT campaign_email_suppressed)

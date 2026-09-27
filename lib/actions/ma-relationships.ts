@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { withStaffSourceReviewState } from "@/lib/data/provisional-source-review"
 import { readMaRelationshipLedger } from "@/lib/data/ma-relationship-ledger"
+import { readOpportunityFreshnessConfirmations } from "@/lib/data/opportunity-freshness-confirmations"
 import type { MaRelationshipActivityProvenance } from "@/lib/ma-relationship-activity-provenance"
 import { isValidMaRelationshipEmail } from "@/lib/ma-relationship-validation"
 import { presentMaOffice } from "@/lib/ma-office-presentation"
@@ -229,6 +230,10 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
     purpose: "global",
     officeIds: officeRows.map((office) => office.id),
   })
+  const latestConfirmations = await readOpportunityFreshnessConfirmations(
+    supabase,
+    ledger.opportunities.map((opportunity) => opportunity.id),
+  )
   const officeFirmIds = new Map(
     officeRows.flatMap((office) => {
       const firm = one(office.firm)
@@ -255,6 +260,8 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
       dateAddedPrecision: opportunity.dateAddedPrecision,
     })),
     ledger.activePursuitOpportunityIds,
+    new Date(),
+    latestConfirmations,
   )
   const opportunityContactResult = await supabase
     .from("opportunity_ma_contacts")
