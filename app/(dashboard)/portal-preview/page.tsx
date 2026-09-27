@@ -208,8 +208,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
               withdrawalPaused={interestWithdrawalOperationsPaused()}
             /></StaffEnglishBoundary> : null}
             staffDocumentAssistanceControls={selectedOption && selectedOwnerToken && selectedOpportunity.match_id
-              && previewJourney?.enabled && previewJourney.gate1Passed && previewJourney.ndaReadyNotified
-              && !previewJourney.revoked && !previewJourney.gate2Passed
+              && previewJourney?.enabled && previewJourney.ndaReadyNotified
+              && !previewJourney.revoked && (previewJourney.signedCopyState === "not_submitted" || previewJourney.signedCopyState === "awaiting_validation")
               ? <StaffEnglishBoundary><StaffReceivedNdaUpload matchId={selectedOpportunity.match_id} selectionToken={selectedOwnerToken}
                   repreneurId={selectedOption.id} repreneurName={selectedOption.name} /></StaffEnglishBoundary> : null}
             documentHrefs={selectedOpportunity.match_id ? {

@@ -8,6 +8,9 @@ import {
 } from "@/lib/opportunity-pursuit-evidence"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
+import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
+
+export type PortalDealAction = "respond" | "sign_nda" | "unknown" | null
 
 export interface PursuitArtifactProjection {
   id: string
@@ -65,6 +68,9 @@ export interface StaffCurrentPursuit {
   revoked: boolean
   hasLiveConfidentialGrant: boolean
   evidenceRequired: boolean
+  projectionUnavailable: boolean
+  hasAuthorizedTemplate: boolean
+  currentSignedCopySubmitted: boolean
   ndaExpiresAt: string | null
   nextAction: OpportunityPursuitJourneyAction | null
   allowedActions: OpportunityPursuitJourneyAction[]
@@ -78,19 +84,21 @@ export interface PortalPursuitConfidentialGrant {
     firmName: string
     officeName: string
     contactNames: string[]
-  }
+  } | null
 }
 
 export interface PortalCurrentPursuit {
   matchId: string
   enabled: boolean
-  gate1Passed: boolean
   ndaReadyNotified: boolean
-  gate2Passed: boolean
-  dispatched: boolean
   confidentialGrant: PortalPursuitConfidentialGrant | null
   revoked: boolean
-  evidenceRequired: boolean
+  projectionUnavailable: boolean
+  /** Current owner action only; a document grant is a resource, not a task. */
+  action: PortalDealAction
+  signedCopyState: "not_submitted" | "awaiting_validation" | "validated" | "unknown"
+  /** Separate from the exact IM predicate. */
+  sourceDisclosureCurrent: boolean
 }
 
 export type PortalPursuitViewer =
@@ -163,7 +171,7 @@ async function loadCurrentPursuit(
   const matchedRepreneur = Array.isArray(match.repreneur)
     ? match.repreneur[0]
     : match.repreneur
-  if (expectedRepreneurId && !isOpportunityInRepreneurNamespace(opportunity, matchedRepreneur)) {
+  if (expectedRepreneurId && (!isOpportunityInRepreneurNamespace(opportunity, matchedRepreneur) || opportunity?.status !== "active")) {
     return null
   }
 
@@ -175,6 +183,7 @@ async function loadCurrentPursuit(
     gate1Result,
     gate2Result,
     dispatchResult,
+    authorizedTemplateResult,
   ] = await Promise.all([
     supabase
       .from("opportunity_pursuit_evidence")
@@ -203,7 +212,16 @@ async function loadCurrentPursuit(
     supabase.rpc("journey_current_gate_1_event", { p_match_id: matchId }),
     supabase.rpc("journey_current_gate_2_event", { p_match_id: matchId }),
     supabase.rpc("journey_current_dispatch_event", { p_match_id: matchId }),
+    expectedRepreneurId
+      ? supabase.rpc("journey_repreneur_authorized_template", { p_match_id: matchId, p_repreneur_id: expectedRepreneurId })
+      : Promise.resolve({ data: null, error: null }),
   ])
+
+  const projectionUnavailable = Boolean(
+    settingsResult.error || evidenceResult.error || artifactResult.error || templateResult.error
+    || grantResult.error || gate1Result.error || gate2Result.error || dispatchResult.error
+    || authorizedTemplateResult.error,
+  )
 
   const entries = (evidenceResult.data ?? []) as OpportunityPursuitEvidence[]
   let memoFeedback: StaffMemoFeedbackProjection | null = null
@@ -263,7 +281,7 @@ async function loadCurrentPursuit(
       })
     : { data: false, error: null }
   const hasLiveConfidentialGrant = (
-    !canonicalGrantResult.error && Boolean(canonicalGrantResult.data)
+    !projectionUnavailable && !canonicalGrantResult.error && Boolean(canonicalGrantResult.data)
   )
   const revoked = Boolean(currentGrant && !hasLiveConfidentialGrant)
     || Boolean(currentGrant?.revoked_at || expired)
@@ -295,6 +313,11 @@ async function loadCurrentPursuit(
     : []
   const hasContinuedCurrentCycle = currentCycleEntries.some(
     (entry) => entry.event_type === "continued",
+  )
+  const currentE6 = currentCycleEntries.find((entry) => entry.event_type === "e6_nda_ready_notified"
+    && entry.metadata?.upstream_evidence_id === ((gate1Result.data as string | null) ?? null))
+  const currentSignedCopySubmitted = Boolean(
+    currentE6 && repreneur && new Date(repreneur.recorded_at).getTime() >= new Date(currentE6.recorded_at).getTime(),
   )
   const nextAction = (
     hasLiveConfidentialGrant
@@ -337,6 +360,11 @@ async function loadCurrentPursuit(
     revoked,
     hasLiveConfidentialGrant,
     evidenceRequired: !projection.gate2Passed,
+    projectionUnavailable: projectionUnavailable || Boolean(canonicalGrantResult.error),
+    hasAuthorizedTemplate: !authorizedTemplateResult.error && Boolean(
+      Array.isArray(authorizedTemplateResult.data) ? authorizedTemplateResult.data[0] : authorizedTemplateResult.data,
+    ),
+    currentSignedCopySubmitted,
     ndaExpiresAt: currentGrant?.nda_expires_at ?? null,
     nextAction,
     allowedActions: [...new Set(allowedActions)],
@@ -352,7 +380,7 @@ export async function readStaffCurrentPursuit(matchId: string) {
 function toPortalCurrentPursuit(
   pursuit: StaffCurrentPursuit,
 ): PortalCurrentPursuit {
-  const canDisclose = pursuit.hasLiveConfidentialGrant
+  const canDisclose = !pursuit.projectionUnavailable && pursuit.hasLiveConfidentialGrant
     && pursuit.enabled
     && pursuit.status === "active_pursuit"
     && pursuit.opportunityStatus === "active"
@@ -376,17 +404,63 @@ function toPortalCurrentPursuit(
       }
     : null
 
+  const sourceDisclosureCurrent = Boolean(
+    canDisclose && pursuit.confidentialGrant?.source_disclosed_at
+    && pursuit.confidentialGrant.source_firm_name?.trim()
+    && pursuit.confidentialGrant.source_office_name?.trim(),
+  )
+  const readyToSign = !pursuit.projectionUnavailable && pursuit.enabled && pursuit.status === "active_pursuit"
+    && pursuit.opportunityStatus === "active" && pursuit.ndaReadyNotified
+    && pursuit.hasAuthorizedTemplate && !pursuit.revoked
+  const signedCopyState = !readyToSign ? "unknown" as const
+    : pursuit.gate2Passed ? "validated" as const
+    : pursuit.currentSignedCopySubmitted ? "awaiting_validation" as const
+    : "not_submitted" as const
+
   return {
     matchId: pursuit.matchId,
     enabled: pursuit.enabled,
-    gate1Passed: pursuit.gate1Passed,
     ndaReadyNotified: pursuit.ndaReadyNotified,
-    gate2Passed: pursuit.gate2Passed,
-    dispatched: pursuit.dispatched,
-    confidentialGrant,
+    confidentialGrant: confidentialGrant
+      ? { ...confidentialGrant, source: sourceDisclosureCurrent ? confidentialGrant.source : null }
+      : null,
     revoked: pursuit.revoked,
-    evidenceRequired: pursuit.evidenceRequired,
+    projectionUnavailable: pursuit.projectionUnavailable,
+    action: pursuit.projectionUnavailable ? "unknown" : readyToSign && signedCopyState === "not_submitted" ? "sign_nda" : null,
+    signedCopyState,
+    sourceDisclosureCurrent,
   }
+}
+
+/** Authoritative, same-owner projection for the workspace's small per-deal indicator. */
+export async function readPortalDealActionIndicators(matchIds: string[]): Promise<Record<string, PortalDealAction>> {
+  const viewer = await resolveViewer({ kind: "portal" })
+  if (!viewer.repreneurId || matchIds.length === 0) return {}
+  const supabase = createAdminClient()
+  const { data, error } = await supabase.from("opportunity_matches")
+    .select("id,status,recommendation_expires_at,opportunity_id,opportunity:opportunities!inner(status,is_demo),repreneur:repreneurs!inner(is_demo)")
+    .eq("repreneur_id", viewer.repreneurId).in("id", matchIds)
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []).filter((row) => {
+    const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
+    const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
+    return opportunity?.status === "active" && isOpportunityInRepreneurNamespace(opportunity, repreneur)
+  })
+  const opportunityIds = rows.map((row) => row.opportunity_id)
+  const activeOwners = opportunityIds.length ? await supabase.from("opportunity_matches")
+    .select("opportunity_id,repreneur_id").eq("status", "active_pursuit").in("opportunity_id", opportunityIds)
+    : { data: [], error: null }
+  if (activeOwners.error) throw new Error(activeOwners.error.message)
+  const locked = new Set((activeOwners.data ?? [])
+    .filter((row) => row.repreneur_id !== viewer.repreneurId).map((row) => row.opportunity_id))
+  const pairs = await Promise.all(rows.map(async (row): Promise<[string, PortalDealAction]> => {
+    if (row.status === "proposed" && !locked.has(row.opportunity_id)
+      && isRecommendationResponseOpen(row.recommendation_expires_at)) return [row.id, "respond"]
+    if (row.status !== "active_pursuit") return [row.id, null]
+    const pursuit = await loadCurrentPursuit(row.id, viewer.repreneurId!)
+    return [row.id, pursuit ? toPortalCurrentPursuit(pursuit).action : "unknown"]
+  }))
+  return Object.fromEntries(pairs)
 }
 
 /** Staff preview and the real portal deliberately share this safe projection. */

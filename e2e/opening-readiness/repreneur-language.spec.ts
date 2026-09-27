@@ -144,12 +144,11 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(beforeListSwitch)
 
     await originalCard.getByRole("link", { name: "Voir le détail" }).click()
-    // Client navigation can retain the previous list DOM. Anchor detail copy
-    // to the visible header for this exact fixture opportunity.
-    const detail = firstPage.locator("#main-content header")
+    // Client navigation can retain the previous list DOM. Scope all detail
+    // checks to the visible current workspace, including its tab panels.
+    const detail = firstPage.locator('[data-wave-workspace="pursuit"]')
       .filter({ has: firstPage.getByRole("heading", { level: 1, name: originalTitle, exact: true }) })
       .filter({ visible: true })
-      .locator("..")
     await expect(detail).toHaveCount(1)
     await expect(detail.getByRole("heading", { level: 1, name: originalTitle, exact: true })).toBeVisible()
     const opportunityCard = detail.locator('[data-slot="card"]')

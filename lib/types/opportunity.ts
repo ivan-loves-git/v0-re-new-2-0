@@ -899,6 +899,16 @@ export interface RepreneurPersonalReview {
   reviewed: boolean
 }
 
+export type OwnerCriterionOutcome = "within_target" | "outside_target" | "not_specified" | "unknown"
+export type OwnerCriterionComparison = {
+  key: "sector" | "geography" | "revenue" | "ebitda" | "margin" | "team"
+  outcome: OwnerCriterionOutcome
+  /** Owner-entered canonical selections or numeric bounds; no matching paths. */
+  target: string[] | { min: number | null; max: number | null } | number | null
+  /** Existing portal-safe opportunity fact. */
+  actual: string | number | null
+}
+
 /** Public canonical taxonomy only; no staff matching target or stable-key path. */
 export interface RepreneurGeographyFilterNode {
   id: string
@@ -910,6 +920,8 @@ export interface RepreneurGeographyFilterNode {
 }
 
 export interface RepreneurOpportunityExposure {
+  /** Detail-only fresh comparison. It never controls recommendation or access. */
+  criteria_comparison?: OwnerCriterionComparison[]
   /** Own navigation state only; null means unavailable, absent means no personal projection. */
   personal_review?: RepreneurPersonalReview | null
   match_id: string
@@ -964,6 +976,7 @@ export interface RepreneurOpportunityExposure {
 }
 
 export interface RepreneurDealFlowOpportunity {
+  criteria_comparison?: OwnerCriterionComparison[]
   personal_review?: RepreneurPersonalReview | null
   match_id: string | null
   match_status: OpportunityMatchStatus | null

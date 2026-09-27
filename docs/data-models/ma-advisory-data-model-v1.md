@@ -1207,6 +1207,46 @@ approval for unsupported stages, reconstructed dates, new telemetry, the P2
 operating dashboard, #29/#31 analytics or #132 repreneur next actions. This entry
 records the approved v1.0 contract; GitHub Ticket #167 owns release evidence.
 
+## Repreneur pursuit workspace projection (#188 / Ticket #207)
+
+The current `/portal/deals/[matchId]` detail remains a safe match-or-opportunity
+resolver. Its workspace sidebar is a **separate current-owner match projection**:
+`proposed`, `interested`, `withdrawn`, `declined`, `active_pursuit` and `dropped`
+on Active, same-namespace opportunities only. `draft`, `shortlisted`,
+`completed`, cross-namespace, inactive and another owner's matches never enter
+the sidebar. Discovery-only detail does not become a pursuit; the existing
+Deals buckets, sorting, filters, review markers and External Pursuits remain
+separate. Navigation alone writes no response, stage or Reviewed marker.
+
+The sidebar sends only match ID, public title, safe sector/activity/geography,
+status and operating stage to the client. Its `respond` indicator is calculated
+on the server from a current own `proposed` match, Active opportunity, no
+competing active owner and an open explicit or unclocked response window.
+`interested`, withdrawn, declined and dropped are not outstanding own actions.
+For active pursuits, the `sign_nda` indicator requires current-cycle E6
+NDA-ready evidence, an exact currently authorized blank template, enabled
+journey, Active opportunity, no revocation and no current-cycle submitted or
+validated repreneur copy. A current submitted copy is `awaiting_validation`,
+not a fresh request; a failed artifact/evidence/template read is `unknown` and
+has no action glow. Gate 1 alone is never a signing indicator. An exact IM
+grant is a resource, never an action. Every download/upload rechecks the
+existing database predicate and exact owner/namespace; the UI never grants.
+The portal payload contains safe E6/submission consequences, not Gate 1/2,
+E7 dispatch, evidence-required flags, artifact records or staff actors.
+
+`criteria_comparison` is computed at detail read time from the current owner's
+six acquisition targets and current safe opportunity facts. It returns only
+sector, geography, revenue, EBITDA, margin and team target/actual values plus
+`within_target`, `outside_target`, `not_specified` or `unknown`. Outcomes reuse
+Matching 2.2's canonical per-criterion normalization, range and geography
+functions. The projection omits aggregate scores/grades, weights, reasons,
+staff geography paths and private recommendation inputs. It explains current
+facts; it does not change staff selection or become an automatic exclusion.
+The detail retains its exact approved public description and source-date
+precision, all four financial/team metrics, response/withdrawal/reinterest,
+Viewed/Reviewed and exact document controls. Original business and file content
+is never translated by the FR/EN interface switch.
+
 ## Change log
 
 | Date | Version | Change | PDR or implementation reference |
