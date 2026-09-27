@@ -116,7 +116,14 @@ export function FloatingNav() {
     segments.length === 2 &&
     segments[0] === "opportunities" &&
     segments[1] === "groups"
-  const visibleBreadcrumbItems = isGroupsHome
+  const isOpportunityFreshnessRule =
+    pathname === "/emails/automations/opportunity-freshness"
+  const visibleBreadcrumbItems = isOpportunityFreshnessRule
+    ? [
+        { href: "/emails", name: "Emails", isLast: false },
+        { href: pathname, name: "Opportunity freshness", isLast: true },
+      ]
+    : isGroupsHome
     ? breadcrumbItems.slice(1)
     : contextualRoot
       ? [{ ...contextualRoot, isLast: false }, ...breadcrumbItems]
