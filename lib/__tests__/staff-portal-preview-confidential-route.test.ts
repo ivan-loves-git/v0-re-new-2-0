@@ -15,7 +15,7 @@ vi.mock("@/lib/data/current-pursuit", () => ({
   resolvePortalPursuitResource: mocks.resolvePortalPursuitResource,
 }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
-vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToken: mocks.selectionToken }))
+vi.mock("@/lib/staff-portal-selection", () => ({ isCurrentStaffPortalSelectionGeneration: mocks.selectionToken }))
 
 import { GET } from "@/app/(dashboard)/portal-preview/deals/[matchId]/documents/[documentId]/route"
 
@@ -23,10 +23,13 @@ const workspaceId = "00000000-0000-4000-8000-000000000003"
 const ownerId = "00000000-0000-4000-8000-000000000001"
 const matchId = "00000000-0000-4000-8000-000000000002"
 const documentId = "00000000-0000-4000-8000-000000000005"
+const generationA = "00000000-0000-4000-8000-000000000006"
+const generationB = "00000000-0000-4000-8000-000000000007"
+const generationC = "00000000-0000-4000-8000-000000000008"
 
-function requestPreview() {
+function requestPreview(generation = generationA) {
   return GET(
-    new NextRequest(`http://localhost/portal-preview/deals/${matchId}/documents/${documentId}?repreneurId=${ownerId}&workspaceId=${workspaceId}`),
+    new NextRequest(`http://localhost/portal-preview/deals/${matchId}/documents/${documentId}?repreneurId=${ownerId}&workspaceId=${workspaceId}&selectionGeneration=${generation}`),
     { params: Promise.resolve({ matchId, documentId }) },
   )
 }
@@ -41,14 +44,20 @@ describe("staff portal preview confidential route", () => {
       }),
     )
     mocks.getCurrentUserAccess.mockResolvedValue({ role: "staff", user: { id: "staff-1" } })
-    mocks.selectionToken.mockResolvedValue("current-token")
+    mocks.selectionToken.mockResolvedValue(true)
   })
 
   it("denies a changed staff workspace before reading a previously granted memo", async () => {
-    mocks.selectionToken.mockResolvedValue(null)
+    mocks.selectionToken.mockResolvedValue(false)
 
     expect((await requestPreview()).status).toBe(404)
-    expect(mocks.selectionToken).toHaveBeenCalledWith(workspaceId, ownerId, "staff-1")
+    expect(mocks.selectionToken).toHaveBeenCalledWith(workspaceId, ownerId, "staff-1", generationA)
+    expect(mocks.resolvePortalPursuitResource).not.toHaveBeenCalled()
+  })
+
+  it("denies a memo link missing its page-issued generation", async () => {
+    expect((await requestPreview("")).status).toBe(400)
+    expect(mocks.selectionToken).not.toHaveBeenCalled()
     expect(mocks.resolvePortalPursuitResource).not.toHaveBeenCalled()
   })
 
@@ -135,6 +144,29 @@ describe("staff portal preview confidential route", () => {
       "https://supabase.test.invalid/storage/v1/object/sign/opportunity-documents/preview-memo?token=test",
       { cache: "no-store", redirect: "error" },
     )
+  })
+
+  it("does not revive an old IM link after A to B to A, but accepts the fresh generation", async () => {
+    let currentGeneration = generationA
+    mocks.selectionToken.mockImplementation(async (_workspace, _owner, _staff, requestedGeneration) => requestedGeneration === currentGeneration)
+    mocks.resolvePortalPursuitResource.mockResolvedValue({ kind: "information-memorandum", documentId })
+    mocks.createAdminClient.mockReturnValue({
+      from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({
+        data: { id: documentId, document_type: "deal_book", external_url: null,
+          storage_bucket: "opportunity-documents", storage_path: "owner/memo.pdf", recipient_match_id: null }, error: null,
+      }) }) }) }),
+      storage: { from: () => ({ createSignedUrl: async () => ({
+        data: { signedUrl: "https://supabase.test.invalid/storage/v1/object/sign/memo?token=test" }, error: null,
+      }) }) },
+    })
+
+    expect((await requestPreview(generationA)).status).toBe(200)
+    currentGeneration = generationB // selected B
+    expect((await requestPreview(generationA)).status).toBe(404)
+    currentGeneration = generationC // selected A again
+    expect((await requestPreview(generationA)).status).toBe(404)
+    expect((await requestPreview(generationC)).status).toBe(200)
+    expect(mocks.resolvePortalPursuitResource).toHaveBeenCalledTimes(2)
   })
 
   it.each([

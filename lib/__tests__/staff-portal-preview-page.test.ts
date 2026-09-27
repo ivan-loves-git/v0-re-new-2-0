@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   readJourney: vi.fn(),
   readActions: vi.fn(),
   selectionToken: vi.fn(),
+  parseSelection: vi.fn(),
   createAdminClient: vi.fn(),
   previewLanguage: vi.fn(),
 }))
@@ -30,7 +31,7 @@ vi.mock("@/lib/data/current-pursuit", () => ({
   readPortalCurrentPursuit: mocks.readJourney,
   readPortalDealActionIndicators: mocks.readActions,
 }))
-vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToken: mocks.selectionToken }))
+vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToken: mocks.selectionToken, parseStaffPortalSelection: mocks.parseSelection }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
 vi.mock("@/lib/i18n/server-language", () => ({ previewUiLanguage: mocks.previewLanguage }))
 
@@ -56,6 +57,7 @@ describe("staff Tools portal page", () => {
     mocks.readJourney.mockResolvedValue(null)
     mocks.readActions.mockResolvedValue({})
     mocks.selectionToken.mockResolvedValue("staff-selection-token")
+    mocks.parseSelection.mockReturnValue({ generation: "00000000-0000-4000-8000-000000000005" })
     mocks.createAdminClient.mockReturnValue({ from: () => ({
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { updated_at: "2026-09-27T08:00:00Z" } }) }) }),
     }) })

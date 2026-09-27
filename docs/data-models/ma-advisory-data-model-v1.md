@@ -1224,8 +1224,8 @@ repreneur's safe readers. Its adapter uses staff-preview links and the current
 staff workspace selection; it never borrows an owner session, records Viewed or
 Reviewed, or writes the repreneur's language choice. Attributed staff response,
 withdrawal and received-NDA controls remain separate from owner actions.
-Preview document links carry the selected owner and workspace ID; downloads
-first verify the current staff workspace generation, then recheck the exact
+Preview document links carry the selected owner, workspace ID and page-issued
+generation; downloads reject an old A link even after an A–B–A switch, then recheck the exact
 current NDA-template or IM grant. A stale selection grants neither a detail
 action nor a document. Original content, private evidence, and REAL/DEMO
 visibility rules are unchanged.

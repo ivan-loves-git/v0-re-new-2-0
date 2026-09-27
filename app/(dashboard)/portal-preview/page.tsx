@@ -36,7 +36,7 @@ import {
 import { projectSelectedReNewPursuits } from "@/lib/portal-preview-pursuits"
 import { isUuid } from "@/lib/uuid"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { currentStaffPortalSelectionToken } from "@/lib/staff-portal-selection"
+import { currentStaffPortalSelectionToken, parseStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { interestWithdrawalOperationsPaused } from "@/lib/interest-withdrawal-operations"
 
 interface StaffPortalPreviewPageProps {
@@ -77,6 +77,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     ? params.returnView : "deals"
   const selectedOwnerToken = selectedRepreneurId
     ? await currentStaffPortalSelectionToken(workspaceId ?? undefined, selectedRepreneurId, access.user.id) : null
+  const selectedOwnerSelection = selectedOwnerToken && selectedRepreneurId
+    ? parseStaffPortalSelection(selectedOwnerToken, selectedRepreneurId, access.user.id) : null
   const currentWorkspace = !workspaceId || Boolean(selectedOwnerToken)
 
   const [profileData, opportunityData, externalPursuits] = selectedRepreneurId
@@ -192,6 +194,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
       <PreviewLanguageScope initialLanguage={previewLanguage}>
       {selectedRepreneurId && selectedDealId && selectedOpportunity && (
         <RepreneurPursuitWorkspace
+          key={JSON.stringify([selectedRepreneurId, workspaceId, selectedDealId, query, status, returnView])}
           opportunity={selectedOpportunity}
           deals={workspaceDeals.map((deal) => ({
             match_id: deal.match_id,
@@ -217,13 +220,13 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             repreneurId: selectedRepreneurId,
             workspaceId,
             returnView,
-            documentHrefs: selectedOpportunity.match_id && workspaceId && selectedOwnerToken ? {
-              ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }, workspaceId),
+            documentHrefs: selectedOpportunity.match_id && workspaceId && selectedOwnerSelection ? {
+              ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }, workspaceId, selectedOwnerSelection.generation),
               ...(previewJourney?.confidentialGrant ? {
                 informationMemorandum: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, {
                   kind: "information-memorandum",
                   documentId: previewJourney.confidentialGrant.informationMemoDocumentId,
-                }, workspaceId),
+                }, workspaceId, selectedOwnerSelection.generation),
               } : {}),
             } : undefined,
           }}

@@ -55,14 +55,14 @@ describe("portal preview deal routes", () => {
   })
 
   it("builds staff-selected-person document links instead of owner-session URLs", () => {
-    expect(createPortalPreviewDocumentHref("person & one", "match-1", { kind: "nda-template" }, "workspace-1")).toBe(
-      "/portal-preview/deals/match-1/nda-template?repreneurId=person+%26+one&workspaceId=workspace-1",
+    expect(createPortalPreviewDocumentHref("person & one", "match-1", { kind: "nda-template" }, "workspace-1", "generation-1")).toBe(
+      "/portal-preview/deals/match-1/nda-template?repreneurId=person+%26+one&workspaceId=workspace-1&selectionGeneration=generation-1",
     )
     expect(createPortalPreviewDocumentHref("person & one", "match-1", {
       kind: "information-memorandum",
       documentId: "memo-1",
-    }, "workspace-1")).toBe(
-      "/portal-preview/deals/match-1/documents/memo-1?repreneurId=person+%26+one&workspaceId=workspace-1",
+    }, "workspace-1", "generation-1")).toBe(
+      "/portal-preview/deals/match-1/documents/memo-1?repreneurId=person+%26+one&workspaceId=workspace-1&selectionGeneration=generation-1",
     )
   })
 })

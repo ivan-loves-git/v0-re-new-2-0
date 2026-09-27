@@ -58,3 +58,15 @@ export async function currentStaffPortalSelectionToken(workspaceId: string | und
   if (error || !data || data.selected_repreneur_id !== ownerId || data.staff_user_id !== staffUserId) return null
   return issueStaffPortalSelection(ownerId, staffUserId, workspaceId, data.generation)
 }
+
+/** A document URL is tied to the generation of the page that issued it. */
+export async function isCurrentStaffPortalSelectionGeneration(
+  workspaceId: string, ownerId: string, staffUserId: string, expectedGeneration: string,
+): Promise<boolean> {
+  if (!isUuid(workspaceId) || !isUuid(ownerId) || !isUuid(expectedGeneration) || !staffUserId) return false
+  const { data, error } = await createAdminClient().from("staff_portal_workspaces")
+    .select("selected_repreneur_id,generation,staff_user_id")
+    .eq("id", workspaceId).maybeSingle()
+  return !error && data?.selected_repreneur_id === ownerId
+    && data?.staff_user_id === staffUserId && data?.generation === expectedGeneration
+}

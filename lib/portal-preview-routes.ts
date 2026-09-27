@@ -78,6 +78,7 @@ export function createPortalPreviewDocumentHref(
   matchId: string,
   resource: { kind: "nda-template" } | { kind: "information-memorandum"; documentId: string },
   workspaceId: string,
+  selectionGeneration: string,
 ) {
   const base = `/portal-preview/deals/${encodeURIComponent(matchId)}`
   const path = resource.kind === "nda-template"
@@ -85,5 +86,6 @@ export function createPortalPreviewDocumentHref(
     : `${base}/documents/${encodeURIComponent(resource.documentId)}`
   const params = new URLSearchParams({ repreneurId })
   params.set("workspaceId", workspaceId)
+  params.set("selectionGeneration", selectionGeneration)
   return `${path}?${params.toString()}`
 }

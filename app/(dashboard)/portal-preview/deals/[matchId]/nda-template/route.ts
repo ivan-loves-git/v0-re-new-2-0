@@ -9,7 +9,7 @@ import {
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { isUuid } from "@/lib/uuid"
-import { currentStaffPortalSelectionToken } from "@/lib/staff-portal-selection"
+import { isCurrentStaffPortalSelectionGeneration } from "@/lib/staff-portal-selection"
 
 function templateDownloadOptions(storagePath: string) {
   if (storagePath.toLowerCase().endsWith(".pdf")) {
@@ -40,16 +40,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ mat
 
     const repreneurId = request.nextUrl.searchParams.get("repreneurId")
     const workspaceId = request.nextUrl.searchParams.get("workspaceId")
-    if (!repreneurId || !workspaceId) {
+    const selectionGeneration = request.nextUrl.searchParams.get("selectionGeneration")
+    if (!repreneurId || !workspaceId || !selectionGeneration) {
       trace.failure("validation_failed")
       return privateStorageDownloadError("Missing staff preview selection", 400)
     }
     const { matchId } = await context.params
-    if (!isUuid(repreneurId) || !isUuid(matchId) || !isUuid(workspaceId)) {
+    if (!isUuid(repreneurId) || !isUuid(matchId) || !isUuid(workspaceId) || !isUuid(selectionGeneration)) {
       trace.failure("validation_failed")
       return privateStorageDownloadError("Not found", 404)
     }
-    if (!await currentStaffPortalSelectionToken(workspaceId, repreneurId, access.user.id)) {
+    if (!await isCurrentStaffPortalSelectionGeneration(workspaceId, repreneurId, access.user.id, selectionGeneration)) {
       trace.failure("authorization_denied")
       return privateStorageDownloadError("Not found", 404)
     }

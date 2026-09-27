@@ -13,6 +13,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({
 
 import {
   currentStaffPortalSelectionToken,
+  isCurrentStaffPortalSelectionGeneration,
   issueStaffPortalSelection,
   parseStaffPortalSelection,
   verifyStaffPortalSelection,
@@ -23,6 +24,7 @@ const ownerB = "10000000-0000-4000-8000-000000000002"
 const workspaceId = "10000000-0000-4000-8000-000000000003"
 const generationA = "10000000-0000-4000-8000-000000000004"
 const generationB = "10000000-0000-4000-8000-000000000005"
+const generationC = "10000000-0000-4000-8000-000000000006"
 
 describe("staff Portal workspace capability", () => {
   beforeEach(() => {
@@ -42,5 +44,17 @@ describe("staff Portal workspace capability", () => {
     const tokenB = await currentStaffPortalSelectionToken(workspaceId, ownerB, "staff-a")
     expect(tokenB && await verifyStaffPortalSelection(tokenB, ownerB, "staff-a"))
       .toMatchObject({ ownerId: ownerB, generation: generationB })
+  })
+
+  it("does not revive an old document generation after A to B to A", async () => {
+    expect(await isCurrentStaffPortalSelectionGeneration(workspaceId, ownerA, "staff-a", generationA)).toBe(true)
+    mocks.row.selected_repreneur_id = ownerB
+    mocks.row.generation = generationB
+    expect(await isCurrentStaffPortalSelectionGeneration(workspaceId, ownerA, "staff-a", generationA)).toBe(false)
+    mocks.row.selected_repreneur_id = ownerA
+    mocks.row.generation = generationC
+    expect(await isCurrentStaffPortalSelectionGeneration(workspaceId, ownerA, "staff-a", generationA)).toBe(false)
+    expect(await isCurrentStaffPortalSelectionGeneration(workspaceId, ownerA, "staff-a", generationC)).toBe(true)
+    expect(await isCurrentStaffPortalSelectionGeneration(workspaceId, ownerA, "staff-b", generationC)).toBe(false)
   })
 })
