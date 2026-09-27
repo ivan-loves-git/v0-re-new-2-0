@@ -36,6 +36,8 @@
   --warning-foreground: #ffffff;
   --info: #2563eb;
   --info-foreground: #ffffff;
+  --invert: #1f2933;
+  --invert-foreground: #ffffff;
   --radius: 0.5rem;
   --sidebar: #081020;
   --sidebar-foreground: #e9eef6;
@@ -86,6 +88,8 @@
   --warning-foreground: #ffffff;
   --info: #3b82f6;
   --info-foreground: #ffffff;
+  --invert: #404040;
+  --invert-foreground: #ffffff;
   --sidebar: #171717;
   --sidebar-foreground: #e5e5e5;
   --sidebar-primary: #3b82f6;
@@ -137,6 +141,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-invert: var(--invert);
+  --color-invert-foreground: var(--invert-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
