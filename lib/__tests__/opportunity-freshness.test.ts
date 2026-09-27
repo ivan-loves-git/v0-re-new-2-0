@@ -39,7 +39,7 @@ function freshnessClient(rows: unknown[]) {
     throw new Error(`Unexpected table: ${table}`)
   })
 
-  return { from, opportunitiesSelect }
+  return { from, rpc: vi.fn().mockResolvedValue({ data: [], error: null }), opportunitiesSelect }
 }
 
 describe("opportunity freshness source context", () => {
@@ -55,7 +55,7 @@ describe("opportunity freshness source context", () => {
   })
 
   it("uses canonical firm and office context before the legacy source label", async () => {
-    const { from, opportunitiesSelect } = freshnessClient([
+    const { from, rpc, opportunitiesSelect } = freshnessClient([
       {
         id: "canonical-opportunity",
         reference: "OPP-CANONICAL",
@@ -84,7 +84,7 @@ describe("opportunity freshness source context", () => {
         created_at: "2026-01-02T00:00:00.000Z",
       },
     ])
-    mocks.createAdminClient.mockReturnValue({ from })
+    mocks.createAdminClient.mockReturnValue({ from, rpc })
 
     const data = await getOpportunityFreshnessData()
 
@@ -99,16 +99,12 @@ describe("opportunity freshness source context", () => {
           id: "canonical-opportunity",
           sourceContextLabel: "Atlas Advisory · Paris",
         }),
-        expect.objectContaining({
-          id: "legacy-opportunity",
-          sourceContextLabel: "Legacy advisory",
-        }),
       ]),
     )
   })
 
-  it("does not turn a month-only CRM date into a stale day-level reminder", async () => {
-    const { from } = freshnessClient([
+  it("includes older month-only inventory without displaying a made-up exact day", async () => {
+    const { from, rpc } = freshnessClient([
       {
         id: "month-only-opportunity",
         reference: "OPP-MONTH",
@@ -123,11 +119,24 @@ describe("opportunity freshness source context", () => {
         created_at: "2026-01-01T00:00:00.000Z",
       },
     ])
-    mocks.createAdminClient.mockReturnValue({ from })
+    mocks.createAdminClient.mockReturnValue({ from, rpc })
 
     const data = await getOpportunityFreshnessData()
 
-    expect(data.staleTotal).toBe(0)
+    expect(data.staleTotal).toBe(1)
+    expect(data.staleOpportunities[0]).toMatchObject({ exactDateAdded: null, basis: "older_inventory_no_confirmation" })
     expect(data.openWithoutDate).toBe(0)
+  })
+
+  it("uses only an exact positive reply to reset the dashboard's older inventory signal", async () => {
+    const { from, rpc } = freshnessClient([{ id: "old-opportunity", reference: "OLD-1",
+      public_title: null, source_label: null, source_office: null, location: null, sector: null,
+      status: "active", is_demo: false, date_added: "2026-01-01", date_added_precision: null,
+      created_at: "2026-01-01T00:00:00Z" }])
+    rpc.mockResolvedValue({ data: [{ opportunity_id: "old-opportunity", confirmation_id: "exact-reply",
+      confirmed_at: "2026-07-01T10:00:00Z" }], error: null })
+    mocks.createAdminClient.mockReturnValue({ from, rpc })
+    expect((await getOpportunityFreshnessData()).staleTotal).toBe(0)
+    expect(rpc).toHaveBeenCalledWith("opportunity_freshness_latest_confirmations", { p_opportunity_ids: ["old-opportunity"] })
   })
 })

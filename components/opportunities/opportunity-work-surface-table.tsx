@@ -50,9 +50,9 @@ import {
   type Sector,
 } from "@/lib/utils/opportunity-sector"
 import {
-  dayLevelOpportunityDate,
   formatOpportunitySourceDate,
 } from "@/lib/utils/opportunity-source-date"
+import { freshnessDueBasis, recordedFreshnessClock, STALE_OPPORTUNITY_DAYS } from "@/lib/opportunity-freshness-policy"
 import { useHydratedNow } from "@/hooks/use-hydrated-now"
 
 type WorkSurfaceMode = "find" | "groups"
@@ -82,6 +82,7 @@ interface PreparedOpportunity {
   interestedCount: number
   proposedCount: number
   ageDays: number | null
+  freshnessDue: boolean
 }
 
 const FIND_ITEMS_PER_PAGE = 20
@@ -119,18 +120,6 @@ function formatEbitda(opportunity: OpportunityWorkSurfaceRecord) {
   return opportunity.ebitda_keur === null || opportunity.ebitda_keur === undefined
     ? "-"
     : `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(opportunity.ebitda_keur)}K`
-}
-
-function getAgeDays(
-  value: string | null | undefined,
-  precision: OpportunityWorkSurfaceRecord["date_added_precision"],
-  now: number | null,
-) {
-  if (now === null) return null
-  const date = dayLevelOpportunityDate(value, precision)
-  if (!date) return null
-  const diff = now - date.getTime()
-  return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
 }
 
 function getRepreneurName(match: OpportunityWorkSurfaceMatch | null) {
@@ -188,6 +177,17 @@ function prepareOpportunity(
   const activeMatch =
     opportunity.matches.find((match) => match.status === "active_pursuit") ??
     null
+  const clock = now === null ? null : recordedFreshnessClock({
+    dateAdded: opportunity.date_added ?? null,
+    dateAddedPrecision: opportunity.date_added_precision,
+    confirmation: opportunity.freshness_confirmation,
+  }, new Date(now))
+  const freshnessDue = now !== null && freshnessDueBasis({
+    status: opportunity.status, isDemo: opportunity.is_demo,
+    hasActiveRealPursuit: activeMatch !== null,
+    dateAdded: opportunity.date_added ?? null, dateAddedPrecision: opportunity.date_added_precision,
+    confirmation: opportunity.freshness_confirmation,
+  }, new Date(now)) !== null
 
   return {
     opportunity,
@@ -200,7 +200,8 @@ function prepareOpportunity(
     proposedCount: opportunity.matches.filter(
       (match) => match.status === "proposed",
     ).length,
-    ageDays: getAgeDays(opportunity.date_added, opportunity.date_added_precision, now),
+    ageDays: clock?.ageDays ?? null,
+    freshnessDue,
   }
 }
 
@@ -209,14 +210,10 @@ function freshnessMatches(
   freshness: FreshnessFilter,
 ) {
   if (freshness === "all") return true
-  if (freshness === "no_date") return !item.opportunity.date_added
-  if (freshness === "fresh") return item.ageDays !== null && item.ageDays <= 90
-  return (
-    item.ageDays !== null &&
-    item.ageDays > 90 &&
-    !item.activeMatch &&
-    !["archived", "closed"].includes(item.opportunity.status)
-  )
+  if (freshness === "no_date") return item.ageDays === null
+  if (freshness === "fresh") return item.opportunity.status === "active" && !item.opportunity.is_demo &&
+    !item.activeMatch && item.ageDays !== null && item.ageDays < STALE_OPPORTUNITY_DAYS
+  return item.freshnessDue
 }
 
 function pursuitSummary(item: PreparedOpportunity) {
@@ -386,12 +383,10 @@ function OpportunityRow({
       <TableCell>
         <div className="flex flex-col gap-1">
           <span>{formatOpportunitySourceDate(opportunity.date_added, opportunity.date_added_precision)}</span>
-          {item.ageDays !== null &&
-            item.ageDays > 90 &&
-            !item.activeMatch &&
-            opportunity.status === "active" && (
+          {opportunity.freshness_confirmation ? <span className="text-xs text-muted-foreground">Confirmed open {opportunity.freshness_confirmation.at.slice(0, 10)}</span> : null}
+          {item.freshnessDue && (
               <Badge variant="outline" className="w-fit">
-                stale
+                45-day source check due
               </Badge>
             )}
         </div>
@@ -486,9 +481,9 @@ export function OpportunityWorkSurfaceTable({
         key: "freshness",
         label: "Freshness",
         options: [
-          { value: "fresh", label: "Fresh" },
-          { value: "stale", label: "Stale" },
-          { value: "no_date", label: "No date" },
+          { value: "fresh", label: "Under 45 days" },
+          { value: "stale", label: "45-day check due" },
+          { value: "no_date", label: "No recorded clock" },
         ],
       },
       {

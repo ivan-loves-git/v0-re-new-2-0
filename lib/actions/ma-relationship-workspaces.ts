@@ -7,6 +7,7 @@ import {
   compareMaRelationshipActivityDescending,
   readMaRelationshipLedger,
 } from "@/lib/data/ma-relationship-ledger"
+import { readOpportunityFreshnessConfirmations } from "@/lib/data/opportunity-freshness-confirmations"
 import { isCandidateStaleOpportunity } from "@/lib/opportunity-freshness-policy"
 import { buildMaRelationshipIndicators } from "@/lib/ma-relationship-statistics"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -148,6 +149,11 @@ async function getWorkspaceRows(
     purpose: "detail",
     officeIds: offices.map((office) => office.id),
   })
+  const opportunityRows = [...ledger.opportunitiesByOffice.values()].flat()
+  const latestConfirmations = await readOpportunityFreshnessConfirmations(
+    createAdminClient(),
+    opportunityRows.map((opportunity) => opportunity.id),
+  )
   const indicators = buildMaRelationshipIndicators(
     offices,
     [...ledger.affiliationsByOffice.values()].flat().map((affiliation) => ({
@@ -157,7 +163,7 @@ async function getWorkspaceRows(
       endedAt: affiliation.endedAt,
       contactStatus: affiliation.contactStatus,
     })),
-    [...ledger.opportunitiesByOffice.values()].flat().map((opportunity) => ({
+    opportunityRows.map((opportunity) => ({
       id: opportunity.id,
       officeId: opportunity.officeId,
       status: opportunity.status,
@@ -165,6 +171,8 @@ async function getWorkspaceRows(
       dateAddedPrecision: opportunity.dateAddedPrecision,
     })),
     ledger.activePursuitOpportunityIds,
+    now,
+    latestConfirmations,
   )
   const contactsByOffice = new Map<string, MaWorkspaceContact[]>()
   for (const row of [...ledger.affiliationsByOffice.values()].flat()) {
@@ -187,7 +195,7 @@ async function getWorkspaceRows(
     contactsByOffice.set(row.officeId, entries)
   }
   const opportunitiesByOffice = new Map<string, MaWorkspaceOpportunity[]>()
-  for (const row of [...ledger.opportunitiesByOffice.values()].flat()) {
+  for (const row of opportunityRows) {
     const entries = opportunitiesByOffice.get(row.officeId) ?? []
     entries.push({
       id: row.id,
@@ -202,6 +210,7 @@ async function getWorkspaceRows(
           status: row.status,
           dateAdded: row.dateAdded,
           dateAddedPrecision: row.dateAddedPrecision,
+          confirmation: latestConfirmations.get(row.id) ?? null,
         },
         ledger.activePursuitOpportunityIds,
         now,

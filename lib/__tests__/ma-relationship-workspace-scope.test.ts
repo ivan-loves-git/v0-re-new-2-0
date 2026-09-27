@@ -24,6 +24,7 @@ const officeId = "11111111-1111-4111-8111-111111111111"
 const opportunityId = "22222222-2222-4222-8222-222222222222"
 
 function workspaceClient(opportunities: Array<Record<string, unknown>>) {
+  const rpc = vi.fn().mockResolvedValue({ data: [], error: null })
   const pursuitRepreneurDemoFilter = vi.fn().mockResolvedValue({
     data: [],
     error: null,
@@ -102,7 +103,7 @@ function workspaceClient(opportunities: Array<Record<string, unknown>>) {
     throw new Error(`Unexpected table: ${table}`)
   })
 
-  return { from, pursuitOpportunityFilter, pursuitSelect }
+  return { from, rpc, pursuitOpportunityFilter, pursuitSelect }
 }
 
 describe("M&A workspace active-pursuit scope", () => {
@@ -124,7 +125,7 @@ describe("M&A workspace active-pursuit scope", () => {
         source_office_id: officeId,
       },
     ])
-    mocks.createAdminClient.mockReturnValue({ from: client.from })
+    mocks.createAdminClient.mockReturnValue({ from: client.from, rpc: client.rpc })
 
     await getMaOfficeWorkspace(officeId)
 
@@ -137,9 +138,28 @@ describe("M&A workspace active-pursuit scope", () => {
     )
   })
 
+  it("removes the office stale badge after an exact recent confirmed-open reply", async () => {
+    const client = workspaceClient([{
+      id: opportunityId, reference: "OPP-1", public_title: "Target", activity: null,
+      status: "active", date_added: "2026-01-01", date_added_precision: "day", source_office_id: officeId,
+    }])
+    client.rpc.mockResolvedValue({ data: [{ opportunity_id: opportunityId, confirmation_id: "reply-1",
+      confirmed_at: new Date().toISOString() }], error: null })
+    mocks.createAdminClient.mockReturnValue({ from: client.from, rpc: client.rpc })
+
+    const workspace = await getMaOfficeWorkspace(officeId)
+
+    expect(workspace?.indicators.staleOpportunities).toBe(0)
+    expect(workspace?.indicators.openOpportunities).toBe(1)
+    expect(workspace?.opportunities[0]?.isCandidateStale).toBe(false)
+    expect(client.rpc).toHaveBeenCalledWith("opportunity_freshness_latest_confirmations", {
+      p_opportunity_ids: [opportunityId],
+    })
+  })
+
   it("does not query active pursuits when a selected firm has no office scope", async () => {
     const client = workspaceClient([])
-    mocks.createAdminClient.mockReturnValue({ from: client.from })
+    mocks.createAdminClient.mockReturnValue({ from: client.from, rpc: client.rpc })
 
     const workspace = await getMaFirmWorkspace("firm-1")
 

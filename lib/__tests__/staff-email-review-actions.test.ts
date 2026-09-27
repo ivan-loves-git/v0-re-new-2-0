@@ -20,7 +20,7 @@ vi.mock("@/lib/pursuit-handoff-copy", () => ({
   buildPursuitNdaReadyRequest: m.e6Copy, fixedIntermediaryHandoffCopy: m.fixedCopy,
 }))
 
-import { approveAndSendStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
+import { approveAndSendStaffEmailReview, editStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
 
 const reviewId = "18600000-0000-4000-8000-000000000010"
 const opportunityId = "18600000-0000-4000-8000-000000000011"
@@ -94,6 +94,24 @@ describe("staff email review public actions", () => {
     m.staff.mockRejectedValue(new Error("Staff access required"))
     await expect(listStaffEmailReviews()).rejects.toThrow("Staff access")
     expect(m.from).not.toHaveBeenCalled()
+  })
+
+  it("keeps records beyond the old latest-50 boundary navigable", async () => {
+    const range = vi.fn().mockResolvedValue({ data: [{ ...row, id: "older-review" }], count: 51, error: null })
+    const listQuery = { in: () => listQuery, order: () => listQuery, range }
+    m.from.mockReturnValue({ select: () => listQuery })
+    const page = await listStaffEmailReviews(3, "all")
+    expect(range).toHaveBeenCalledWith(50, 74)
+    expect(page).toMatchObject({ total: 51, page: 3, pageSize: 25, reviews: [{ id: "older-review" }] })
+  })
+
+  it("sends grouped staff edits to the freshness RPC with its exact body parameter", async () => {
+    m.from.mockImplementation((table) => query(table === "staff_email_reviews" ? { ...row, source_kind: "freshness" } : null))
+    await editStaffEmailReview(reviewId, 1, "Reviewed group", "Reviewed words")
+    expect(m.rpc).toHaveBeenCalledWith("opportunity_freshness_edit", {
+      p_review_id: reviewId, p_version: 1, p_subject: "Reviewed group",
+      p_body: "Reviewed words", p_actor: "staff-1",
+    })
   })
 
   it("explains why an earlier uncertain send blocks another draft", async () => {

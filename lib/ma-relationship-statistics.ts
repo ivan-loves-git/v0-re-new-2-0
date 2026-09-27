@@ -87,6 +87,7 @@ export function buildMaRelationshipIndicators(
   opportunities: MaRelationshipStatisticOpportunity[],
   activePursuitOpportunityIds: Iterable<string>,
   now = new Date(),
+  latestConfirmations: ReadonlyMap<string, { id: string; at: string }> = new Map(),
 ): MaRelationshipStatistics {
   const byOfficeId = new Map<string, MaRelationshipOfficeStatistics>()
   const officeFirmIds = new Map<string, string>()
@@ -142,7 +143,10 @@ export function buildMaRelationshipIndicators(
     if (isOpenRelationshipOpportunity(opportunity.status)) {
       statistics.openOpportunityCount += 1
     }
-    if (isCandidateStaleOpportunity(opportunity, activePursuits, now)) {
+    if (isCandidateStaleOpportunity({
+      ...opportunity,
+      confirmation: latestConfirmations.get(opportunity.id) ?? null,
+    }, activePursuits, now)) {
       statistics.candidateStaleCount += 1
     }
     if (opportunity.status === "closed") {
