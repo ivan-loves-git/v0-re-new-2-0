@@ -26,6 +26,15 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 27, 2026",
+    version: "0.9.84",
+    title: "A clearer step in every deal journey",
+    isCompleted: true,
+    events: [
+      { title: "See your current position", type: "fix", description: "The compact journey marks earlier positions in blue and gives one slim marker to the current step, both in your workspace and staff preview. Full history still separates recorded evidence from steps shown only for orientation." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
     version: "0.9.83",
     title: "Staff can preview the same deal workspace",
     isCompleted: true,

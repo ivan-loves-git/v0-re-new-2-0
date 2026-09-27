@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { LanguageProvider } from "@/lib/i18n/language-context"
 import { RepreneurPursuitWorkspace, currentWorkspaceAction, filterWorkspaceDeals, nextWorkspaceResponseRefreshDelay, type SidebarDeal } from "@/components/portal/repreneur-pursuit-workspace"
 import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity"
+import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 
@@ -24,6 +25,27 @@ const deals: SidebarDeal[] = [
 ]
 
 describe("repreneur pursuit workspace", () => {
+  it("uses the same single-current journey strip for owner and staff preview in both languages", () => {
+    const journey: PortalCurrentPursuit = {
+      matchId: "own-match", enabled: true, ndaReadyNotified: true, revoked: false,
+      projectionUnavailable: false, action: "sign_nda", signedCopyState: "not_submitted",
+      sourceDisclosureCurrent: false, confidentialGrant: null,
+      history: { currentCycleRecorded: true, previousCycleEnded: false, ndaReadyNoticeRecorded: true, currentSubmissionRecorded: false, accessEnded: false },
+    }
+    for (const language of ["en", "fr"] as const) {
+      for (const staffPreview of [undefined, { repreneurId: "owner", workspaceId: "workspace", returnView: "deals" as const }]) {
+        const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: language },
+          createElement(RepreneurPursuitWorkspace, {
+            opportunity: { ...opportunity, match_status: "active_pursuit", pursuit_stage: "interest" },
+            deals, actions: {}, journey, staffPreview, responseAsOf: "2026-09-27T00:00:00Z",
+          })))
+        expect(html.match(/aria-current="step"/g)).toHaveLength(1)
+        expect(html.match(/data-journey-position="earlier"/g)).toHaveLength(3)
+        expect(html).toContain(language === "fr" ? "Étape actuelle" : "Current step")
+      }
+    }
+  })
+
   it("filters only its authorized sidebar input without changing the selected detail", () => {
     expect(filterWorkspaceDeals(deals, "software", "all").map((deal) => deal.match_id)).toEqual(["ended-match"])
     expect(filterWorkspaceDeals(deals, "", "awaiting").map((deal) => deal.match_id)).toEqual(["own-match"])

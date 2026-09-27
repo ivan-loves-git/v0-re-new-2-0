@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 import { LanguageProvider } from "@/lib/i18n/language-context"
 import { PursuitJourneyHistory, PursuitJourneyProgress } from "@/components/portal/pursuit-journey"
-import { buildPortalJourneyView } from "@/lib/portal-pursuit-journey"
+import { buildPortalJourneyProgress, buildPortalJourneyView } from "@/lib/portal-pursuit-journey"
 import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 import type { RepreneurDealFlowOpportunity } from "@/lib/types/opportunity"
 
@@ -20,6 +20,50 @@ const pursuit: PortalCurrentPursuit = {
 const state = (steps: ReturnType<typeof buildPortalJourneyView>, key: string) => steps.find((step) => step.key === key)
 
 describe("owner-safe pursuit journey", () => {
+  it("shows one current process position while keeping earlier evidence truthful", () => {
+    const progress = buildPortalJourneyProgress(opportunity, pursuit)
+    expect(progress.filter((step) => step.position === "current").map((step) => step.key)).toEqual(["nda_ready"])
+    expect(progress.filter((step) => step.position === "earlier").map((step) => step.key)).toEqual(["proposed", "response", "confirmed"])
+    expect(progress.find((step) => step.key === "proposed")).toMatchObject({ state: "unknown", date: null })
+    expect(progress.find((step) => step.key === "nda_submitted")?.position).toBe("ahead")
+  })
+
+  it("renders one current step in the shared strip in French and English", () => {
+    for (const language of ["en", "fr"] as const) {
+      const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: language },
+        createElement(PursuitJourneyProgress, { opportunity, pursuit, onFullHistory: () => undefined })))
+      expect(html.match(/aria-current="step"/g)).toHaveLength(1)
+      expect(html).toContain(language === "fr" ? "Étape actuelle" : "Current step")
+      expect(html).not.toContain(language === "fr" ? "Étapes consignées" : "Recorded milestones")
+    }
+  })
+
+  it("keeps advanced business progress ahead of an available document without inventing earlier history", () => {
+    const progress = buildPortalJourneyProgress({ ...opportunity, pursuit_stage: "qa_with_ma_firm", pursuit_stage_provenance: "staff_confirmed_history", interest_expressed_at: null }, {
+      ...pursuit, action: null,
+      confidentialGrant: { informationMemoDocumentId: "exact-im", grantedAt: "2026-09-26T10:00:00Z", source: null },
+      history: { ...pursuit.history, currentCycleRecorded: false, ndaReadyNoticeRecorded: false },
+    })
+    expect(progress.filter((step) => step.position === "current").map((step) => step.key)).toEqual(["qa"])
+    expect(progress.filter((step) => step.position === "earlier").map((step) => step.key)).toEqual(["proposed", "response", "confirmed", "nda_ready", "nda_submitted", "nda_signed", "memo"])
+    expect(progress.find((step) => step.key === "nda_signed")).toMatchObject({ state: "unknown", date: null })
+    expect(progress.find((step) => step.key === "seller")?.position).toBe("ahead")
+  })
+
+  it.each(["withdrawn", "declined", "dropped", "completed"] as const)("does not invent an in-progress or closing position for %s", (match_status) => {
+    const progress = buildPortalJourneyProgress({ ...opportunity, match_status, pursuit_stage: "closed" }, null)
+    expect(progress.every((step) => step.position === "unavailable")).toBe(true)
+    expect(progress.find((step) => step.key === "closing")?.state).toBe("future")
+  })
+
+  it("keeps the current business position when documents are unavailable", () => {
+    const progress = buildPortalJourneyProgress({ ...opportunity, pursuit_stage: "info_memo_received" }, {
+      ...pursuit, action: null, projectionUnavailable: true, confidentialGrant: null,
+    })
+    expect(progress.filter((step) => step.position === "current").map((step) => step.key)).toEqual(["memo"])
+    expect(progress.find((step) => step.key === "memo")?.date).toBeNull()
+  })
+
   it("shows only exact owner-visible consequences and leaves unsupported history unknown", () => {
     const steps = buildPortalJourneyView(opportunity, pursuit)
     expect(state(steps, "response")).toMatchObject({ state: "recorded", date: "2026-09-25T10:00:00Z", role: null })

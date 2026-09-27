@@ -1263,6 +1263,19 @@ is never translated by the FR/EN interface switch.
 
 ### Owner-safe Journey mapping (#188 / Ticket #208)
 
+**Approved compact-strip presentation contract (#188 / Ticket #217, 27 September 2026):**
+The shared owner/staff-preview strip shows earlier positions in blue, exactly
+one slim current marker when a supported current position exists, and no large
+filled current-step tiles. It selects the furthest currently supported position
+from the existing safe mapping: current NDA work may refine early operating
+progress, but an available document cannot move a later business stage
+backwards. Earlier blue positions mean sequence only, not verified completion,
+recorded dates, document validation or permission. Full history retains its
+independent evidence states and unknown dates. Terminal or unsupported states
+cannot invent an in-progress marker or successful closing. This presentation
+rule performs no migration, historical inference, stage write or access change;
+release proof belongs to the exact GitHub candidate and production gate.
+
 The compact map is process context, not transaction completion. The detail
 projects `history.currentCycleRecorded`, `previousCycleEnded`,
 `ndaReadyNoticeRecorded`, `currentSubmissionRecorded` and `accessEnded` as
@@ -1304,6 +1317,7 @@ retains canonical responses, evidence and current permission rules.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-09-27 | #188 Ticket #217 approved candidate | Corrected the shared compact strip's sequence/current presentation without changing Full history evidence, dates, stage, document access or stored data. Release verification remains a separate gate. | GitHub Product Change #188 / Ticket #217 |
 | 2026-09-27 | #188 Ticket #207 preview correction | The selected staff Portal preview now renders the released pursuit workspace with selected-owner criteria, progress, Documents and Journey. Staff-only actions and current workspace-bound document routes remain separate from owner state; no migration or historical rewrite. | GitHub Product Change #188 / Ticket #207 |
 | 2026-09-27 | #188 Tickets #207–#208 candidate | Added the owner-scoped pursuit workspace, criteria comparison, current action projection and compact/detailed Journey with explicit unknown history and future context. The candidate changes presentation and allowlisted reads only; release evidence belongs to the exact GitHub PR and production gate. | GitHub Product Change #188 / Tickets #207–#208 |
 | 2026-09-27 | #133 Tickets #200–#202 held build | Added the optional account-owned FR/EN UI preference candidate, browser continuity and French-first access/intake/assessment/profile, opportunity and pursuit copy with separate staff-preview choice. The migration and combined #133 release remain unapplied and unshipped. | GitHub Product Change #133 / Decision #199 / Tickets #200–#202; migration `20260927120000` |

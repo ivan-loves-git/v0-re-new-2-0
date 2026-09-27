@@ -35,6 +35,28 @@ export interface PortalJourneyViewStep {
 type JourneyOpportunity = Pick<RepreneurDealFlowOpportunity,
   "match_status" | "pursuit_stage" | "pursuit_stage_provenance" | "interest_expressed_at" | "interest_rejected">
 
+export type JourneyPosition = "earlier" | "current" | "ahead" | "unavailable"
+export interface PortalJourneyProgressStep extends PortalJourneyViewStep {
+  position: JourneyPosition
+}
+
+/**
+ * A linear position indicator, not a completion ledger. Current document work
+ * can refine an early operating stage; it cannot pull a later stage backwards.
+ * Earlier blue positions never change evidence, dates, stages or permissions.
+ */
+export function buildPortalJourneyProgress(
+  opportunity: JourneyOpportunity,
+  pursuit: PortalCurrentPursuit | null,
+): PortalJourneyProgressStep[] {
+  const steps = buildPortalJourneyView(opportunity, pursuit)
+  const currentIndex = steps.reduce((latest, step, index) => step.state === "current" ? index : latest, -1)
+  return steps.map((step, index) => ({
+    ...step,
+    position: currentIndex < 0 ? "unavailable" : index < currentIndex ? "earlier" : index === currentIndex ? "current" : "ahead",
+  }))
+}
+
 /** Presentation only. Every recorded state comes from an existing owner-safe consequence. */
 export function buildPortalJourneyView(
   opportunity: JourneyOpportunity,
