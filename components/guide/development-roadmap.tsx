@@ -26,6 +26,27 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 27, 2026",
+    version: "0.9.82",
+    title: "Follow every Re-New deal in one workspace",
+    isCompleted: true,
+    events: [
+      { title: "Move between your matched deals", type: "feature", description: "A clear list sits beside each deal on desktop and opens full width on mobile. Public business details, your six acquisition criteria and permitted documents stay together." },
+      { title: "See progress without guesswork", type: "feature", description: "The compact journey and detailed history show recorded milestones, the current business stage and future context separately. Document access follows its own checks, and unknown dates stay unknown." },
+      { title: "Act only when a current request is yours", type: "decision", description: "The blue action cue appears for an open proposal or a verified NDA signing request. A submitted copy waits for Re-New review; an available information memorandum is a resource, not an overdue task." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
+    version: "0.9.81",
+    title: "Choose French or English for your workspace",
+    isCompleted: true,
+    events: [
+      { title: "A consistent interface language", type: "feature", description: "Repreneurs can choose French or English for access, profile, opportunities and pursuit controls. Their choice follows their account, while staff can preview either language independently." },
+      { title: "Original information stays original", type: "decision", description: "Changing interface language does not rewrite business descriptions, legal documents, uploaded files or emails." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
     version: "0.9.80",
     title: "Review older opportunities with their source",
     isCompleted: true,
