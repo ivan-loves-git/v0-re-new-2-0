@@ -286,7 +286,7 @@ if "${psql[@]}" -Atc "SELECT public.opportunity_freshness_record_reply('$review_
   echo "Later exact reply crossed a reserved provider lease" >&2; exit 1
 fi
 wait "$reserve_first_pid"
-reserve_first_token="$(rg -m1 '^[0-9a-f-]{36}$' "$cluster_dir/reserve-first.out")"
+reserve_first_token="$(grep -E -m1 '^[0-9a-f-]{36}$' "$cluster_dir/reserve-first.out")"
 "${psql[@]}" -Atc "SELECT public.opportunity_freshness_finish('$reply_group','$reserve_first_token','sent','provider-accepted-3',NULL,'staff-1')" >/dev/null
 "${psql[@]}" -Atc "SELECT public.opportunity_freshness_record_reply('$review_id','18700000-0000-4000-8000-000000000007','confirmed_open',now(),'Later reply after delivery','staff-1')" >/dev/null
 echo "#187 disposable SQL: source flag, 44/45/legacy, identity, ACL, exact grouped receipt/reply, independent inbound/reply both-order races, source/pursuit, version/recipient drift, discard, template switch and uncertain retry passed"
