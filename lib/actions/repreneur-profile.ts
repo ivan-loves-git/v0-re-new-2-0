@@ -28,6 +28,10 @@ export type TargetThesisInput = {
   target_staff_size_max: number | null
 }
 
+export type StaffTargetThesisSaveFailure = {
+  code: "staff_workspace_changed" | "staff_profile_changed"
+}
+
 export type ProfileContribution = "ldc" | "advisory_team"
 
 type TargetThesisRow = {
@@ -208,7 +212,7 @@ export async function updateRepreneurTargetThesis(
   expectedUpdatedAt?: string,
   operationKey?: string,
   selectionToken?: string,
-) {
+): Promise<void | StaffTargetThesisSaveFailure> {
   const access = await requireStaffAccess()
   if (!repreneurId.trim()) throw new Error("Repreneur profile is required.")
   // Preserve the pre-existing staff profile editor outside Tools Portal.
@@ -219,7 +223,7 @@ export async function updateRepreneurTargetThesis(
     return
   }
   const selection = await verifyStaffPortalSelection(selectionToken, repreneurId, access.user.id)
-  if (!selection) throw new Error("The selected staff workspace changed. Refresh and try again.")
+  if (!selection) return { code: "staff_workspace_changed" }
   const supabase = createAdminClient()
   const values = await prepareTargetThesisForRepreneur(repreneurId, input)
   let expected = expectedUpdatedAt
@@ -238,7 +242,7 @@ export async function updateRepreneurTargetThesis(
     p_workspace_id: selection.workspaceId,
     p_workspace_generation: selection.generation,
   })
-  if (error) throw new Error("The selected profile changed or this staff edit could not be saved. Refresh and try again.")
+  if (error) return { code: "staff_profile_changed" }
   await recalculateRepreneurScoresAndMatches(repreneurId)
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/portal-preview")

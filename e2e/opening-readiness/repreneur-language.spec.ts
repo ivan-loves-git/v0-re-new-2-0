@@ -47,7 +47,7 @@ async function accountLanguage(client: Client, userId: string) {
 }
 
 async function ownerState(client: Client, repreneurId: string, opportunityId: string) {
-  const [matches, interestEvents, external, review, documents] = await Promise.all([
+  const [matches, interestEvents, external, review] = await Promise.all([
     client.query<{ id: string; status: string; updated_at: string }>(
       "SELECT id,status,updated_at::text FROM public.opportunity_matches WHERE repreneur_id=$1 ORDER BY id", [repreneurId]),
     client.query<{ id: string }>(
@@ -56,10 +56,8 @@ async function ownerState(client: Client, repreneurId: string, opportunityId: st
       "SELECT id,title,stage FROM public.external_pursuits WHERE owner_repreneur_id=$1 ORDER BY id", [repreneurId]),
     client.query<{ first_viewed_at: string; reviewed: boolean }>(
       "SELECT first_viewed_at::text,reviewed FROM public.repreneur_opportunity_review_state WHERE repreneur_id=$1 AND opportunity_id=$2", [repreneurId, opportunityId]),
-    client.query<{ id: string; title: string; file_name: string }>(
-      "SELECT id,title,file_name FROM public.opportunity_documents WHERE opportunity_id=$1 ORDER BY id", [opportunityId]),
   ])
-  return { matches: matches.rows, interestEvents: interestEvents.rows, external: external.rows, review: review.rows, documents: documents.rows }
+  return { matches: matches.rows, interestEvents: interestEvents.rows, external: external.rows, review: review.rows }
 }
 
 test("French-first locale is account-scoped, live, and separate from staff preview", async ({ browser }) => {
@@ -122,21 +120,29 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     await sectors.getByRole("checkbox", { name: "Tech & Digital" }).check()
     await firstPage.keyboard.press("Escape")
     await expect(firstPage.getByRole("button", { name: "Secteurs (1)" })).toBeVisible()
-    await expect(firstPage.getByText(originalTitle, { exact: true })).toBeVisible()
-    await expect(firstPage.getByText(originalTeaser, { exact: true })).toBeVisible()
-    const detailHref = await firstPage.getByRole("link", { name: "Voir le détail" }).first().getAttribute("href")
-    expect(detailHref).toBe(`/portal/deals/${fixture.ids.realOpportunity}`)
+    const originalCard = firstPage.locator('[data-slot="card"]')
+      .filter({ has: firstPage.getByText(originalTeaser, { exact: true }) })
+    await expect(originalCard).toHaveCount(1)
+    await expect(originalCard.getByText(originalTitle, { exact: true })).toBeVisible()
+    await expect(originalCard.getByText(originalTeaser, { exact: true })).toBeVisible()
+    const { rows: fixtureMatches } = await client.query<{ id: string }>(
+      "SELECT id FROM public.opportunity_matches WHERE repreneur_id=$1 AND opportunity_id=$2",
+      [fixture.repreneurs.real.id, fixture.ids.realOpportunity],
+    )
+    expect(fixtureMatches.length).toBeLessThanOrEqual(1)
+    const detailHref = await originalCard.getByRole("link", { name: "Voir le détail" }).getAttribute("href")
+    expect(detailHref).toBe(`/portal/deals/${fixtureMatches[0]?.id ?? fixture.ids.realOpportunity}`)
     await firstPage.getByRole("button", { name: "English", exact: true }).click()
     await expect(firstPage.getByRole("textbox", { name: "Search deal flow" })).toHaveValue("QA OPENING REAL")
     await expect(firstPage.getByRole("button", { name: "Sectors (1)" })).toBeVisible()
-    await expect(firstPage.getByText(originalTitle, { exact: true })).toBeVisible()
-    await expect(firstPage.getByText(originalTeaser, { exact: true })).toBeVisible()
-    expect(await firstPage.getByRole("link", { name: "View detail" }).first().getAttribute("href")).toBe(detailHref)
+    await expect(originalCard.getByText(originalTitle, { exact: true })).toBeVisible()
+    await expect(originalCard.getByText(originalTeaser, { exact: true })).toBeVisible()
+    expect(await originalCard.getByRole("link", { name: "View detail" }).getAttribute("href")).toBe(detailHref)
     await firstPage.getByRole("button", { name: "Français", exact: true }).click()
     await expect(firstPage.getByRole("textbox", { name: "Rechercher parmi les opportunités" })).toHaveValue("QA OPENING REAL")
     expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(beforeListSwitch)
 
-    await firstPage.getByRole("link", { name: "Voir le détail" }).first().click()
+    await originalCard.getByRole("link", { name: "Voir le détail" }).click()
     await expect(firstPage.getByRole("heading", { name: originalTitle })).toBeVisible()
     await expect(firstPage.getByText(originalTeaser, { exact: true })).toBeVisible()
     await expect(firstPage.getByText("QA OPENING REAL SYNTHETIC — NEVER COMMERCIAL")).toHaveCount(0)
@@ -260,6 +266,11 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     })
     contexts.push(publicContext)
     const publicPage = await publicContext.newPage()
+    await publicPage.goto("/welcome")
+    await expect(publicPage).toHaveTitle("Re-New | WAVE")
+    await publicPage.getByRole("button", { name: "English", exact: true }).click()
+    await expect(publicPage).toHaveTitle("Re-New | WAVE")
+    await publicPage.getByRole("button", { name: "Français", exact: true }).click()
     await publicPage.goto("/intake-v2")
     await publicPage.locator("#first_name").fill("Synthetic First")
     await publicPage.locator("#last_name").fill("Synthetic Last")

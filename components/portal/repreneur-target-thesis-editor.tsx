@@ -41,6 +41,7 @@ import {
   certifyMyProfileContribution,
   updateMyTargetThesis,
   type ProfileContribution,
+  type StaffTargetThesisSaveFailure,
   type TargetThesisInput,
 } from "@/lib/actions/repreneur-profile"
 
@@ -192,7 +193,7 @@ export function RepreneurTargetThesisEditor({
   staffAssistanceName,
 }: {
   repreneur: TargetThesisProfile
-  onSave?: (input: TargetThesisInput) => Promise<void>
+  onSave?: (input: TargetThesisInput) => Promise<void | StaffTargetThesisSaveFailure>
   successMessage?: string
   triggerLabel?: string
   title?: string
@@ -234,7 +235,13 @@ export function RepreneurTargetThesisEditor({
 
     startTransition(async () => {
       try {
-        await (onSave ?? updateMyTargetThesis)(input)
+        const failure = await (onSave ?? updateMyTargetThesis)(input)
+        if (failure) {
+          toast.error(failure.code === "staff_workspace_changed"
+            ? "The selected staff workspace changed. Refresh and try again."
+            : "The selected profile changed or this staff edit could not be saved. Refresh and try again.")
+          return
+        }
         toast.success(staffAssistanceName ? successMessage : u("Target thesis updated. Your deal matching has been refreshed."))
         setOpen(false)
         router.refresh()

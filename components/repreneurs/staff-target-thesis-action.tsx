@@ -11,8 +11,9 @@ export function StaffTargetThesisAction({ repreneur, selectionToken }: { reprene
   async function save(input: TargetThesisInput) {
     const fingerprint = JSON.stringify(input)
     if (retry.current?.fingerprint !== fingerprint) retry.current = { fingerprint, key: crypto.randomUUID() }
-    await updateRepreneurTargetThesis(repreneur.id, input, repreneur.updated_at, retry.current.key, selectionToken)
-    retry.current = null
+    const failure = await updateRepreneurTargetThesis(repreneur.id, input, repreneur.updated_at, retry.current.key, selectionToken)
+    if (!failure) retry.current = null
+    return failure
   }
   return <RepreneurTargetThesisEditor
     repreneur={repreneur}
