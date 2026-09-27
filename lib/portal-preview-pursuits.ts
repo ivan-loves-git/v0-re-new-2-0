@@ -16,6 +16,7 @@ export interface SelectedReNewPursuitDeal {
 export function projectSelectedReNewPursuits(
   repreneurId: string,
   deals: SelectedReNewPursuitDeal[],
+  workspaceId?: string | null,
 ): ReNewPursuitBoardRecord[] {
   return deals.flatMap((deal) => {
     if (!deal.match_id || !deal.match_status) return []
@@ -32,7 +33,7 @@ export function projectSelectedReNewPursuits(
       canonicalStage: deal.pursuit_stage ?? null,
       canonicalJourney: journey,
       stageProvenance: deal.pursuit_stage_provenance ?? null,
-      href: createPortalPreviewHref(repreneurId, deal.match_id),
+      href: createPortalPreviewHref(repreneurId, deal.match_id, workspaceId, { returnView: "renew-pursuits" }),
       ownerName: null,
       updatedAt: deal.updated_at,
     }]

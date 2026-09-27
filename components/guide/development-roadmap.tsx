@@ -33,6 +33,7 @@ const roadmapEvents: RoadmapPeriod[] = [
       { title: "Move between your matched deals", type: "feature", description: "A clear list sits beside each deal on desktop and opens full width on mobile. Public business details, your six acquisition criteria and permitted documents stay together." },
       { title: "See progress without guesswork", type: "feature", description: "The compact journey and detailed history show recorded milestones, the current business stage and future context separately. Document access follows its own checks, and unknown dates stay unknown." },
       { title: "Act only when a current request is yours", type: "decision", description: "The blue action cue appears for an open proposal or a verified NDA signing request. A submitted copy waits for Re-New review; an available information memorandum is a resource, not an overdue task." },
+      { title: "See the same workspace in staff preview", type: "fix", description: "Tools now shows the same deal list, criteria, documents and journey when staff preview a selected repreneur. Staff assistance stays attributed to staff, and previewing never changes the repreneur's reading markers or language choice." },
     ],
   },
   {

@@ -271,6 +271,40 @@ test("French-first locale is account-scoped, live, and separate from staff previ
       await expect(staffPage.getByRole("tab", { name: "Deals", exact: true })).toBeVisible()
     }
 
+    // The selected staff route must show the same current workspace without
+    // borrowing an owner session or changing the owner's review/language state.
+    await staffPage.goto(`/portal-preview?repreneurId=${fixture.repreneurs.real.id}&dealId=${fixtureMatches[0]?.id ?? fixture.ids.realOpportunity}`)
+    await expect(staffPage).toHaveURL(/workspaceId=/, { timeout: 30_000 })
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+      await staffPage.setViewportSize(viewport)
+      const workspace = staffPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      await expect(workspace).toHaveCount(1)
+      await expect(workspace.getByRole("heading", { level: 1, name: originalTitle })).toBeVisible()
+      for (const language of ["fr", "en"] as const) {
+        await staffPage.getByRole("group", { name: "Interface language" }).getByRole("button", {
+          name: language === "fr" ? "Français" : "English", exact: true,
+        }).click()
+        const criteriaName = language === "fr" ? "Vos critères" : "Your criteria"
+        await workspace.getByRole("tab", { name: criteriaName }).click()
+        const criteria = workspace.getByRole("region", { name: criteriaName })
+        await expect(criteria).toBeVisible()
+        await expect(criteria.getByRole("heading", { level: 3 })).toHaveCount(6)
+        await workspace.getByRole("tab", { name: "Documents" }).click()
+        await expect(workspace.getByRole("tabpanel", { name: "Documents" })).toBeVisible()
+        await workspace.getByRole("tab", { name: language === "fr" ? "Parcours" : "Journey" }).click()
+        await expect(workspace.locator("[data-wave-journey]")).toBeVisible()
+        await expect(staffPage.getByRole("heading", { name: "Portal preview", exact: true })).toBeVisible()
+        await expect(staffPage.locator("html")).toHaveAttribute("lang", "en")
+      }
+      if (viewport.width < 1000) {
+        await workspace.getByRole("button", { name: "Pursuits" }).click()
+        await expect(workspace.getByRole("navigation", { name: "Pursuits" })).toBeVisible()
+      }
+      expect(await staffPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+    expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(previewBefore)
+    expect(await accountLanguage(client, fixture.repreneurs.real.userId)).toBe("en")
+
     const noScript = await browser.newContext({ javaScriptEnabled: false })
     contexts.push(noScript)
     const noScriptPage = await noScript.newPage()

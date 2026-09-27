@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight, Search, PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { sectorUiLabel, geographyUiLabel } from "@/lib/i18n/canonical-labels"
 import { displayLocale } from "@/lib/i18n/ui-language"
 import { matchStatusUiLabel, pursuitStageUiLabel } from "@/lib/i18n/deal-labels"
 import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
+import { createPortalPreviewHref, type PortalPreviewSection } from "@/lib/portal-preview-routes"
 import type { PortalCurrentPursuit, PortalDealAction } from "@/lib/data/current-pursuit"
 import type { OwnerCriterionComparison, RepreneurDealFlowOpportunity, RepreneurOpportunityExposure } from "@/lib/types/opportunity"
 import { cn } from "@/lib/utils"
@@ -24,6 +25,12 @@ export type SidebarDeal = Pick<RepreneurOpportunityExposure,
   "match_id" | "match_status" | "pursuit_stage" | "public_title" | "canonical_sector" |
   "sector" | "activity" | "geography_label" | "location" | "interest_rejected" | "recommendation_expires_at">
 type StatusFilter = "all" | "active" | "awaiting" | "ended"
+interface StaffPreviewWorkspaceAdapter {
+  repreneurId: string
+  workspaceId: string | null
+  returnView: PortalPreviewSection
+  documentHrefs?: { ndaTemplate?: string; informationMemorandum?: string }
+}
 const hasOwnAction = (action: PortalDealAction | undefined) => action === "respond" || action === "sign_nda"
 
 function dealName(deal: Pick<RepreneurOpportunityExposure, "public_title">, language: "fr" | "en") {
@@ -114,7 +121,7 @@ function CriteriaPanel({ criteria }: { criteria: OwnerCriterionComparison[] | un
   </section>
 }
 
-export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey, responseAsOf, withdrawalPaused = false, initialQuery = "", initialStatus = "all", returnHref = "/portal/deals" }: {
+export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey, responseAsOf, withdrawalPaused = false, initialQuery = "", initialStatus = "all", returnHref = "/portal/deals", staffPreview, staffAssistanceControls, staffDocumentAssistanceControls }: {
   opportunity: Deal
   deals: SidebarDeal[]
   actions: Record<string, PortalDealAction>
@@ -125,6 +132,9 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   initialQuery?: string
   initialStatus?: StatusFilter
   returnHref?: string
+  staffPreview?: StaffPreviewWorkspaceAdapter
+  staffAssistanceControls?: ReactNode
+  staffDocumentAssistanceControls?: ReactNode
 }) {
   const copy = useUiCopy()
   const language = useUiLanguage()
@@ -155,6 +165,9 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   const previousDeal = currentIndex > 0 ? visible[currentIndex - 1] : null
   const nextDeal = currentIndex >= 0 && currentIndex < visible.length - 1 ? visible[currentIndex + 1] : null
   const hrefFor = (deal: SidebarDeal) => {
+    if (staffPreview) return createPortalPreviewHref(staffPreview.repreneurId, deal.match_id, staffPreview.workspaceId, {
+      query, status, returnView: staffPreview.returnView,
+    })
     const params = new URLSearchParams()
     if (query) params.set("q", query)
     if (status !== "all") params.set("status", status)
@@ -162,6 +175,10 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
     const suffix = params.toString()
     return `/portal/deals/${deal.match_id}${suffix ? `?${suffix}` : ""}`
   }
+  const listHref = staffPreview
+    ? createPortalPreviewHref(staffPreview.repreneurId, undefined, staffPreview.workspaceId, {
+        query, status, view: staffPreview.returnView,
+      }) : returnHref
   const title = dealName(opportunity, language)
   const selectedAction = opportunity.match_id
     ? currentWorkspaceAction(opportunity as SidebarDeal, actions[opportunity.match_id], actionNow)
@@ -203,7 +220,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
     </aside>
     <div className={cn("min-w-0 bg-muted/20", mobileListOpen && "hidden lg:block")}>
       <div className="flex min-h-16 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
-        <div className="flex min-w-0 items-center gap-2 text-sm"><Button variant="outline" size="sm" className="lg:hidden" onClick={() => setMobileListOpen(true)}><PanelLeft data-icon="inline-start" />{copy("Pursuits")}</Button><Link href={returnHref} className="hidden text-muted-foreground underline-offset-4 hover:underline sm:inline">{copy("My pursuits")}</Link><ChevronRight aria-hidden="true" className="hidden size-4 text-muted-foreground sm:inline" /><span className="truncate font-medium">{title}</span></div>
+        <div className="flex min-w-0 items-center gap-2 text-sm"><Button variant="outline" size="sm" className="lg:hidden" onClick={() => setMobileListOpen(true)}><PanelLeft data-icon="inline-start" />{copy("Pursuits")}</Button><Link href={listHref} className="hidden text-muted-foreground underline-offset-4 hover:underline sm:inline">{copy("My pursuits")}</Link><ChevronRight aria-hidden="true" className="hidden size-4 text-muted-foreground sm:inline" /><span className="truncate font-medium">{title}</span></div>
         <div className="flex shrink-0 gap-1">
           {previousDeal ? <Button asChild variant="ghost" size="icon"><Link href={hrefFor(previousDeal)} aria-label={copy("Previous pursuit")}><ChevronLeft /></Link></Button>
             : <Button variant="ghost" size="icon" aria-label={copy("Previous pursuit")} disabled><ChevronLeft /></Button>}
@@ -212,7 +229,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
         </div>
       </div>
       <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-6 sm:px-7 sm:py-8">
-        <div className="flex items-start gap-4"><SectorArtwork sector={opportunity.canonical_sector ?? opportunity.sector} large action={hasOwnAction(selectedAction)} /><div className="min-w-0 flex-1"><RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="heading" /></div></div>
+        <div className="flex items-start gap-4"><SectorArtwork sector={opportunity.canonical_sector ?? opportunity.sector} large action={hasOwnAction(selectedAction)} /><div className="min-w-0 flex-1"><RepreneurOpportunityDetail opportunity={opportunity} journey={journey} readOnly={Boolean(staffPreview)} mode="heading" /></div></div>
         <PursuitJourneyProgress opportunity={opportunity} pursuit={journey} onFullHistory={fullHistory} />
         <Tabs value={tab} onValueChange={setTab} className="min-w-0 gap-5">
           <TabsList aria-label={copy("Pursuit information")} className="grid h-auto w-full grid-cols-2 justify-start gap-x-3 gap-y-0 sm:inline-flex sm:h-10 sm:w-fit sm:gap-7">
@@ -222,14 +239,14 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
             <TabsTrigger value="journey" className="min-h-11 w-full sm:w-auto sm:flex-none">{copy("Journey")}</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-5">
-            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="metrics" />
+            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} readOnly={Boolean(staffPreview)} mode="metrics" />
             {selectedAction === "sign_nda" ? <section className="rounded-lg border border-primary/30 bg-card p-5"><p className="text-xs font-semibold text-primary">{copy("Your action")}</p><h2 className="mt-2 font-semibold">{copy("Your signed NDA is needed")}</h2><p className="mt-2 text-sm text-muted-foreground">{copy("Download the current template, sign it and submit your copy for Re-New review.")}</p><Button className="mt-4" onClick={() => setTab("documents")}>{copy("Open documents")}</Button></section> : null}
             {selectedAction === "unknown" ? <p role="status" className="rounded-lg border bg-card p-4 text-sm text-muted-foreground">{copy("Action status is unavailable right now. Refresh before relying on this view.")}</p> : null}
-            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} withdrawalPaused={withdrawalPaused} mode="response" />
-            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="description" />
+            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} withdrawalPaused={withdrawalPaused} readOnly={Boolean(staffPreview)} staffAssistanceControls={staffPreview ? staffAssistanceControls : null} mode="response" />
+            <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} readOnly={Boolean(staffPreview)} mode="description" />
           </TabsContent>
           <TabsContent value="criteria"><CriteriaPanel criteria={opportunity.criteria_comparison} /></TabsContent>
-          <TabsContent value="documents">{opportunity.match_status === "active_pursuit" ? <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} mode="documents" /> : <section className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">{copy("Confidential documents become available only in an authorized active pursuit.")}</section>}</TabsContent>
+          <TabsContent value="documents">{opportunity.match_status === "active_pursuit" ? <RepreneurOpportunityDetail opportunity={opportunity} journey={journey} readOnly={Boolean(staffPreview)} documentHrefs={staffPreview?.documentHrefs} staffDocumentAssistanceControls={staffPreview ? staffDocumentAssistanceControls : null} mode="documents" /> : <section className="rounded-lg border bg-card p-5 text-sm text-muted-foreground">{copy("Confidential documents become available only in an authorized active pursuit.")}</section>}</TabsContent>
           <TabsContent value="journey"><PursuitJourneyHistory opportunity={opportunity} pursuit={journey} /></TabsContent>
         </Tabs>
       </div>

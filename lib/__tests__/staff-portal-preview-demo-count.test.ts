@@ -156,6 +156,10 @@ describe("Staff Portal Preview DEMO counts", () => {
       opportunity_id: opportunityId,
       match_id: null,
       deal_bucket: "live",
+      criteria_comparison: [
+        { key: "sector" }, { key: "geography" }, { key: "revenue" },
+        { key: "ebitda" }, { key: "margin" }, { key: "team" },
+      ],
     })
   })
 })

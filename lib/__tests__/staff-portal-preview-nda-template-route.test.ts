@@ -6,20 +6,23 @@ const mocks = vi.hoisted(() => ({
   resolvePortalPursuitResource: vi.fn(),
   createAdminClient: vi.fn(),
   fetch: vi.fn(),
+  selectionToken: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({ getCurrentUserAccess: mocks.getCurrentUserAccess }))
 vi.mock("@/lib/data/current-pursuit", () => ({ resolvePortalPursuitResource: mocks.resolvePortalPursuitResource }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
+vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToken: mocks.selectionToken }))
 
 import { GET } from "@/app/(dashboard)/portal-preview/deals/[matchId]/nda-template/route"
 
 const ownerId = "00000000-0000-4000-8000-000000000001"
 const matchId = "00000000-0000-4000-8000-000000000002"
+const workspaceId = "00000000-0000-4000-8000-000000000003"
 
 function request(repreneurId = ownerId) {
   return GET(
-    new NextRequest(`http://localhost/portal-preview/deals/${matchId}/nda-template?repreneurId=${repreneurId}`),
+    new NextRequest(`http://localhost/portal-preview/deals/${matchId}/nda-template?repreneurId=${repreneurId}&workspaceId=${workspaceId}`),
     { params: Promise.resolve({ matchId }) },
   )
 }
@@ -29,6 +32,7 @@ describe("staff-selected NDA template route", () => {
     vi.clearAllMocks()
     vi.stubGlobal("fetch", mocks.fetch)
     mocks.fetch.mockResolvedValue(new Response("exact template", { headers: { "content-type": "application/pdf" } }))
+    mocks.selectionToken.mockResolvedValue("current-token")
   })
 
   it("denies a repreneur session before resolving the selected-owner resource", async () => {
@@ -49,6 +53,15 @@ describe("staff-selected NDA template route", () => {
       resource: { kind: "nda-template" },
     })
     expect(mocks.createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it("denies a changed staff workspace before resolving the selected-owner document", async () => {
+    mocks.getCurrentUserAccess.mockResolvedValue({ role: "staff", user: { id: "staff-1" } })
+    mocks.selectionToken.mockResolvedValue(null)
+
+    expect((await request()).status).toBe(404)
+    expect(mocks.selectionToken).toHaveBeenCalledWith(workspaceId, ownerId, "staff-1")
+    expect(mocks.resolvePortalPursuitResource).not.toHaveBeenCalled()
   })
 
   it("proxies only an exact Gate 1 template without exposing a signed URL", async () => {

@@ -765,6 +765,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
 export async function listStaffPreviewRepreneurDealFlow(
   repreneurId: string,
   sort: RepreneurDealSort = "relevance",
+  selectedDealId?: string | null,
 ): Promise<RepreneurDealFlowResult> {
   await requireStaffAccess()
   if (!isUuid(repreneurId)) return EMPTY_REPRENEUR_DEAL_FLOW
@@ -773,7 +774,14 @@ export async function listStaffPreviewRepreneurDealFlow(
   const repreneur = await getRepreneurDealFlowProfileById(supabase, repreneurId)
   if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
 
-  return listRepreneurDealFlowForProfile(repreneur, sort)
+  const result = await listRepreneurDealFlowForProfile(repreneur, sort)
+  // Detail-only comparison uses the selected owner's current targets. The
+  // list stays compact and never projects private matching reasons or scores.
+  if (selectedDealId && isUuid(selectedDealId)) {
+    const selected = result.deals.find((deal) => deal.match_id === selectedDealId || deal.opportunity_id === selectedDealId)
+    if (selected) selected.criteria_comparison = await ownerCriteriaForDeal(supabase, repreneur, selected)
+  }
+  return result
 }
 
 export async function getMyRepreneurOpportunity(

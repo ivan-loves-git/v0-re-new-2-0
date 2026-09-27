@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   resolvePortalPursuitResource: vi.fn(),
   createAdminClient: vi.fn(),
   fetch: vi.fn(),
+  selectionToken: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({ getCurrentUserAccess: mocks.getCurrentUserAccess }))
@@ -14,13 +15,19 @@ vi.mock("@/lib/data/current-pursuit", () => ({
   resolvePortalPursuitResource: mocks.resolvePortalPursuitResource,
 }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
+vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToken: mocks.selectionToken }))
 
 import { GET } from "@/app/(dashboard)/portal-preview/deals/[matchId]/documents/[documentId]/route"
 
+const workspaceId = "00000000-0000-4000-8000-000000000003"
+const ownerId = "00000000-0000-4000-8000-000000000001"
+const matchId = "00000000-0000-4000-8000-000000000002"
+const documentId = "00000000-0000-4000-8000-000000000005"
+
 function requestPreview() {
   return GET(
-    new NextRequest("http://localhost/portal-preview/deals/match-1/documents/memo-1?repreneurId=repreneur-1"),
-    { params: Promise.resolve({ matchId: "match-1", documentId: "memo-1" }) },
+    new NextRequest(`http://localhost/portal-preview/deals/${matchId}/documents/${documentId}?repreneurId=${ownerId}&workspaceId=${workspaceId}`),
+    { params: Promise.resolve({ matchId, documentId }) },
   )
 }
 
@@ -34,6 +41,15 @@ describe("staff portal preview confidential route", () => {
       }),
     )
     mocks.getCurrentUserAccess.mockResolvedValue({ role: "staff", user: { id: "staff-1" } })
+    mocks.selectionToken.mockResolvedValue("current-token")
+  })
+
+  it("denies a changed staff workspace before reading a previously granted memo", async () => {
+    mocks.selectionToken.mockResolvedValue(null)
+
+    expect((await requestPreview()).status).toBe(404)
+    expect(mocks.selectionToken).toHaveBeenCalledWith(workspaceId, ownerId, "staff-1")
+    expect(mocks.resolvePortalPursuitResource).not.toHaveBeenCalled()
   })
 
   it("fails closed when the preview pursuit lacks an exact canonical IM grant", async () => {
@@ -67,20 +83,20 @@ describe("staff portal preview confidential route", () => {
     await requestPreview()
 
     expect(mocks.resolvePortalPursuitResource).toHaveBeenCalledWith({
-      matchId: "match-1",
-      viewer: { kind: "staff-preview", repreneurId: "repreneur-1" },
-      resource: { kind: "information-memorandum", documentId: "memo-1" },
+      matchId,
+      viewer: { kind: "staff-preview", repreneurId: ownerId },
+      resource: { kind: "information-memorandum", documentId },
     })
   })
 
   it("proxies an authorized preview memo without exposing its signed storage URL", async () => {
     mocks.resolvePortalPursuitResource.mockResolvedValue({
       kind: "information-memorandum",
-      documentId: "memo-1",
+      documentId,
     })
     const maybeSingle = vi.fn().mockResolvedValue({
       data: {
-        id: "memo-1",
+        id: documentId,
         document_type: "deal_book",
         external_url: null,
         storage_bucket: "opportunity-documents",
@@ -127,11 +143,11 @@ describe("staff portal preview confidential route", () => {
   ])("fails closed for an external preview memo %s", async (_label, storagePath) => {
     mocks.resolvePortalPursuitResource.mockResolvedValue({
       kind: "information-memorandum",
-      documentId: "memo-1",
+      documentId,
     })
     const maybeSingle = vi.fn().mockResolvedValue({
       data: {
-        id: "memo-1",
+        id: documentId,
         document_type: "deal_book",
         external_url: "https://storage.example.test/legacy-signed-memo",
         storage_bucket: "opportunity-documents",
@@ -158,7 +174,7 @@ describe("staff portal preview confidential route", () => {
   it("does not expose raw document metadata errors", async () => {
     mocks.resolvePortalPursuitResource.mockResolvedValue({
       kind: "information-memorandum",
-      documentId: "memo-1",
+      documentId,
     })
     const maybeSingle = vi.fn().mockResolvedValue({
       data: null,

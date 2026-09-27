@@ -201,6 +201,11 @@ async function expectPreview(
     await expect(
       page.locator("#main-content").getByRole("heading", { name: title }),
     ).toBeVisible();
+    const previewWorkspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(previewWorkspace).toHaveCount(1);
+    await expect(previewWorkspace.getByRole("tab", { name: "Your criteria" })).toBeVisible();
+    await expect(previewWorkspace.getByRole("tab", { name: "Documents" })).toBeVisible();
+    await expect(previewWorkspace.getByRole("tab", { name: "Journey" })).toBeVisible();
     await expect(
       page
         .locator("#main-content")
@@ -1100,6 +1105,17 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     // Staff records a distinct copy received through another channel after the
     // owner's submission. It becomes the current version without validating it.
     await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur + "&dealId=" + savedMatch.id);
+    await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    const staffWorkspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(staffWorkspace).toHaveCount(1);
+    await staffWorkspace.getByRole("tab", { name: "Documents" }).click();
+    const staffDocuments = staffWorkspace.getByRole("tabpanel", { name: "Documents" });
+    const staffTemplateHref = await staffDocuments.getByRole("link", { name: "Download template" }).getAttribute("href");
+    expect(staffTemplateHref).toContain("/portal-preview/deals/" + savedMatch.id + "/nda-template?");
+    expect(staffTemplateHref).toContain("workspaceId=");
+    const staffTemplate = await page.request.get(baseURL + staffTemplateHref!);
+    expect(staffTemplate.status()).toBe(200);
+    expect(createHash("sha256").update(await staffTemplate.body()).digest("hex")).toBe(manifest.files.blankNda.sha256);
     await page.locator("#staff-nda-title").fill("QA STAFF-RECEIVED NDA — SYNTHETIC");
     await page.locator("#staff-nda-file").setInputFiles(manifest.files.staffReceivedNda.path);
     await page.locator("#staff-nda-reference").fill("Synthetic received-email reference");

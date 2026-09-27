@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   listExternal: vi.fn(),
   getAttachments: vi.fn(),
   readJourney: vi.fn(),
+  readActions: vi.fn(),
+  selectionToken: vi.fn(),
+  createAdminClient: vi.fn(),
   previewLanguage: vi.fn(),
 }))
 
@@ -23,12 +26,20 @@ vi.mock("@/lib/actions/repreneur-portal-preview", () => ({
 vi.mock("@/lib/actions/external-pursuit-attachments", () => ({
   getExternalPursuitAttachmentMap: mocks.getAttachments,
 }))
-vi.mock("@/lib/data/current-pursuit", () => ({ readPortalCurrentPursuit: mocks.readJourney }))
+vi.mock("@/lib/data/current-pursuit", () => ({
+  readPortalCurrentPursuit: mocks.readJourney,
+  readPortalDealActionIndicators: mocks.readActions,
+}))
+vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToken: mocks.selectionToken }))
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
 vi.mock("@/lib/i18n/server-language", () => ({ previewUiLanguage: mocks.previewLanguage }))
 
 import StaffPortalPreviewPage from "@/app/(dashboard)/portal-preview/page"
 
 const ownerId = "00000000-0000-4000-8000-000000000001"
+const matchId = "00000000-0000-4000-8000-000000000002"
+const otherMatchId = "00000000-0000-4000-8000-000000000003"
+const workspaceId = "00000000-0000-4000-8000-000000000004"
 
 describe("staff Tools portal page", () => {
   beforeEach(() => {
@@ -43,7 +54,75 @@ describe("staff Tools portal page", () => {
     mocks.listExternal.mockResolvedValue([])
     mocks.getAttachments.mockResolvedValue({})
     mocks.readJourney.mockResolvedValue(null)
+    mocks.readActions.mockResolvedValue({})
+    mocks.selectionToken.mockResolvedValue("staff-selection-token")
+    mocks.createAdminClient.mockReturnValue({ from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { updated_at: "2026-09-27T08:00:00Z" } }) }) }),
+    }) })
     mocks.previewLanguage.mockResolvedValue("en")
+  })
+
+  it("renders the shared selected-deal workspace with staff-scoped navigation and assistance", async () => {
+    mocks.listOpportunities.mockResolvedValue({ repreneur: { id: ownerId, is_demo: false }, opportunities: [
+      { match_id: matchId, match_status: "proposed", opportunity_id: "00000000-0000-4000-8000-000000000011", public_title: "Selected safe deal", teaser_summary: "Approved public description", visible_documents: [], updated_at: "2026-09-27T08:00:00Z", recommendation_expires_at: null, criteria_comparison: [
+        { key: "sector", outcome: "within_target", target: ["Industry"], actual: "Industry" },
+        { key: "geography", outcome: "within_target", target: ["France"], actual: "France" },
+        { key: "revenue", outcome: "within_target", target: { min: 1, max: 5 }, actual: 3 },
+        { key: "ebitda", outcome: "within_target", target: { min: 100, max: 500 }, actual: 300 },
+        { key: "margin", outcome: "within_target", target: 10, actual: 12 },
+        { key: "team", outcome: "within_target", target: { min: 10, max: 50 }, actual: 20 },
+      ] },
+      { match_id: otherMatchId, match_status: "interested", opportunity_id: "00000000-0000-4000-8000-000000000012", public_title: "Other safe selected-owner deal", visible_documents: [], updated_at: "2026-09-27T08:00:00Z" },
+    ] })
+    mocks.readActions.mockResolvedValue({ [matchId]: "respond", [otherMatchId]: null })
+
+    const page = await StaffPortalPreviewPage({ searchParams: Promise.resolve({
+      repreneurId: ownerId, workspaceId, dealId: matchId, q: "safe", status: "awaiting",
+    }) })
+    const html = renderToStaticMarkup(page)
+
+    expect(html).toContain('data-wave-workspace="pursuit"')
+    expect(html).toContain("Approved public description")
+    expect(html).toContain("Your criteria")
+    expect(html).toContain("Documents")
+    expect(html).toContain("Journey")
+    expect(html).toContain("Other safe selected-owner deal")
+    expect(html).toContain(`href="/portal-preview?repreneurId=${ownerId}&amp;dealId=${otherMatchId}&amp;workspaceId=${workspaceId}&amp;q=safe&amp;status=awaiting"`)
+    expect(html).toContain("Re-New staff response for Ada Owner")
+    expect(html).toContain("staff_portal_assistance")
+    expect(html).toContain(`repreneurId=${ownerId}`)
+    expect(html).toContain(`workspaceId=${workspaceId}`)
+    expect(html).not.toContain('href="/portal/deals/')
+    expect(html).not.toContain('data-wave-action="express_interest"')
+    expect(html).not.toContain('data-wave-workflow="portal_deals"')
+    expect(html).not.toContain("Mark as reviewed")
+    expect(mocks.readActions).toHaveBeenCalledWith([matchId, otherMatchId], { kind: "staff-preview", repreneurId: ownerId })
+  })
+
+  it("denies a stale staff workspace without rendering a selected deal or actions", async () => {
+    mocks.listOpportunities.mockResolvedValue({ repreneur: { id: ownerId }, opportunities: [
+      { match_id: matchId, match_status: "active_pursuit", opportunity_id: "00000000-0000-4000-8000-000000000011", public_title: "No longer selected", visible_documents: [] },
+    ] })
+    mocks.selectionToken.mockResolvedValue(null)
+
+    const page = await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId, workspaceId, dealId: matchId }) })
+    const html = renderToStaticMarkup(page)
+
+    expect(html).toContain("Staff workspace changed")
+    expect(html).not.toContain("No longer selected")
+    expect(html).not.toContain('data-wave-workspace="pursuit"')
+    expect(mocks.readJourney).not.toHaveBeenCalled()
+    expect(mocks.readActions).not.toHaveBeenCalled()
+  })
+
+  it("denies a selected deal outside the chosen owner's safe list", async () => {
+    const page = await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId, workspaceId, dealId: matchId }) })
+    const html = renderToStaticMarkup(page)
+
+    expect(html).toContain("Deal not visible in portal preview")
+    expect(html).not.toContain('data-wave-workspace="pursuit"')
+    expect(mocks.readJourney).not.toHaveBeenCalled()
+    expect(mocks.readActions).not.toHaveBeenCalled()
   })
 
   it("shows the exact selected person's deal count and authenticated staff identity", async () => {

@@ -9,6 +9,7 @@ import {
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 import { isUuid } from "@/lib/uuid"
+import { currentStaffPortalSelectionToken } from "@/lib/staff-portal-selection"
 
 function templateDownloadOptions(storagePath: string) {
   if (storagePath.toLowerCase().endsWith(".pdf")) {
@@ -38,13 +39,18 @@ export async function GET(request: NextRequest, context: { params: Promise<{ mat
     }
 
     const repreneurId = request.nextUrl.searchParams.get("repreneurId")
-    if (!repreneurId) {
+    const workspaceId = request.nextUrl.searchParams.get("workspaceId")
+    if (!repreneurId || !workspaceId) {
       trace.failure("validation_failed")
-      return privateStorageDownloadError("Missing repreneurId", 400)
+      return privateStorageDownloadError("Missing staff preview selection", 400)
     }
     const { matchId } = await context.params
-    if (!isUuid(repreneurId) || !isUuid(matchId)) {
+    if (!isUuid(repreneurId) || !isUuid(matchId) || !isUuid(workspaceId)) {
       trace.failure("validation_failed")
+      return privateStorageDownloadError("Not found", 404)
+    }
+    if (!await currentStaffPortalSelectionToken(workspaceId, repreneurId, access.user.id)) {
+      trace.failure("authorization_denied")
       return privateStorageDownloadError("Not found", 404)
     }
     const template = await resolvePortalPursuitResource({

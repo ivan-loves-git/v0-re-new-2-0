@@ -46,15 +46,23 @@ describe("portal preview deal routes", () => {
     )
   })
 
+  it("keeps selected owner and staff workspace through filtered next and return links", () => {
+    expect(createPortalPreviewDealHrefMap("owner-1", [
+      { opportunityId: "opportunity-1", matchId: "match-1" },
+    ], "workspace-1", { query: "metal", status: "awaiting", returnView: "renew-pursuits" })).toEqual({
+      "match-1": "/portal-preview?repreneurId=owner-1&dealId=match-1&workspaceId=workspace-1&q=metal&status=awaiting&returnView=renew-pursuits",
+    })
+  })
+
   it("builds staff-selected-person document links instead of owner-session URLs", () => {
-    expect(createPortalPreviewDocumentHref("person & one", "match-1", { kind: "nda-template" })).toBe(
-      "/portal-preview/deals/match-1/nda-template?repreneurId=person+%26+one",
+    expect(createPortalPreviewDocumentHref("person & one", "match-1", { kind: "nda-template" }, "workspace-1")).toBe(
+      "/portal-preview/deals/match-1/nda-template?repreneurId=person+%26+one&workspaceId=workspace-1",
     )
     expect(createPortalPreviewDocumentHref("person & one", "match-1", {
       kind: "information-memorandum",
       documentId: "memo-1",
-    })).toBe(
-      "/portal-preview/deals/match-1/documents/memo-1?repreneurId=person+%26+one",
+    }, "workspace-1")).toBe(
+      "/portal-preview/deals/match-1/documents/memo-1?repreneurId=person+%26+one&workspaceId=workspace-1",
     )
   })
 })
