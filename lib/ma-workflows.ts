@@ -731,6 +731,15 @@ export async function getMaOpportunityWorkflow(
   )
 
   const interactions = await readMaOpportunityInteractionHistory(supabase, opportunityId)
+  const { data: lastConfirmation, error: confirmationError } = await supabase
+    .from("opportunity_freshness_replies")
+    .select("id,reply_at")
+    .eq("opportunity_id", opportunityId)
+    .eq("outcome", "confirmed_open")
+    .order("reply_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (confirmationError) throw new Error("The source confirmation clock could not be verified.")
 
   // Legacy NDA and visibility metadata no longer establishes confidential
   // access. The canonical pursuit projection is the only disclosure authority.
@@ -740,6 +749,7 @@ export async function getMaOpportunityWorkflow(
     opportunity,
     activeMatch,
     interactions,
+    confirmation: lastConfirmation ? { id: lastConfirmation.id, at: lastConfirmation.reply_at } : null,
     memoAvailable,
   })
 

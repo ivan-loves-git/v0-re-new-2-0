@@ -26,6 +26,16 @@ interface RoadmapPeriod {
 const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Sep 27, 2026",
+    version: "0.9.80",
+    title: "Review older opportunities with their source",
+    isCompleted: false,
+    events: [
+      { title: "One draft per intermediary contact", type: "feature", description: "After 45 days, WAVE can prepare one unsent review for the exact eligible opportunities linked to the same source contact. Older inventory with uncertain date precision is labelled honestly; no last-confirmed date is invented." },
+      { title: "Staff decide whether to send", type: "decision", description: "Staff can review, edit or discard the grouped message. Sending requires the existing validity-check template to be enabled and every opportunity, source relationship and recipient still to be current. One provider receipt covers the exact group. This candidate is awaiting release proof." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
     version: "0.9.79",
     title: "Withdraw an interest before Re-New validates it",
     isCompleted: false,

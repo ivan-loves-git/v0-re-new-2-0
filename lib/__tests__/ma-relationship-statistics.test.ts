@@ -73,7 +73,7 @@ describe("W-083 firm and office relationship statistics", () => {
       activeContactCount: 1,
       sourcedOpportunityCount: 2,
       openOpportunityCount: 2,
-      candidateStaleCount: 2,
+      candidateStaleCount: 1,
       latestKnownAt: "2026-01-02",
     })
     expect(statistics.byOfficeId.get("lyon")).toMatchObject({
@@ -89,13 +89,13 @@ describe("W-083 firm and office relationship statistics", () => {
       activeContactCount: 1,
       sourcedOpportunityCount: 3,
       openOpportunityCount: 2,
-      candidateStaleCount: 2,
+      candidateStaleCount: 1,
       latestKnownAt: "2026-01-04",
       latestKnownAtPrecision: "month",
     })
   })
 
-  it("uses the freshness rule: draft, active or paused at least 90 days old without an active pursuit", () => {
+  it("uses the 45-day freshness signal only for active opportunities without a pursuit", () => {
     const now = new Date("2026-05-01T00:00:00.000Z")
     const staleDate = "2026-01-30"
     const statistics = buildMaRelationshipStatistics(
@@ -110,6 +110,12 @@ describe("W-083 firm and office relationship statistics", () => {
         },
         {
           id: "pursued-stale",
+          officeId: "office-a",
+          status: "active",
+          dateAdded: staleDate,
+        },
+        {
+          id: "active-unpursued",
           officeId: "office-a",
           status: "active",
           dateAdded: staleDate,

@@ -57,6 +57,9 @@ const initial: Parameters<typeof ReviewDetail>[0]["initial"] = {
     detail: {},
   }],
   catalogueEnabled: true,
+  asOf: "2026-09-24T19:00:00.000Z",
+  members: [],
+  replies: [],
 }
 
 function renderIn(timeZone: string, element: ReturnType<typeof createElement>) {
@@ -81,7 +84,7 @@ describe("staff email review timestamps", () => {
   })
 
   it("shows the same Paris preparation time in the queue on server and browser", () => {
-    const element = createElement(ReviewQueue, { reviews: [review] })
+    const element = createElement(ReviewQueue, { reviews: { reviews: [review], total: 1, page: 1, pageSize: 25, filter: "active" } })
     const serverHtml = renderIn("UTC", element)
     const browserHtml = renderIn("Europe/Paris", element)
 

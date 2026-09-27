@@ -889,6 +889,8 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await anonymousReviewContext.close();
     await realPage.goto(`/emails/review/${sourceReviewId}`);
     await expect(realPage).toHaveURL(/\/portal\/deals/);
+    await realPage.goto("/emails/automations/opportunity-freshness");
+    await expect(realPage).toHaveURL(/\/portal\/deals/);
     const sourceEmail = await one<{
       delivery_status: string;
       provider_message_id: string | null;
