@@ -194,7 +194,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
     const nextHref = listHrefFor(nextQuery, nextStatus)
     if (window.location.pathname === nextHref.split("?")[0]
       && window.location.pathname + window.location.search !== nextHref) {
-      window.history.replaceState(window.history.state, "", nextHref)
+      window.history.replaceState(null, "", nextHref)
     }
   }
   useEffect(() => {
