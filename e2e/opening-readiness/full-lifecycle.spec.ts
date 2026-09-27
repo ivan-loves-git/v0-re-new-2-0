@@ -1102,27 +1102,103 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       file_name: basename(manifest.files.repreneurSignedNda.path), size_bytes: manifest.files.repreneurSignedNda.bytes,
       recorded_by: fixture.repreneurs.real.email });
 
+    // Entry/detail transitions must keep the filtered return and reopen the
+    // list on mobile, even when the same client component survives navigation.
+    await realPage.goto("/portal/pursuits");
+    const ownerEntry = realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(ownerEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await ownerEntry.getByRole("textbox", { name: "Search pursuits" }).fill("QA LIFECYCLE REAL");
+    await ownerEntry.getByRole("combobox", { name: "Pursuit status" }).selectOption("active");
+    await expect(realPage).toHaveURL(/\/portal\/pursuits\?q=QA\+LIFECYCLE\+REAL&status=active/);
+    await expect(ownerEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(ownerEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await ownerEntry.getByRole("navigation", { name: "Pursuits" })
+      .getByRole("link", { name: /QA LIFECYCLE REAL/ }).click();
+    await expect(realPage).toHaveURL(new RegExp(`/portal/deals/${savedMatch.id}`));
+    await expect(realPage.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await realPage.goBack();
+    await expect(realPage).toHaveURL(/\/portal\/pursuits\?q=QA\+LIFECYCLE\+REAL&status=active/);
+    await expect(ownerEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await expect(ownerEntry.getByRole("heading", { name: "Select a pursuit to see its details.", exact: true })).toBeVisible();
+    await expect(ownerEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(ownerEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await realPage.goForward();
+    await expect(realPage).toHaveURL(new RegExp(`/portal/deals/${savedMatch.id}`));
+    const returnedOwnerDetail = realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      .filter({ has: realPage.getByRole("heading", { level: 1, name: desktopTitle, exact: true }) });
+    await expect(returnedOwnerDetail).toHaveCount(1);
+    await expect(returnedOwnerDetail.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await returnedOwnerDetail.getByRole("link", { name: "My pursuits", exact: true }).click({ noWaitAfter: true });
+    await expect(realPage).toHaveURL(/\/portal\/pursuits\?q=QA\+LIFECYCLE\+REAL&status=active/);
+    await expect(ownerEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await expect(ownerEntry.getByRole("heading", { name: "Select a pursuit to see its details.", exact: true })).toBeVisible();
+    await expect(ownerEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(ownerEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await realPage.setViewportSize({ width: 390, height: 844 });
+    await expect(realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      .getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await realPage.setViewportSize({ width: 1440, height: 1000 });
+
     // Staff records a distinct copy received through another channel after the
     // owner's submission. It becomes the current version without validating it.
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur);
+    await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    await page.getByRole("tab", { name: "Re-New Pursuits" }).click();
+    await expect(page).toHaveURL(/view=renew-pursuits/);
+    const staffEntry = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(staffEntry).toHaveCount(1);
+    await expect(staffEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await staffEntry.getByRole("textbox", { name: "Search pursuits" }).fill("QA LIFECYCLE REAL");
+    await staffEntry.getByRole("combobox", { name: "Pursuit status" }).selectOption("active");
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&view=renew-pursuits/);
+    await expect(staffEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(staffEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await staffEntry.getByRole("navigation", { name: "Pursuits" })
+      .getByRole("link", { name: /QA LIFECYCLE REAL/ }).click();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&returnView=renew-pursuits/);
+    await expect(page.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&view=renew-pursuits/);
+    await expect(staffEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await expect(staffEntry.getByRole("heading", { name: "Select a pursuit to see its details.", exact: true })).toBeVisible();
+    await expect(staffEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(staffEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await page.goForward();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&returnView=renew-pursuits/);
+    await expect(page.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+
+    // The existing selected-detail history check starts from an unfiltered
+    // direct detail, independently of the filtered-entry Back check above.
     await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur + "&dealId=" + savedMatch.id);
     await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).not.toHaveURL(/(?:q|status)=/);
     const staffWorkspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
     await expect(staffWorkspace).toHaveCount(1);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
     await page.getByRole("group", { name: "Interface language" }).getByRole("button", { name: "English", exact: true }).click();
     const staffSearch = staffWorkspace.getByRole("textbox", { name: "Search pursuits" });
     const staffStatus = staffWorkspace.getByRole("combobox", { name: "Pursuit status" });
     await staffSearch.fill("QA LIFECYCLE REAL");
     await staffStatus.selectOption("active");
     await staffWorkspace.getByRole("navigation", { name: "Pursuits" }).getByRole("link", { name: /QA LIFECYCLE REAL/ }).click();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
     await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL.*status=active/);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
     await staffSearch.fill("other local filter");
     await staffStatus.selectOption("ended");
     await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
     await expect(page).not.toHaveURL(/(?:q|status)=/);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
     await expect(staffSearch).toHaveValue("");
     await expect(staffStatus).toHaveValue("all");
     await page.goForward();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
     await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL.*status=active/);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
     await expect(staffSearch).toHaveValue("QA LIFECYCLE REAL");
     await expect(staffStatus).toHaveValue("active");
     await staffWorkspace.getByRole("tab", { name: "Documents" }).click();
