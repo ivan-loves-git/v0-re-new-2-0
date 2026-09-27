@@ -277,11 +277,18 @@ async function loadCurrentPursuit(
   const currentGrant = (
     grantResult.data as PursuitConfidentialGrantProjection | null
   ) ?? null
+  const cycleStartIndex = projection.currentCycleId
+    ? entries.findIndex((entry) => entry.id === projection.currentCycleId)
+    : -1
+  const cycleStartedAt = cycleStartIndex >= 0 ? new Date(entries[cycleStartIndex].recorded_at).getTime() : NaN
+  const grantRecordedAt = currentGrant ? new Date(currentGrant.source_disclosed_at).getTime() : NaN
+  const grantBelongsToCurrentCycle = Boolean(currentGrant && Number.isFinite(cycleStartedAt)
+    && Number.isFinite(grantRecordedAt) && grantRecordedAt >= cycleStartedAt)
   const expired = Boolean(
-    currentGrant?.nda_expires_at
+    grantBelongsToCurrentCycle && currentGrant?.nda_expires_at
     && new Date(currentGrant.nda_expires_at).getTime() <= Date.now(),
   )
-  const canonicalGrantResult = currentGrant
+  const canonicalGrantResult = grantBelongsToCurrentCycle && currentGrant
     ? await supabase.rpc("journey_repreneur_can_access_confidential", {
         p_match_id: matchId,
         p_repreneur_id: match.repreneur_id,
@@ -289,10 +296,11 @@ async function loadCurrentPursuit(
       })
     : { data: false, error: null }
   const hasLiveConfidentialGrant = (
-    !projectionUnavailable && !canonicalGrantResult.error && Boolean(canonicalGrantResult.data)
+    grantBelongsToCurrentCycle && !projectionUnavailable && !canonicalGrantResult.error && Boolean(canonicalGrantResult.data)
   )
-  const revoked = Boolean(currentGrant && !hasLiveConfidentialGrant)
-    || Boolean(currentGrant?.revoked_at || expired)
+  const revoked = grantBelongsToCurrentCycle && (
+    !hasLiveConfidentialGrant || Boolean(currentGrant?.revoked_at || expired)
+  )
 
   const blockers: string[] = []
   if (!settingsResult.data?.enabled) {
@@ -313,9 +321,6 @@ async function loadCurrentPursuit(
     blockers.push("The NDA expiry has passed; confidential access is unavailable.")
   }
 
-  const cycleStartIndex = projection.currentCycleId
-    ? entries.findIndex((entry) => entry.id === projection.currentCycleId)
-    : -1
   const currentCycleEntries = cycleStartIndex >= 0
     ? entries.slice(cycleStartIndex)
     : []
@@ -469,16 +474,8 @@ export async function readPortalDealActionIndicators(matchIds: string[]): Promis
     const repreneur = Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur
     return opportunity?.status === "active" && isOpportunityInRepreneurNamespace(opportunity, repreneur)
   })
-  const opportunityIds = rows.map((row) => row.opportunity_id)
-  const activeOwners = opportunityIds.length ? await supabase.from("opportunity_matches")
-    .select("opportunity_id,repreneur_id").eq("status", "active_pursuit").in("opportunity_id", opportunityIds)
-    : { data: [], error: null }
-  if (activeOwners.error) throw new Error(activeOwners.error.message)
-  const locked = new Set((activeOwners.data ?? [])
-    .filter((row) => row.repreneur_id !== viewer.repreneurId).map((row) => row.opportunity_id))
   const pairs = await Promise.all(rows.map(async (row): Promise<[string, PortalDealAction]> => {
-    if (row.status === "proposed" && !locked.has(row.opportunity_id)
-      && isRecommendationResponseOpen(row.recommendation_expires_at)) return [row.id, "respond"]
+    if (row.status === "proposed" && isRecommendationResponseOpen(row.recommendation_expires_at)) return [row.id, "respond"]
     if (row.status !== "active_pursuit") return [row.id, null]
     const pursuit = await loadCurrentPursuit(row.id, viewer.repreneurId!)
     return [row.id, pursuit ? toPortalCurrentPursuit(pursuit).action : "unknown"]

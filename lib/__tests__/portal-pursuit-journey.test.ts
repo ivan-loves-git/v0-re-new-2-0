@@ -68,6 +68,9 @@ describe("owner-safe pursuit journey", () => {
     const ended = buildPortalJourneyView(opportunity, { ...pursuit, action: null, revoked: true, confidentialGrant: null,
       history: { ...pursuit.history, accessEnded: true, ndaReadyNoticeRecorded: false } })
     expect(state(ended, "memo")).toMatchObject({ state: "outcome", date: null })
+    const endedAtMemoStage = buildPortalJourneyView({ ...opportunity, pursuit_stage: "info_memo_received" }, { ...pursuit, action: null, revoked: true, confidentialGrant: null,
+      history: { ...pursuit.history, accessEnded: true, ndaReadyNoticeRecorded: false } })
+    expect(state(endedAtMemoStage, "memo")).toMatchObject({ state: "outcome", date: null })
     for (const status of ["withdrawn", "declined", "dropped"] as const) {
       const steps = buildPortalJourneyView({ ...opportunity, match_status: status, pursuit_stage: "closed" }, null)
       expect(state(steps, "response")?.state).toBe(status === "withdrawn" || status === "declined" || status === "dropped" ? "outcome" : "unknown")
@@ -90,7 +93,17 @@ describe("owner-safe pursuit journey", () => {
       expect(html).toContain('data-wave-progress="true"')
       expect(html).toContain('data-wave-journey="true"')
       expect(html).toContain(language === "fr" ? "Date non consignée" : "Date not recorded")
+      expect(html).toContain(language === "fr" ? "Étapes et éléments disponibles" : "Stages and available records")
+      expect(html).toContain(language === "fr" ? "Non établi ici" : "Not established here")
       expect(html).not.toMatch(/gate_1|gate_2|actor|metadata|artifact|idempotency|source_firm_id|staff-secret/)
     }
+  })
+
+  it("keeps future context in canonical roadmap order without claiming completion", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(PursuitJourneyHistory, { opportunity: { ...opportunity, pursuit_stage: "qa_with_ma_firm" }, pursuit })))
+    expect(html.indexOf("Valuation")).toBeLessThan(html.indexOf("Letter of intent"))
+    expect(html).toContain("Future step")
+    expect(html).toContain("Not established here")
   })
 })

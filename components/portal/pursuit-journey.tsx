@@ -22,7 +22,7 @@ function useJourneyWords() {
     switch (state) {
       case "recorded": return copy("Recorded")
       case "current": return copy("Current state")
-      case "unknown": return copy("History unknown")
+      case "unknown": return copy("Not established here")
       case "future": return copy("Future step")
       case "outcome": return copy("Outcome")
     }
@@ -35,7 +35,9 @@ function useJourneyWords() {
     if (step.key === "response" && step.state === "outcome") return copy("This outcome is distinct from an active pursuit.")
     if (step.key === "response" && opportunity.match_status === "interested" && !opportunity.interest_rejected) return copy("The response is awaiting Re-New validation.")
     if (step.key === "nda_ready" && pursuit?.action === "sign_nda") return `${copy(step.explanation)} ${copy("The next action is in Documents.")}`
-    if (step.key === "memo" && step.state === "outcome") return copy("The current IM permission ended; previously visible files are not available here.")
+    if (step.key === "memo" && step.state === "outcome") return opportunity.pursuit_stage === "info_memo_received"
+      ? copy("The IM remains the current business stage, but access to the exact document has ended.")
+      : copy("The current IM permission ended; previously visible files are not available here.")
     if (step.key === "memo" && opportunity.pursuit_stage === "info_memo_received" && !pursuit?.confidentialGrant) return copy("The IM stage is recorded, but this view has no current permission to open the document.")
     if (step.state === "current" && opportunity.pursuit_stage_provenance === "staff_confirmed_history" &&
       ["confirmed", "nda_signed", "memo", "qa", "intermediary", "seller", "loi"].includes(step.key)) {
@@ -139,8 +141,6 @@ export function PursuitJourneyHistory({ opportunity, pursuit }: {
   const { copy } = useJourneyWords()
   const steps = buildPortalJourneyView(opportunity, pursuit)
   const outcome = outcomeLabel(opportunity, copy)
-  const current = steps.filter((step) => step.state !== "future")
-  const future = steps.filter((step) => step.state === "future")
   return <section id="journey-view" className="overflow-hidden rounded-lg border bg-card" aria-label={copy("Journey & history")} data-wave-journey>
     <div className="border-b p-5 sm:p-6"><h2 className="font-semibold">{copy("Journey & history")}</h2><p className="mt-1 text-sm leading-6 text-muted-foreground">{copy("Dates appear only when a safe record exists. Business stages and document access follow separate checks.")}</p>
       {pursuit?.projectionUnavailable ? <p role="status" className="mt-3 rounded-md border bg-muted p-3 text-sm">{copy("The detailed record is unavailable right now. Current business stage information may still appear.")}</p> : null}
@@ -148,7 +148,6 @@ export function PursuitJourneyHistory({ opportunity, pursuit }: {
       {opportunity.match_status === "active_pursuit" && pursuit && !pursuit.projectionUnavailable && !pursuit.history.currentCycleRecorded ? <p className="mt-3 rounded-md border bg-muted p-3 text-sm">{copy("Current cycle history is incomplete; missing steps have no assumed date or completion.")}</p> : null}
       {outcome ? <p className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm dark:bg-amber-950"><strong>{outcome}.</strong> {copy("This outcome is distinct from an active pursuit.")}</p> : null}
     </div>
-    <div><WaveMicroLabel asChild className="border-b bg-muted/30 px-5 py-3 text-muted-foreground"><h3>{copy("Recorded history")}</h3></WaveMicroLabel><ol>{current.map((step) => <JourneyRow key={step.key} step={step} opportunity={opportunity} pursuit={pursuit} />)}</ol></div>
-    <div><WaveMicroLabel asChild className="border-y bg-muted/30 px-5 py-3 text-muted-foreground"><h3>{copy("Future process context")}</h3></WaveMicroLabel><ol>{future.map((step) => <JourneyRow key={step.key} step={step} opportunity={opportunity} pursuit={pursuit} />)}</ol></div>
+    <div><WaveMicroLabel asChild className="border-b bg-muted/30 px-5 py-3 text-muted-foreground"><h3>{copy("Stages and available records")}</h3></WaveMicroLabel><ol>{steps.map((step) => <JourneyRow key={step.key} step={step} opportunity={opportunity} pursuit={pursuit} />)}</ol></div>
   </section>
 }

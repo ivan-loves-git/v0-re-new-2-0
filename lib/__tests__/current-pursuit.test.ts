@@ -285,18 +285,18 @@ describe("current pursuit reads", () => {
       { id: "unclocked", status: "proposed", recommendation_expires_at: null, opportunity_id: "o1", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
       { id: "expired", status: "proposed", recommendation_expires_at: "2020-01-01T00:00:00Z", opportunity_id: "o2", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
       { id: "pending", status: "interested", recommendation_expires_at: null, opportunity_id: "o3", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
-      { id: "locked", status: "proposed", recommendation_expires_at: null, opportunity_id: "o4", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
+      { id: "positioned-elsewhere", status: "proposed", recommendation_expires_at: null, opportunity_id: "o4", opportunity: { status: "active", is_demo: false }, repreneur: { is_demo: false } },
       { id: "cross-namespace", status: "proposed", recommendation_expires_at: null, opportunity_id: "o5", opportunity: { status: "active", is_demo: true }, repreneur: { is_demo: false } },
       { id: "inactive", status: "proposed", recommendation_expires_at: null, opportunity_id: "o6", opportunity: { status: "paused", is_demo: false }, repreneur: { is_demo: false } },
     ]
-    let reads = 0
     const listQuery = query({ data: matchRows, error: null })
-    const from = vi.fn(() => reads++ === 0 ? listQuery : query({ data: [{ opportunity_id: "o4", repreneur_id: "someone-else" }], error: null }))
+    const from = vi.fn(() => listQuery)
     mocks.createAdminClient.mockReturnValue({ from })
 
     const result = await readPortalDealActionIndicators(matchRows.map((row) => row.id))
     expect(listQuery.eq).toHaveBeenCalledWith("repreneur_id", "repreneur-1")
-    expect(result).toEqual({ unclocked: "respond", expired: null, pending: null, locked: null })
+    expect(from).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ unclocked: "respond", expired: null, pending: null, "positioned-elsewhere": "respond" })
   })
 
   it("returns the complete current staff workspace after staff access", async () => {
@@ -548,6 +548,28 @@ describe("current pursuit reads", () => {
         currentSubmissionRecorded: false,
       },
     })
+  })
+
+  it("permits a fresh current E6 signing request after reopen without restoring the old grant", async () => {
+    const later = "2026-08-10T09:00:00.000Z"
+    const reopened = [
+      { ...evidence[0], id: "prior-cycle" },
+      { ...evidence[0], id: "prior-drop", event_type: "dropped" as const, recorded_at: "2026-08-08T09:00:00.000Z" },
+      { ...evidence[0], id: "reopened", event_type: "reopened" as const, recorded_at: "2026-08-09T09:00:00.000Z" },
+      { ...evidence[0], id: "current-cycle", recorded_at: later },
+      { ...evidence[4], id: "new-gate", recorded_at: "2026-08-10T10:00:00.000Z" },
+      { ...evidence[5], id: "new-e6", metadata: { upstream_evidence_id: "new-gate" }, recorded_at: "2026-08-10T11:00:00.000Z" },
+    ]
+    const { rpc } = setupCurrentPursuit({ evidence: reopened, currentGate1Id: "new-gate", currentGate2Id: null,
+      currentDispatchId: null, grant: { ...grant, revoked_at: "2026-08-08T09:00:00.000Z" },
+      canonicalAccess: { data: false, error: null } })
+    const result = await readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } })
+    expect(result).toMatchObject({
+      action: "sign_nda", signedCopyState: "not_submitted", revoked: false,
+      confidentialGrant: null, sourceDisclosureCurrent: false,
+      history: { previousCycleEnded: true, ndaReadyNoticeRecorded: true, currentSubmissionRecorded: false, accessEnded: false },
+    })
+    expect(rpc.mock.calls.some(([name]) => name === "journey_repreneur_can_access_confidential")).toBe(false)
   })
 
   it("requires the current E6 notice and authorized template for an own signing action", async () => {

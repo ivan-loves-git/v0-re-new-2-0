@@ -1220,8 +1220,10 @@ separate. Navigation alone writes no response, stage or Reviewed marker.
 
 The sidebar sends only match ID, public title, safe sector/activity/geography,
 status and operating stage to the client. Its `respond` indicator is calculated
-on the server from a current own `proposed` match, Active opportunity, no
-competing active owner and an open explicit or unclocked response window.
+on the server from a current own `proposed` match, Active opportunity and an
+open explicit or unclocked response window. Another active owner does not
+silence the response control; the existing positioned-elsewhere explanation
+and server action still own that case.
 `interested`, withdrawn, declined and dropped are not outstanding own actions.
 For active pursuits, the `sign_nda` indicator requires current-cycle E6
 NDA-ready evidence, an exact currently authorized blank template, enabled
@@ -1256,8 +1258,10 @@ Booleans only after the exact owner, active opportunity, same-namespace and
 current-pursuit reads succeed. These are derived server-side from the latest
 canonical `mutual_interest_validated` cycle boundary, a prior `dropped` cycle,
 the current E6 notice bound to current Gate 1, a current repreneur artifact
-recorded no earlier than that notice, and the current confidential grant's
-revoked/expired result. A failed evidence, artifact, template, grant or resolver
+recorded no earlier than that notice, and a grant recorded in the same current
+cycle with its revoked/expired result. A retained old revoked grant cannot
+block a new E6 signing request or revive its old IM/source access. A failed
+evidence, artifact, template, grant or resolver
 read makes the projection unavailable; it does not turn missing evidence into a
 new request. No raw event, event ID, artifact ID, staff actor or metadata enters
 this history object.

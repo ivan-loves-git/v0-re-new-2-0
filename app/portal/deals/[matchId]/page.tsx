@@ -43,6 +43,8 @@ export default async function PortalDealDetailPage({ params, searchParams }: {
       match_id: deal.match_id,
       match_status: deal.match_status,
       pursuit_stage: deal.pursuit_stage,
+      interest_rejected: deal.interest_rejected,
+      recommendation_expires_at: deal.recommendation_expires_at,
       public_title: deal.public_title,
       canonical_sector: deal.canonical_sector,
       sector: deal.sector,
@@ -52,6 +54,7 @@ export default async function PortalDealDetailPage({ params, searchParams }: {
     }))}
     actions={actions}
     journey={journey}
+    responseAsOf={new Date().toISOString()}
     withdrawalPaused={interestWithdrawalOperationsPaused()}
     initialQuery={typeof search.q === "string" ? search.q.slice(0, 120) : ""}
     initialStatus={status}

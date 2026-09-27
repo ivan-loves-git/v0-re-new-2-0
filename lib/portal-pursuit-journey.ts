@@ -91,8 +91,8 @@ export function buildPortalJourneyView(
           state = "current"
           date = pursuit.confidentialGrant.grantedAt
           role = "renew"
-        } else if (stage === "info_memo_received") state = "current"
-        else if (readable && pursuit.history.accessEnded) state = "outcome"
+        } else if (readable && pursuit.history.accessEnded) state = "outcome"
+        else if (stage === "info_memo_received") state = "current"
         break
       case "qa":
         state = stage === "qa_with_ma_firm" ? "current" : "unknown"

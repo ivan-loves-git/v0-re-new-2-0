@@ -84,6 +84,12 @@ async function login(page: Page, email: string, loginPassword = password) {
   });
 }
 
+async function openOwnerDocuments(page: Page) {
+  const workspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+  await workspace.getByRole("tab", { name: "Documents", exact: true }).click();
+  await expect(workspace.getByRole("tabpanel", { name: "Documents" })).toBeVisible();
+}
+
 async function approvePreparedReview(page: Page) {
   await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { name: "Review & send" })).toBeVisible();
@@ -841,13 +847,16 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
     await page.locator(`a[href="/emails/review/${cancelledReviewId}"]`).click();
     expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("Europe/Paris");
-    const subjectField = page.locator("#review-subject");
+    const reviewSurface = page.locator("#main-content:visible").filter({
+      has: page.locator("#review-subject:visible"),
+    });
+    const subjectField = reviewSurface.locator("#review-subject:visible");
     await expect(subjectField).toBeVisible();
-    const sendButton = page.getByRole("button", { name: "Approve and send" });
+    const sendButton = reviewSurface.getByRole("button", { name: "Approve and send" });
     const sendBox = await sendButton.boundingBox();
     expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390);
     await subjectField.fill("QA reviewed subject - no send");
-    await page.getByRole("button", { name: "Save reviewed text" }).click();
+    await reviewSurface.getByRole("button", { name: "Save reviewed text" }).click();
     await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
     const hydrationErrors: string[] = [];
     const recordHydrationError = (message: string) => {
@@ -864,14 +873,14 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     try {
       await page.reload();
       await expect(subjectField).toHaveValue("QA reviewed subject - no send");
-      await page.locator("#review-cancel-reason").fill("Disposable draft superseded before any send");
-      await expect(page.getByRole("button", { name: "Cancel with reason" })).toBeEnabled();
+      await reviewSurface.locator("#review-cancel-reason:visible").fill("Disposable draft superseded before any send");
+      await expect(reviewSurface.getByRole("button", { name: "Cancel with reason" })).toBeEnabled();
       expect(hydrationErrors).toEqual([]);
     } finally {
       page.off("pageerror", collectPageError);
       page.off("console", collectConsoleError);
     }
-    await page.getByRole("button", { name: "Cancel with reason" }).click();
+    await reviewSurface.getByRole("button", { name: "Cancel with reason" }).click();
     await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
     await page.reload();
     await expect(page.getByText("cancelled", { exact: true }).first()).toBeVisible();
@@ -959,6 +968,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     );
 
     await realPage.goto("/portal/deals/" + savedMatch.id);
+    await openOwnerDocuments(realPage);
     await expect(
       realPage.getByText("Confidential documents locked", { exact: true }),
     ).toBeVisible();
@@ -1020,6 +1030,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.getByRole("button", { name: "Pass Gate 1" }).click();
     // Gate 1 alone cannot expose the template or accept a portal upload.
     await realPage.goto("/portal/deals/" + savedMatch.id);
+    await openOwnerDocuments(realPage);
     await expect(realPage.getByRole("link", { name: "Download template" })).toHaveCount(0);
     await expect(realPage.locator("#signed-nda-file")).toHaveCount(0);
     expect((await realPage.request.get(baseURL + "/portal/deals/" + savedMatch.id + "/nda-template")).status()).toBe(404);
@@ -1066,6 +1077,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(renewSection.getByText("Version 1 recorded.")).toBeVisible();
 
     await realPage.goto("/portal/deals/" + savedMatch.id);
+    await openOwnerDocuments(realPage);
     const ndaDownloadHref = await realPage
       .getByRole("link", { name: "Download template" })
       .getAttribute("href");
@@ -1207,6 +1219,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     });
 
     await realPage.goto("/portal/deals/" + savedMatch.id);
+    await openOwnerDocuments(realPage);
     await expect(
       realPage.getByText("QA OPENING REAL FIRM — SYNTHETIC"),
     ).toBeVisible();
@@ -1239,6 +1252,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
         { button: "English", link: "Download IM", code: "en" },
       ]) {
         await realPage.getByRole("button", { name: language.button, exact: true }).click();
+        await openOwnerDocuments(realPage);
         await expect(realPage.getByRole("link", { name: language.link })).toHaveAttribute("href", memoHref!);
         await expect.poll(async () => {
           const { rows } = await client.query<{ language: string }>(
