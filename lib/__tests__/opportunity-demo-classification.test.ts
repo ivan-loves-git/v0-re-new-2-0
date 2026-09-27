@@ -1,5 +1,10 @@
 import { readFileSync } from "node:fs"
-import { describe, expect, it } from "vitest"
+import { createElement } from "react"
+import { renderToStaticMarkup } from "react-dom/server"
+import { describe, expect, it, vi } from "vitest"
+import { OpportunityDemoControl } from "@/components/opportunities/opportunity-demo-control"
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 
 const platformRoot = process.cwd()
 
@@ -46,5 +51,42 @@ describe("staff DEMO opportunity classification", () => {
     expect(control).toContain("DemoClassificationLockNotice")
     expect(control).toContain("Mark DEMO")
     expect(control).toContain("Remove DEMO")
+  })
+
+  it.each([
+    [true, "DEMO"],
+    [false, "REAL"],
+  ])("shows the current %s classification with an enabled explanation trigger when matched", (isDemo, label) => {
+    const html = renderToStaticMarkup(createElement(OpportunityDemoControl, {
+      isDemo,
+      action: vi.fn(),
+      controlState: {
+        lockReason: "matched",
+        updatedAt: null,
+        updatedByLabel: null,
+      },
+    }))
+
+    expect(html).toContain(label)
+    expect(html).toContain('aria-label="Why is the Demo / Real setting locked?"')
+    expect(html).toContain('aria-expanded="false"')
+    expect(html).not.toContain(' disabled=""')
+    expect(html).not.toContain("Mark DEMO")
+    expect(html).not.toContain("Remove DEMO")
+  })
+
+  it("keeps the unmatched reclassification action and confirmation path", () => {
+    const html = renderToStaticMarkup(createElement(OpportunityDemoControl, {
+      isDemo: false,
+      action: vi.fn(),
+      controlState: {
+        lockReason: null,
+        updatedAt: null,
+        updatedByLabel: null,
+      },
+    }))
+
+    expect(html).toContain("Mark DEMO")
+    expect(html).not.toContain("Demo / Real setting locked")
   })
 })
