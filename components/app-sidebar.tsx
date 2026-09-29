@@ -99,6 +99,7 @@ const toolsNavigation: NavigationItem[] = [
   { name: "Emails", href: "/emails", icon: Mail },
   { name: "Portal preview", href: "/portal-preview", icon: Eye },
   { name: "WAVE AI", href: "/tools/wave-ai", icon: Sparkles },
+  { name: "Product intelligence", href: "/tools/product-intelligence", icon: BarChart3 },
   { name: "Feedback", href: "/tools/feedback", icon: MessageSquareText },
 ]
 
