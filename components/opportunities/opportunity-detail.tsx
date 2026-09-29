@@ -598,6 +598,7 @@ export function OpportunityDetail({
         <TabsContent value="pursuit">
           <OpportunityPursuitPanel
             opportunityId={opportunity.id}
+            recipientImRequired={Boolean(opportunity.recipient_im_required)}
             matches={matches}
             documents={documents}
             ndaArtifacts={ndaArtifacts}
@@ -628,6 +629,8 @@ export function OpportunityDetail({
         <TabsContent value="documents">
           <OpportunityDocumentsPanel
             opportunityId={opportunity.id}
+            recipientImRequired={Boolean(opportunity.recipient_im_required)}
+            matches={matches}
             documents={documents}
             pendingCleanups={pendingCleanups}
             canonicalNdaDocumentIds={ndaArtifacts.map(

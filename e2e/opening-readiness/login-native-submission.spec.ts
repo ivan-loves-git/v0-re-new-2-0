@@ -34,10 +34,10 @@ for (const viewport of [
       await page.locator("#email").fill(email);
       await page.locator("#password").fill(password);
       await expect(
-        page.getByRole("button", { name: "Sign In", exact: true }),
+        page.getByRole("button", { name: "Se connecter", exact: true }),
       ).toBeDisabled();
       await expect(page.getByRole("status")).toHaveText(
-        "Preparing secure sign-in. If this continues, enable JavaScript and reload.",
+        "Préparation de la connexion sécurisée. Si ce message persiste, activez JavaScript et rechargez la page.",
       );
       await expect(page.getByRole("status")).toBeVisible();
       await page.locator("#password").press("Enter");
@@ -78,7 +78,7 @@ test("login waits for delayed hydration before enabling submission", async ({
   });
   try {
     await page.goto("/auth/login", { waitUntil: "commit" });
-    const submit = page.getByRole("button", { name: "Sign In", exact: true });
+    const submit = page.getByRole("button", { name: "Se connecter", exact: true });
     await expect(submit).toBeDisabled();
     await page.locator("#email").fill(email);
     await page.locator("#password").fill(password);

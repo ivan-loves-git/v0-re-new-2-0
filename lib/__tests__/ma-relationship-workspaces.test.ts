@@ -47,10 +47,8 @@ describe("W-086/W-087 relationship workspaces", () => {
   it("reuses the existing candidate-stale rule while displaying open as active or paused", () => {
     expect(actions).toContain("isCandidateStaleOpportunity")
     expect(actions).toContain("buildMaRelationshipIndicators")
-    expect(freshnessPolicy).toContain('"draft",')
     expect(freshnessPolicy).toContain('"active",')
-    expect(freshnessPolicy).toContain('"paused",')
-    expect(freshnessPolicy).toContain("STALE_OPPORTUNITY_DAYS = 90")
+    expect(freshnessPolicy).toContain("STALE_OPPORTUNITY_DAYS = 45")
     expect(ledger).toContain('eq("status", "active_pursuit")')
     expect(actions).toContain("latestKnownOpportunityDate")
     expect(actions).toContain("updated_by")

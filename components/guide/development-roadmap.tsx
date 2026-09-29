@@ -25,6 +25,184 @@ interface RoadmapPeriod {
 
 const roadmapEvents: RoadmapPeriod[] = [
   {
+    period: "Sep 27, 2026",
+    version: "0.9.85",
+    title: "Pursuits now opens the right workspace",
+    isCompleted: true,
+    events: [
+      { title: "Start with your Re-New matches", type: "fix", description: "Pursuits now opens the matched-deal list and its full detail workspace instead of the old board. Re-New staff see the same experience when previewing a selected repreneur; opening the list alone changes no reading marker or deal." },
+      { title: "Keep external dossiers separate", type: "feature", description: "Independent External Pursuits retain their own clearly labelled view and existing controls. Deal discovery stays in Deals." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
+    version: "0.9.84",
+    title: "A clearer step in every deal journey",
+    isCompleted: true,
+    events: [
+      { title: "See your current position", type: "fix", description: "The compact journey marks earlier positions in blue and gives one slim marker to the current step, both in your workspace and staff preview. Full history still separates recorded evidence from steps shown only for orientation." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
+    version: "0.9.83",
+    title: "Staff can preview the same deal workspace",
+    isCompleted: true,
+    events: [
+      { title: "Correct the selected-deal preview", type: "fix", description: "Tools now shows the same deal list, criteria, documents and journey when staff preview a selected repreneur. Staff assistance stays attributed to staff, and previewing never changes the repreneur's reading markers or language choice." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
+    version: "0.9.82",
+    title: "Follow every Re-New deal in one workspace",
+    isCompleted: true,
+    events: [
+      { title: "Move between your matched deals", type: "feature", description: "A clear list sits beside each deal on desktop and opens full width on mobile. Public business details, your six acquisition criteria and permitted documents stay together." },
+      { title: "See progress without guesswork", type: "feature", description: "The compact journey and detailed history show recorded milestones, the current business stage and future context separately. Document access follows its own checks, and unknown dates stay unknown." },
+      { title: "Act only when a current request is yours", type: "decision", description: "The blue action cue appears for an open proposal or a verified NDA signing request. A submitted copy waits for Re-New review; an available information memorandum is a resource, not an overdue task." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
+    version: "0.9.81",
+    title: "Choose French or English for your workspace",
+    isCompleted: true,
+    events: [
+      { title: "A consistent interface language", type: "feature", description: "Repreneurs can choose French or English for access, profile, opportunities and pursuit controls. Their choice follows their account, while staff can preview either language independently." },
+      { title: "Original information stays original", type: "decision", description: "Changing interface language does not rewrite business descriptions, legal documents, uploaded files or emails." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
+    version: "0.9.80",
+    title: "Review older opportunities with their source",
+    isCompleted: true,
+    events: [
+      { title: "One draft per intermediary contact", type: "feature", description: "After 45 days, WAVE can prepare one unsent review for the exact eligible opportunities linked to the same source contact. Older inventory with uncertain date precision is labelled honestly; no last-confirmed date is invented." },
+      { title: "Staff decide whether to send", type: "decision", description: "Staff can review, edit or discard the grouped message. Sending requires the existing validity-check template to be enabled and every opportunity, source relationship and recipient still to be current. One provider receipt covers the exact group." },
+    ],
+  },
+  {
+    period: "Sep 27, 2026",
+    version: "0.9.79",
+    title: "Withdraw an interest before Re-New validates it",
+    isCompleted: true,
+    events: [
+      { title: "Correct an accidental interest without losing history", type: "feature", description: "A repreneur can confirm withdrawal of their current unvalidated interest; Re-New staff can do the same in the selected repreneur workspace with their own identity recorded. The deal shows Withdrawn instead of appearing as an active pursuit or a Decline." },
+      { title: "One decision wins", type: "decision", description: "If Re-New has already validated the pursuit, the normal staff-managed Drop process applies. An earlier alert already in flight remains recorded, while a later eligible interest must be a fresh request." },
+    ],
+  },
+  {
+    period: "Sep 26, 2026",
+    version: "0.9.78",
+    title: "Recipient-specific information memoranda",
+    isCompleted: true,
+    events: [
+      { title: "A separate copy for each repreneur", type: "feature", description: "Re-New can require a personalized IM on an opportunity, upload it for the exact active pursuit, and grant it only through the existing NDA and approval steps. Existing IMs stay reusable and unchanged." },
+      { title: "Clear Drop cleanup", type: "decision", description: "Dropping a pursuit removes access immediately and schedules deletion of only that repreneur's private IM copy. Staff can see whether deletion is confirmed or still needs a retry." },
+    ],
+  },
+  {
+    period: "Sep 24, 2026",
+    version: "0.9.77",
+    title: "Review operational emails before sending",
+    isCompleted: true,
+    events: [
+      { title: "A staff review step inside WAVE", type: "feature", description: "Staff can prepare the existing M&A follow-ups and NDA handoffs, check the exact recipient and wording, then explicitly approve a REAL send or cancel with a reason. An uncertain result stays visible and cannot be bypassed with a new draft." },
+      { title: "Existing email controls stay in place", type: "decision", description: "Automatic emails and Manual Send are unchanged. Disabled M&A templates can still be prepared for review but cannot send until their existing switch is enabled separately." },
+      { title: "Clear review times and phone navigation", type: "fix", description: "Review and history times now agree on Paris time after a page reload. On a phone, the Emails tabs scroll instead of crowding or clipping their labels." },
+    ],
+  },
+  {
+    period: "Sep 23, 2026",
+    version: "0.9.76",
+    title: "Staff can assist from the selected repreneur's portal",
+    isCompleted: false,
+    events: [
+      { title: "Act for the right person without signing in as them", type: "feature", description: "Re-New staff can select a repreneur in Tools, update their acquisition thesis, upload their Lettre de cadrage, and record an independent interest or decline with the staff actor clearly recorded. Personal reading marks, certifications and account choices remain the repreneur's own." },
+      { title: "Keep documents and pursuits in their own lanes", type: "feature", description: "Staff can record an already-received signed NDA for later validation and manage the selected person's separate External Pursuits. Upload alone never approves confidential access, and External files never become Re-New opportunity evidence." },
+    ],
+  },
+  {
+    period: "Sep 23, 2026",
+    version: "0.9.75",
+    title: "Groups is the opportunity home",
+    isCompleted: true,
+    events: [
+      { title: "One place for opportunity work and downloads", type: "feature", description: "Staff can use both internal CSV exports beside New opportunity in Groups. Old Opportunities bookmarks open Groups; the same records, filters and Full export confirmation remain." },
+    ],
+  },
+  {
+    period: "Sep 23, 2026",
+    version: "0.9.74",
+    title: "Activity is easier to find and read",
+    isCompleted: true,
+    events: [
+      { title: "Find the right operating office", type: "feature", description: "Staff can search by firm or office when filtering Activity or adding a record. Offices with repeated or missing names remain separate choices with their stable identity and a review cue." },
+      { title: "Understand the history on screen", type: "style", description: "Office, contact and opportunity filters are compact and can be cleared together. The timeline keeps ownership and delivery evidence visible, and makes clear when results cover only the latest 250 loaded activities." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.73",
+    title: "A clear follow-up window for recommended opportunities",
+    isCompleted: true,
+    events: [
+      { title: "One reminder while a recommendation is still open", type: "feature", description: "A recommendation with an actual portal response window can have one reminder after 48 hours, before its 72-hour deadline. A response, lost access or an expired window stops that client reminder. Old unclocked recommendations are not assigned a deadline." },
+      { title: "Unanswered expiry is visible to staff", type: "decision", description: "If the same cycle remains unanswered at 72 hours, one configured-staff alert can be sent without renewing the recommendation or changing its status. Both new email switches start inactive and can be edited by staff; enabling them later does not email old cycles." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.72",
+    title: "A precise follow-up after confidential memo access",
+    isCompleted: true,
+    events: [
+      { title: "Record the feedback actually received", type: "feature", description: "Staff can record substantive feedback by email or phone against the exact memo access grant. A later regrant is kept separate; opening the memo or adding a note never counts as feedback." },
+      { title: "A controlled five-weekday reminder", type: "decision", description: "One client reminder can become due five Monday–Friday days after that grant at the same Paris time, only while access is valid and no feedback is recorded. Its new email switch starts inactive; enabling it later does not send reminders for old grants." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.71",
+    title: "Clear decisions on each opportunity interest",
+    isCompleted: true,
+    events: [
+      { title: "Staff can decide on the exact interest", type: "feature", description: "Re-New can validate a repreneur's interest or record why this opportunity will not proceed. This staff decision does not reject their account or affect their other opportunities; the internal reason stays with staff." },
+      { title: "Notices are controlled by staff", type: "decision", description: "Neutral client outcomes and a staff alert for replies to proposed opportunities are available, but their new switches start inactive. Staff can edit the wording and choose when to activate them; older responses are not emailed retroactively." },
+    ],
+  },
+  {
+    period: "Sep 22, 2026",
+    version: "0.9.70",
+    title: "Viewed and Reviewed make Deal Flow easier to scan",
+    isCompleted: true,
+    events: [
+      { title: "Personal reading state", type: "feature", description: "Opening a deal detail records Viewed; repreneurs can mark it Reviewed or undo that choice. The personal marker helps organize their own Deal Flow without changing interest, matching or staff decisions." },
+      { title: "Unreviewed opportunities stay easy to find", type: "feature", description: "Recommended and Live Opportunities show items not yet reviewed first when the personal state is available, while reviewed deals remain visible. Older visits are not guessed from before tracking began." },
+    ],
+  },
+  {
+    period: "Sep 20, 2026",
+    version: "0.9.69",
+    title: "Sort the staff pursuit board",
+    isCompleted: true,
+    events: [
+      { title: "Three useful ways to review pursuits", type: "feature", description: "Sort cards within each column by stage progression, repreneur A–Z or opportunity A–Z. Your choice stays selected while filtering or switching views, so you can review the same work from different angles." },
+    ],
+  },
+  {
+    period: "Sep 20, 2026",
+    version: "0.9.68",
+    title: "A compact staff pursuit board, v1.0",
+    isCompleted: true,
+    events: [
+      { title: "Five columns, precise stages", type: "feature", description: "The staff Re-New board groups active work into Matching, Proposed, Interest to validate, Active pursuit and LOI. Every card keeps its exact stage; completed, dropped and inactive cases have their own views." },
+      { title: "Start compact and learn from daily use", type: "decision", description: "We chose v1.0 for an overview that is easier to scan. It can expand to twelve stage columns if daily use exposes hidden bottlenecks or a recurring need for separate stage queues. Business history and document access remain separate." },
+    ],
+  },
+  {
     period: "Sep 12, 2026",
     version: "0.9.67",
     title: "A complete staff opportunity and pursuit export",

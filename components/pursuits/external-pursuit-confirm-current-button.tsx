@@ -5,23 +5,32 @@ import { CheckCircle2, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { confirmExternalPursuitCurrent } from "@/lib/actions/external-pursuit-capacity"
+import { confirmSelectedExternalPursuitCurrent } from "@/lib/actions/staff-portal-external"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
 import {
   beginExternalPursuitConfirmation,
   EMPTY_EXTERNAL_PURSUIT_CONFIRMATION_STATE,
   settleExternalPursuitConfirmation,
 } from "@/lib/utils/external-pursuit-confirmation"
+import { useUiLanguage } from "@/components/i18n/ui-text"
+import { uiCopy } from "@/lib/i18n/ui-copy"
+import { publicPursuitOutcome } from "@/lib/i18n/pursuit-outcomes"
+import type { Language } from "@/lib/i18n/translations"
 
 /** Owner-board mount: one frozen idempotency key survives an unknown response. */
 export function ExternalPursuitConfirmCurrentButton({
   pursuitId,
   onOperationLockChange,
   onConfirmed,
+  staffPortalSelection,
 }: {
   pursuitId: string
+  staffPortalSelection?: { ownerId: string; token: string }
   onOperationLockChange?: ExternalPursuitOperationLockHandler
   onConfirmed?: () => void
 }) {
+  const customerLanguage = useUiLanguage()
+  const language: Language = staffPortalSelection ? "en" : customerLanguage
   const stateRef = useRef(EMPTY_EXTERNAL_PURSUIT_CONFIRMATION_STATE)
   const lockToken = useRef<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -45,22 +54,26 @@ export function ExternalPursuitConfirmCurrentButton({
     stateRef.current = start.state
     setPending(true)
     try {
-      const result = await confirmExternalPursuitCurrent(
-        start.attempt.pursuitId,
-        start.attempt.idempotencyKey,
-      )
+      const result = staffPortalSelection
+        ? await confirmSelectedExternalPursuitCurrent(
+            staffPortalSelection.ownerId, staffPortalSelection.token,
+            start.attempt.pursuitId, start.attempt.idempotencyKey,
+          )
+        : await confirmExternalPursuitCurrent(
+            start.attempt.pursuitId, start.attempt.idempotencyKey,
+          )
       stateRef.current = settleExternalPursuitConfirmation(stateRef.current, result.outcome)
       setRetryPending(stateRef.current.pending !== null)
       if (!result.success) {
-        toast.error(result.message)
+        toast.error(staffPortalSelection ? result.message : publicPursuitOutcome(result.message, language, "Confirmation result is unknown. Retry the same confirmation."))
         return
       }
-      toast.success(result.message)
+      toast.success(staffPortalSelection ? result.message : publicPursuitOutcome(result.message, language, "Current status confirmed."))
       onConfirmed?.()
     } catch {
       stateRef.current = settleExternalPursuitConfirmation(stateRef.current, "ambiguous")
       setRetryPending(true)
-      toast.error("Confirmation result is unknown. Retry the same confirmation.")
+      toast.error(uiCopy(language, "Confirmation result is unknown. Retry the same confirmation."))
     } finally {
       setPending(false)
     }
@@ -69,7 +82,7 @@ export function ExternalPursuitConfirmCurrentButton({
   return (
     <Button type="button" variant="outline" onClick={confirm} disabled={pending}>
       {pending ? <RefreshCw className="animate-spin" /> : <CheckCircle2 />}
-      {pending ? "Confirming…" : retryPending ? "Retry confirmation" : "Confirm current"}
+      {uiCopy(language, pending ? "Confirming…" : retryPending ? "Retry confirmation" : "Confirm current")}
     </Button>
   )
 }

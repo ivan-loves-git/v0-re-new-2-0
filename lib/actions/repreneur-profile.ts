@@ -1,6 +1,8 @@
 "use server"
 
+import { randomUUID } from "node:crypto"
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
+import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { revalidatePath } from "next/cache"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import {
@@ -24,6 +26,10 @@ export type TargetThesisInput = {
   target_ebitda_margin_min_pct: number | null
   target_staff_size_min: number | null
   target_staff_size_max: number | null
+}
+
+export type StaffTargetThesisSaveFailure = {
+  code: "staff_workspace_changed" | "staff_profile_changed"
 }
 
 export type ProfileContribution = "ldc" | "advisory_team"
@@ -93,7 +99,7 @@ export async function getMyRepreneurProfile(): Promise<PortalRepreneurProfile | 
 }
 
 /** Updates only the authenticated repreneur's matching thesis. */
-async function updateTargetThesisForRepreneur(repreneurId: string, input: TargetThesisInput) {
+async function prepareTargetThesisForRepreneur(repreneurId: string, input: TargetThesisInput) {
   const supabase = createAdminClient()
   const { data: currentThesis, error: currentThesisError } = await supabase
     .from("repreneurs")
@@ -157,22 +163,30 @@ async function updateTargetThesisForRepreneur(repreneurId: string, input: Target
   validateRange(ebitdaMin, ebitdaMax, "EBITDA range")
   validateRange(staffSizeMin, staffSizeMax, "Staff-size range")
 
+  return {
+    q12_geo_zones: geoZones,
+    q13_target_sectors_v2: sectors,
+    q14_deal_size: dealSizes,
+    q16_equity: equity,
+    target_revenue_min_meur: revenueMin,
+    target_revenue_max_meur: revenueMax,
+    target_ebitda_min_keur: ebitdaMin,
+    target_ebitda_max_keur: ebitdaMax,
+    target_ebitda_margin_min_pct: ebitdaMarginMin,
+    target_staff_size_min: staffSizeMin,
+    target_staff_size_max: staffSizeMax,
+  }
+}
+
+async function updateTargetThesisForRepreneur(repreneurId: string, input: TargetThesisInput) {
+  const values = await prepareTargetThesisForRepreneur(repreneurId, input)
+  const supabase = createAdminClient()
   const { error } = await supabase
     .from("repreneurs")
     .update({
-      q12_geo_zones: geoZones,
-      q13_target_sectors_v2: sectors,
-      q14_deal_size: dealSizes,
-      q16_equity: equity,
-      sector_preferences: sectors,
-      target_location: geoZones,
-      target_revenue_min_meur: revenueMin,
-      target_revenue_max_meur: revenueMax,
-      target_ebitda_min_keur: ebitdaMin,
-      target_ebitda_max_keur: ebitdaMax,
-      target_ebitda_margin_min_pct: ebitdaMarginMin,
-      target_staff_size_min: staffSizeMin,
-      target_staff_size_max: staffSizeMax,
+      ...values,
+      sector_preferences: values.q13_target_sectors_v2,
+      target_location: values.q12_geo_zones,
   })
     .eq("id", repreneurId)
 
@@ -192,12 +206,46 @@ export async function updateMyTargetThesis(input: TargetThesisInput) {
 }
 
 /** Staff may correct the same persisted thesis fields for a named repreneur. */
-export async function updateRepreneurTargetThesis(repreneurId: string, input: TargetThesisInput) {
-  await requireStaffAccess()
+export async function updateRepreneurTargetThesis(
+  repreneurId: string,
+  input: TargetThesisInput,
+  expectedUpdatedAt?: string,
+  operationKey?: string,
+  selectionToken?: string,
+): Promise<void | StaffTargetThesisSaveFailure> {
+  const access = await requireStaffAccess()
   if (!repreneurId.trim()) throw new Error("Repreneur profile is required.")
-
-  await updateTargetThesisForRepreneur(repreneurId, input)
+  // Preserve the pre-existing staff profile editor outside Tools Portal.
+  // Only the selected-owner Portal assistance path carries a workspace token.
+  if (!selectionToken) {
+    await updateTargetThesisForRepreneur(repreneurId, input)
+    revalidatePath(`/repreneurs/${repreneurId}`)
+    return
+  }
+  const selection = await verifyStaffPortalSelection(selectionToken, repreneurId, access.user.id)
+  if (!selection) return { code: "staff_workspace_changed" }
+  const supabase = createAdminClient()
+  const values = await prepareTargetThesisForRepreneur(repreneurId, input)
+  let expected = expectedUpdatedAt
+  if (!expected) {
+    const { data, error } = await supabase.from("repreneurs").select("updated_at").eq("id", repreneurId).maybeSingle()
+    if (error || !data) throw new Error("Repreneur profile not found")
+    expected = data.updated_at
+  }
+  const { error } = await supabase.rpc("w196_update_staff_target_thesis", {
+    p_repreneur_id: repreneurId,
+    p_expected_updated_at: expected,
+    p_values: values,
+    p_staff_user_id: access.user.id,
+    p_staff_email: access.user.email,
+    p_operation_key: operationKey ?? randomUUID(),
+    p_workspace_id: selection.workspaceId,
+    p_workspace_generation: selection.generation,
+  })
+  if (error) return { code: "staff_profile_changed" }
+  await recalculateRepreneurScoresAndMatches(repreneurId)
   revalidatePath(`/repreneurs/${repreneurId}`)
+  revalidatePath("/portal-preview")
 }
 
 /** Keeps repreneur declarations separate from staff-owned milestones. */

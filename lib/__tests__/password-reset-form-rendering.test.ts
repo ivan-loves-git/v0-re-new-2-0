@@ -11,12 +11,13 @@ vi.mock("@/lib/auth-client", () => ({
 }))
 
 import { ResetPasswordForm } from "@/app/auth/reset-password/reset-password-form"
+import { LanguageProvider } from "@/lib/i18n/language-context"
 
 function renderResetForm() {
   return renderToStaticMarkup(
-    createElement(ResetPasswordForm, {
-      portalSetup: true,
-    }),
+    createElement(LanguageProvider, { initialLanguage: "fr" },
+      createElement(ResetPasswordForm, { portalSetup: true }),
+    ),
   )
 }
 
@@ -28,6 +29,6 @@ describe("password reset form rendering", () => {
 
     expect(markup).not.toContain('name="password"')
     expect(markup).not.toContain('name="confirmPassword"')
-    expect(markup).toContain("Validation du lien...")
+    expect(markup).toContain("Vérification du lien…")
   })
 })

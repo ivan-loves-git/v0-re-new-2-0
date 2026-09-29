@@ -1,5 +1,5 @@
 import type { EmailTemplateKey } from "@/lib/types/email"
-import { dayLevelOpportunityDate } from "@/lib/utils/opportunity-source-date"
+import { freshnessDueBasis } from "@/lib/opportunity-freshness-policy"
 
 export type MaWorkflowTemplateKey = Extract<
   EmailTemplateKey,
@@ -11,11 +11,10 @@ export type MaWorkflowTemplateKey = Extract<
 >
 
 const INFO_MEMO_REMINDER_BUSINESS_DAYS = 5
-const OPPORTUNITY_FRESHNESS_DAYS = 90
-const OPPORTUNITY_MONTHLY_RECHECK_DAYS = 30
 
 interface OpportunityContext {
   status: string
+  is_demo?: boolean
   date_added: string | null
   date_added_precision?: "day" | "month" | null
   created_at: string
@@ -24,6 +23,7 @@ interface OpportunityContext {
 
 interface MatchContext {
   pursuit_stage: string | null
+  pursuit_stage_provenance?: string | null
   pursuit_stage_updated_at: string | null
   updated_at: string
 }
@@ -89,6 +89,7 @@ function deriveNdaInfoMemoReminder(
   now: Date,
 ): MaWorkflowRecommendation | null {
   if (!activeMatch || memoAvailable) return null
+  if (activeMatch.pursuit_stage_provenance === "staff_confirmed_history") return null
   if (activeMatch.pursuit_stage && !["interest", "info_memo_received"].includes(activeMatch.pursuit_stage)) return null
 
   const ndaRequest = latestSentInteraction(interactions, "ma_nda_info_memo_request")
@@ -113,39 +114,22 @@ function deriveNdaInfoMemoReminder(
 
 function deriveOpportunityFreshnessReminder(
   opportunity: OpportunityContext,
-  interactions: InteractionContext[],
+  activeMatch: MatchContext | null,
+  confirmation: { id: string; at: string } | null,
   now: Date,
 ): MaWorkflowRecommendation | null {
-  if (!["active", "paused"].includes(opportunity.status)) return null
-
-  const lastValidityCheck = latestSentInteraction(interactions, "ma_opportunity_validity_check")
-  const lastValidityCheckDate = interactionDate(lastValidityCheck)
-  // A month-only CRM date has a technical first day for storage. Do not use it
-  // to trigger a daily SLA; fall back to the precise internal record date.
-  const preciseSourceDate = dayLevelOpportunityDate(
-    opportunity.date_added,
-    opportunity.date_added_precision,
-  )
-  const ageReferenceDate = preciseSourceDate
-    ? opportunity.date_added
-    : opportunity.created_at ?? opportunity.updated_at
-
-  if (!lastValidityCheckDate) {
-    const ageDays = calendarDaysSince(ageReferenceDate, now)
-    if (ageDays === null || ageDays < OPPORTUNITY_FRESHNESS_DAYS) return null
-    return {
-      title: "3-month opportunity freshness check due",
-      message: `This opportunity has been open for ${ageDays} days without a logged source validity check. Ask the M&A source whether the deal is still open and what the current seller timeline is.`,
-      templateKey: "ma_opportunity_validity_check",
-    }
-  }
-
-  const daysSinceCheck = calendarDaysSince(lastValidityCheckDate, now)
-  if (daysSinceCheck === null || daysSinceCheck < OPPORTUNITY_MONTHLY_RECHECK_DAYS) return null
-
+  const due = freshnessDueBasis({
+    status: opportunity.status, isDemo: opportunity.is_demo === true,
+    hasActiveRealPursuit: activeMatch !== null,
+    dateAdded: opportunity.date_added, dateAddedPrecision: opportunity.date_added_precision,
+    confirmation,
+  }, now)
+  if (!due) return null
   return {
-    title: "Monthly M&A source re-check due",
-    message: `The last source validity check was sent ${daysSinceCheck} days ago. If the deal was confirmed open, send the monthly re-check before keeping it active in the pipeline.`,
+    title: "45-day source freshness review due",
+    message: due.basis === "confirmed_open"
+      ? `The source last explicitly confirmed this opportunity open ${due.ageDays} calendar days ago. Review the source context and unsent draft; sending alone never resets the clock.`
+      : `This opportunity has an older inventory age of at least ${due.ageDays} calendar days with no recorded source confirmation. Preserve its stored date precision and review the unsent draft.`,
     templateKey: "ma_opportunity_validity_check",
   }
 }
@@ -154,23 +138,25 @@ export function deriveMaWorkflowRecommendation({
   opportunity,
   activeMatch,
   interactions,
+  confirmation = null,
   memoAvailable = false,
   now = new Date(),
 }: {
   opportunity: OpportunityContext
   activeMatch: MatchContext | null
   interactions: InteractionContext[]
+  confirmation?: { id: string; at: string } | null
   memoAvailable?: boolean
   now?: Date
 }): MaWorkflowRecommendation | null {
   const ndaInfoMemoReminder = deriveNdaInfoMemoReminder(activeMatch, interactions, memoAvailable, now)
   if (ndaInfoMemoReminder) return ndaInfoMemoReminder
-  if (activeMatch && !memoAvailable) {
+  if (activeMatch && !memoAvailable && activeMatch.pursuit_stage_provenance !== "staff_confirmed_history") {
     return {
       title: "NDA/info memo request available",
       message: "The next expected M&A action is to request the firm's NDA and info memo using their process.",
       templateKey: "ma_nda_info_memo_request",
     }
   }
-  return deriveOpportunityFreshnessReminder(opportunity, interactions, now)
+  return deriveOpportunityFreshnessReminder(opportunity, activeMatch, confirmation, now)
 }

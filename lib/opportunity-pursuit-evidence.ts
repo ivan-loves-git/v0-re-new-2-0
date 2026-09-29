@@ -4,7 +4,7 @@ export const PURSUIT_EVIDENCE_TYPES = [
   "mutual_interest_validated", "qualification_requested", "manual_package_dispatched", "memo_approved", "e4_qualification_requested", "intermediary_qualified",
   "template_validated", "gate_1_passed", "renew_signed_copy_validated",
   "repreneur_signed_copy_validated", "gate_2_passed", "e6_nda_ready_notified", "e7_signed_copies_and_memo_requested", "e8_memo_enabled_completed",
-  "confidential_access_granted", "access_revoked", "continued", "dropped", "reopened", "completed",
+  "confidential_access_granted", "memo_feedback_received", "access_revoked", "continued", "dropped", "reopened", "completed",
 ] as const
 
 export type OpportunityPursuitEvidenceType = (typeof PURSUIT_EVIDENCE_TYPES)[number]

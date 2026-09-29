@@ -25,7 +25,7 @@ describe("repreneur opportunity interest matrix", () => {
   it("offers self-discovered interest only in the detail for unassigned or locked opportunities", () => {
     expect(listSource).not.toContain("LockedOpportunityInterestAction")
     expect(listSource).toContain("View detail")
-    expect(detailSource).toContain("{lockedForAnotherRepreneur || canExpressUnassignedInterest ? (")
+    expect(detailSource).toContain("{(lockedForAnotherRepreneur || canExpressUnassignedInterest || opportunity.match_status === \"withdrawn\") && (!readOnly || !staffAssistanceControls) ? (")
     expect(detailSource).toContain("lockedForAnotherRepreneur={lockedForAnotherRepreneur}")
     expect(querySource).toContain("is_locked_for_other_repreneur: isLockedForOtherRepreneur(")
   })
@@ -35,13 +35,13 @@ describe("repreneur opportunity interest matrix", () => {
     expect(listSource).toContain('lg:grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)]')
     expect(listSource).toContain('lg:grid-cols-[minmax(0,1fr)_auto]')
     expect(listSource).toContain('className="flex min-w-0 flex-col gap-3 lg:items-end"')
-    expect(listSource).toContain("opportunityTitle(opportunity)")
-    expect(listSource).toContain("displayRepreneurOpportunityGeography(opportunity.location)")
-    expect(listSource).toContain("Added {opportunity.date_added_display ?? \"-\"}")
+    expect(listSource).toContain("opportunityTitle(opportunity, language)")
+    expect(listSource).toContain("displayRepreneurOpportunityGeography(opportunity.location, language)")
+    expect(listSource).toContain("opportunity.date_added_display_en ?? opportunity.date_added_display")
     expect(listSource).toContain("formatNumber(opportunity.revenue_meur")
     expect(listSource).toContain("formatNumber(opportunity.ebitda_keur")
-    expect(listSource).toContain("formatEbitdaMargin(opportunity)")
-    expect(listSource).toContain("opportunity.reference")
+    expect(listSource).toContain("formatEbitdaMargin(opportunity, language)")
+    expect(listSource).not.toContain("opportunity.reference")
     expect(listSource).toContain("opportunity.sector ?? opportunity.activity")
   })
 
@@ -56,7 +56,10 @@ describe("repreneur opportunity interest matrix", () => {
   it("keeps accepted staff proposals recommended but never labels a self-signalled interest as selected by Re-New", () => {
     expect(isStaffRecommended({ is_staff_recommended: false } as never)).toBe(false)
     expect(isStaffRecommended({ is_staff_recommended: true } as never)).toBe(true)
-    expect(querySource).toContain("is_staff_recommended: !opportunity.interest_expressed_at")
+    expect(querySource).toContain("currentProposedResponse || !opportunity.interest_expressed_at")
+    expect(querySource).toContain("decisionState.proposed.has(opportunity.match_id)")
+    expect(listSource).toContain("!opportunity.interest_rejected")
+    expect(detailSource).toContain("isStaffRecommended(opportunity) && !opportunity.interest_rejected")
   })
 
   it("allows only the exact portal-visible match to express interest on a staff-only opportunity", () => {

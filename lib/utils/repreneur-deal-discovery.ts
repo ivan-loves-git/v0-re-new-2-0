@@ -121,9 +121,13 @@ export function filterRepreneurDeals(
     ].some((value) => normalizeText(value).includes(normalizedSearch))
 
     const matchesGeography = filters.geography.length === 0
-      || (opportunity.geography_node_id !== null
-        && opportunity.geography_node_id !== undefined
-        && filters.geography.includes(opportunity.geography_node_id))
+      || (opportunity.geography_filter_nodes !== undefined
+        ? opportunity.geography_filter_nodes.some((node) =>
+          filters.geography.includes(node.id)
+          || node.equivalentNodeIds?.some((id) => filters.geography.includes(id)))
+        : (opportunity.geography_node_id !== null
+          && opportunity.geography_node_id !== undefined
+          && filters.geography.includes(opportunity.geography_node_id)))
     const matchesSector = filters.sector.length === 0
       || (opportunity.canonical_sector !== null
         && opportunity.canonical_sector !== undefined

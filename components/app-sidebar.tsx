@@ -28,6 +28,7 @@ import {
   ListTree,
   UsersRound,
   Inbox,
+  Eye,
   type LucideIcon,
 } from "lucide-react"
 import { hasRecentRoadmapUpdates } from "@/lib/data/roadmap-status"
@@ -95,6 +96,7 @@ const maNavigation: NavigationItem[] = [
 
 const toolsNavigation: NavigationItem[] = [
   { name: "Emails", href: "/emails", icon: Mail },
+  { name: "Portal preview", href: "/portal-preview", icon: Eye },
   { name: "WAVE AI", href: "/tools/wave-ai", icon: Sparkles },
 ]
 

@@ -10,13 +10,11 @@ import { TopTier1Repreneurs } from "@/components/dashboard/top-tier1-repreneurs"
 import { AssessmentStatus, RecentAssessmentResults } from "@/components/dashboard/assessment-status"
 import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
-import Link from "next/link"
 import { connection } from "next/server"
 import { subDays, subWeeks, endOfWeek, subMonths, format } from "date-fns"
-import { Eye, LayoutDashboard } from "lucide-react"
+import { LayoutDashboard } from "lucide-react"
 import { getFollowUpSuggestions } from "@/lib/actions/wave-ai"
 import { FollowUpSuggestionsWidget } from "@/components/follow-ups/follow-up-suggestions-widget"
 import { getRepreneurDashboardSnapshot } from "@/lib/data/dashboard-snapshots"
@@ -321,14 +319,6 @@ export default async function RepreneurDashboardPage() {
         subtitle="Overview of your repreneur pipeline"
         icon={LayoutDashboard}
         tone="repreneur"
-        actions={
-          <Button asChild>
-            <Link href="/portal-preview">
-              <Eye data-icon="inline-start" />
-              Portal Preview
-            </Link>
-          </Button>
-        }
       />
 
       {/* Row 1: Stats + Top Tiers - streams in */}

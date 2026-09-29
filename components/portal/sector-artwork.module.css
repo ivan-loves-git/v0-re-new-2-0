@@ -1,0 +1,27 @@
+.avatar {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+  isolation: isolate;
+}
+.small { width: 48px; height: 48px; }
+.large { width: 80px; height: 80px; }
+.avatar > :first-child { position: relative; z-index: 1; }
+.action::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  border-radius: 10px;
+  background: conic-gradient(from 0deg, #2563eb, #8bb6ff, #2563eb, #b6d1ff, #2563eb);
+  filter: blur(4px);
+  opacity: .75;
+  animation: turn 15s linear infinite;
+  transition: filter .2s ease, opacity .2s ease;
+}
+.action:hover::before, .action:focus-within::before { filter: blur(8px); opacity: 1; }
+@keyframes turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .action::before { animation: none; transition: none; } }

@@ -36,6 +36,8 @@
   --warning-foreground: #ffffff;
   --info: #2563eb;
   --info-foreground: #ffffff;
+  --invert: #1f2933;
+  --invert-foreground: #ffffff;
   --radius: 0.5rem;
   --sidebar: #081020;
   --sidebar-foreground: #e9eef6;
@@ -86,6 +88,8 @@
   --warning-foreground: #ffffff;
   --info: #3b82f6;
   --info-foreground: #ffffff;
+  --invert: #404040;
+  --invert-foreground: #ffffff;
   --sidebar: #171717;
   --sidebar-foreground: #e5e5e5;
   --sidebar-primary: #3b82f6;
@@ -137,6 +141,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  --color-invert: var(--invert);
+  --color-invert-foreground: var(--invert-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -283,6 +289,10 @@
 
   .skip-link {
     @apply fixed left-3 top-3 z-[100] -translate-y-20 rounded-md bg-foreground px-3 py-2 text-sm font-semibold text-background shadow-lg transition-transform focus:translate-y-0;
+  }
+
+  body:has([data-localized-skip-link]) > [data-root-skip-link] {
+    display: none;
   }
 
   @keyframes wave-success-confirm {

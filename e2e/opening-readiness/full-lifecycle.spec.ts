@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
   devices,
   expect,
   test,
   type BrowserContext,
+  type ConsoleMessage,
   type Page,
 } from "@playwright/test";
 import { verifyPassword } from "better-auth/crypto";
@@ -21,6 +22,9 @@ const databaseUrl = process.env.OPENING_FIXTURE_DATABASE_URL;
 const releaseSha = process.env.OPENING_FIXTURE_RELEASE_SHA;
 const runnerTemp = process.env.RUNNER_TEMP;
 const baseURL = "http://127.0.0.1:3000";
+
+// Only this file's browser page uses Paris time; the CI dev server stays UTC.
+test.use({ timezoneId: "Europe/Paris" });
 
 if (
   !password ||
@@ -50,6 +54,7 @@ type InputManifest = {
     | "blankNda"
     | "renewSignedNda"
     | "repreneurSignedNda"
+    | "staffReceivedNda"
     | "informationMemorandum",
     { path: string; sha256: string; bytes: number }
   >;
@@ -64,6 +69,7 @@ type EvidenceEntry = {
 
 async function login(page: Page, email: string, loginPassword = password) {
   await page.goto("/auth/login");
+  await page.getByRole("button", { name: "English", exact: true }).click();
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(loginPassword);
   const signInResponse = page.waitForResponse(
@@ -76,6 +82,25 @@ async function login(page: Page, email: string, loginPassword = password) {
   await expect(page).toHaveURL(/\/(dashboard_re|portal\/deals)/, {
     timeout: 30_000,
   });
+}
+
+async function openOwnerDocuments(page: Page) {
+  const workspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+  await workspace.getByRole("tab", { name: "Documents", exact: true }).click();
+  await expect(workspace.getByRole("tabpanel", { name: "Documents" })).toBeVisible();
+}
+
+async function approvePreparedReview(page: Page) {
+  await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
+  await expect(page.getByRole("heading", { name: "Review & send" })).toBeVisible();
+  page.once("dialog", async (dialog) => { await dialog.accept(); });
+  await page.getByRole("button", { name: "Approve and send" }).click();
+  await expect(page.getByText("Provider accepted the reviewed email.", { exact: false })).toBeVisible();
+  await page.reload();
+  const visibleReview = page.locator("#main-content:visible");
+  const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
+    .filter({ hasText: "Provider receipt qa-allowlist-accepted." });
+  await expect(receipt).toContainText("Sent means accepted by the provider, not delivered or read.");
 }
 
 async function chooseOption(
@@ -164,6 +189,10 @@ async function expectPreview(
       encodeURIComponent(opportunityId),
   );
   if (visible) {
+    // This older lifecycle scenario asserts English copy; preview language is
+    // now an independent staff-browser choice and defaults to French.
+    await page.getByRole("group", { name: "Interface language" })
+      .getByRole("button", { name: "English", exact: true }).click();
     await expect(
       page
         .locator("#main-content")
@@ -172,10 +201,15 @@ async function expectPreview(
     await expect(
       page.locator("#main-content").getByRole("heading", { name: title }),
     ).toBeVisible();
+    const previewWorkspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(previewWorkspace).toHaveCount(1);
+    await expect(previewWorkspace.getByRole("tab", { name: "Your criteria" })).toBeVisible();
+    await expect(previewWorkspace.getByRole("tab", { name: "Documents" })).toBeVisible();
+    await expect(previewWorkspace.getByRole("tab", { name: "Journey" })).toBeVisible();
     await expect(
       page
         .locator("#main-content")
-        .getByText("Responses are disabled while previewing.", {
+        .getByText("Current repreneur-facing status for this opportunity.", {
           exact: true,
         }),
     ).toBeVisible();
@@ -280,7 +314,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
   page,
   browser,
 }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(420_000);
   const manifest = JSON.parse(
     await readFile(join(inputDirectory, "manifest.json"), "utf8"),
   ) as InputManifest;
@@ -315,6 +349,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
   let realContext: BrowserContext | null = null;
   let realNonOwnerContext: BrowserContext | null = null;
   let demoContext: BrowserContext | null = null;
+  let demoMobileContext: BrowserContext | null = null;
   let anonymousContext: BrowserContext | null = null;
 
   try {
@@ -518,6 +553,16 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       surface: "mobile",
       result: "active DEMO only",
     });
+    await mobilePage.goto("/opportunities/" + mobileOpportunityId + "?tab=documents");
+    const mobileRecipientToggle = mobilePage.getByRole("button", { name: "Require recipient-specific IMs" });
+    await expect(mobileRecipientToggle).toBeVisible();
+    const mobileToggleBox = await mobileRecipientToggle.boundingBox();
+    expect(mobileToggleBox && mobileToggleBox.x + mobileToggleBox.width).toBeLessThanOrEqual(390);
+    await mobileRecipientToggle.click();
+    await expect(mobilePage.locator("#main-content:visible").getByText("Recipient-specific required", { exact: true })).toBeVisible();
+    await mobilePage.getByRole("button", { name: "Use reusable IMs for future grants" }).click();
+    await expect(mobilePage.locator("#main-content:visible").getByText("Reusable IMs", { exact: true })).toBeVisible();
+    await record({ step: "staff IM flag remained usable on a DEMO mobile viewport", surface: "mobile", result: "explicit on/off; no files reclassified" });
     await mobileContext.close();
     mobileContext = null;
 
@@ -648,6 +693,110 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       result: "manual response recorded; no automated deadline asserted",
     });
 
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&view=profile");
+    await page.getByRole("button", { name: "Edit thesis as staff" }).click();
+    await page.locator("#target-revenue-min").fill("11");
+    await page.getByRole("dialog", { name: /target thesis/i })
+      .getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
+    await page.getByRole("button", { name: "Save attributed staff edit" }).click();
+    await expect(page.getByText(/Target thesis updated for/)).toBeVisible();
+    const thesisAudit = await one<{ staff_user_id: string; changed_fields: string[]; revenue: string }>(client,
+      `SELECT h.staff_user_id,h.changed_fields,r.target_revenue_min_meur::text AS revenue
+       FROM public.staff_assisted_profile_changes h JOIN public.repreneurs r ON r.id=h.repreneur_id
+       WHERE h.repreneur_id=$1 ORDER BY h.recorded_at DESC LIMIT 1`, [fixture.ids.realNonOwnerRepreneur]);
+    expect(thesisAudit.staff_user_id).toBe(fixture.authIds.staffUser);
+    expect(thesisAudit.changed_fields).toContain("target_revenue_min_meur");
+    expect(Number(thesisAudit.revenue)).toBe(11);
+
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&dealId=" + desktopOpportunityId);
+    await page.getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
+    await page.getByRole("button", { name: "Record interest" }).click();
+    await expect(page.getByText(/Recorded by Re-New staff for/)).toBeVisible();
+    const staffInterest = await one<{ match_id: string; staff_user_id: string; owner_events: number; click_alerts: number }>(client,
+      `SELECT h.match_id,h.staff_user_id,
+        (SELECT count(*)::int FROM public.opportunity_interest_events e WHERE e.match_id=h.match_id) AS owner_events,
+        (SELECT count(*)::int FROM public.opportunity_matches m WHERE m.id=h.match_id AND m.interest_notification_sent_at IS NOT NULL) AS click_alerts
+       FROM public.staff_assisted_match_responses h WHERE h.repreneur_id=$1 AND h.opportunity_id=$2
+       ORDER BY h.recorded_at DESC LIMIT 1`, [fixture.ids.realNonOwnerRepreneur, desktopOpportunityId]);
+    expect(staffInterest.staff_user_id).toBe(fixture.authIds.staffUser);
+    expect(staffInterest.owner_events).toBe(0);
+    expect(staffInterest.click_alerts).toBe(0);
+    await record({ step: "staff thesis and independent interest stay attributed without owner-response alerts", surface: "database",
+      result: "profile field audit and exact-match response audit record the staff actor" });
+
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur + "&view=external-pursuits");
+    await page.getByRole("button", { name: "New external pursuit" }).click();
+    await page.locator("#external-pursuit-title").fill("QA STAFF EXTERNAL DOSSIER — SYNTHETIC");
+    await page.getByRole("button", { name: "Add contact" }).click();
+    await page.getByRole("textbox", { name: "Contact 1 name" }).fill("Synthetic external contact");
+    await page.getByRole("button", { name: "Create pursuit" }).click();
+    await expect(page.getByRole("dialog", { name: "New external pursuit" })).toHaveCount(0);
+    const selectedDossier = await one<{ id: string; owner_repreneur_id: string; creator: string; contacts: number }>(client,
+      `SELECT p.id,p.owner_repreneur_id,
+        (SELECT actor_user_id FROM public.external_pursuit_audit_events a WHERE a.external_pursuit_id=p.id AND a.event_type='created' ORDER BY a.occurred_at LIMIT 1) AS creator,
+        (SELECT count(*)::int FROM public.external_pursuit_contacts c WHERE c.external_pursuit_id=p.id) AS contacts
+       FROM public.external_pursuits p WHERE p.title='QA STAFF EXTERNAL DOSSIER — SYNTHETIC' LIMIT 1`);
+    expect(selectedDossier.owner_repreneur_id).toBe(fixture.ids.realNonOwnerRepreneur);
+    expect(selectedDossier.creator).toBe(fixture.authIds.staffUser);
+    expect(selectedDossier.contacts).toBe(1);
+    const dossierCard = page.locator("article").filter({ hasText: "QA STAFF EXTERNAL DOSSIER — SYNTHETIC" });
+    await dossierCard.getByRole("combobox", { name: "Move QA STAFF EXTERNAL DOSSIER — SYNTHETIC stage" }).click();
+    await page.getByRole("option", { name: "Contact / qualification" }).click();
+    await expect.poll(async () => (await one<{ stage: string }>(client,
+      "SELECT stage FROM public.external_pursuits WHERE id=$1", [selectedDossier.id])).stage)
+      .toBe("contact_qualification");
+    await dossierCard.getByRole("button", { name: "Follow-up & files" }).click();
+    await expect(page.getByText("Staff-only notes", { exact: true })).toHaveCount(0);
+    await page.getByRole("textbox", { name: "Next action" }).fill("Call synthetic intermediary");
+    await page.getByRole("combobox", { name: "Responsible" }).click();
+    await page.getByRole("option", { name: "Re-New staff" }).click();
+    await page.getByRole("button", { name: "Save follow-up" }).click();
+    await expect.poll(async () => (await one<{ next_action: string }>(client,
+      "SELECT next_action FROM public.external_pursuits WHERE id=$1", [selectedDossier.id])).next_action)
+      .toBe("Call synthetic intermediary");
+    const refreshedDossierCard = page.locator("article").filter({ hasText: "QA STAFF EXTERNAL DOSSIER — SYNTHETIC" });
+    await expect(refreshedDossierCard.getByRole("button", { name: "Follow-up & files" })).toBeVisible();
+    await refreshedDossierCard.getByRole("button", { name: "Follow-up & files" }).click();
+    await page.getByLabel("Choose a private attachment").setInputFiles(manifest.files.staffReceivedNda.path);
+    await page.getByRole("button", { name: "Add attachment" }).click();
+    await expect.poll(async () => (await one<{ count: number }>(client,
+      "SELECT count(*)::int AS count FROM public.external_pursuit_attachments WHERE external_pursuit_id=$1 AND created_by=$2",
+      [selectedDossier.id, fixture.authIds.staffUser])).count).toBe(1);
+    // A successful upload reloads the board, closing its follow-up dialog.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await refreshedDossierCard.getByRole("button", { name: "Follow-up & files" }).click();
+    await page.getByRole("button", { name: "Confirm current", exact: true }).click();
+    await expect.poll(async () => (await one<{ actor: string; stage: string }>(client,
+      "SELECT last_confirmed_by AS actor,stage FROM public.external_pursuits WHERE id=$1", [selectedDossier.id])))
+      .toEqual({ actor: fixture.authIds.staffUser, stage: "contact_qualification" });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await record({ step: "selected-owner External dossier, contact and follow-up retain staff actor", surface: "database",
+      result: "exact owner, private file actor, current-status confirmation, and staff-only notes absent from portal" });
+
+    const workspaceId = new URL(page.url()).searchParams.get("workspaceId");
+    expect(workspaceId).toMatch(/^[0-9a-f-]{36}$/);
+    const staleTab = await page.context().newPage();
+    await staleTab.goto("/portal-preview?repreneurId=" + fixture.ids.realNonOwnerRepreneur
+      + "&view=profile&workspaceId=" + workspaceId);
+    await staleTab.getByRole("button", { name: "Edit thesis as staff" }).click();
+    await staleTab.locator("#target-revenue-min").fill("12");
+    await staleTab.getByRole("dialog", { name: /target thesis/i })
+      .getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
+    await page.getByRole("combobox").filter({ hasText: fixture.repreneurs.realNonOwner.email }).click();
+    await page.getByPlaceholder("Search by name or email...").fill(fixture.repreneurs.real.email);
+    await page.getByRole("option").filter({ hasText: fixture.repreneurs.real.email }).click();
+    await expect(page).toHaveURL(new RegExp("repreneurId=" + fixture.ids.realRepreneur));
+    await staleTab.getByRole("button", { name: "Save attributed staff edit" }).click();
+    await expect(staleTab.getByText("The selected staff workspace changed. Refresh and try again.", { exact: true })).toBeVisible();
+    expect((await one<{ revenue: number; changes: number }>(client,
+      `SELECT target_revenue_min_meur::double precision AS revenue,
+        (SELECT count(*)::int FROM public.staff_assisted_profile_changes WHERE repreneur_id=$1) AS changes
+       FROM public.repreneurs WHERE id=$1`, [fixture.ids.realNonOwnerRepreneur])))
+      .toEqual({ revenue: 11, changes: 1 });
+    await staleTab.close();
+    await record({ step: "switching selected repreneur revokes an old browser form", surface: "desktop",
+      result: "A to B selection rejected the still-open A thesis form without a second write" });
+
     await page.goto(
       "/opportunities/" + desktopOpportunityId + "?tab=recommendations",
     );
@@ -675,14 +824,92 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       result: "active pursuit at interest",
     });
 
+    // The sanitized 771 structure has no historical M&A catalogue seed rows.
+    // Seed only this disposable key; missing catalogue keys remain a send veto.
+    await client.query(`INSERT INTO public.email_templates
+      (template_key,subject,description,is_active,requires_consent,body_markdown,body_editable)
+      VALUES ('ma_nda_info_memo_request','QA NDA and memo - {opportunityTitle}',
+        'Disposable M&A review fixture',false,false,'Bonjour {firstName},\\n\\nQA fixture NDA request.',true)
+      ON CONFLICT (template_key) DO UPDATE SET is_active=false`);
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
     await chooseOption(page, "#ma_template", "Request NDA and info memo");
     await expect(page.locator("#ma_subject")).not.toHaveValue("");
     await expect(page.locator("#ma_body")).not.toHaveValue("");
-    await page.getByRole("button", { name: "Send to contact" }).click();
-    await expect(
-      page.getByText("M&A email sent", { exact: true }),
-    ).toBeVisible();
+    // The disposable fixture deliberately tests an inactive catalogue key.
+    // Preparation stays usable, but sending is visibly blocked until the
+    // synthetic switch is restored. No production setting is touched.
+    await page.getByRole("button", { name: "Prepare for review" }).click();
+    await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
+    const cancelledReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
+    await expect(page.getByText("Catalogue template disabled")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/emails");
+    await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
+    const emailTabStrip = page.locator('#main-content:visible [data-slot="tabs-list"]:visible').locator("..");
+    await emailTabStrip.evaluate((strip) => { strip.scrollLeft = strip.scrollWidth; });
+    expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
+    await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
+    await page.locator(`a[href="/emails/review/${cancelledReviewId}"]`).click();
+    expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("Europe/Paris");
+    const reviewSurface = page.locator("#main-content:visible").filter({
+      has: page.locator("#review-subject:visible"),
+    });
+    const subjectField = reviewSurface.locator("#review-subject:visible");
+    await expect(subjectField).toBeVisible();
+    const sendButton = reviewSurface.getByRole("button", { name: "Approve and send" });
+    const sendBox = await sendButton.boundingBox();
+    expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390);
+    await subjectField.fill("QA reviewed subject - no send");
+    await reviewSurface.getByRole("button", { name: "Save reviewed text" }).click();
+    await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
+    const hydrationErrors: string[] = [];
+    const recordHydrationError = (message: string) => {
+      if (/react\.dev\/errors\/418|react error #418|hydration failed|hydration mismatch|server.rendered HTML didn.t match the client|text content does not match server.rendered HTML|tree hydrated but some attributes/i.test(message)) {
+        hydrationErrors.push(message);
+      }
+    };
+    const collectPageError = (error: Error) => recordHydrationError(error.message);
+    const collectConsoleError = (message: ConsoleMessage) => {
+      if (message.type() === "error") recordHydrationError(message.text());
+    };
+    page.on("pageerror", collectPageError);
+    page.on("console", collectConsoleError);
+    try {
+      await page.reload();
+      await expect(subjectField).toHaveValue("QA reviewed subject - no send");
+      await reviewSurface.locator("#review-cancel-reason:visible").fill("Disposable draft superseded before any send");
+      await expect(reviewSurface.getByRole("button", { name: "Cancel with reason" })).toBeEnabled();
+      expect(hydrationErrors).toEqual([]);
+    } finally {
+      page.off("pageerror", collectPageError);
+      page.off("console", collectConsoleError);
+    }
+    await reviewSurface.getByRole("button", { name: "Cancel with reason" }).click();
+    await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
+    await page.reload();
+    await expect(page.getByText("cancelled", { exact: true }).first()).toBeVisible();
+    const cancelled = await one<{ state: string; subject: string; cancel_reason: string; events: number }>(client,
+      `SELECT r.state,r.subject,r.cancel_reason,
+        (SELECT count(*)::int FROM public.staff_email_review_events e WHERE e.review_id=r.id) AS events
+       FROM public.staff_email_reviews r WHERE r.id=$1`, [cancelledReviewId]);
+    expect(cancelled).toEqual({ state: "cancelled", subject: "QA reviewed subject - no send", cancel_reason: "Disposable draft superseded before any send", events: 3 });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_nda_info_memo_request'");
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
+    await chooseOption(page, "#ma_template", "Request NDA and info memo");
+    await page.getByRole("button", { name: "Prepare for review" }).click();
+    await approvePreparedReview(page);
+    const sourceReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
+    const anonymousReviewContext = await browser.newContext({ baseURL });
+    const anonymousReviewPage = await anonymousReviewContext.newPage();
+    await anonymousReviewPage.goto(`/emails/review/${sourceReviewId}`);
+    await expect(anonymousReviewPage).toHaveURL(/\/auth\/login/);
+    await anonymousReviewContext.close();
+    await realPage.goto(`/emails/review/${sourceReviewId}`);
+    await expect(realPage).toHaveURL(/\/portal\/deals/);
+    await realPage.goto("/emails/automations/opportunity-freshness");
+    await expect(realPage).toHaveURL(/\/portal\/deals/);
     const sourceEmail = await one<{
       delivery_status: string;
       provider_message_id: string | null;
@@ -707,24 +934,37 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.goto(
       "/opportunities/" + desktopOpportunityId + "?tab=documents",
     );
-    await page.locator("#document-title").fill("QA LIFECYCLE IM — SYNTHETIC");
+    await expect(page.locator("#main-content:visible").getByText("Reusable IMs", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Require recipient-specific IMs" }).click();
+    await expect(page.locator("#main-content:visible").getByText("Recipient-specific required", { exact: true })).toBeVisible();
+    await page.reload();
+    await page.locator("#document-title").fill("QA LIFECYCLE RECIPIENT IM — SYNTHETIC");
     await chooseOption(page, "#document-type", "Information memorandum (IM)");
+    await expect(page.locator("#main-content:visible")).toContainText("This upload will belong only to");
     await page
       .locator("#document-file")
       .setInputFiles(manifest.files.informationMemorandum.path);
     await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(
-      page.getByText("QA LIFECYCLE IM — SYNTHETIC", { exact: true }),
+      page.getByText("QA LIFECYCLE RECIPIENT IM — SYNTHETIC", { exact: true }),
     ).toBeVisible();
     const memo = await one<{
       id: string;
+      title: string;
+      file_name: string;
       size_bytes: string;
       content_sha256: string;
+      recipient_match_id: string;
+      recipient_repreneur_id: string;
     }>(
       client,
-      "SELECT document.id,document.size_bytes::text,intent.content_sha256 FROM public.opportunity_documents document JOIN public.private_upload_intents intent ON intent.bucket_id=document.storage_bucket AND intent.storage_path=document.storage_path AND intent.status='finalized' WHERE document.opportunity_id=$1 AND document.document_type='deal_book'",
+      "SELECT document.id,document.title,document.file_name,document.size_bytes::text,intent.content_sha256,document.recipient_match_id::text,document.recipient_repreneur_id::text FROM public.opportunity_documents document JOIN public.private_upload_intents intent ON intent.bucket_id=document.storage_bucket AND intent.storage_path=document.storage_path AND intent.status='finalized' WHERE document.opportunity_id=$1 AND document.document_type='deal_book'",
       [desktopOpportunityId],
     );
+    expect(memo.title).toBe("QA LIFECYCLE RECIPIENT IM — SYNTHETIC");
+    expect(memo.file_name).toBe(basename(manifest.files.informationMemorandum.path));
+    expect(memo.recipient_match_id).toBe(savedMatch.id);
+    expect(memo.recipient_repreneur_id).toBe(fixture.ids.realRepreneur);
     expect(Number(memo.size_bytes)).toBe(
       manifest.files.informationMemorandum.bytes,
     );
@@ -733,6 +973,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     );
 
     await realPage.goto("/portal/deals/" + savedMatch.id);
+    await openOwnerDocuments(realPage);
     await expect(
       realPage.getByText("Confidential documents locked", { exact: true }),
     ).toBeVisible();
@@ -746,9 +987,9 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(deniedMemo.headers()["cache-control"]).toBe("private, no-store");
     expect(deniedMemo.headers()["referrer-policy"]).toBe("no-referrer");
     await record({
-      step: "IM persisted privately and portal access failed closed",
+      step: "recipient IM bound privately and portal access failed closed",
       surface: "storage",
-      result: "hash matched; pre-grant download denied",
+      result: "hash and exact pursuit/repreneur binding matched; pre-grant download denied",
     });
 
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
@@ -764,10 +1005,8 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await blankSection.getByRole("button", { name: "Record version" }).click();
     await expect(blankSection.getByText("Version 1 recorded.")).toBeVisible();
 
-    await page
-      .getByRole("button", { name: "Send qualification and NDA request" })
-      .click();
-    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Qualification request sent." })).toBeVisible();
+    await page.getByRole("button", { name: "Prepare qualification and NDA request" }).click();
+    await approvePreparedReview(page);
     const e4 = await one<{ delivery_status: string; request_included: boolean; current_blank_exists: boolean; exact_validation: boolean }>(client,
       `SELECT d.delivery_status,position('nous transmettre un NDA à signer' in i.body_markdown)>0 AS request_included,
        EXISTS(SELECT 1 FROM public.opportunity_nda_artifacts a WHERE a.opportunity_id=$2 AND a.artifact_role='blank_template') AS current_blank_exists,
@@ -775,6 +1014,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
        FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id
        WHERE d.match_id=$1 AND d.handoff_type='e4'`, [savedMatch.id, desktopOpportunityId]);
     expect(e4).toEqual({ delivery_status: "sent", request_included: true, current_blank_exists: true, exact_validation: true });
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await expect(
       page.getByRole("button", {
         name: "Record intermediary qualification",
@@ -795,18 +1035,20 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.getByRole("button", { name: "Pass Gate 1" }).click();
     // Gate 1 alone cannot expose the template or accept a portal upload.
     await realPage.goto("/portal/deals/" + savedMatch.id);
+    await openOwnerDocuments(realPage);
     await expect(realPage.getByRole("link", { name: "Download template" })).toHaveCount(0);
     await expect(realPage.locator("#signed-nda-file")).toHaveCount(0);
     expect((await realPage.request.get(baseURL + "/portal/deals/" + savedMatch.id + "/nda-template")).status()).toBe(404);
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByRole("button", { name: "Send NDA-ready notice" })).toBeVisible();
-    await page.getByRole("button", { name: "Send NDA-ready notice" }).click();
-    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "NDA-ready notice sent." })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Prepare NDA-ready notice" })).toBeVisible();
+    await page.getByRole("button", { name: "Prepare NDA-ready notice" }).click();
+    await approvePreparedReview(page);
     const e6 = await one<{ delivery_status: string; provider_message_id: string; evidence: boolean }>(client,
       "SELECT d.delivery_status,d.provider_message_id,(e.id IS NOT NULL AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text) AS evidence FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.match_id=$1 AND d.handoff_type='e6'", [savedMatch.id]);
     expect(e6).toEqual({ delivery_status: "sent", provider_message_id: "qa-allowlist-accepted", evidence: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
 
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     const renewSection = page
       .getByRole("heading", { name: "Re-New-signed copy" })
       .locator("xpath=ancestor::section");
@@ -820,7 +1062,10 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(renewSection.getByText("Version 1 recorded.")).toBeVisible();
 
     await realPage.goto("/portal/deals/" + savedMatch.id);
-    const ndaDownloadHref = await realPage
+    await openOwnerDocuments(realPage);
+    const ownerDocuments = realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      .getByRole("tabpanel", { name: "Documents" });
+    const ndaDownloadHref = await ownerDocuments
       .getByRole("link", { name: "Download template" })
       .getAttribute("href");
     expect(ndaDownloadHref).toBeTruthy();
@@ -832,21 +1077,166 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(createHash("sha256").update(ndaBytes).digest("hex")).toBe(
       manifest.files.blankNda.sha256,
     );
-    await realPage
+    await ownerDocuments
       .locator("#signed-nda-title")
       .fill("QA LIFECYCLE REPRENEUR NDA — SYNTHETIC");
-    await realPage
+    await ownerDocuments
       .locator("#signed-nda-file")
       .setInputFiles(manifest.files.repreneurSignedNda.path);
-    await realPage.getByRole("button", { name: "Upload signed copy" }).click();
-    const signedNdaForm = realPage.locator("form").filter({
-      has: realPage.locator("#signed-nda-title"),
-    });
+    await ownerDocuments.getByRole("button", { name: "Upload signed copy" }).click();
+    await openOwnerDocuments(realPage);
     await expect(
-      signedNdaForm.getByRole("status").filter({
+      ownerDocuments.getByRole("status").filter({
         hasText: "Your signed NDA has been received for staff validation.",
       }),
     ).toBeVisible();
+    await expect(ownerDocuments.locator("#signed-nda-title")).toHaveCount(0);
+    await expect(ownerDocuments.getByRole("button", { name: "Upload signed copy" })).toHaveCount(0);
+    const ownerCopy = await one<{ id: string; digest: string; version_number: number; title: string; file_name: string; size_bytes: number; recorded_by: string }>(client,
+      `SELECT a.id,a.content_sha256 AS digest,a.version_number,d.title,d.file_name,d.size_bytes::int,a.recorded_by
+       FROM public.opportunity_nda_artifacts a JOIN public.opportunity_documents d ON d.id=a.document_id
+       WHERE a.match_id=$1 AND a.artifact_role='repreneur_signed_copy'
+       ORDER BY a.version_number DESC LIMIT 1`, [savedMatch.id]);
+    expect(ownerCopy).toEqual({ id: expect.any(String), digest: manifest.files.repreneurSignedNda.sha256,
+      version_number: 1, title: "QA LIFECYCLE REPRENEUR NDA — SYNTHETIC",
+      file_name: basename(manifest.files.repreneurSignedNda.path), size_bytes: manifest.files.repreneurSignedNda.bytes,
+      recorded_by: fixture.repreneurs.real.email });
+
+    // Entry/detail transitions must keep the filtered return and reopen the
+    // list on mobile, even when the same client component survives navigation.
+    await realPage.goto("/portal/pursuits");
+    const ownerEntry = realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(ownerEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await ownerEntry.getByRole("textbox", { name: "Search pursuits" }).fill("QA LIFECYCLE REAL");
+    await ownerEntry.getByRole("combobox", { name: "Pursuit status" }).selectOption("active");
+    await expect(realPage).toHaveURL(/\/portal\/pursuits\?q=QA\+LIFECYCLE\+REAL&status=active/);
+    await expect(ownerEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(ownerEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await ownerEntry.getByRole("navigation", { name: "Pursuits" })
+      .getByRole("link", { name: /QA LIFECYCLE REAL/ }).click();
+    await expect(realPage).toHaveURL(new RegExp(`/portal/deals/${savedMatch.id}`));
+    await expect(realPage.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await realPage.goBack();
+    await expect(realPage).toHaveURL(/\/portal\/pursuits\?q=QA\+LIFECYCLE\+REAL&status=active/);
+    await expect(ownerEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await expect(ownerEntry.getByRole("heading", { name: "Select a pursuit to see its details.", exact: true })).toBeVisible();
+    await expect(ownerEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(ownerEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await realPage.goForward();
+    await expect(realPage).toHaveURL(new RegExp(`/portal/deals/${savedMatch.id}`));
+    const returnedOwnerDetail = realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      .filter({ has: realPage.getByRole("heading", { level: 1, name: desktopTitle, exact: true }) });
+    await expect(returnedOwnerDetail).toHaveCount(1);
+    await expect(returnedOwnerDetail.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await returnedOwnerDetail.getByRole("link", { name: "My pursuits", exact: true }).click({ noWaitAfter: true });
+    await expect(realPage).toHaveURL(/\/portal\/pursuits\?q=QA\+LIFECYCLE\+REAL&status=active/);
+    await expect(ownerEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await expect(ownerEntry.getByRole("heading", { name: "Select a pursuit to see its details.", exact: true })).toBeVisible();
+    await expect(ownerEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(ownerEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await realPage.setViewportSize({ width: 390, height: 844 });
+    await expect(realPage.locator('#main-content [data-wave-workspace="pursuit"]:visible')
+      .getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await realPage.setViewportSize({ width: 1440, height: 1000 });
+
+    // Staff records a distinct copy received through another channel after the
+    // owner's submission. It becomes the current version without validating it.
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur);
+    await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    await page.getByRole("tab", { name: "Re-New Pursuits" }).click();
+    await expect(page).toHaveURL(/view=renew-pursuits/);
+    const staffEntry = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(staffEntry).toHaveCount(1);
+    await expect(staffEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await staffEntry.getByRole("textbox", { name: "Search pursuits" }).fill("QA LIFECYCLE REAL");
+    await staffEntry.getByRole("combobox", { name: "Pursuit status" }).selectOption("active");
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&view=renew-pursuits/);
+    await expect(staffEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(staffEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await staffEntry.getByRole("navigation", { name: "Pursuits" })
+      .getByRole("link", { name: /QA LIFECYCLE REAL/ }).click();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&returnView=renew-pursuits/);
+    await expect(page.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&view=renew-pursuits/);
+    await expect(staffEntry.getByRole("complementary", { name: "My pursuits" })).toBeVisible();
+    await expect(staffEntry.getByRole("heading", { name: "Select a pursuit to see its details.", exact: true })).toBeVisible();
+    await expect(staffEntry.getByRole("textbox", { name: "Search pursuits" })).toHaveValue("QA LIFECYCLE REAL");
+    await expect(staffEntry.getByRole("combobox", { name: "Pursuit status" })).toHaveValue("active");
+    await page.goForward();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL&status=active&returnView=renew-pursuits/);
+    await expect(page.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+
+    // The existing selected-detail history check starts from an unfiltered
+    // direct detail, independently of the filtered-entry Back check above.
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.realRepreneur + "&dealId=" + savedMatch.id);
+    await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).not.toHaveURL(/(?:q|status)=/);
+    const staffWorkspace = page.locator('#main-content [data-wave-workspace="pursuit"]:visible');
+    await expect(staffWorkspace).toHaveCount(1);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await page.getByRole("group", { name: "Interface language" }).getByRole("button", { name: "English", exact: true }).click();
+    const staffSearch = staffWorkspace.getByRole("textbox", { name: "Search pursuits" });
+    const staffStatus = staffWorkspace.getByRole("combobox", { name: "Pursuit status" });
+    await staffSearch.fill("QA LIFECYCLE REAL");
+    await staffStatus.selectOption("active");
+    await staffWorkspace.getByRole("navigation", { name: "Pursuits" }).getByRole("link", { name: /QA LIFECYCLE REAL/ }).click();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL.*status=active/);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await staffSearch.fill("other local filter");
+    await staffStatus.selectOption("ended");
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).not.toHaveURL(/(?:q|status)=/);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await expect(staffSearch).toHaveValue("");
+    await expect(staffStatus).toHaveValue("all");
+    await page.goForward();
+    await expect(page).toHaveURL(new RegExp(`dealId=${savedMatch.id}`));
+    await expect(page).toHaveURL(/q=QA\+LIFECYCLE\+REAL.*status=active/);
+    await expect(staffWorkspace.getByRole("heading", { level: 1, name: desktopTitle, exact: true })).toBeVisible();
+    await expect(staffSearch).toHaveValue("QA LIFECYCLE REAL");
+    await expect(staffStatus).toHaveValue("active");
+    await staffWorkspace.getByRole("tab", { name: "Documents" }).click();
+    const staffDocuments = staffWorkspace.getByRole("tabpanel", { name: "Documents" });
+    const staffTemplateHref = await staffDocuments.getByRole("link", { name: "Download template" }).getAttribute("href");
+    expect(staffTemplateHref).toContain("/portal-preview/deals/" + savedMatch.id + "/nda-template?");
+    expect(staffTemplateHref).toContain("workspaceId=");
+    expect(staffTemplateHref).toContain("selectionGeneration=");
+    const staffTemplate = await page.request.get(baseURL + staffTemplateHref!);
+    expect(staffTemplate.status()).toBe(200);
+    expect(createHash("sha256").update(await staffTemplate.body()).digest("hex")).toBe(manifest.files.blankNda.sha256);
+    await page.locator("#staff-nda-title").fill("QA STAFF-RECEIVED NDA — SYNTHETIC");
+    await page.locator("#staff-nda-file").setInputFiles(manifest.files.staffReceivedNda.path);
+    await page.locator("#staff-nda-reference").fill("Synthetic received-email reference");
+    await page.getByText("I am Re-New staff recording a copy already signed by", { exact: false }).click();
+    await page.getByRole("button", { name: "Record received PDF" }).click();
+    await expect(page.getByText("Received NDA recorded as staff evidence; staff validation is still required.")).toBeVisible();
+    const receipt = await one<{ artifact_id: string; digest: string; version_number: number; supersedes_artifact_id: string; recorded_by: string; title: string; file_name: string; size_bytes: number; staff_user_id: string; source_kind: string; source_reference: string; validated: number; gate2: number }>(client,
+      `SELECT a.id AS artifact_id,a.content_sha256 AS digest,a.version_number,a.supersedes_artifact_id,
+        a.recorded_by,d.title,d.file_name,d.size_bytes::int,r.staff_user_id,r.source_kind,r.source_reference,
+        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='repreneur_signed_copy_validated') AS validated,
+        (SELECT count(*)::int FROM public.opportunity_pursuit_evidence e WHERE e.match_id=$1 AND e.event_type='gate_2_passed') AS gate2
+       FROM public.staff_received_nda_receipts r
+       JOIN public.opportunity_nda_artifacts a ON a.id=r.artifact_id
+       JOIN public.opportunity_documents d ON d.id=a.document_id
+       WHERE r.match_id=$1 ORDER BY r.recorded_at DESC LIMIT 1`, [savedMatch.id]);
+    expect(receipt).toEqual({ artifact_id: expect.any(String), digest: manifest.files.staffReceivedNda.sha256,
+      version_number: 2, supersedes_artifact_id: ownerCopy.id, recorded_by: fixture.staff.email,
+      title: "QA STAFF-RECEIVED NDA — SYNTHETIC", file_name: basename(manifest.files.staffReceivedNda.path),
+      size_bytes: manifest.files.staffReceivedNda.bytes, staff_user_id: fixture.authIds.staffUser,
+      source_kind: "email", source_reference: "Synthetic received-email reference", validated: 0, gate2: 0 });
+    const currentCopy = await one<{ id: string; digest: string; version_number: number }>(client,
+      `SELECT a.id,a.content_sha256 AS digest,a.version_number FROM public.opportunity_nda_artifacts a
+       WHERE a.match_id=$1 AND a.artifact_role='repreneur_signed_copy'
+       ORDER BY a.version_number DESC LIMIT 1`, [savedMatch.id]);
+    expect(currentCopy).toEqual({ id: receipt.artifact_id, digest: manifest.files.staffReceivedNda.sha256, version_number: 2 });
+    await record({ step: "owner upload and attributed staff receipt retained as separate NDA versions", surface: "database",
+      result: "both exact PDF names, byte lengths and hashes; staff actor and email provenance; current version awaits validation and Gate 2" });
 
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await page.getByRole("button", { name: "Validate Re-New copy" }).click();
@@ -859,17 +1249,17 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     ).toBeVisible();
     await page.getByRole("button", { name: "Pass Gate 2" }).click();
     await expect(
-      page.getByRole("button", { name: "Send signed copies and memo request" }),
+      page.getByRole("button", { name: "Prepare signed copies and memo request" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Send signed copies and memo request" }).click();
-    await expect(page.locator("p[role=\"status\"]").filter({ hasText: "Signed copies and memo request sent." })).toBeVisible();
+    await page.getByRole("button", { name: "Prepare signed copies and memo request" }).click();
+    await approvePreparedReview(page);
     const e7 = await one<{ delivery_status: string; exact_interaction: boolean; attachment_snapshot: Array<{ content_sha256: string; size_bytes: number }> }>(client,
       "SELECT d.delivery_status,i.client_operation_key=d.operation_key AND i.provider_request_fingerprint=d.request_fingerprint AS exact_interaction,d.attachment_snapshot FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id WHERE d.match_id=$1 AND d.handoff_type='e7'", [savedMatch.id]);
     expect(e7.delivery_status).toBe("sent");
     expect(e7.exact_interaction).toBe(true);
     expect(e7.attachment_snapshot.map((a) => [a.content_sha256, Number(a.size_bytes)])).toEqual([
       [manifest.files.renewSignedNda.sha256, manifest.files.renewSignedNda.bytes],
-      [manifest.files.repreneurSignedNda.sha256, manifest.files.repreneurSignedNda.bytes],
+      [manifest.files.staffReceivedNda.sha256, manifest.files.staffReceivedNda.bytes],
     ]);
     await record({
       step: "canonical NDA gates and signed-copy handoff completed",
@@ -878,6 +1268,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
         "Gate 1, E6, both current signatures, Gate 2 and E7 delivered through the safe mail adapter",
     });
 
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await page.locator("#journey-im").selectOption(memo.id);
     const expiry = new Date(Date.now() + 72 * 60 * 60 * 1000)
       .toISOString()
@@ -960,6 +1351,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     });
 
     await realPage.goto("/portal/deals/" + savedMatch.id);
+    await openOwnerDocuments(realPage);
     await expect(
       realPage.getByText("QA OPENING REAL FIRM — SYNTHETIC"),
     ).toBeVisible();
@@ -980,6 +1372,53 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(createHash("sha256").update(memoBytes).digest("hex")).toBe(
       manifest.files.informationMemorandum.sha256,
     );
+    const documentIdentity = { title: memo.title, file_name: memo.file_name, size_bytes: memo.size_bytes };
+    const { rows: previousUiLanguage } = await client.query<{ language: string }>(
+      "SELECT language FROM public.repreneur_ui_preferences WHERE user_id=$1",
+      [fixture.repreneurs.real.userId],
+    );
+    expect(previousUiLanguage.length).toBeLessThanOrEqual(1);
+    try {
+      for (const language of [
+        { button: "Français", link: "Télécharger la note d’information", code: "fr" },
+        { button: "English", link: "Download IM", code: "en" },
+      ]) {
+        await realPage.getByRole("button", { name: language.button, exact: true }).click();
+        await openOwnerDocuments(realPage);
+        await expect(realPage.getByRole("link", { name: language.link })).toHaveAttribute("href", memoHref!);
+        await expect.poll(async () => {
+          const { rows } = await client.query<{ language: string }>(
+            "SELECT language FROM public.repreneur_ui_preferences WHERE user_id=$1",
+            [fixture.repreneurs.real.userId],
+          );
+          return rows[0]?.language ?? null;
+        }).toBe(language.code);
+        const afterSwitch = await realPage.request.get(baseURL + memoHref!);
+        expect(afterSwitch.status()).toBe(200);
+        expect(afterSwitch.headers()["cache-control"]).toBe("private, no-store");
+        expect(await afterSwitch.body()).toEqual(memoBytes);
+        const unchangedDocument = await one<{ title: string; file_name: string; size_bytes: string }>(
+          client,
+          "SELECT title,file_name,size_bytes::text FROM public.opportunity_documents WHERE id=$1",
+          [memo.id],
+        );
+        expect(unchangedDocument).toEqual(documentIdentity);
+      }
+    } finally {
+      if (previousUiLanguage[0]) {
+        await client.query(
+          "INSERT INTO public.repreneur_ui_preferences (user_id,language) VALUES ($1,$2) ON CONFLICT (user_id) DO UPDATE SET language=EXCLUDED.language",
+          [fixture.repreneurs.real.userId, previousUiLanguage[0].language],
+        );
+      } else {
+        await client.query("DELETE FROM public.repreneur_ui_preferences WHERE user_id=$1", [fixture.repreneurs.real.userId]);
+      }
+    }
+    await record({
+      step: "owner switched FR/EN while retaining the exact granted IM",
+      surface: "storage",
+      result: "nonempty original title and filename, private bytes and owner download remained unchanged; QA language preference restored",
+    });
 
     anonymousContext = await browser.newContext({ baseURL });
     const anonymousPage = await anonymousContext.newPage();
@@ -1077,6 +1516,17 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
         "exact bytes to owner; anonymous, DEMO and second REAL non-owner denied",
     });
 
+    await page.goto("/opportunities/" + desktopOpportunityId + "?tab=documents");
+    await page.getByRole("button", { name: "Use reusable IMs for future grants" }).click();
+    await expect(page.locator("#main-content:visible").getByText("Reusable IMs", { exact: true })).toBeVisible();
+    await expect(page.locator("#main-content:visible")).toContainText("Recipient-specific ·");
+    const stillBound = await one<{ recipient_match_id: string; recipient_repreneur_id: string }>(client,
+      "SELECT recipient_match_id::text,recipient_repreneur_id::text FROM public.opportunity_documents WHERE id=$1", [memo.id]);
+    expect(stillBound).toEqual({ recipient_match_id: savedMatch.id, recipient_repreneur_id: fixture.ids.realRepreneur });
+    const stillGranted = await realPage.request.get(baseURL + memoHref!);
+    expect(stillGranted.status()).toBe(200);
+    await expectMemoDenied(demoPage, savedMatch.id, memo.id);
+
     await page.goto("/analytics_op");
     const activeOpportunitiesCard = page
       .locator("#main-content")
@@ -1108,6 +1558,132 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       result: "two REAL active shown; two DEMO active excluded",
       count: 2,
     });
+
+    // #192 runs only on the owned synthetic DEMO pair. The protected fixture
+    // has no provider credential; it does not alter the REAL lifecycle below.
+    await demoPage.goto("/portal/deals/" + mobileOpportunityId);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => {
+      const { rows } = await client.query<{ id: string; status: string }>(
+        "SELECT id,status FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2",
+        [mobileOpportunityId, fixture.ids.demoRepreneur],
+      );
+      return rows[0] ?? null;
+    }, { timeout: 30_000 }).toMatchObject({ status: "interested" });
+    const initialInterest = await one<{ id: string; interest_expressed_at: string }>(client,
+      "SELECT id,interest_expressed_at::text FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2",
+      [mobileOpportunityId, fixture.ids.demoRepreneur]);
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Withdraw interest" }).click();
+    const desktopWithdrawal = demoPage.getByRole("alertdialog");
+    await expect(desktopWithdrawal).toContainText("It does not erase the record or recall an email already sent.");
+    await desktopWithdrawal.getByRole("button", { name: "Keep interest" }).click();
+    expect((await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status).toBe("interested");
+    await demoPage.getByRole("button", { name: "Withdraw interest" }).click();
+    await demoPage.getByRole("alertdialog").getByRole("button", { name: "Confirm withdrawal" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("withdrawn");
+    await demoPage.goto("/portal/deals");
+    await expect(demoPage.locator('section[aria-labelledby="deal-section-in-progress"]')
+      .getByText(mobileTitle, { exact: true })).toHaveCount(0);
+    await expect(demoPage.locator('section[aria-labelledby="deal-section-live-opportunities"]'))
+      .toContainText(mobileTitle);
+    const firstWithdrawal = await one<{ reviewed_at: string | null; reason: string }>(client,
+      `SELECT m.reviewed_at::text,e.internal_reason AS reason FROM public.opportunity_matches m
+       JOIN public.opportunity_interest_events e ON e.match_id=m.id AND e.event_type='withdrawn'
+       WHERE m.id=$1 AND e.interest_expressed_at=$2`,
+      [initialInterest.id, initialInterest.interest_expressed_at]);
+    expect(firstWithdrawal.reviewed_at).toBeNull();
+    expect(firstWithdrawal.reason).toBe("I expressed interest by mistake.");
+    await page.goto("/opportunities/" + mobileOpportunityId + "?tab=recommendations");
+    const withdrawnStaffRow = page.getByRole("row")
+      .filter({ hasText: fixture.repreneurs.demo.email });
+    await expect(withdrawnStaffRow).toContainText("Withdrawn");
+    await expect(withdrawnStaffRow.getByRole("button", { name: "Validate" })).toHaveCount(0);
+    await record({ step: "owner desktop withdrawal requires explicit confirmation", surface: "desktop",
+      result: "cancel preserved interest; confirm retained unreviewed history without pending validation and moved deal out of In Progress" });
+
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => one<{ status: string; interest_expressed_at: string }>(client,
+      "SELECT status,interest_expressed_at::text FROM public.opportunity_matches WHERE id=$1", [initialInterest.id]),
+    { timeout: 30_000 }).toMatchObject({ status: "interested" });
+    const secondToken = (await one<{ interest_expressed_at: string }>(client,
+      "SELECT interest_expressed_at::text FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).interest_expressed_at;
+    expect(Date.parse(secondToken)).toBeGreaterThan(Date.parse(initialInterest.interest_expressed_at));
+    demoMobileContext = await browser.newContext({ ...devices["iPhone 13"], baseURL,
+      storageState: await demoContext.storageState() });
+    const demoMobilePage = await demoMobileContext.newPage();
+    await demoMobilePage.goto("/portal/deals/" + initialInterest.id);
+    await demoMobilePage.getByRole("button", { name: "Withdraw interest" }).click();
+    const mobileWithdrawal = demoMobilePage.getByRole("alertdialog");
+    await expect(mobileWithdrawal).toBeVisible();
+    // The shared dialog enters with a 200 ms translated animation. Measure its
+    // resting geometry, not the transient frame that can extend past the edge.
+    await mobileWithdrawal.evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+    });
+    const mobileViewportWidth = demoMobilePage.viewportSize()?.width;
+    expect(mobileViewportWidth).toBe(390);
+    const mobileBounds = await mobileWithdrawal.boundingBox();
+    expect(mobileBounds).not.toBeNull();
+    expect(mobileBounds!.x).toBeGreaterThanOrEqual(-1);
+    expect(mobileBounds!.x + mobileBounds!.width).toBeLessThanOrEqual(mobileViewportWidth! + 1);
+    await mobileWithdrawal.getByRole("button", { name: "Keep interest" }).click();
+    expect((await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status).toBe("interested");
+    await demoMobilePage.getByRole("button", { name: "Withdraw interest" }).click();
+    await demoMobilePage.getByRole("alertdialog").getByRole("button", { name: "Confirm withdrawal" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("withdrawn");
+    await record({ step: "owner mobile withdrawal requires explicit confirmation", surface: "mobile",
+      result: "cancel preserved fresh interest; confirm retained a distinct withdrawn token" });
+
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("interested");
+    await page.goto("/portal-preview?repreneurId=" + fixture.ids.demoRepreneur
+      + "&dealId=" + mobileOpportunityId);
+    await expect(page).toHaveURL(/workspaceId=/, { timeout: 30_000 });
+    await page.getByRole("checkbox", { name: /I am acting as Re-New staff on behalf of/ }).click();
+    await page.getByRole("button", { name: "Withdraw interest" }).click();
+    await expect(page.getByRole("alertdialog").locator("textarea"))
+      .toHaveValue("Re-New staff is withdrawing this interest on the repreneur's behalf.");
+    await page.getByRole("alertdialog").getByRole("button", { name: "Confirm withdrawal" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("withdrawn");
+    const staffWithdrawal = await one<{ actor: string; origin: string }>(client,
+      `SELECT actor,withdrawal_origin AS origin FROM public.opportunity_interest_events
+       WHERE match_id=$1 AND event_type='withdrawn' ORDER BY occurred_at DESC LIMIT 1`,
+      [initialInterest.id]);
+    expect(staffWithdrawal).toEqual({ actor: fixture.authIds.staffUser, origin: "staff" });
+    await record({ step: "staff withdrew exact interest in selected DEMO workspace", surface: "database",
+      result: "selected-owner action retained actual staff actor and neutral on-behalf reason" });
+
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await demoPage.getByRole("button", { name: "Express interest" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("interested");
+    const finalInterest = await one<{ interest_expressed_at: string }>(client,
+      "SELECT interest_expressed_at::text FROM public.opportunity_matches WHERE id=$1", [initialInterest.id]);
+    expect(Date.parse(finalInterest.interest_expressed_at)).toBeGreaterThan(Date.parse(secondToken));
+    await page.goto("/opportunities/" + mobileOpportunityId + "?tab=recommendations");
+    const demoMatchRow = page.getByRole("row").filter({ hasText: fixture.repreneurs.demo.email });
+    await demoMatchRow.getByRole("button", { name: "Validate" }).click();
+    await expect.poll(async () => (await one<{ status: string }>(client,
+      "SELECT status FROM public.opportunity_matches WHERE id=$1", [initialInterest.id])).status,
+    { timeout: 30_000 }).toBe("active_pursuit");
+    await demoPage.goto("/portal/deals/" + initialInterest.id);
+    await expect(demoPage.getByRole("button", { name: "Withdraw interest" })).toHaveCount(0);
+    await record({ step: "fresh DEMO interest needs fresh validation", surface: "database",
+      result: "new token validated once; prior withdrawal evidence kept; no post-validation withdrawal action" });
 
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await page.getByRole("button", { name: "Record Continue" }).click();
@@ -1255,6 +1831,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       realContext?.close(),
       realNonOwnerContext?.close(),
       demoContext?.close(),
+      demoMobileContext?.close(),
       anonymousContext?.close(),
     ]);
     await client.end();

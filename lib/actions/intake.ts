@@ -9,6 +9,7 @@ import { sendEmail, wasEmailSent } from "@/lib/email"
 import { WelcomeEmail } from "@/lib/email/templates/welcome"
 import { ThankYouEmail } from "@/lib/email/templates/thank-you"
 import { HighScoreAlertEmail } from "@/lib/email/templates/high-score-alert"
+import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-content"
 
 // High score threshold for alert email
 const HIGH_SCORE_THRESHOLD = 70
@@ -81,6 +82,7 @@ export async function createIntakeDraft(data: {
       repreneurId: repreneur.id,
       templateKey: "welcome",
       react: WelcomeEmail({
+        registrationComplete: false,
         repreneur: {
           id: repreneur.id,
           firstName: data.first_name.trim(),
@@ -380,11 +382,12 @@ export async function completeIntake(
       // Send thank you email
       sendEmail({
         to: repreneurData.email,
-        subject: "Merci pour votre inscription chez Re-New!",
+        subject: await getTemplateSubject("thank_you", "Votre inscription Re-New est confirmée"),
         repreneurId: id,
         templateKey: "thank_you",
         react: ThankYouEmail({
           repreneur: emailData,
+          bodyOverride: await getTemplateBody("thank_you"),
           metadata: { tier1Score: scoreBreakdown.total },
         }),
       }).catch((err) => {

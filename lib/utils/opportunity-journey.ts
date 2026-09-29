@@ -11,7 +11,9 @@ export type OpportunityJourney =
   | "proposed"
   | "interest_received"
   | "active_pursuit"
+  | "nda_signed"
   | "info_memo_received"
+  | "qa_with_ma_firm"
   | "intermediary_meeting"
   | "seller_meeting"
   | "loi"
@@ -37,7 +39,9 @@ export const OPPORTUNITY_JOURNEY_OPTIONS: ReadonlyArray<{ value: OpportunityJour
   { value: "proposed", label: "Proposed" },
   { value: "interest_received", label: "Interest received" },
   { value: "active_pursuit", label: "Active pursuit" },
+  { value: "nda_signed", label: "NDA signed" },
   { value: "info_memo_received", label: "Info memo received" },
+  { value: "qa_with_ma_firm", label: "Q&A with M&A firm" },
   { value: "intermediary_meeting", label: "Intermediary meeting" },
   { value: "seller_meeting", label: "Seller meeting" },
   { value: "loi", label: "LOI" },
@@ -49,7 +53,9 @@ export const OPPORTUNITY_JOURNEY_OPTIONS: ReadonlyArray<{ value: OpportunityJour
 
 const pursuitStageToJourney: Record<OpportunityPursuitStage, OpportunityJourney> = {
   interest: "active_pursuit",
+  nda_signed: "nda_signed",
   info_memo_received: "info_memo_received",
+  qa_with_ma_firm: "qa_with_ma_firm",
   intermediary_meeting: "intermediary_meeting",
   seller_meeting: "seller_meeting",
   loi: "loi",

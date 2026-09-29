@@ -1,4 +1,5 @@
 import "server-only"
+import { createHash } from "node:crypto"
 
 import { beginPursuitHandoff, finalizePursuitHandoff, assertPursuitHandoffCurrent, type PreparedPursuitHandoff, type HandoffAttempt } from "@/lib/pursuit-handoff-delivery"
 import { assertPursuitEmailSize } from "@/lib/pursuit-handoff-attachments"
@@ -125,6 +126,7 @@ interface MatchRow {
   id: string
   status: OpportunityMatchStatus
   pursuit_stage: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   pursuit_stage_updated_at: string | null
   nda_status: OpportunityNdaStatus | null
   nda_signed_at: string | null
@@ -277,10 +279,9 @@ function getWorkflowContacts(
           relation.contact_name_snapshot ??
           relation.affiliation?.contact?.display_name ??
           null,
-        email:
-          relation.contact_email_snapshot ??
-          relation.affiliation?.contact?.email ??
-          null,
+        // Delivery authority comes from the live canonical contact. A retained
+        // snapshot is history, not a fallback recipient if that email is gone.
+        email: relation.affiliation?.contact?.email ?? null,
         phone:
           relation.contact_phone_snapshot ??
           relation.affiliation?.contact?.phone ??
@@ -430,6 +431,50 @@ function markdownToEmailHtml(body: string) {
     .join("")
 }
 
+export function buildMaReviewedRequest(subject: string, body: string, recipientEmail: string, attachments?: ResendDeliveryRequest["attachments"]): ResendDeliveryRequest {
+  return {
+    from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [recipientEmail], subject,
+    html: markdownToEmailHtml(body), text: body,
+    ...(attachments ? { attachments } : {}),
+  }
+}
+
+// The review queue stores already-rendered text. Keep preparation and final
+// delivery on this one renderer so the approved words are the attempted words.
+export async function renderMaWorkflowContent(opportunityId: string, subject: string, body: string) {
+  const { variables } = await loadOpportunityContext(opportunityId)
+  return {
+    subject: substituteTemplateVariables(subject, variables),
+    body: substituteTemplateVariables(body, variables),
+  }
+}
+
+export async function getMaReviewContext(opportunityId: string, contactLinkId?: string | null) {
+  const { opportunity, contacts, defaultContact, activeMatch } = await loadOpportunityContext(opportunityId)
+  const contact = contactLinkId ? contacts.find((row) => row.id === contactLinkId) : defaultContact
+  if (!opportunity.source_office_id || !contact?.affiliationId || !contact.contactId || !contact.email) {
+    throw new Error("Choose a current canonical opportunity contact with an email address.")
+  }
+  return {
+    opportunityId: opportunity.id,
+    namespace: opportunity.is_demo ? "DEMO" as const : "REAL" as const,
+    contactLinkId: contact.id,
+    recipientEmail: contact.email,
+    activeMatchId: activeMatch?.id ?? null,
+  }
+}
+
+export async function getMaReviewTemplateVersion(templateKey: string, requireActive: boolean) {
+  const { data, error } = await createAdminClient().from("email_templates")
+    .select("template_key,subject,body_markdown,body_editable,is_active")
+    .eq("template_key", templateKey).maybeSingle()
+  if (error || !data?.template_key) throw new Error("This catalogue email is missing. No email was sent.")
+  if (requireActive && data.is_active !== true) {
+    throw new Error("This catalogue email is disabled in Templates. A staff member must enable it separately before sending.")
+  }
+  return createHash("sha256").update(JSON.stringify([data.subject, data.body_markdown, data.body_editable])).digest("hex")
+}
+
 async function sendIntermediaryEmail({
   request,
   idempotencyKey,
@@ -523,6 +568,7 @@ async function loadOpportunityContext(opportunityId: string) {
         id,
         status,
         pursuit_stage,
+        pursuit_stage_provenance,
         pursuit_stage_updated_at,
         nda_status,
         nda_signed_at,
@@ -590,6 +636,74 @@ async function loadOpportunityContext(opportunityId: string) {
   return { opportunity, variables, activeMatch, contacts, defaultContact }
 }
 
+async function readMaOpportunityInteractionHistory(
+  supabase: ReturnType<typeof createAdminClient>,
+  opportunityId: string,
+): Promise<MaSourceInteraction[]> {
+  // Keep opportunity-centric history complete after an audited office change.
+  // PostgREST caps one response, so fetch ordered pages rather than showing
+  // only the latest eight and silently hiding retained old-office evidence.
+  const interactionRows: MaInteraction[] = []
+  const pageSize = 200
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("ma_interactions")
+      .select("*")
+      .eq("opportunity_id", opportunityId)
+      .order("occurred_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + pageSize - 1)
+    if (error) throw new Error(error.message)
+    interactionRows.push(...((data ?? []) as MaInteraction[]))
+    if ((data ?? []).length < pageSize) break
+  }
+  const officeIds = [...new Set(interactionRows.map((interaction) => interaction.office_id))]
+  const { data: officeRows, error: officeError } = officeIds.length
+    ? await supabase.from("ma_offices").select("id,name,firm_id").in("id", officeIds)
+    : { data: [], error: null }
+  if (officeError) throw new Error(officeError.message)
+  const firmIds = [...new Set((officeRows ?? []).map((office) => office.firm_id))]
+  const { data: firmRows, error: firmError } = firmIds.length
+    ? await supabase.from("ma_firms").select("id,name").in("id", firmIds)
+    : { data: [], error: null }
+  if (firmError) throw new Error(firmError.message)
+  const firmNames = new Map((firmRows ?? []).map((firm) => [firm.id, firm.name]))
+  const originalOffices = new Map((officeRows ?? []).map((office) => [office.id, {
+    officeName: office.name,
+    firmName: firmNames.get(office.firm_id) ?? null,
+  }]))
+  return interactionRows.map(
+    (interaction): MaSourceInteraction => ({
+      id: interaction.id,
+      opportunity_id: interaction.opportunity_id ?? opportunityId,
+      original_office_name: originalOffices.get(interaction.office_id)?.officeName ?? null,
+      original_firm_name: originalOffices.get(interaction.office_id)?.firmName ?? null,
+      template_key: interaction.template_key ?? "",
+      channel: interaction.channel,
+      direction: interaction.direction ?? "outbound",
+      recipient_email: interaction.recipient_email_snapshot ?? "",
+      subject: interaction.title ?? "M&A interaction",
+      body_markdown: interaction.body_markdown ?? interaction.summary ?? null,
+      status: interaction.delivery_status ?? "recorded",
+      error_message: interaction.delivery_error ?? null,
+      sent_at: interaction.sent_at ?? null,
+      occurred_at: interaction.occurred_at,
+      owner_verification_state: interaction.owner_verification_state,
+      created_by: interaction.created_by ?? null,
+      created_at: interaction.created_at,
+    }),
+  )
+}
+
+// A separate, guarded entrypoint lets acceptance tests exercise the exact
+// paged read and office joins used by the staff workflow, not prefilled UI data.
+export async function getMaOpportunityInteractionHistory(
+  opportunityId: string,
+): Promise<MaSourceInteraction[]> {
+  await requireStaffAccess()
+  return readMaOpportunityInteractionHistory(createAdminClient(), opportunityId)
+}
+
 export async function getMaOpportunityWorkflow(
   opportunityId: string,
 ): Promise<MaOpportunityWorkflow> {
@@ -616,33 +730,16 @@ export async function getMaOpportunityWorkflow(
     }),
   )
 
-  const { data, error } = await supabase
-    .from("ma_interactions")
-    .select("*")
+  const interactions = await readMaOpportunityInteractionHistory(supabase, opportunityId)
+  const { data: lastConfirmation, error: confirmationError } = await supabase
+    .from("opportunity_freshness_replies")
+    .select("id,reply_at")
     .eq("opportunity_id", opportunityId)
-    .order("occurred_at", { ascending: false })
-    .limit(8)
-
-  if (error) throw new Error(error.message)
-  const interactions = ((data ?? []) as MaInteraction[]).map(
-    (interaction): MaSourceInteraction => ({
-      id: interaction.id,
-      opportunity_id: interaction.opportunity_id ?? opportunityId,
-      template_key: interaction.template_key ?? "",
-      channel: interaction.channel,
-      direction: interaction.direction ?? "outbound",
-      recipient_email: interaction.recipient_email_snapshot ?? "",
-      subject: interaction.title ?? "M&A interaction",
-      body_markdown: interaction.body_markdown ?? interaction.summary ?? null,
-      status: interaction.delivery_status ?? "recorded",
-      error_message: interaction.delivery_error ?? null,
-      sent_at: interaction.sent_at ?? null,
-      occurred_at: interaction.occurred_at,
-      owner_verification_state: interaction.owner_verification_state,
-      created_by: interaction.created_by ?? null,
-      created_at: interaction.created_at,
-    }),
-  )
+    .eq("outcome", "confirmed_open")
+    .order("reply_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (confirmationError) throw new Error("The source confirmation clock could not be verified.")
 
   // Legacy NDA and visibility metadata no longer establishes confidential
   // access. The canonical pursuit projection is the only disclosure authority.
@@ -652,6 +749,7 @@ export async function getMaOpportunityWorkflow(
     opportunity,
     activeMatch,
     interactions,
+    confirmation: lastConfirmation ? { id: lastConfirmation.id, at: lastConfirmation.reply_at } : null,
     memoAvailable,
   })
 
@@ -707,6 +805,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     clientOperationKey: string | null
   },
   handoff?: PreparedPursuitHandoff,
+  review?: { recipientEmail: string; templateVersion: string; actorId: string },
 ): Promise<MaEmailSendResult> {
   const { user } = await requireStaffAccess()
   const { templateKey, subject, body, contactId, clientOperationKey } = payload
@@ -724,6 +823,13 @@ export async function sendMaSourceWorkflowEmailPayload(
   }
 
   const supabase = createAdminClient()
+  if (!review) return { success: false, message: "Prepare this email in Review & send before delivery." }
+  try {
+    const version = await getMaReviewTemplateVersion(templateKey, true)
+    if (!handoff && version !== review.templateVersion) return { success: false, message: "The catalogue template changed after preparation. This draft cannot be sent." }
+  } catch (error) {
+    return { success: false, message: error instanceof Error ? error.message : "The catalogue template could not be verified." }
+  }
   const { data: sourceReviewRequired, error: sourceReviewError } =
     await supabase.rpc("ma_opportunity_source_review_required", {
       p_opportunity_id: opportunityId,
@@ -741,7 +847,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   const { data: emailReservationToken, error: emailReservationError } =
     await supabase.rpc("reserve_ma_source_email_send", {
       p_opportunity_id: opportunityId,
-      p_actor: user.id,
+      p_actor: review.actorId,
     })
 
   if (emailReservationError || typeof emailReservationToken !== "string") {
@@ -766,8 +872,13 @@ export async function sendMaSourceWorkflowEmailPayload(
     throw error
   }
 
-  const { opportunity, variables, activeMatch, contacts, defaultContact } =
+  const { opportunity, activeMatch, contacts, defaultContact } =
     workflowContext
+
+  if (opportunity.is_demo || review.recipientEmail.trim().toLowerCase() === "") {
+    await releaseReservation()
+    return { success: false, message: "Only REAL emails can be sent from Review & send." }
+  }
 
   if (templateKey === "ma_nda_info_memo_request" && !activeMatch) {
     await releaseReservation()
@@ -816,6 +927,10 @@ export async function sendMaSourceWorkflowEmailPayload(
         "Add an email to the selected M&A contact before sending a follow-up.",
     }
   }
+  if (recipientEmail.trim().toLowerCase() !== review.recipientEmail.trim().toLowerCase()) {
+    await releaseReservation()
+    return { success: false, message: "The canonical recipient changed after review. No email was sent." }
+  }
   if (!opportunity.source_office_id || !recipient.affiliationId) {
     await releaseReservation()
     return {
@@ -833,16 +948,9 @@ export async function sendMaSourceWorkflowEmailPayload(
     }
   }
 
-  const renderedSubject = substituteTemplateVariables(subject, variables)
-  const renderedBody = substituteTemplateVariables(body, variables)
-  const providerRequest: ResendDeliveryRequest = {
-    from: `${FROM_NAME} <${FROM_EMAIL}>`,
-    to: [recipientEmail],
-    subject: renderedSubject,
-    html: markdownToEmailHtml(renderedBody),
-    text: renderedBody,
-    ...(handoff?.attachments ? { attachments: handoff.attachments } : {}),
-  }
+  const renderedSubject = subject
+  const renderedBody = body
+  const providerRequest = buildMaReviewedRequest(renderedSubject, renderedBody, recipientEmail, handoff?.attachments)
   const providerRequestFingerprint =
     fingerprintResendDeliveryRequest(providerRequest, handoff ? `${handoff.type}:${handoff.upstreamId}` : undefined)
 
@@ -867,7 +975,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     contactId: recipient.contactId,
     opportunityId: opportunity.id,
     purpose: maContactEmailPurposeForTemplate(templateKey),
-    actor: user.id,
+    actor: review.actorId,
     operationKey: clientOperationKey,
   })
   if (!emailAuthorization.allowed) {
@@ -882,7 +990,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (handoff) {
     try {
       assertPursuitEmailSize(providerRequest)
-      handoffAttempt = await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.email)
+      handoffAttempt = await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.id)
       if (handoffAttempt.delivery_status === "sent") {
         await releaseReservation()
         return { success: true, message: "This pursuit handoff was already sent.", operationState: "sent", eventId: handoffAttempt.evidence_id ?? undefined }
@@ -898,7 +1006,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   }
   const finishHandoff = async (status: "sent" | "failed", interactionId: string, providerMessageId: string | null, deliveryError: string | null) => {
     if (!handoffAttempt) return undefined
-    return finalizePursuitHandoff(supabase, handoffAttempt, user.email, status, providerMessageId, deliveryError, interactionId)
+    return finalizePursuitHandoff(supabase, handoffAttempt, user.id, status, providerMessageId, deliveryError, interactionId)
   }
 
   const { data: pendingRows, error: beginError } = await supabase.rpc(
@@ -907,7 +1015,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       p_opportunity_id: opportunity.id,
       p_office_id: opportunity.source_office_id,
       p_affiliation_id: recipient.affiliationId,
-      p_actor: user.id,
+      p_actor: review.actorId,
       p_template_key: templateKey,
       p_recipient_email: recipientEmail,
       p_title: renderedSubject,
@@ -938,6 +1046,7 @@ export async function sendMaSourceWorkflowEmailPayload(
       )
         ? "The earlier email result needs manual reconciliation because its safe provider replay window has expired."
         : "Email blocked because a canonical delivery record could not be started or safely replayed.",
+      operationState: "pending",
     }
   }
 
@@ -1002,7 +1111,7 @@ export async function sendMaSourceWorkflowEmailPayload(
     "finalize_ma_interaction_email_send",
     {
       p_interaction_id: interactionId,
-      p_actor: user.id,
+      p_actor: review.actorId,
       p_delivery_status: result.outcome,
       p_provider_message_id:
         result.outcome === "sent" ? result.providerMessageId : null,

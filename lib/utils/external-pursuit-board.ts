@@ -9,7 +9,9 @@ export function mapCanonicalJourneyToBoardStage(journey: OpportunityJourney): Ex
     case "proposed": return "identified"
     case "interest_received":
     case "active_pursuit": return "contact_qualification"
+    case "nda_signed":
     case "info_memo_received": return "information"
+    case "qa_with_ma_firm":
     case "intermediary_meeting":
     case "seller_meeting": return "meetings"
     case "loi": return "loi"

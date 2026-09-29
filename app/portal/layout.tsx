@@ -5,6 +5,8 @@ import { PortalShell } from "@/components/portal/portal-shell"
 import { getOpaqueTelemetryUserId } from "@/lib/telemetry/identity"
 import { WaveTelemetryIdentity } from "@/lib/telemetry/provider"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
+import { LanguageProvider } from "@/lib/i18n/language-context"
+import { resolvedRepreneurUiLanguage } from "@/lib/i18n/server-language"
 
 async function PortalGate({
   children,
@@ -12,6 +14,7 @@ async function PortalGate({
   children: React.ReactNode
 }) {
   const { user } = await requirePortalAccess()
+  const { language, accountLanguage } = await resolvedRepreneurUiLanguage(user.id)
   queueM2RepreneurEvent({
     userId: user.id,
     routeTemplate: "/portal",
@@ -26,9 +29,11 @@ async function PortalGate({
         userId={getOpaqueTelemetryUserId(user.id)}
         role="repreneur"
       />
-      <PortalShell userEmail={user.email} userName={user.name}>
-        {children}
-      </PortalShell>
+      <LanguageProvider key={user.id} initialLanguage={language} accountLanguage={accountLanguage} scope="account" showSkipLink>
+        <PortalShell userEmail={user.email} userName={user.name}>
+          {children}
+        </PortalShell>
+      </LanguageProvider>
     </>
   )
 }

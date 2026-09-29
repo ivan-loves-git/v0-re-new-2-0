@@ -381,6 +381,49 @@ function sectorCriterion(
   return review("Sector fit", "the current data is incomplete")
 }
 
+export type OwnerCriterionKey = "sector" | "geography" | "revenue" | "ebitda" | "margin" | "team"
+export type OwnerCriterionOutcome = "within_target" | "outside_target" | "not_specified" | "unknown"
+
+/**
+ * Present the six current matching comparisons without publishing the scoring
+ * weights, staff geography paths, free-text reasons, or an aggregate grade.
+ * Call this on the server with fresh owner targets and deal facts only.
+ */
+export function compareOwnerOpportunityCriteria(
+  repreneur: ScoringRepreneur,
+  opportunity: ScoringOpportunity,
+): Record<OwnerCriterionKey, OwnerCriterionOutcome> {
+  const sectorTargets = preferredList(repreneur.q13_target_sectors_v2, repreneur.sector_preferences)
+  const geographyTargets = preferredList(repreneur.q12_geo_zones, repreneur.target_location)
+  const results: Array<[OwnerCriterionKey, CriterionResult]> = [
+    ["sector", sectorTargets.length ? sectorCriterion(repreneur, opportunity) : omitted("Sector")],
+    ["geography", geographyTargets.length ? geographyCriterion(repreneur, opportunity) : omitted("Geography")],
+    ["revenue", numericRangeCriterion(
+      toNumber(opportunity.revenue_meur), toNumber(repreneur.target_revenue_min_meur),
+      toNumber(repreneur.target_revenue_max_meur), MATCHING_V2_CONFIG.weights.revenue,
+      "Revenue", false, MATCHING_V2_CONFIG.numericFalloff.zeroScaleFloors.revenueMeur,
+    )],
+    ["ebitda", numericRangeCriterion(
+      toNumber(opportunity.ebitda_keur), toNumber(repreneur.target_ebitda_min_keur),
+      toNumber(repreneur.target_ebitda_max_keur), MATCHING_V2_CONFIG.weights.absoluteEbitda,
+      "Absolute EBITDA", true, MATCHING_V2_CONFIG.numericFalloff.zeroScaleFloors.absoluteEbitdaKeur,
+    )],
+    ["margin", ebitdaMarginCriterion(repreneur, opportunity)],
+    ["team", headcountCriterion(
+      toNumber(opportunity.headcount), toNumber(repreneur.target_staff_size_min),
+      toNumber(repreneur.target_staff_size_max),
+    )],
+  ]
+  const translate: Record<CriterionOutcome, OwnerCriterionOutcome> = {
+    match: "within_target",
+    partial: "outside_target",
+    hard_exclusion: "outside_target",
+    review: "unknown",
+    omitted: "not_specified",
+  }
+  return Object.fromEntries(results.map(([key, result]) => [key, translate[result.outcome]])) as Record<OwnerCriterionKey, OwnerCriterionOutcome>
+}
+
 export function calculateOpportunityMatchScore(
   repreneur: ScoringRepreneur,
   opportunity: ScoringOpportunity,

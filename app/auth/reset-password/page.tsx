@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { Loader2 } from "lucide-react"
 import { connection } from "next/server"
 import { ResetPasswordForm } from "./reset-password-form"
+import { UiText } from "@/components/i18n/ui-text"
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
@@ -31,7 +32,7 @@ function LoadingFallback() {
       <div className="w-full max-w-md">
         <div className="rounded-lg border bg-card p-8 text-center">
           <Loader2 className="mx-auto size-8 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Validation du lien...</p>
+          <p className="mt-4 text-muted-foreground"><UiText text="Validating link..." /></p>
         </div>
       </div>
     </main>

@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import WelcomeClient from './client'
 
 export const metadata: Metadata = {
-  title: 'Rejoignez Re-New | Questionnaire Repreneur',
+  title: 'Re-New | WAVE',
   description: 'Complétez votre profil repreneur et rejoignez le réseau Re-New pour votre projet d\'acquisition.',
   openGraph: {
     title: 'Rejoignez Re-New',

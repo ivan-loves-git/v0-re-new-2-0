@@ -320,6 +320,7 @@ export async function listOpportunityWorkSurfaceRecords(options?: {
       opportunity_id,
       status,
       pursuit_stage,
+      pursuit_stage_provenance,
       updated_at,
       repreneur:repreneurs(id, first_name, last_name, email, is_demo, lifecycle_status, journey_stage, recommendation, who_score, when_score)
       `,
@@ -359,9 +360,21 @@ export async function listOpportunityWorkSurfaceRecords(options?: {
     matchesByOpportunity.set(match.opportunity_id, current)
   }
 
+  const freshnessConfirmations = new Map<string, { id: string; at: string }>()
+  if (options?.includeSourceReview !== false) {
+    for (let start = 0; start < opportunityIds.length; start += matchOpportunityChunkSize) {
+      const { data, error } = await supabase.rpc("opportunity_freshness_latest_confirmations", {
+        p_opportunity_ids: opportunityIds.slice(start, start + matchOpportunityChunkSize),
+      })
+      if (error) throw new Error("The source-confirmation clock is unavailable.")
+      for (const row of data ?? []) freshnessConfirmations.set(row.opportunity_id, { id: row.confirmation_id, at: row.confirmed_at })
+    }
+  }
+
   return opportunities.map((opportunity) => ({
     ...opportunity,
     matches: matchesByOpportunity.get(opportunity.id) ?? [],
+    freshness_confirmation: freshnessConfirmations.get(opportunity.id) ?? null,
   }))
 }
 

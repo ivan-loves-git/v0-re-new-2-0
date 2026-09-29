@@ -22,6 +22,7 @@ export interface LockedOpportunityInterestStore {
     repreneurId: string
     actorId: string
     expressedAt: string
+    withdrawnExpectation?: { interestAt: string; updatedAt: string }
   }): Promise<LockedOpportunityInterestRecord>
   getNotificationDetails(input: {
     opportunityId: string
@@ -31,12 +32,14 @@ export interface LockedOpportunityInterestStore {
     matchId: string
     repreneurId: string
     opportunityId: string
+    expressedAt: string
     sentAt: string
   }): Promise<void>
 }
 
 export interface LockedOpportunityInterestNotifier {
   send(input: LockedOpportunityInterestNotificationDetails & {
+    matchId: string
     expressedAt: string
     idempotencyKey: string
   }): Promise<{ success: boolean; error?: string }>
@@ -78,6 +81,7 @@ export async function expressOpportunityInterest(
     repreneurId: string
     actorId: string
     now: string
+    withdrawnExpectation?: { interestAt: string; updatedAt: string }
   },
   dependencies: {
     store: LockedOpportunityInterestStore
@@ -89,6 +93,7 @@ export async function expressOpportunityInterest(
     repreneurId: input.repreneurId,
     actorId: input.actorId,
     expressedAt: input.now,
+    withdrawnExpectation: input.withdrawnExpectation,
   })
 
   if (interest.notificationSentAt) {
@@ -114,6 +119,7 @@ export async function expressOpportunityInterest(
     })
     const notification = await dependencies.notifier.send({
       ...details,
+      matchId: interest.matchId,
       expressedAt: interest.expressedAt,
       idempotencyKey: lockedOpportunityInterestIdempotencyKey(
         interest.matchId,
@@ -132,6 +138,7 @@ export async function expressOpportunityInterest(
       matchId: interest.matchId,
       repreneurId: input.repreneurId,
       opportunityId: input.opportunityId,
+      expressedAt: interest.expressedAt,
       sentAt: input.now,
     })
   } catch {

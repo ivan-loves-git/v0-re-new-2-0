@@ -75,6 +75,26 @@ export const translations = {
     fr: 'CV téléchargé',
     en: 'Resume uploaded',
   },
+  removeUploadedCv: {
+    fr: 'Retirer le CV téléversé',
+    en: 'Remove uploaded resume',
+  },
+  removeUploadedDocument: {
+    fr: 'Retirer le document téléversé',
+    en: 'Remove uploaded document',
+  },
+  priorityChoiceQuestion: {
+    fr: 'Pour vous, la reprise est :',
+    en: 'For you, acquiring a company is:',
+  },
+  priorityChoicePreferred: {
+    fr: 'Mon option préférentielle de carrière',
+    en: 'My preferred career path',
+  },
+  priorityChoiceOther: {
+    fr: 'Une option parmi d’autres',
+    en: 'One option among others',
+  },
   linkedin: {
     fr: 'Profil LinkedIn (optionnel)',
     en: 'LinkedIn profile (optional)',

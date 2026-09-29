@@ -70,7 +70,12 @@ describe("Staff Portal Preview DEMO counts", () => {
         data: [],
         error: null,
       })
-      if (["geography_nodes", "repreneur_geography_targets"].includes(table)) return query({ data: [], error: null })
+      if (table === "geography_nodes") return query({ data: [
+        { id: "fr", stable_key: "france", label: "France", node_level: "country", parent_id: null },
+        { id: "idf-macro", stable_key: "fr-macro-idf", label: "Île-de-France", node_level: "macro_zone", parent_id: "fr" },
+        { id: "idf-region", stable_key: "fr-region-idf", label: "Île-de-France", node_level: "region", parent_id: "idf-macro" },
+      ], error: null })
+      if (table === "repreneur_geography_targets") return query({ data: [], error: null })
       throw new Error(`Unexpected table: ${table}`)
     })
     mocks.rpc.mockImplementation((name: string) => {
@@ -88,7 +93,7 @@ describe("Staff Portal Preview DEMO counts", () => {
           revenue_meur: 2,
           ebitda_keur: 200,
           headcount: 20,
-          geography_node_id: null,
+          geography_node_id: "idf-region",
           headcount_range: "10-49",
           date_added: "2026-09-01",
           date_added_precision: "day",
@@ -99,15 +104,31 @@ describe("Staff Portal Preview DEMO counts", () => {
     })
   })
 
-  it("counts the canonical live inventory even when the repreneur owns no matches", async () => {
+  it("does not advertise a namespace-wide count as one person's deal count", async () => {
     const [option] = await listStaffPortalPreviewOptions()
 
-    expect(option.visibleOpportunityCount).toBe(1)
+    expect(option.id).toBe(repreneurId)
+    expect(option).not.toHaveProperty("visibleOpportunityCount")
     expect(mocks.requireStaffAccess).toHaveBeenCalledOnce()
-    expect(mocks.rpc).toHaveBeenCalledWith("w164_repreneur_live_inventory", {
-      p_repreneur_id: repreneurId,
-      p_opportunity_id: null,
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it("does not confuse a shared email with a role linked to a different valid profile", async () => {
+    const otherId = "00000000-0000-4000-8000-000000000099"
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "repreneurs") return query({ data: [
+        { id: repreneurId, first_name: "Ada", last_name: "One", email: "shared@example.test", lifecycle_status: "client", is_demo: false },
+        { id: otherId, first_name: "Bea", last_name: "Two", email: "shared@example.test", lifecycle_status: "client", is_demo: false },
+      ], error: null })
+      if (table === "app_user_roles") return query({ data: [
+        { role: "repreneur", email: "shared@example.test", repreneur_id: otherId },
+      ], error: null })
+      throw new Error(`Unexpected table: ${table}`)
     })
+
+    const options = await listStaffPortalPreviewOptions()
+    expect(options[0].portalRoleLinked).toBe(false)
+    expect(options[1].portalRoleLinked).toBe(true)
   })
 
   it("shows canonical live inventory to a REAL preview with zero owned matches", async () => {
@@ -118,7 +139,12 @@ describe("Staff Portal Preview DEMO counts", () => {
       opportunity_id: opportunityId,
       match_id: null,
       deal_bucket: "live",
+      geography_filter_nodes: [
+        { id: "idf-macro", equivalentNodeIds: ["idf-region"] },
+        { id: "fr" },
+      ],
     })
+    expect(result.opportunities[0]).not.toHaveProperty("geography_path_stable_keys")
     expect(mocks.rpc).toHaveBeenCalledWith("w164_repreneur_live_inventory", {
       p_repreneur_id: repreneurId,
       p_opportunity_id: null,
@@ -130,6 +156,10 @@ describe("Staff Portal Preview DEMO counts", () => {
       opportunity_id: opportunityId,
       match_id: null,
       deal_bucket: "live",
+      criteria_comparison: [
+        { key: "sector" }, { key: "geography" }, { key: "revenue" },
+        { key: "ebitda" }, { key: "margin" }, { key: "team" },
+      ],
     })
   })
 })

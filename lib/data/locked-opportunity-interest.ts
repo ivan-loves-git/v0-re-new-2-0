@@ -38,15 +38,20 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
 
   return {
     async recordInterest(input): Promise<LockedOpportunityInterestRecord> {
-      const { data, error } = await supabase.rpc(
-        "express_opportunity_interest",
-        {
+      const { data, error } = input.withdrawnExpectation
+        ? await supabase.rpc("w192_reexpress_withdrawn_interest", {
+          p_opportunity_id: input.opportunityId,
+          p_repreneur_id: input.repreneurId,
+          p_actor_id: input.actorId,
+          p_expected_withdrawn_at: input.withdrawnExpectation.interestAt,
+          p_expected_updated_at: input.withdrawnExpectation.updatedAt,
+        })
+        : await supabase.rpc("express_opportunity_interest", {
           p_opportunity_id: input.opportunityId,
           p_repreneur_id: input.repreneurId,
           p_actor_id: input.actorId,
           p_expressed_at: input.expressedAt,
-        },
-      )
+        })
 
       if (error) {
         if (isUnavailableRpcError(error)) {
@@ -140,7 +145,8 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
         .eq("id", input.matchId)
         .eq("repreneur_id", input.repreneurId)
         .eq("opportunity_id", input.opportunityId)
-        .eq("status", "interested")
+        .eq("interest_expressed_at", input.expressedAt)
+        .in("status", ["interested", "withdrawn"])
         .is("interest_notification_sent_at", null)
         .select("id")
         .maybeSingle()
@@ -149,14 +155,16 @@ export function createLockedOpportunityInterestStore(): LockedOpportunityInteres
       if (!data) {
         const { data: existing, error: existingError } = await supabase
           .from("opportunity_matches")
-          .select("id, interest_notification_sent_at")
+          .select("id, interest_expressed_at, interest_notification_sent_at")
           .eq("id", input.matchId)
           .eq("repreneur_id", input.repreneurId)
           .eq("opportunity_id", input.opportunityId)
-          .eq("status", "interested")
+          .in("status", ["interested", "withdrawn"])
           .maybeSingle()
 
         if (existingError) throw new Error(existingError.message)
+        // A later fresh interest must never inherit the old provider receipt.
+        if (existing?.interest_expressed_at !== input.expressedAt) return
         if (!existing?.interest_notification_sent_at) {
           throw new Error("Interest notification status could not be recorded")
         }

@@ -73,17 +73,20 @@ describe("repreneur portal profile scope", () => {
     const profileSummary = source("components/portal/repreneur-profile-summary.tsx")
     const dealDetail = source("components/opportunities/repreneur-opportunity-detail.tsx")
 
-    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
+    for (const field of ["Sector", "Revenue", "EBITDA", "EBITDA margin", "Employees"]) {
       expect(profileSummary).toContain(field)
     }
-    for (const field of ["Re-New ref", "Sector", "Revenue", "EBITDA", "EBITDA margin", "Team"]) {
+    for (const field of ["Sector", "Revenue", "EBITDA", "EBITDA margin", "Team"]) {
       expect(dealDetail).toContain(field)
     }
     expect(profileSummary).toContain("teaser_summary")
     expect(dealDetail).toContain("teaser_summary")
 
-    for (const field of ["opportunity.reference", "opportunity.sector", "Revenue", "EBITDA", "Margin", "Team"]) {
+    for (const field of ["opportunity.sector", "Revenue", "EBITDA", "Margin", "Team"]) {
       expect(dealList).toContain(field)
+    }
+    for (const repreneurSurface of [dealList, profileSummary, dealDetail]) {
+      expect(repreneurSurface).not.toContain("Re-New ref")
     }
     expect(dealList).toContain("opportunity.teaser_summary")
     expect(dealList).toContain("line-clamp-3")
@@ -91,7 +94,7 @@ describe("repreneur portal profile scope", () => {
     expect(dealList).not.toContain("opportunity.internal_notes")
     expect(dealList).toContain("View detail")
     expect(profileSummary).toContain("View detail")
-    expect(dealList).toContain('Added {opportunity.date_added_display ?? "-"}')
+    expect(dealList).toContain("opportunity.date_added_display_en ?? opportunity.date_added_display")
     expect(dealList).toContain("opportunity.match_id ?? opportunity.opportunity_id")
     expect(profileSummary).toContain("Date added")
   })
@@ -144,7 +147,7 @@ describe("repreneur portal profile scope", () => {
     expect(opportunityDetail).toContain("opportunity.match_id &&")
     expect(opportunityDetail).toContain("matchId={opportunity.match_id}")
     expect(opportunityDetail).toContain("const canExpressUnassignedInterest = !opportunity.match_id")
-    expect(opportunityDetail).toContain("(opportunity.match_status || canExpressUnassignedInterest) ? <Card>")
+    expect(opportunityDetail).toContain("(opportunity.match_status || canExpressUnassignedInterest) ? <Card")
   })
 
   it("resolves deal details through an owned match or the namespace-safe live inventory", () => {
@@ -162,7 +165,7 @@ describe("repreneur portal profile scope", () => {
     expect(detailGetter).toContain("if (matchResult.error) throw new Error(matchResult.error.message)")
     expect(detailGetter).toContain("const exposure = matchResult.data ? normalizeExposure(matchResult.data, repreneur) : null")
     expect(detailGetter).toContain('supabase.rpc("w164_repreneur_live_inventory"')
-    expect(detailPage).toContain("const opportunity = await getMyRepreneurOpportunity(matchId)")
+    expect(detailPage).toContain("getMyRepreneurOpportunity(matchId)")
     expect(detailPage).toContain("if (!opportunity)")
     expect(detailPage).toContain("notFound()")
   })
@@ -200,6 +203,7 @@ describe("repreneur portal profile scope", () => {
       portalOpportunities.indexOf("async function updateMyOpportunityResponse"),
     )
     const dealsPage = source("app/portal/deals/page.tsx")
+    const dealsContent = source("components/portal/portal-deals-content.tsx")
 
     expect(dealFlowProjection).toContain("const statefulDeals = matchedOpportunities")
     expect(dealFlowProjection).toContain('const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")')
@@ -211,12 +215,17 @@ describe("repreneur portal profile scope", () => {
     )
     expect(dealFlowProjection).not.toContain("const liveDeals = automaticMatching.complete ?")
     expect(detailGetter).not.toContain("if (!thesisCompleteness.complete) return null")
-    expect(dealsPage).toContain("Your current Re-New selections remain available")
-    expect(dealsPage).toContain('href="/portal/profile#target-thesis"')
+    expect(dealsPage).toContain("<PortalDealsContent result={result} sort={sort} />")
+    expect(dealsContent).toContain("Your current Re-New selections remain available")
+    expect(dealsContent).toContain('href="/portal/profile#target-thesis"')
   })
 
-  it("uses staff-only valid-email selection without invitation, offer or lifecycle gates", () => {
+  it("uses staff-only client and valid-email selection without invitation, offer or score gates", () => {
     const opportunityMatches = source("lib/actions/opportunity-matches.ts")
+    const serverEligibility = opportunityMatches.slice(
+      opportunityMatches.indexOf("async function ensureMatchNamespaceAndEmail"),
+      opportunityMatches.indexOf("async function calculateStoredPlatformMatch"),
+    )
     const pickerByOpportunity = opportunityMatches.slice(
       opportunityMatches.indexOf("export async function listOpportunityMatchCandidates"),
       opportunityMatches.indexOf("export async function listOpportunityCandidatesForRepreneur"),
@@ -232,9 +241,14 @@ describe("repreneur portal profile scope", () => {
       expect(picker).not.toContain('from("app_user_roles")')
       expect(picker).not.toContain("isAcceptedPaidMatchingClient")
     }
+    expect(serverEligibility).toContain("requireClient")
+    expect(serverEligibility).toContain('repreneur.lifecycle_status !== "client"')
     expect(pickerByOpportunity).toContain("candidate.is_demo === opportunity.is_demo")
+    expect(pickerByOpportunity).toContain('.eq("lifecycle_status", "client")')
     expect(pickerByRepreneur).toContain("opportunity.is_demo !== repreneur.is_demo")
+    expect(pickerByRepreneur).toContain('repreneur.lifecycle_status !== "client"')
     expect(pickerByRepreneur).not.toContain('.neq("repreneur_exposure", "staff_only")')
+    expect(opportunityMatches).toContain("ensureMatchNamespaceAndEmail(opportunityId, repreneurId, !existingMatch)")
   })
 
   it("excludes DEMO active-pursuit owners from the staff response read", () => {
@@ -261,6 +275,7 @@ describe("repreneur portal profile scope", () => {
 
   it("keeps Staff Portal Preview aligned with exact staff-only and dropped portal history", () => {
     const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
+    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const opportunityList = source("components/opportunities/repreneur-opportunity-list.tsx")
     const normalizePreview = staffPreview.slice(
       staffPreview.indexOf("function normalizeExposure"),
@@ -269,8 +284,8 @@ describe("repreneur portal profile scope", () => {
 
     expect(staffPreview).toContain('"active_pursuit", "dropped"')
     expect(normalizePreview).not.toContain('opportunity.repreneur_exposure === "staff_only"')
-    expect(staffPreview).toContain("listStaffPreviewRepreneurDealFlow(repreneurId)")
-    expect(staffPreview).toContain('supabase.rpc("w164_repreneur_live_inventory"')
+    expect(staffPreview).toContain('listStaffPreviewRepreneurDealFlow(repreneurId, "relevance", selectedDealId)')
+    expect(portalOpportunities).toContain('supabase.rpc("w164_repreneur_live_inventory"')
     expect(opportunityList).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped"')
   })
 

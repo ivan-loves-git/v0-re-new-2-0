@@ -8,9 +8,12 @@ import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-me
 import { queueM2StaffPursuitEvent } from "@/lib/telemetry/m2-repreneur"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
-import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
+import { preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
+import { deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
+import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
+import { RECIPIENT_IM_PAUSED_MESSAGE, recipientImOperationsPaused } from "@/lib/recipient-im-operations"
 
-export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string } | { success: false; message: string }
+export type OpportunityPursuitJourneyResult = { success: true; message: string; eventId: string; reviewId?: string } | { success: false; message: string }
 
 const evidenceAction: Partial<Record<OpportunityPursuitJourneyAction, string>> = {
   request_qualification: "qualification_requested", qualify: "intermediary_qualified", validate_template: "template_validated", pass_gate_1: "gate_1_passed",
@@ -76,6 +79,16 @@ export async function runOpportunityPursuitJourneyAction(input: {
         capture("validation_error", "validation_failed")
         return { success: false, message: "Set the NDA expiry before granting confidential access." }
       }
+      if (recipientImOperationsPaused()) {
+        const { data: candidate, error: candidateError } = await supabase.from("opportunity_documents")
+          .select("recipient_match_id").eq("id", input.documentId).maybeSingle()
+        if (candidateError || !candidate) throw new Error("The selected Information Memorandum is unavailable.")
+        if (candidate.recipient_match_id) {
+          trace.failure("validation_failed")
+          capture("validation_error", "validation_failed")
+          return { success: false, message: RECIPIENT_IM_PAUSED_MESSAGE }
+        }
+      }
       const { data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt })
       if (error) throw error
       const notificationTrace = startCriticalOperation("email.memo_notification")
@@ -116,30 +129,34 @@ export async function runOpportunityPursuitJourneyAction(input: {
     if (["continue", "drop", "reopen", "complete"].includes(input.action)) {
       const { data, error } = await supabase.rpc("journey_transition_terminal", { p_match_id: input.matchId, p_transition: input.action, p_actor: actor, p_idempotency_key: key, p_closure_reason: input.reason ?? null })
       if (error) throw error
+      let message = `Pursuit ${input.action} recorded.`
+      if (input.action === "drop") {
+        const cleanup = await processRecipientImCleanup({ matchId: input.matchId }).catch(() => null)
+        message = cleanup && cleanup.failed === 0 && cleanup.remaining === 0
+          ? cleanup.deleted > 0 ? "Pursuit dropped. Recipient IM private deletion confirmed." : "Pursuit dropped. No recipient IM private deletion is pending."
+          : "Pursuit dropped. Recipient IM access is denied; private deletion remains pending for retry."
+      }
       trace.success()
       capture("success")
-      return { success: true, message: `Pursuit ${input.action} recorded.`, eventId: data }
+      return { success: true, message, eventId: data }
     }
     if (input.action === "request_qualification") {
-      const result = await sendPursuitIntermediaryHandoff(input.matchId, "e4")
-      if (!result.success) throw new Error(result.message)
+      const result = await preparePursuitEmailReview(input.matchId, "e4")
       trace.success()
       capture("success")
-      return { success: true, message: result.message, eventId: result.eventId }
+      return { success: true, message: result.message, eventId: result.reviewId, reviewId: result.reviewId }
     }
     if (input.action === "send_nda_ready") {
-      const result = await sendPursuitNdaReadyNotice(input.matchId)
-      if (!result.success) throw new Error(result.message)
+      const result = await preparePursuitEmailReview(input.matchId, "e6")
       trace.success()
       capture("success")
-      return { success: true, message: result.message, eventId: result.eventId }
+      return { success: true, message: result.message, eventId: result.reviewId, reviewId: result.reviewId }
     }
     if (input.action === "record_dispatch") {
-      const result = await sendPursuitIntermediaryHandoff(input.matchId, "e7")
-      if (!result.success) throw new Error(result.message)
+      const result = await preparePursuitEmailReview(input.matchId, "e7")
       trace.success()
       capture("success")
-      return { success: true, message: result.message, eventId: result.eventId }
+      return { success: true, message: result.message, eventId: result.reviewId, reviewId: result.reviewId }
     }
     const eventType = evidenceAction[input.action]
     if (!eventType) {
@@ -169,7 +186,7 @@ export async function startOpportunityPursuit(matchId: string, evidenceReference
   const staff = await requireStaffAccess()
   const trace = startCriticalOperation("pursuit.start")
   return trace.failOnThrow(async () => {
-    const { data, error } = await createAdminClient().rpc("journey_start_pursuit", { p_match_id: matchId, p_actor: staff.user.email, p_idempotency_key: idempotencyKey, p_evidence_reference: evidenceReference ?? null })
+    const { data, error } = await createAdminClient().rpc("w173_revalidate_historical_pursuit", { p_match_id: matchId, p_actor: staff.user.email, p_idempotency_key: idempotencyKey, p_evidence_reference: evidenceReference ?? null })
     queueM2StaffPursuitEvent({
       userId: staff.user.id,
       action: "confirm",
@@ -177,7 +194,10 @@ export async function startOpportunityPursuit(matchId: string, evidenceReference
       ...(error ? { errorCode: "persistence_failed" as const } : {}),
     })
     if (error) trace.failure("persistence_failed")
-    else trace.success()
+    else {
+      await deliverValidationNotification(String(data)).catch(() => "failed")
+      trace.success()
+    }
     return error ? { success: false, message: error.message } : { success: true, message: "Mutual interest validated.", eventId: data }
   }, "persistence_failed")
 }

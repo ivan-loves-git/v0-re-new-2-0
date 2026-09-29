@@ -3,20 +3,28 @@ import { EmailOverview } from "./components/email-overview"
 import { EmailLog } from "./components/email-log"
 import { EmailTemplates } from "./components/email-templates"
 import { ManualSend } from "./components/manual-send"
+import { ReviewQueue } from "./components/review-queue"
+import { listStaffEmailReviews } from "@/lib/actions/staff-email-review"
 import { getEmailStats, getEmailLogs, getTemplateSettings, getDailyEmailCounts } from "@/lib/actions/emails"
 import { connection } from "next/server"
 import { Mail } from "lucide-react"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 
-export default async function EmailsPage() {
+export default async function EmailsPage({ searchParams }: {
+  searchParams: Promise<{ reviewPage?: string; reviewFilter?: string }>
+}) {
   await connection()
+  const params = await searchParams
+  const reviewPage = Number(params.reviewPage ?? "1")
+  const reviewFilter = params.reviewFilter === "all" ? "all" : "active"
 
-  const [stats, logsData, templates, dailyCounts] = await Promise.all([
+  const [stats, logsData, templates, dailyCounts, reviews] = await Promise.all([
     getEmailStats(30),
     getEmailLogs({ limit: 50 }),
     getTemplateSettings(),
     getDailyEmailCounts(14),
+    listStaffEmailReviews(reviewPage, reviewFilter),
   ])
 
   return (
@@ -24,13 +32,18 @@ export default async function EmailsPage() {
       <SectionPageHeader title="Email operations" subtitle="Monitor delivery, manage templates, and send workflow communications" icon={Mail} tone="neutral" />
 
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 sm:w-fit sm:min-w-[520px]">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="logs">History</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="send">Manual Send</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="review" className="w-full">
+        <div className="overflow-x-auto border-b border-border/80">
+          <TabsList className="w-max border-b-0">
+            <TabsTrigger value="review">Review &amp; send</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="logs">History</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+            <TabsTrigger value="send">Manual Send</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="review" className="mt-6"><ReviewQueue reviews={reviews} /></TabsContent>
 
         <TabsContent value="overview" className="mt-6">
           <EmailOverview stats={stats} dailyCounts={dailyCounts} />

@@ -88,11 +88,11 @@ describe("W-062 canonical interaction persistence", () => {
     expect(historyPanel).toContain("Owner to verify")
     expect(historyPanel).toContain("sessionStorage")
     expect(historyPanel).toContain("crypto.randomUUID()")
-    expect(historyPanel).toContain("clientOperationKey")
-    expect(historyPanel).toContain('result.operationState !== "pending"')
+    expect(historyPanel).toContain("sourceOperationId: sendOperation.key")
+    expect(historyPanel).toContain("prepareMaEmailReview")
     expect(workflow).toContain('operationState: "pending"')
     expect(workflow).toContain('operationState: "failed"')
-    expect(sendRoute).toContain("clientOperationKey")
+    expect(sendRoute).toContain("status: 410")
   })
 
   it("keeps a production-shaped disposable migration rehearsal", () => {

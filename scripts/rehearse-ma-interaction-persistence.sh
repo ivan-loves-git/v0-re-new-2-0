@@ -5,7 +5,7 @@ set -euo pipefail
 # script accepts no project environment values and never contacts Supabase.
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pg_bin="${PG_BIN:-/opt/homebrew/opt/postgresql@16/bin}"
-cluster_dir="$(mktemp -d /private/tmp/renew-w062-postgres.XXXXXX)"
+cluster_dir="$(mktemp -d "${TMPDIR:-/tmp}/renew-w062-postgres.XXXXXX")"
 port="${W062_REHEARSAL_PORT:-55462}"
 
 cleanup() {

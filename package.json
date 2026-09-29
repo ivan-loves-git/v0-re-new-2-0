@@ -20,7 +20,7 @@
     "agent:pr-status": "node scripts/agent-pr-status.mjs",
     "security:verify-pdf-worker-trace": "node scripts/verify-pdf-worker-server-trace.mjs",
     "matching-v2:refresh": "tsx scripts/refresh-matching-v2-buyer-import.ts",
-    "design:check": "node scripts/check-wave-visual-policy.mjs && node .agents/skills/impeccable/scripts/detect.mjs app components styles",
+    "design:check": "node scripts/check-wave-visual-policy.mjs",
     "data-model:check": "node scripts/check-ma-data-model-sync.mjs",
     "w098:source-preflight": "node scripts/verify-w098-source-workbook.mjs",
     "w163:titles": "tsx scripts/reconcile-w163-platform-titles.ts",

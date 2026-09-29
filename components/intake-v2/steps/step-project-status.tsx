@@ -72,7 +72,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
 
       <div className="space-y-3">
         <Label className="text-base font-medium">
-          {priorityQuestion.label} *
+          {t('priorityChoiceQuestion')} *
         </Label>
         <RadioGroup
           value={priorityValue}
@@ -94,7 +94,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
                 htmlFor={`q11-priority-${option.value}`}
                 className={`cursor-pointer font-normal leading-relaxed flex-1 ${priorityValue === option.value ? 'text-blue-900' : ''}`}
               >
-                {option.label}
+                {t(option.value === 'preferred' ? 'priorityChoicePreferred' : 'priorityChoiceOther')}
               </Label>
             </div>
           ))}

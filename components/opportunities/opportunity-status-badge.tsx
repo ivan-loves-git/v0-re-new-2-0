@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import type React from "react"
-import { Archive, CheckCircle2, CirclePause, Eye, EyeOff, FileText, Handshake, Inbox, MessageCircle, Pencil, Send, XCircle } from "lucide-react"
+import { Archive, CheckCircle2, CirclePause, Eye, EyeOff, FileCheck2, FileText, Handshake, Inbox, MessageCircle, Pencil, Send, XCircle } from "lucide-react"
 import {
   getOpportunityStatusLabel,
   getOpportunityVisibilityLabel,
@@ -46,7 +46,9 @@ export function OpportunityJourneyBadge({ journey }: { journey: OpportunityJourn
     proposed: { className: "border-transparent bg-accent text-accent-foreground hover:bg-accent", icon: Send },
     interest_received: { className: "border-transparent bg-orange-100 text-orange-800 hover:bg-orange-100", icon: MessageCircle },
     active_pursuit: { className: "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-100", icon: Handshake },
+    nda_signed: { className: "border-transparent bg-cyan-100 text-cyan-800 hover:bg-cyan-100", icon: FileCheck2 },
     info_memo_received: { className: "border-transparent bg-cyan-100 text-cyan-800 hover:bg-cyan-100", icon: FileText },
+    qa_with_ma_firm: { className: "border-transparent bg-violet-100 text-violet-800 hover:bg-violet-100", icon: Handshake },
     intermediary_meeting: { className: "border-transparent bg-violet-100 text-violet-800 hover:bg-violet-100", icon: Handshake },
     seller_meeting: { className: "border-transparent bg-violet-100 text-violet-800 hover:bg-violet-100", icon: Handshake },
     loi: { className: "border-transparent bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-100", icon: CheckCircle2 },

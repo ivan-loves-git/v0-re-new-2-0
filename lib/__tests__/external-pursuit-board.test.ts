@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { projectCanonicalJourneyToBoard } from "@/lib/utils/external-pursuit-board"
+import { canonicalJourneyUiLabel, pursuitStageUiLabel } from "@/lib/i18n/pursuit-labels"
 import {
   beginOrRetryExternalPursuitSubmission,
   captureExternalPursuitSubmission,
@@ -18,6 +19,12 @@ const sidebar = source("components/app-sidebar.tsx")
 const rehearsal = source("scripts/rehearse-external-pursuit-board.sql")
 
 describe("W-106 pursuit board", () => {
+  it("presents controlled journey stages in French while preserving unknown originals", () => {
+    expect(canonicalJourneyUiLabel("live_in_inventory", "fr")).toBe("Disponible dans le portefeuille")
+    expect(canonicalJourneyUiLabel("paused", "fr")).toBe("Suspendu")
+    expect(pursuitStageUiLabel("dropped_archived", "fr")).toBe("Interrompue / archivée")
+    expect(canonicalJourneyUiLabel("custom-stage", "fr")).toBe("custom-stage")
+  })
   it("derives the board position from the established canonical journey, not a board-owned state", () => {
     expect(projectCanonicalJourneyToBoard({ opportunityStatus: "active", matchStatus: "draft", pursuitStage: null })).toMatchObject({ journey: "matching", stage: "identified" })
     expect(projectCanonicalJourneyToBoard({ opportunityStatus: "active", matchStatus: "proposed", pursuitStage: null })).toMatchObject({ journey: "proposed", stage: "identified" })
@@ -74,10 +81,10 @@ describe("W-106 pursuit board", () => {
 
   it("keeps title-only intake, explicit staff ownership, labelled controls and responsive stage groups", () => {
     expect(board).toContain('setDraft(blankDraft())')
-    expect(board).toContain('setOwnerId("")')
+    expect(board).toContain('setOwnerId(selectedOwnerId ?? "")')
     expect(board).toContain('stage: "identified"')
     expect(board).toContain("<Label htmlFor={id}")
-    expect(board).toContain("ariaLabel={`Move ${record.title} stage`}")
+    expect(board).toContain('ariaLabel={control("Move {title} stage", { title: record.title })}')
     expect(board).toContain("grid gap-4 lg:flex lg:overflow-x-auto")
     expect(board).toContain("max-h-[90svh] overflow-y-auto")
     expect(board).toContain("Availability")

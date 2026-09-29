@@ -5,6 +5,7 @@ import Link from "next/link"
 import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
 import { StaffAssignmentEmailStatus } from "@/components/opportunities/staff-assignment-email-status"
+import { StaffInterestRejectionControl } from "@/components/opportunities/staff-interest-rejection-control"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -52,7 +53,7 @@ import {
   type OpportunityPursuitDropReason,
 } from "@/lib/types/opportunity"
 
-const STAFF_EDITABLE_STATUS_OPTIONS = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter((option) => option.value !== "active_pursuit")
+const STAFF_EDITABLE_STATUS_OPTIONS = OPPORTUNITY_MATCH_STATUS_OPTIONS.filter((option) => option.value !== "active_pursuit" && option.value !== "withdrawn")
 const REPRENEUR_EXPOSURE_STATUSES = new Set(["proposed", "interested"])
 
 interface OpportunityMatchesPanelProps {
@@ -233,7 +234,15 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setPendingActionId(matchId)
     setFeedback(null)
     try {
-      await removeOpportunityMatch(matchId, opportunityId)
+      const result = await removeOpportunityMatch(matchId, opportunityId)
+      if (!result.ok) {
+        showFeedback({
+          type: "error",
+          title: "Recommendation not removed",
+          description: result.message,
+        })
+        return
+      }
       showFeedback({
         type: "success",
         title: "Recommendation removed",
@@ -250,11 +259,11 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     }
   }
 
-  async function handleValidate(matchId: string) {
+  async function handleValidate(matchId: string, interestAt: string | null, updatedAt: string) {
     setPendingActionId(matchId)
     setFeedback(null)
     try {
-      await validateOpportunityPursuit(matchId, opportunityId)
+      await validateOpportunityPursuit(matchId, opportunityId, interestAt, updatedAt)
       showFeedback({
         type: "success",
         title: "Pursuit validated",
@@ -278,11 +287,13 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
     setPendingActionId(matchId)
     setFeedback(null)
     try {
-      await dropOpportunityPursuit(matchId, opportunityId, reason)
+      const result = await dropOpportunityPursuit(matchId, opportunityId, reason)
       showFeedback({
         type: "success",
         title: "Pursuit dropped",
-        description: "The opportunity is unlocked for another interested repreneur.",
+        description: result.cleanupPending
+          ? "The opportunity is unlocked. Recipient IM access is denied; private deletion remains pending for retry."
+          : "The opportunity is unlocked for another interested repreneur. No recipient IM private deletion is pending.",
       })
       setDropReason("")
     } catch (error) {
@@ -566,7 +577,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 ) : (
                   matches.map((match) => {
                     const isLockedByAnother = Boolean(activeMatch && activeMatch.id !== match.id)
-                    const canValidate = match.status === "interested" && !isLockedByAnother
+                    const canValidate = match.status === "interested" && !isLockedByAnother && !match.interest_rejection
                     const isPending = pendingActionId === match.id
 
                     return (
@@ -579,6 +590,8 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                           <Badge variant="outline">{getOpportunityMatchStatusLabel(match.status)}</Badge>
                           <StaffRecommendationRenewAction matchId={match.id} status={match.status} expiresAt={match.recommendation_expires_at} />
                           <StaffAssignmentEmailStatus matchId={match.id} status={match.assignment_email_status} />
+                          {match.status === "interested" && match.interest_rejection && <Badge variant="outline">Interest not selected</Badge>}
+                          {match.status === "withdrawn" && match.interest_withdrawal && <p className="max-w-56 text-xs text-muted-foreground">{match.interest_withdrawal.reason} · {match.interest_withdrawal.origin === "staff" ? "Re-New staff" : "Repreneur"} ({match.interest_withdrawal.actor})</p>}
                         </TableCell>
                         <TableCell>
                           <Badge variant={recommendationVariant(match.platform_recommendation)}>
@@ -608,11 +621,21 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                                 variant="outline"
                                 size="sm"
                                 disabled={isPending}
-                                onClick={() => void handleValidate(match.id)}
+                                onClick={() => void handleValidate(match.id, match.interest_expressed_at ?? null, match.updated_at)}
                               >
                                 <CheckCircle2 data-icon="inline-start" />
                                 Validate
                               </Button>
+                            )}
+
+                            {match.status === "interested" && (
+                              <StaffInterestRejectionControl
+                                matchId={match.id}
+                                opportunityId={opportunityId}
+                                interestAt={match.interest_expressed_at ?? null}
+                                updatedAt={match.updated_at}
+                                rejection={match.interest_rejection}
+                              />
                             )}
 
                             {match.status === "interested" && isLockedByAnother && (

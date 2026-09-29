@@ -5,8 +5,10 @@
  */
 export function displayRepreneurOpportunityGeography(
   geographyLabel: string | null | undefined,
+  language: Language = "en",
 ) {
   return geographyLabel?.trim()
     ? geographyLabel
-    : "Geography to confirm"
+    : language === "fr" ? "Zone géographique à confirmer" : "Geography to confirm"
 }
+import type { Language } from "@/lib/i18n/translations"

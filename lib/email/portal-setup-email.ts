@@ -22,6 +22,7 @@ export function renderPortalAccessSetupEmail(
         </a>
       </p>
       <p style="color: #4b5563; font-size: 14px;">Ce lien est valable pendant ${validity}.</p>
+      <p>À très vite,<br />L'équipe Re-New</p>
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
       <p style="color: #6b7280; font-size: 12px;">Re-New Platform</p>
     </div>

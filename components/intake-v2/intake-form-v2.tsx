@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { INTAKE_STEPS } from '@/lib/config/questionnaire-v2'
 import { SHOW_AUTOFILL } from '@/lib/config/intake-test-data'
 import { useLanguage } from '@/lib/i18n/language-context'
+import { publicIntakeError } from '@/lib/i18n/form-outcomes'
 import type { Language } from '@/lib/i18n/translations'
 import {
   StepContact,
@@ -365,7 +366,7 @@ export function IntakeFormV2() {
       {state.submitResult?.error && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md">
           <p className="text-sm text-red-700 dark:text-red-300">
-            {state.submitResult.error}
+            {publicIntakeError(state.submitResult.error, language)}
           </p>
         </div>
       )}

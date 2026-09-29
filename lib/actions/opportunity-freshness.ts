@@ -4,6 +4,7 @@ import { requireStaffAccess } from "@/lib/access-control"
 import {
   CANDIDATE_STALE_OPPORTUNITY_STATUSES,
   STALE_OPPORTUNITY_DAYS,
+  freshnessDueBasis,
   isCandidateStaleOpportunity,
   opportunityDaysOpen,
   parseOpportunityDate,
@@ -25,6 +26,8 @@ export interface OpportunityFreshnessReminder {
   exactDateAdded: string | null
   monthAdded: string | null
   daysOpen: number | null
+  basis: "confirmed_open" | "recorded_source_day" | "older_inventory_no_confirmation" | null
+  confirmationAt: string | null
 }
 
 export interface OpportunityFreshnessData {
@@ -128,17 +131,27 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
   )
 
   const rows = (opportunitiesResult.data ?? []) as OpportunityFreshnessRow[]
+  const latestConfirmation = new Map<string, { id: string; at: string }>()
+  for (let start = 0; start < rows.length; start += 100) {
+    const { data, error } = await supabase.rpc("opportunity_freshness_latest_confirmations", {
+      p_opportunity_ids: rows.slice(start, start + 100).map((row) => row.id),
+    })
+    if (error) throw new Error("The source confirmation clock is unavailable.")
+    for (const reply of data ?? []) latestConfirmation.set(reply.opportunity_id, { id: reply.confirmation_id, at: reply.confirmed_at })
+  }
   const reminders = rows
     .map((opportunity) => {
       const date = parseOpportunityDate(
         opportunity.date_added,
         opportunity.date_added_precision,
       )
-      const daysOpen = opportunityDaysOpen(
-        opportunity.date_added,
-        now,
-        opportunity.date_added_precision,
-      )
+      const confirmation = latestConfirmation.get(opportunity.id) ?? null
+      const due = freshnessDueBasis({
+        status: opportunity.status, isDemo: opportunity.is_demo,
+        hasActiveRealPursuit: activePursuitOpportunityIds.has(opportunity.id),
+        dateAdded: opportunity.date_added, dateAddedPrecision: opportunity.date_added_precision,
+        confirmation,
+      }, now)
 
       return {
         id: opportunity.id,
@@ -151,7 +164,7 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
         dateAdded: opportunity.date_added,
         dateAddedPrecision: opportunity.date_added_precision,
         exactDateAdded:
-          date && opportunity.date_added_precision !== "month"
+          date && opportunity.date_added_precision === "day"
             ? formatExactDate(date)
             : null,
         monthAdded: opportunity.date_added
@@ -161,7 +174,9 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
               { fallback: "" },
             )
           : null,
-        daysOpen,
+        daysOpen: due?.ageDays ?? null,
+        basis: due?.basis ?? null,
+        confirmationAt: confirmation?.at ?? null,
       }
     })
     .filter((opportunity) =>
@@ -171,6 +186,7 @@ export async function getOpportunityFreshnessData(): Promise<OpportunityFreshnes
           status: opportunity.status,
           dateAdded: opportunity.dateAdded,
           dateAddedPrecision: opportunity.dateAddedPrecision,
+          confirmation: latestConfirmation.get(opportunity.id) ?? null,
         },
         activePursuitOpportunityIds,
         now,

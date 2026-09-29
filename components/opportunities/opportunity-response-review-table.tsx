@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
+import { StaffInterestRejectionControl } from "@/components/opportunities/staff-interest-rejection-control"
 import { markOpportunityMatchReviewed, validateOpportunityPursuit } from "@/lib/actions/opportunity-matches"
+import { isPendingOpportunityResponse } from "@/lib/opportunity-response-queue"
 import {
   OPPORTUNITY_DECLINE_REASON_OPTIONS,
   getOpportunityMatchRecommendationLabel,
@@ -50,7 +52,7 @@ function declineReasonLabels(response: OpportunityMatchResponse) {
 }
 
 export function OpportunityResponseReviewTable({ responses }: OpportunityResponseReviewTableProps) {
-  const pendingCount = responses.filter((response) => !response.reviewed_at).length
+  const pendingCount = responses.filter(isPendingOpportunityResponse).length
 
   if (responses.length === 0) {
     return (
@@ -86,8 +88,12 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
             </TableHeader>
             <TableBody>
               {responses.map((response) => {
-                const reviewAction = markOpportunityMatchReviewed.bind(null, response.id, response.opportunity_id)
-                const validateAction = validateOpportunityPursuit.bind(null, response.id, response.opportunity_id)
+                const reviewAction = markOpportunityMatchReviewed.bind(null, response.id,
+                  response.opportunity_id, response.status, response.interest_expressed_at ?? null,
+                  response.updated_at)
+                const validateAction = validateOpportunityPursuit.bind(
+                  null, response.id, response.opportunity_id, response.interest_expressed_at ?? null, response.updated_at,
+                )
                 const activeLock = Boolean(response.active_pursuit_match_id)
                 return (
                   <TableRow key={response.id}>
@@ -102,7 +108,12 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                             {response.decline_reason_text ? ` - ${response.decline_reason_text}` : ""}
                           </div>
                         )}
-                        {!response.reviewed_at && (
+                        {response.status === "withdrawn" && response.interest_withdrawal && (
+                          <div className="max-w-52 text-xs text-muted-foreground">
+                            {response.interest_withdrawal.reason} · {response.interest_withdrawal.origin === "staff" ? "Re-New staff" : "Repreneur"} ({response.interest_withdrawal.actor})
+                          </div>
+                        )}
+                        {isPendingOpportunityResponse(response) && (
                           <Badge variant="outline" className="w-fit">
                             New response
                           </Badge>
@@ -146,7 +157,7 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                           </div>
                         )}
 
-                        {response.status === "interested" && !activeLock && (
+                        {response.status === "interested" && !activeLock && !response.interest_rejection && (
                           <form action={validateAction}>
                             <OpportunityReviewSubmitButton size="sm" label="Validate pursuit" pendingLabel="Validating...">
                               <ShieldCheck data-icon="inline-start" />
@@ -154,7 +165,19 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                           </form>
                         )}
 
-                        {response.reviewed_at ? (
+                        {response.status === "interested" && (
+                          <StaffInterestRejectionControl
+                            matchId={response.id}
+                            opportunityId={response.opportunity_id}
+                            interestAt={response.interest_expressed_at ?? null}
+                            updatedAt={response.updated_at}
+                            rejection={response.interest_rejection}
+                          />
+                        )}
+
+                        {response.status === "withdrawn" ? (
+                          <span className="text-sm text-muted-foreground">Historical withdrawal; no validation pending</span>
+                        ) : response.reviewed_at ? (
                           <span className="text-sm text-muted-foreground">Reviewed {formatDateTime(response.reviewed_at)}</span>
                         ) : (
                           <form action={reviewAction}>

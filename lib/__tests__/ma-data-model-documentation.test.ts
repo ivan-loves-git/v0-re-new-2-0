@@ -105,8 +105,9 @@ describe("canonical M&A data model documentation", () => {
   it("requires a validated two-party mutual-interest event before E4", () => {
     for (const rule of [
       "Repreneur records their own response",
-      "staff records and validates the intermediary/counterparty response with reliable evidence",
-      "Only the validated response pair creates a distinct mutual-interest-validation immutable event; only that event may trigger E4",
+      "staff independently records interest/decline for the exact selected repreneur under #183",
+      "staff separately records and validates the intermediary/counterparty response with reliable evidence",
+      "Only the separate validated response pair creates that immutable event and may trigger E4",
     ]) {
       expect(contract).toContain(rule)
     }

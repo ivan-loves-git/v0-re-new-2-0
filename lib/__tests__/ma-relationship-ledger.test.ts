@@ -97,4 +97,25 @@ describe("W-103 Relationship Indicators", () => {
       latestKnownAtPrecision: "month",
     })
   })
+
+  it("uses an exact recent positive reply for office and firm stale counts without changing open counts", () => {
+    const now = new Date("2026-04-02T12:00:00.000Z")
+    const indicators = buildMaRelationshipIndicators(
+      sharedLedgerFixture.offices,
+      sharedLedgerFixture.affiliations,
+      sharedLedgerFixture.opportunities,
+      sharedLedgerFixture.activePursuitOpportunityIds,
+      now,
+      new Map([["active-stale", { id: "reply-1", at: "2026-03-31T08:00:00Z" }]]),
+    )
+
+    expect(indicators.byOfficeId.get("paris")).toMatchObject({
+      openOpportunityCount: 2,
+      candidateStaleCount: 0,
+    })
+    expect(indicators.byFirmId.get("firm-a")).toMatchObject({
+      openOpportunityCount: 2,
+      candidateStaleCount: 0,
+    })
+  })
 })

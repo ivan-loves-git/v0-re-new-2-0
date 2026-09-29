@@ -19,18 +19,18 @@ interface StepReviewProps extends AssessmentStepProps {
 export function StepReview({ data, onBack, onEditStep, onSubmit, isSubmitting }: StepReviewProps) {
   const { language } = useLanguage()
 
-  const title = language === 'fr' ? 'Verification de vos reponses' : 'Review your answers'
+  const title = language === 'fr' ? 'Vérification de vos réponses' : 'Review your answers'
   const subtitle = language === 'fr'
-    ? 'Verifiez vos reponses avant de soumettre. Vous pouvez modifier une section en cliquant sur "Modifier".'
+    ? 'Vérifiez vos réponses avant de soumettre. Vous pouvez modifier une section en cliquant sur « Modifier ».'
     : 'Review your answers before submitting. You can edit a section by clicking "Edit".'
   const editLabel = language === 'fr' ? 'Modifier' : 'Edit'
-  const submitLabel = language === 'fr' ? 'Soumettre mes reponses' : 'Submit my answers'
+  const submitLabel = language === 'fr' ? 'Soumettre mes réponses' : 'Submit my answers'
   const submittingLabel = language === 'fr' ? 'Envoi en cours...' : 'Submitting...'
   const backLabel = language === 'fr' ? 'Retour' : 'Back'
 
   const blocATitle = language === 'fr' ? 'Bloc A - Profil de leadership' : 'Bloc A - Leadership Profile'
   const blocBTitle = language === 'fr' ? 'Bloc B - Mises en situation' : 'Bloc B - Situational Scenarios'
-  const blocCTitle = language === 'fr' ? 'Bloc C - Auto-evaluation' : 'Bloc C - Self-Assessment'
+  const blocCTitle = language === 'fr' ? 'Bloc C - Auto-évaluation' : 'Bloc C - Self-Assessment'
 
   return (
     <div className="flex flex-col gap-8">

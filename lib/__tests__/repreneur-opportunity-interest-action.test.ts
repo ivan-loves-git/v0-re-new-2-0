@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
   requirePortalAccess: vi.fn(),
   revalidatePath: vi.fn(),
+  deliverResponseNotification: vi.fn(),
 }));
 
 vi.mock("@/lib/access-control", () => ({
@@ -21,6 +22,10 @@ vi.mock("next/cache", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
+}));
+
+vi.mock("@/lib/email/interest-notification-delivery", () => ({
+  deliverResponseNotification: mocks.deliverResponseNotification,
 }));
 
 import { markMyOpportunityInterested } from "@/lib/actions/repreneur-opportunity-responses";
@@ -64,6 +69,7 @@ describe("repreneur opportunity interest response", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requirePortalAccess.mockResolvedValue({ repreneurId: REPRENEUR_ID });
+    mocks.deliverResponseNotification.mockResolvedValue("already_sent");
   });
 
   it("persists the owned proposed match and keeps a repeated interest response idempotent", async () => {
@@ -91,6 +97,9 @@ describe("repreneur opportunity interest response", () => {
     expect(rpc).toHaveBeenCalledTimes(2);
     expect(rpc).toHaveBeenNthCalledWith(1, "update_repreneur_opportunity_response", expectedRpc);
     expect(rpc).toHaveBeenNthCalledWith(2, "update_repreneur_opportunity_response", expectedRpc);
+    expect(mocks.deliverResponseNotification).toHaveBeenCalledTimes(2);
+    expect(mocks.deliverResponseNotification).toHaveBeenNthCalledWith(1, MATCH_ID, "interested");
+    expect(mocks.deliverResponseNotification).toHaveBeenNthCalledWith(2, MATCH_ID, "interested");
     expect(selectForMatch).toHaveBeenNthCalledWith(1, "id", MATCH_ID);
     expect(selectForMatch).toHaveBeenNthCalledWith(2, "id", MATCH_ID);
     expect(selectForRepreneur).toHaveBeenNthCalledWith(
@@ -124,6 +133,7 @@ describe("repreneur opportunity interest response", () => {
       p_repreneur_id: REPRENEUR_ID,
       p_actor_id: "",
     });
+    expect(mocks.deliverResponseNotification).not.toHaveBeenCalled();
     expect(mocks.redirect).toHaveBeenCalledWith("/portal/deals");
   });
 

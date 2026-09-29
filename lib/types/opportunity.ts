@@ -36,6 +36,7 @@ export type OpportunityMatchStatus =
   | "shortlisted"
   | "proposed"
   | "interested"
+  | "withdrawn"
   | "declined"
   | "active_pursuit"
   | "dropped"
@@ -43,7 +44,9 @@ export type OpportunityMatchStatus =
 
 export type OpportunityPursuitStage =
   | "interest"
+  | "nda_signed"
   | "info_memo_received"
+  | "qa_with_ma_firm"
   | "intermediary_meeting"
   | "seller_meeting"
   | "loi"
@@ -192,6 +195,7 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
   { value: "shortlisted", label: "Shortlisted" },
   { value: "proposed", label: "Proposed" },
   { value: "interested", label: "Interested" },
+  { value: "withdrawn", label: "Withdrawn" },
   { value: "declined", label: "Declined" },
   { value: "active_pursuit", label: "Active pursuit" },
   { value: "dropped", label: "Dropped" },
@@ -200,7 +204,9 @@ export const OPPORTUNITY_MATCH_STATUS_OPTIONS = [
 
 export const OPPORTUNITY_PURSUIT_STAGE_OPTIONS = [
   { value: "interest", label: "Interest" },
+  { value: "nda_signed", label: "NDA signed" },
   { value: "info_memo_received", label: "Info memo received" },
+  { value: "qa_with_ma_firm", label: "Q&A with M&A firm" },
   { value: "intermediary_meeting", label: "Intermediary meeting" },
   { value: "seller_meeting", label: "Seller meeting" },
   { value: "loi", label: "LOI" },
@@ -368,6 +374,8 @@ export interface MaSourceInteraction {
    */
   id: string
   opportunity_id: string
+  original_office_name?: string | null
+  original_firm_name?: string | null
   source_id?: string | null
   contact_id?: string | null
   template_key: string
@@ -430,6 +438,10 @@ export interface Opportunity {
   /** Canonical staff-only W-039 geography identity; literal location remains reader-facing. */
   geography_node_id?: string | null
   status: OpportunityStatus
+  /** Staff-only #185 choice; existing opportunities remain false. */
+  recipient_im_required?: boolean
+  recipient_im_required_changed_at?: string | null
+  recipient_im_required_changed_by?: string | null
   source_id?: string | null
   source_office_id?: string | null
   source_label?: string | null
@@ -591,12 +603,14 @@ export interface OpportunityWorkSurfaceMatch {
   opportunity_id: string
   status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   updated_at: string
   repreneur?: OpportunityMatchRepreneur | null
 }
 
 export interface OpportunityWorkSurfaceRecord extends OpportunityWithSource {
   matches: OpportunityWorkSurfaceMatch[]
+  freshness_confirmation?: { id: string; at: string } | null
 }
 
 export interface Opportunity_Insert {
@@ -666,6 +680,14 @@ export interface OpportunityDocument {
   repreneur_approved_by?: string | null
   uploaded_at: string
   updated_at: string
+  /** Immutable recipient ownership; null denotes an ordinary reusable IM. */
+  recipient_match_id?: string | null
+  recipient_repreneur_id?: string | null
+  recipient_im_cleanup_status?: "pending" | "failed" | "deleted" | null
+  recipient_im_dropped_by?: string | null
+  recipient_im_dropped_at?: string | null
+  recipient_im_drop_reason?: string | null
+  recipient_im_deletion_receipt_at?: string | null
   /** Server-read W-170 projection only; the removal RPC rechecks under lock. */
   can_remove_unused_retained?: boolean
 }
@@ -730,6 +752,10 @@ export interface OpportunityMatchRepreneur {
 }
 
 export interface OpportunityMatch extends OpportunityConfidentialityGate {
+  /** Staff-only private exact-interest decision, never a portal field. */
+  interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
+  /** Staff-only withdrawal history for the current exact request. */
+  interest_withdrawal?: { interest_expressed_at: string; reason: string; withdrawn_at: string; actor: string; origin: "owner" | "staff" } | null
   /** Staff-only readback; never projected into the repreneur portal. */
   assignment_email_status?: "pending" | "sent" | "failed" | "blocked" | "review_required" | "delivery_issue" | "unavailable" | null
   id: string
@@ -737,6 +763,7 @@ export interface OpportunityMatch extends OpportunityConfidentialityGate {
   repreneur_id: string
   status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   pursuit_stage_notes?: string | null
   pursuit_stage_updated_by?: string | null
   pursuit_stage_updated_at?: string | null
@@ -803,7 +830,7 @@ export interface OpportunityMatchResponse {
   id: string
   opportunity_id: string
   repreneur_id: string
-  status: Extract<OpportunityMatchStatus, "interested" | "declined">
+  status: Extract<OpportunityMatchStatus, "interested" | "withdrawn" | "declined">
   platform_recommendation: OpportunityMatchRecommendation
   platform_score?: number | null
   human_recommendation: OpportunityMatchRecommendation
@@ -812,6 +839,9 @@ export interface OpportunityMatchResponse {
   decline_reason_text?: string | null
   reviewed_by?: string | null
   reviewed_at?: string | null
+  interest_expressed_at?: string | null
+  interest_rejection?: { interest_expressed_at: string | null; reason: string; decided_at: string; decided_by: string; delivery_status: string } | null
+  interest_withdrawal?: OpportunityMatch["interest_withdrawal"]
   updated_at: string
   opportunity?: Pick<
     Opportunity,
@@ -864,11 +894,42 @@ export type RepreneurMemoAvailability =
   | "awaiting_confidentiality"
   | "awaiting_document_approval"
 
+export interface RepreneurPersonalReview {
+  viewed: boolean
+  reviewed: boolean
+}
+
+export type OwnerCriterionOutcome = "within_target" | "outside_target" | "not_specified" | "unknown"
+export type OwnerCriterionComparison = {
+  key: "sector" | "geography" | "revenue" | "ebitda" | "margin" | "team"
+  outcome: OwnerCriterionOutcome
+  /** Owner-entered canonical selections or numeric bounds; no matching paths. */
+  target: string[] | { min: number | null; max: number | null } | number | null
+  /** Existing portal-safe opportunity fact. */
+  actual: string | number | null
+}
+
+/** Public canonical taxonomy only; no staff matching target or stable-key path. */
+export interface RepreneurGeographyFilterNode {
+  id: string
+  label: string
+  nodeLevel: OpportunityGeographyOption["node_level"] | null
+  parentLabel: string | null
+  /** A second stored canonical ID represented by this one selectable area. */
+  equivalentNodeIds?: string[]
+}
+
 export interface RepreneurOpportunityExposure {
+  /** Detail-only fresh comparison. It never controls recommendation or access. */
+  criteria_comparison?: OwnerCriterionComparison[]
+  /** Own navigation state only; null means unavailable, absent means no personal projection. */
+  personal_review?: RepreneurPersonalReview | null
   match_id: string
   match_status: OpportunityMatchStatus
   pursuit_stage?: OpportunityPursuitStage | null
   pursuit_stage_updated_at?: string | null
+  /** Safe explanation only; it never grants document access or establishes a gate. */
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
@@ -881,6 +942,12 @@ export interface RepreneurOpportunityExposure {
   geography_node_id?: string | null
   /** Canonical geography label paired with the portal-safe node identity. */
   geography_label?: string | null
+  /** Display-only taxonomy level used to order the portal geography filter. */
+  geography_node_level?: OpportunityGeographyOption["node_level"] | null
+  /** Display-only canonical parent label used when geography labels collide. */
+  geography_parent_label?: string | null
+  /** This opportunity's selectable canonical geography ancestors, self first. */
+  geography_filter_nodes?: RepreneurGeographyFilterNode[]
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null
@@ -893,9 +960,13 @@ export interface RepreneurOpportunityExposure {
   date_added?: string | null
   /** Server-formatted; the staff-only precision enum is never serialized to the portal. */
   date_added_display?: string
+  /** Same source precision, preformatted for an interface-only EN switch. */
+  date_added_display_en?: string
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
+  /** Public outcome only; private reason and actor are never serialized. */
+  interest_rejected?: boolean
   interest_notification_sent_at?: string | null
   recommendation_expires_at?: string | null
   updated_at: string
@@ -905,10 +976,13 @@ export interface RepreneurOpportunityExposure {
 }
 
 export interface RepreneurDealFlowOpportunity {
+  criteria_comparison?: OwnerCriterionComparison[]
+  personal_review?: RepreneurPersonalReview | null
   match_id: string | null
   match_status: OpportunityMatchStatus | null
   pursuit_stage?: OpportunityPursuitStage | null
   pursuit_stage_updated_at?: string | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status?: OpportunityNdaStatus | null
   nda_updated_at?: string | null
   visible_documents: RepreneurOpportunityDocument[]
@@ -921,6 +995,12 @@ export interface RepreneurDealFlowOpportunity {
   geography_node_id?: string | null
   /** Canonical geography label paired with the portal-safe node identity. */
   geography_label?: string | null
+  /** Display-only taxonomy level used to order the portal geography filter. */
+  geography_node_level?: OpportunityGeographyOption["node_level"] | null
+  /** Display-only canonical parent label used when geography labels collide. */
+  geography_parent_label?: string | null
+  /** This opportunity's selectable canonical geography ancestors, self first. */
+  geography_filter_nodes?: RepreneurGeographyFilterNode[]
   /** Canonical 16-sector identity used by portal filters. */
   canonical_sector?: string | null
   sector?: string | null
@@ -933,9 +1013,13 @@ export interface RepreneurDealFlowOpportunity {
   date_added?: string | null
   /** Server-formatted; the staff-only precision enum is never serialized to the portal. */
   date_added_display?: string
+  /** Same source precision, preformatted for an interface-only EN switch. */
+  date_added_display_en?: string
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
   decline_reason_text?: string | null
   interest_expressed_at?: string | null
+  /** Public outcome only; private reason and actor are never serialized. */
+  interest_rejected?: boolean
   interest_notification_sent_at?: string | null
   recommendation_expires_at?: string | null
   updated_at: string

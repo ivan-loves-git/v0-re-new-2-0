@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { updateExternalPursuitFollowUp } from "@/lib/actions/external-pursuits"
+import { updateSelectedExternalPursuitFollowUp } from "@/lib/actions/staff-portal-external"
 import {
   EXTERNAL_PURSUIT_AVAILABILITY,
   type ExternalPursuitAvailability,
@@ -22,8 +23,13 @@ import {
   type FollowUpAttempt,
 } from "@/lib/external-pursuit-follow-up"
 import type { ExternalPursuitOperationLockHandler } from "@/lib/external-pursuit-operation-lock"
-import { externalPursuitDueState, externalPursuitDueStateLabel } from "@/lib/utils/external-pursuit-due-state"
+import { externalPursuitDueState } from "@/lib/utils/external-pursuit-due-state"
 import { captureExternalPursuitCompleted } from "@/lib/telemetry/external-pursuit-client"
+import { useUiLanguage } from "@/components/i18n/ui-text"
+import { uiCopy, type UiCopyKey } from "@/lib/i18n/ui-copy"
+import { pursuitAvailabilityUiLabel, pursuitDueUiLabel } from "@/lib/i18n/pursuit-labels"
+import { publicPursuitOutcome } from "@/lib/i18n/pursuit-outcomes"
+import type { Language } from "@/lib/i18n/translations"
 
 export type ExternalPursuitFollowUpPanelProps = {
   pursuitId: string
@@ -31,13 +37,7 @@ export type ExternalPursuitFollowUpPanelProps = {
   followUp: ExternalPursuitFollowUpSnapshot
   onSaved?: () => void
   onOperationLockChange?: ExternalPursuitOperationLockHandler
-}
-
-const availabilityLabels: Record<ExternalPursuitAvailability, string> = {
-  available: "Available",
-  limited: "Limited availability",
-  unavailable: "Unavailable",
-  unknown: "Availability unknown",
+  staffPortalSelection?: { ownerId: string; token: string }
 }
 
 const stateTone = {
@@ -57,7 +57,13 @@ export function ExternalPursuitFollowUpPanel({
   followUp,
   onSaved,
   onOperationLockChange,
+  staffPortalSelection,
 }: ExternalPursuitFollowUpPanelProps) {
+  const customerLanguage = useUiLanguage()
+  const language: Language = role === "staff" ? "en" : customerLanguage
+  const copy = (key: UiCopyKey) => uiCopy(language, key)
+  const outcome = (message: unknown, fallback: UiCopyKey) =>
+    role === "staff" && typeof message === "string" ? message : publicPursuitOutcome(message, language, fallback)
   const prefix = useId()
   const operationLockToken = `external-pursuit-follow-up:${pursuitId}:${prefix}`
   const operationLockHeld = useRef(false)
@@ -99,7 +105,7 @@ export function ExternalPursuitFollowUpPanel({
       availability,
       dueAt: dueAt || null,
       sharedNotes,
-      ...(role === "staff" ? { staffInternalNotes } : {}),
+      ...(role === "staff" && !staffPortalSelection ? { staffInternalNotes } : {}),
     }
     const attempt = externalPursuitFollowUpSubmission({
       recovery: recoveryAttempt,
@@ -110,7 +116,7 @@ export function ExternalPursuitFollowUpPanel({
       makeKey: () => globalThis.crypto.randomUUID(),
     })
     if (!attempt) {
-      toast.message("Follow-up is already current")
+      toast.message(copy("Follow-up is already current"))
       return
     }
     attemptRef.current = attempt
@@ -119,12 +125,15 @@ export function ExternalPursuitFollowUpPanel({
     startTransition(async () => {
       let result
       try {
-        result = await updateExternalPursuitFollowUp(pursuitId, attempt.patch, attempt.idempotencyKey)
+        result = staffPortalSelection
+          ? await updateSelectedExternalPursuitFollowUp(staffPortalSelection.ownerId, staffPortalSelection.token,
+              pursuitId, attempt.patch, attempt.idempotencyKey)
+          : await updateExternalPursuitFollowUp(pursuitId, attempt.patch, attempt.idempotencyKey)
       } catch {
         const retryMessage = "The save result is unclear. Fields are locked until you retry this exact save."
         setRecoveryAttempt(attempt)
         setFormError(retryMessage)
-        toast.error("Follow-up not confirmed", { description: retryMessage })
+        toast.error(copy("Follow-up not confirmed"), { description: copy("The save result is unclear. Fields are locked until you retry this exact save.") })
         return
       }
       if (!result.success) {
@@ -132,12 +141,12 @@ export function ExternalPursuitFollowUpPanel({
           const retryMessage = "The save result is unclear. Fields are locked until you retry this exact save."
           setRecoveryAttempt(attempt)
           setFormError(retryMessage)
-          toast.error("Follow-up not confirmed", { description: retryMessage })
+          toast.error(copy("Follow-up not confirmed"), { description: copy("The save result is unclear. Fields are locked until you retry this exact save.") })
           return
         }
         releaseOperationLock()
         setFormError(result.message)
-        toast.error("Follow-up not updated", { description: result.message })
+        toast.error(copy("Follow-up not updated"), { description: outcome(result.message, "Could not update follow-up.") })
         return
       }
       baselineRef.current = attempt.snapshot
@@ -151,7 +160,7 @@ export function ExternalPursuitFollowUpPanel({
       if (role === "staff") setStaffInternalNotes(attempt.snapshot.staffInternalNotes ?? "")
       captureExternalPursuitCompleted(role, "update")
       releaseOperationLock()
-      toast.success("Follow-up updated")
+      toast.success(copy("Follow-up updated"))
       onSaved?.()
     })
   }
@@ -160,54 +169,54 @@ export function ExternalPursuitFollowUpPanel({
     <Card>
       <CardHeader className="gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 text-base"><CalendarClock className="size-4" /> Follow-up</CardTitle>
-          <Badge variant="outline" className={stateTone[dueState]}>{externalPursuitDueStateLabel(dueState)}</Badge>
+          <CardTitle className="flex items-center gap-2 text-base"><CalendarClock className="size-4" /> {copy("Follow-up")}</CardTitle>
+          <Badge variant="outline" className={stateTone[dueState]}>{pursuitDueUiLabel(dueState, language)}</Badge>
         </div>
-        <CardDescription>Keep the next concrete step, availability and notes current. This does not send reminders or messages.</CardDescription>
+        <CardDescription>{copy("Keep the next concrete step, availability and notes current. This does not send reminders or messages.")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        {formError ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{formError}</p> : null}
+        {formError ? <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{outcome(formError, "Could not update follow-up.")}</p> : null}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor={`${prefix}-next-action`}>Next action</Label>
-            <Input id={`${prefix}-next-action`} value={nextAction} onChange={(event) => setNextAction(event.target.value)} placeholder="For example, request the information memorandum" disabled={controlsLocked} />
+            <Label htmlFor={`${prefix}-next-action`}>{copy("Next action")}</Label>
+            <Input id={`${prefix}-next-action`} value={nextAction} onChange={(event) => setNextAction(event.target.value)} placeholder={copy("For example, request the information memorandum")} disabled={controlsLocked} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${prefix}-responsible-party`}>Responsible</Label>
+            <Label htmlFor={`${prefix}-responsible-party`}>{copy("Responsible")}</Label>
             <div className="flex gap-2">
               <Select value={responsibleParty} onValueChange={(value) => setResponsibleParty(value as ExternalPursuitResponsibleParty)} disabled={controlsLocked}>
-                <SelectTrigger id={`${prefix}-responsible-party`} className="w-full"><SelectValue placeholder="Choose responsibility" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="owner">Owner</SelectItem>
-                  <SelectItem value="staff">Re-New staff</SelectItem>
+                <SelectTrigger id={`${prefix}-responsible-party`} className="w-full"><SelectValue placeholder={copy("Choose responsibility")} /></SelectTrigger>
+                <SelectContent lang={language}>
+                  <SelectItem value="owner">{copy("Owner")}</SelectItem>
+                  <SelectItem value="staff">{copy("Re-New staff")}</SelectItem>
                 </SelectContent>
               </Select>
-              {responsibleParty ? <Button type="button" variant="outline" onClick={() => { setNextAction(""); setResponsibleParty("") }} disabled={controlsLocked}>Clear</Button> : null}
+              {responsibleParty ? <Button type="button" variant="outline" onClick={() => { setNextAction(""); setResponsibleParty("") }} disabled={controlsLocked}>{copy("Clear")}</Button> : null}
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${prefix}-due-at`}>Due date</Label>
+            <Label htmlFor={`${prefix}-due-at`}>{copy("Due date")}</Label>
             <Input id={`${prefix}-due-at`} type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} disabled={controlsLocked} />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor={`${prefix}-availability`}>Availability</Label>
+            <Label htmlFor={`${prefix}-availability`}>{copy("Availability")}</Label>
             <Select value={availability} onValueChange={(value) => setAvailability(value as ExternalPursuitAvailability)} disabled={controlsLocked}>
               <SelectTrigger id={`${prefix}-availability`} className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{EXTERNAL_PURSUIT_AVAILABILITY.map((value) => <SelectItem key={value} value={value}>{availabilityLabels[value]}</SelectItem>)}</SelectContent>
+              <SelectContent lang={language}>{EXTERNAL_PURSUIT_AVAILABILITY.map((value) => <SelectItem key={value} value={value}>{pursuitAvailabilityUiLabel(value, language)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${prefix}-shared-notes`}>Shared notes</Label>
+          <Label htmlFor={`${prefix}-shared-notes`}>{copy("Shared notes")}</Label>
           <Textarea id={`${prefix}-shared-notes`} value={sharedNotes} onChange={(event) => setSharedNotes(event.target.value)} disabled={controlsLocked} />
         </div>
-        {role === "staff" ? <div className="space-y-2 rounded-md border bg-muted/30 p-4">
+        {role === "staff" && !staffPortalSelection ? <div className="space-y-2 rounded-md border bg-muted/30 p-4">
           <Label htmlFor={`${prefix}-staff-notes`}>Staff-only notes</Label>
           <p className="text-sm text-muted-foreground">Visible to Re-New staff only; never shown in the owner portal.</p>
           <Textarea id={`${prefix}-staff-notes`} value={staffInternalNotes} onChange={(event) => setStaffInternalNotes(event.target.value)} disabled={controlsLocked} />
         </div> : null}
         <Button type="button" onClick={submit} disabled={isPending}>
-          <Save className="size-4" /> {isPending ? "Saving…" : recoveryAttempt ? "Retry exact save" : "Save follow-up"}
+          <Save className="size-4" /> {copy(isPending ? "Saving…" : recoveryAttempt ? "Retry exact save" : "Save follow-up")}
         </Button>
       </CardContent>
     </Card>

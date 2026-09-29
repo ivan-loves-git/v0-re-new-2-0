@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { WHEN_QUESTIONS } from '@/lib/config/questionnaire-v2'
 import { useLanguage } from '@/lib/i18n/language-context'
+import { publicIntakeError } from '@/lib/i18n/form-outcomes'
 import type { IntakeV2StepProps } from '@/lib/types/intake-v2'
 import { Info } from 'lucide-react'
 
@@ -277,7 +278,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
           </p>
         </div>
         {errors.target_thesis && (
-          <p role="alert" className="text-sm text-red-500">{errors.target_thesis}</p>
+          <p role="alert" className="text-sm text-red-500">{publicIntakeError(errors.target_thesis, language)}</p>
         )}
         <div className="grid gap-3 md:grid-cols-3">
           <div className="grid grid-cols-2 gap-2">

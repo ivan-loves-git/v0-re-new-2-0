@@ -4,10 +4,11 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { requireStaffAccess } from "@/lib/access-control"
 import { sendEmail } from "@/lib/email"
 import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-content"
+import { resolveTemplateSubject } from "@/lib/email/template-default-subjects"
 import { revalidatePath } from "next/cache"
 import { render } from "@react-email/render"
 import type { EmailTemplateKey } from "@/lib/types/email"
-import { MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
+import { INTEREST_TEMPLATE_DEFAULT_BODIES, MA_TEMPLATE_DEFAULT_BODIES, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getSuppressedMaContactEmailAddresses } from "@/lib/email/ma-contact-email-authorization"
 
 // Import all email templates
@@ -25,6 +26,9 @@ import { InterviewReminderEmail } from "@/lib/email/templates/interview-reminder
 import { BookingReminderEmail } from "@/lib/email/templates/booking-reminder"
 import { MaIntermediaryEmail } from "@/lib/email/templates/ma-intermediary"
 import { RecommendationAssignmentEmailV1, RECOMMENDATION_ASSIGNMENT_SUBJECT_V1 } from "@/lib/email/templates/recommendation-assignment-v1"
+import { InterestNotificationEmail } from "@/lib/email/templates/interest-notification"
+import { MemoFeedbackReminderEmail } from "@/lib/email/templates/memo-feedback-reminder"
+import { RecommendationCycleNotificationEmail } from "@/lib/email/templates/recommendation-cycle-notification"
 
 const MA_SAMPLE_VARIABLES = {
   firstName: "Camille",
@@ -201,7 +205,10 @@ export async function getTemplateSettings() {
     throw new Error(error.message)
   }
 
-  return data || []
+  return (data || []).map((template) => ({
+    ...template,
+    subject: resolveTemplateSubject(template.template_key as EmailTemplateKey, template.subject),
+  }))
 }
 
 /**
@@ -211,14 +218,13 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
   await requireStaffAccess()
   const supabase = createAdminClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("email_templates")
     .update({ is_active: enabled })
     .eq("template_key", templateKey)
+    .select("template_key")
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error || !data?.length) throw new Error(error?.message ?? "This template is unavailable and remains inactive.")
 
   revalidatePath("/emails")
 }
@@ -232,19 +238,18 @@ export async function updateTemplateSettings(
   settings: { subject?: string; preview_text?: string; body_markdown?: string }
 ) {
   await requireStaffAccess()
-  if (TEMPLATE_METADATA[templateKey]?.manualSend === false) {
+  if (TEMPLATE_METADATA[templateKey]?.manualSend === false && TEMPLATE_METADATA[templateKey]?.copyEditable !== true) {
     throw new Error("This notification uses immutable versioned copy. Its content cannot be edited here.")
   }
   const supabase = createAdminClient()
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("email_templates")
     .update(settings)
     .eq("template_key", templateKey)
+    .select("template_key")
 
-  if (error) {
-    throw new Error(error.message)
-  }
+  if (error || !data?.length) throw new Error(error?.message ?? "This template is unavailable and cannot be edited.")
 
   revalidatePath("/emails")
 }
@@ -269,9 +274,9 @@ export async function getRenderedTemplate(
     .select("subject, body_markdown, body_editable")
     .eq("template_key", templateKey)
     .single()
-  const subject = row?.subject || TEMPLATE_METADATA[templateKey]?.name || ""
+  const subject = resolveTemplateSubject(templateKey, row?.subject, TEMPLATE_METADATA[templateKey]?.name)
   const bodyEditable = !!row?.body_editable
-  const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
+  const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
   const bodyMarkdown: string | null = bodyEditable ? (row?.body_markdown?.trim() || fallbackBody) : null
   const bodyOverride = bodyMarkdown ?? undefined
 
@@ -298,6 +303,7 @@ export async function getRenderedTemplate(
     case "thank_you":
       element = ThankYouEmail({
         repreneur: sampleRepreneur,
+        bodyOverride,
         metadata: { whoScore: 85, whenScore: 70, recommendation: "interview" },
       })
       break
@@ -343,6 +349,48 @@ export async function getRenderedTemplate(
     case "booking_reminder":
       element = BookingReminderEmail({ repreneur: sampleRepreneur, bodyOverride })
       break
+    case "interest_outcome_validated":
+    case "interest_outcome_rejected":
+    case "proposed_opportunity_response_staff": {
+      const variables = {
+        firstName: "Sophie", repreneurName: "Sophie Martin",
+        opportunityTitle: "Opportunité fictive", responseLabel: "avec intérêt",
+      }
+      element = InterestNotificationEmail({
+        subject: substituteTemplateVariables(subject, variables),
+        body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
+        variables,
+        staff: templateKey === "proposed_opportunity_response_staff",
+      })
+      break
+    }
+    case "memo_feedback_reminder": {
+      const variables = {
+        firstName: "Sophie",
+        opportunityTitle: "Opportunité fictive",
+      }
+      element = MemoFeedbackReminderEmail({
+        subject: substituteTemplateVariables(subject, variables),
+        body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
+        variables,
+      })
+      break
+    }
+    case "recommendation_response_reminder":
+    case "recommendation_unanswered_staff_alert": {
+      const variables = {
+        firstName: "Sophie",
+        repreneurName: "Sophie Martin",
+        opportunityTitle: "Opportunité fictive",
+      }
+      element = RecommendationCycleNotificationEmail({
+        subject: substituteTemplateVariables(subject, variables),
+        body: bodyMarkdown ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? "",
+        variables,
+        staff: templateKey === "recommendation_unanswered_staff_alert",
+      })
+      break
+    }
     case "ma_opportunity_validity_check":
     case "ma_request_more_information":
     case "ma_repreneur_interest_feedback":
@@ -443,8 +491,8 @@ export async function sendManualEmail(
 
   switch (templateKey) {
     case "welcome":
-      template = WelcomeEmail({ repreneur: emailData })
-      subject = "Bienvenue chez Re-New"
+      template = WelcomeEmail({ repreneur: emailData, bodyOverride: await getTemplateBody("welcome") })
+      subject = await getTemplateSubject("welcome", "Votre inscription Re-New est confirmée")
       break
     case "form_step_complete":
       template = FormStepCompleteEmail({ repreneur: emailData, metadata })
@@ -455,8 +503,8 @@ export async function sendManualEmail(
       subject = "Finalisez votre profil repreneur"
       break
     case "thank_you":
-      template = ThankYouEmail({ repreneur: emailData, metadata })
-      subject = "Merci pour votre inscription Re-New"
+      template = ThankYouEmail({ repreneur: emailData, metadata, bodyOverride: await getTemplateBody("thank_you") })
+      subject = await getTemplateSubject("thank_you", "Votre inscription Re-New est confirmée")
       break
     case "high_score_alert":
       template = HighScoreAlertEmail({ repreneur: emailData, metadata })
@@ -480,7 +528,7 @@ export async function sendManualEmail(
       break
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
-      subject = "Suite à la revue de votre dossier repreneur"
+      subject = await getTemplateSubject("rejection", "Suite à la revue de votre dossier repreneur")
       break
     case "interview_reminder":
       template = InterviewReminderEmail({
@@ -489,14 +537,14 @@ export async function sendManualEmail(
           interviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         },
       })
-      subject = "Rappel de votre entretien Re-New"
+      subject = await getTemplateSubject("interview_reminder", "Rappel — votre entretien avec Re-New")
       break
     case "booking_reminder":
       template = BookingReminderEmail({
         repreneur: emailData,
         bodyOverride: await getTemplateBody(templateKey),
       })
-      subject = "Planifiez votre entretien Re-New"
+      subject = await getTemplateSubject("booking_reminder", "Réservez votre entretien avec Re-New")
       break
     default:
       throw new Error(`Unknown template: ${templateKey}`)
@@ -596,8 +644,8 @@ export async function sendTestEmail(
 
   switch (templateKey) {
     case "welcome":
-      template = WelcomeEmail({ repreneur: emailData })
-      subject = "[TEST] Bienvenue chez Re-New"
+      template = WelcomeEmail({ repreneur: emailData, bodyOverride: await getTemplateBody("welcome") })
+      subject = `[TEST] ${await getTemplateSubject("welcome", "Votre inscription Re-New est confirmée")}`
       break
     case "form_step_complete":
       template = FormStepCompleteEmail({ repreneur: emailData, metadata })
@@ -608,8 +656,8 @@ export async function sendTestEmail(
       subject = "[TEST] Finalisez votre profil repreneur"
       break
     case "thank_you":
-      template = ThankYouEmail({ repreneur: emailData, metadata })
-      subject = "[TEST] Merci pour votre inscription Re-New"
+      template = ThankYouEmail({ repreneur: emailData, metadata, bodyOverride: await getTemplateBody("thank_you") })
+      subject = `[TEST] ${await getTemplateSubject("thank_you", "Votre inscription Re-New est confirmée")}`
       break
     case "high_score_alert":
       template = HighScoreAlertEmail({ repreneur: emailData, metadata })
@@ -633,21 +681,21 @@ export async function sendTestEmail(
       break
     case "rejection":
       template = RejectionEmail({ repreneur: emailData })
-      subject = "[TEST] Suite à la revue de votre dossier repreneur"
+      subject = `[TEST] ${await getTemplateSubject("rejection", "Suite à la revue de votre dossier repreneur")}`
       break
     case "interview_reminder":
       template = InterviewReminderEmail({
         repreneur: emailData,
         metadata: { interviewAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() },
       })
-      subject = "[TEST] Rappel de votre entretien Re-New"
+      subject = `[TEST] ${await getTemplateSubject("interview_reminder", "Rappel — votre entretien avec Re-New")}`
       break
     case "booking_reminder":
       template = BookingReminderEmail({
         repreneur: emailData,
         bodyOverride: await getTemplateBody(templateKey),
       })
-      subject = "[TEST] Planifiez votre entretien Re-New"
+      subject = `[TEST] ${await getTemplateSubject("booking_reminder", "Réservez votre entretien avec Re-New")}`
       break
     default:
       return { success: false, message: `Unknown template: ${templateKey}` }

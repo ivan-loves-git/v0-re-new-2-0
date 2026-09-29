@@ -1,20 +1,26 @@
 import "server-only"
 
+import { readPersonalOpportunityReviews } from "@/lib/data/repreneur-opportunity-review"
+
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import { listLockedOpportunityInterestStateByMatch } from "@/lib/data/locked-opportunity-interest-state"
+import { readRepreneurInterestStates } from "@/lib/data/opportunity-interest-decisions"
 import {
   safeRepreneurOpportunityTitle,
   safeRepreneurTeaserSummary,
 } from "@/lib/opportunity-confidentiality"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
-import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
+import { calculateOpportunityMatchScore, compareOwnerOpportunityCriteria } from "@/lib/utils/opportunity-match-scoring"
+import { canonicalTargetThesisValues, targetThesisLabels } from "@/lib/repreneur-target-thesis"
+import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
 import {
   loadMatchingGeographyContext,
   withMatchingGeography,
   withMatchingGeographyTargets,
+  withRepreneurGeographyLabel,
 } from "@/lib/repreneur-opportunity-geography"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { classifyRepreneurDeal } from "@/lib/repreneur-deal-buckets"
@@ -32,9 +38,10 @@ import type {
   RepreneurDealFlowOpportunity,
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
+  OwnerCriterionComparison,
 } from "@/lib/types/opportunity"
 
-const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit", "dropped"]
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "withdrawn", "declined", "active_pursuit", "dropped"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
@@ -84,10 +91,14 @@ type RepreneurDealFlowOpportunityRow = {
   headcount: number | null
   geography_node_id: string | null
   geography_label?: string | null
+  geography_node_level?: "country" | "macro_zone" | "region" | null
+  geography_parent_label?: string | null
+  geography_filter_nodes?: RepreneurDealFlowOpportunity["geography_filter_nodes"]
   headcount_range: string | null
   date_added: string | null
   date_added_precision: "day" | "month" | null
   updated_at: string
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
 }
 
 function normalizeProfile(row: any): RepreneurOpportunityProfile {
@@ -119,6 +130,7 @@ function normalizeExposure(
     match_status: row.status,
     pursuit_stage: row.pursuit_stage,
     pursuit_stage_updated_at: row.pursuit_stage_updated_at,
+    pursuit_stage_provenance: row.pursuit_stage_provenance ?? null,
     nda_status: row.nda_status,
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
@@ -132,6 +144,9 @@ function normalizeExposure(
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -144,6 +159,11 @@ function normalizeExposure(
     date_added_display: formatOpportunitySourceDate(
       opportunity.date_added,
       opportunity.date_added_precision,
+    ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
     ),
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
@@ -249,13 +269,14 @@ async function getRepreneurDealFlowProfileById(
 
 function withStaffRecommendation(
   opportunity: RepreneurOpportunityExposure,
+  currentProposedResponse: boolean,
 ): RepreneurDealFlowOpportunity {
   return {
     ...opportunity,
-    // A staff-proposed match remains a Re-New recommendation after the
-    // repreneur accepts it. Only the timestamp written by the self-interest
-    // RPC distinguishes an independently discovered signal from that path.
-    is_staff_recommended: !opportunity.interest_expressed_at,
+    // The exact immutable proposed-response event preserves recommendation
+    // provenance after acceptance. The null timestamp remains the historical
+    // fallback for as-yet-unanswered proposals; self-interest has no event.
+    is_staff_recommended: currentProposedResponse || !opportunity.interest_expressed_at,
     is_outside_current_criteria: false,
   }
 }
@@ -286,6 +307,44 @@ function isDefined<T>(value: T | null): value is T {
   return value !== null
 }
 
+function selection(value: string | string[] | null | undefined) {
+  return Array.isArray(value) ? value : value ? [value] : []
+}
+
+async function ownerCriteriaForDeal(
+  supabase: ReturnType<typeof createAdminClient>,
+  repreneur: RepreneurDealFlowProfile,
+  opportunity: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity,
+): Promise<OwnerCriterionComparison[]> {
+  const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
+  const ownerWithGeography = withMatchingGeographyTargets(repreneur, geography)
+  const dealWithGeography = withMatchingGeography(opportunity, geography)
+  const outcomes = compareOwnerOpportunityCriteria(ownerWithGeography, dealWithGeography)
+  const geoValues = selection(repreneur.q12_geo_zones).length
+    ? selection(repreneur.q12_geo_zones) : selection(repreneur.target_location)
+  const sectorValues = selection(repreneur.q13_target_sectors_v2).length
+    ? selection(repreneur.q13_target_sectors_v2) : selection(repreneur.sector_preferences)
+  const targetGeographies = targetThesisLabels(
+    canonicalTargetThesisValues(geoValues, WHEN_QUESTIONS.q12.options, "geography"),
+    WHEN_QUESTIONS.q12.options,
+  )
+  const targetSectors = targetThesisLabels(
+    canonicalTargetThesisValues(sectorValues, WHEN_QUESTIONS.q13.options, "sector"),
+    WHEN_QUESTIONS.q13.options,
+  )
+  const range = (min: number | null | undefined, max: number | null | undefined) => ({ min: min ?? null, max: max ?? null })
+  const margin = opportunity.revenue_meur != null && opportunity.revenue_meur > 0 && opportunity.ebitda_keur != null
+    ? (opportunity.ebitda_keur / (opportunity.revenue_meur * 1000)) * 100 : null
+  return [
+    { key: "sector", outcome: outcomes.sector, target: targetSectors, actual: opportunity.sector ?? opportunity.activity ?? null },
+    { key: "geography", outcome: outcomes.geography, target: targetGeographies, actual: opportunity.geography_label ?? opportunity.location ?? null },
+    { key: "revenue", outcome: outcomes.revenue, target: range(repreneur.target_revenue_min_meur, repreneur.target_revenue_max_meur), actual: opportunity.revenue_meur ?? null },
+    { key: "ebitda", outcome: outcomes.ebitda, target: range(repreneur.target_ebitda_min_keur, repreneur.target_ebitda_max_keur), actual: opportunity.ebitda_keur ?? null },
+    { key: "margin", outcome: outcomes.margin, target: repreneur.target_ebitda_margin_min_pct ?? null, actual: Number.isFinite(margin) ? margin : null },
+    { key: "team", outcome: outcomes.team, target: range(repreneur.target_staff_size_min, repreneur.target_staff_size_max), actual: opportunity.headcount ?? null },
+  ]
+}
+
 function toDealFlowOpportunity(
   opportunity: RepreneurDealFlowOpportunityRow,
   repreneur: RepreneurDealFlowProfile,
@@ -306,6 +365,9 @@ function toDealFlowOpportunity(
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -318,6 +380,11 @@ function toDealFlowOpportunity(
     date_added_display: formatOpportunitySourceDate(
       opportunity.date_added,
       opportunity.date_added_precision,
+    ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
     ),
     updated_at: opportunity.updated_at,
     is_staff_recommended: false,
@@ -344,6 +411,9 @@ function toNeutralDealFlowOpportunity(
     ),
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: normalizeOpportunitySector(opportunity.sector),
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -356,6 +426,11 @@ function toNeutralDealFlowOpportunity(
     date_added_display: formatOpportunitySourceDate(
       opportunity.date_added,
       opportunity.date_added_precision,
+    ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
     ),
     updated_at: opportunity.updated_at,
     is_staff_recommended: false,
@@ -371,6 +446,7 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     match_status: opportunity.match_status,
     pursuit_stage: opportunity.pursuit_stage,
     pursuit_stage_updated_at: opportunity.pursuit_stage_updated_at,
+    pursuit_stage_provenance: opportunity.pursuit_stage_provenance ?? null,
     nda_status: opportunity.nda_status,
     nda_updated_at: opportunity.nda_updated_at,
     visible_documents: opportunity.visible_documents,
@@ -380,6 +456,9 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     teaser_summary: opportunity.teaser_summary,
     geography_node_id: opportunity.geography_node_id,
     geography_label: opportunity.geography_label,
+    geography_node_level: opportunity.geography_node_level,
+    geography_parent_label: opportunity.geography_parent_label,
+    geography_filter_nodes: opportunity.geography_filter_nodes,
     canonical_sector: opportunity.canonical_sector,
     sector: opportunity.sector,
     activity: opportunity.activity,
@@ -390,10 +469,12 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
     headcount_range: opportunity.headcount_range,
     date_added: opportunity.date_added,
     date_added_display: opportunity.date_added_display,
+    date_added_display_en: opportunity.date_added_display_en,
     decline_reason_categories: opportunity.decline_reason_categories,
     decline_reason_text: opportunity.decline_reason_text,
     interest_expressed_at: opportunity.interest_expressed_at,
     interest_notification_sent_at: opportunity.interest_notification_sent_at,
+    interest_rejected: opportunity.interest_rejected,
     recommendation_expires_at: opportunity.recommendation_expires_at,
     updated_at: opportunity.updated_at,
     is_staff_recommended: opportunity.is_staff_recommended,
@@ -420,6 +501,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       decline_reason_text,
       pursuit_stage,
       pursuit_stage_updated_at,
+      pursuit_stage_provenance,
       nda_status,
       nda_signed_at,
       nda_waived_at,
@@ -472,6 +554,11 @@ export async function listMyRepreneurOpportunities(): Promise<{
     supabase,
     opportunities.map((opportunity) => opportunity.match_id),
   )
+  const decisionState = await readRepreneurInterestStates(repreneur.id,
+    opportunities.map((opportunity) => ({
+      id: opportunity.match_id,
+      interest_expressed_at: interestStateByMatch.get(opportunity.match_id)?.interest_expressed_at ?? opportunity.interest_expressed_at,
+    })))
 
   return {
     repreneur,
@@ -479,6 +566,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
       .map((exposure) => ({
         ...exposure,
         ...interestStateByMatch.get(exposure.match_id),
+        interest_rejected: decisionState.rejected.has(exposure.match_id),
         is_locked_for_other_repreneur: isLockedForOtherRepreneur(
           exposure.opportunity_id,
           repreneur.id,
@@ -489,7 +577,7 @@ export async function listMyRepreneurOpportunities(): Promise<{
         visible_documents: [],
         memo_availability: undefined,
       }))
-      .map((opportunity) => withDealBucket(opportunity, false))
+      .map((opportunity) => withDealBucket(opportunity, opportunity.match_status === "withdrawn"))
       .filter(isDefined),
   }
 }
@@ -533,6 +621,7 @@ async function listRepreneurDealFlowForProfile(
         decline_reason_text,
         pursuit_stage,
         pursuit_stage_updated_at,
+        pursuit_stage_provenance,
         nda_status,
         nda_signed_at,
         nda_waived_at,
@@ -593,11 +682,17 @@ async function listRepreneurDealFlowForProfile(
     supabase,
     matchedOpportunities.map((opportunity) => opportunity.match_id),
   )
+  const decisionState = await readRepreneurInterestStates(repreneur.id,
+    matchedOpportunities.map((opportunity) => ({
+      id: opportunity.match_id,
+      interest_expressed_at: interestStateByMatch.get(opportunity.match_id)?.interest_expressed_at ?? opportunity.interest_expressed_at,
+    })))
 
   const statefulDeals = matchedOpportunities
     .map((exposure) => ({
       ...exposure,
       ...interestStateByMatch.get(exposure.match_id),
+      interest_rejected: decisionState.rejected.has(exposure.match_id),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
         exposure.opportunity_id,
         repreneur.id,
@@ -606,9 +701,9 @@ async function listRepreneurDealFlowForProfile(
       visible_documents: [],
       memo_availability: undefined,
     }))
-    .map(withStaffRecommendation)
-    .map((opportunity) => withMatchingGeography(opportunity, geography))
-    .map((opportunity) => withDealBucket(opportunity, false))
+    .map((opportunity) => withStaffRecommendation(opportunity, decisionState.proposed.has(opportunity.match_id)))
+    .map((opportunity) => withRepreneurGeographyLabel(opportunity, geography))
+    .map((opportunity) => withDealBucket(opportunity, opportunity.match_status === "withdrawn"))
     .filter(isDefined)
   const statefulOpportunityIds = new Set(statefulDeals.map((opportunity) => opportunity.opportunity_id))
   const geographyAwareRepreneur = withMatchingGeographyTargets(repreneur, geography)
@@ -651,6 +746,10 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
 
   const result = await listRepreneurDealFlowForProfile(repreneur, sort)
+  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, result.deals.map((deal) => deal.opportunity_id))
+  for (const deal of result.deals) {
+    deal.personal_review = reviews ? reviews.get(deal.opportunity_id) ?? { viewed: false, reviewed: false } : null
+  }
   const access = await requirePortalAccess()
   queueM2RepreneurEvent({
     userId: access.user.id,
@@ -666,6 +765,7 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
 export async function listStaffPreviewRepreneurDealFlow(
   repreneurId: string,
   sort: RepreneurDealSort = "relevance",
+  selectedDealId?: string | null,
 ): Promise<RepreneurDealFlowResult> {
   await requireStaffAccess()
   if (!isUuid(repreneurId)) return EMPTY_REPRENEUR_DEAL_FLOW
@@ -674,7 +774,14 @@ export async function listStaffPreviewRepreneurDealFlow(
   const repreneur = await getRepreneurDealFlowProfileById(supabase, repreneurId)
   if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
 
-  return listRepreneurDealFlowForProfile(repreneur, sort)
+  const result = await listRepreneurDealFlowForProfile(repreneur, sort)
+  // Detail-only comparison uses the selected owner's current targets. The
+  // list stays compact and never projects private matching reasons or scores.
+  if (selectedDealId && isUuid(selectedDealId)) {
+    const selected = result.deals.find((deal) => deal.match_id === selectedDealId || deal.opportunity_id === selectedDealId)
+    if (selected) selected.criteria_comparison = await ownerCriteriaForDeal(supabase, repreneur, selected)
+  }
+  return result
 }
 
 export async function getMyRepreneurOpportunity(
@@ -695,6 +802,7 @@ export async function getMyRepreneurOpportunity(
         decline_reason_text,
         pursuit_stage,
         pursuit_stage_updated_at,
+        pursuit_stage_provenance,
         nda_status,
         nda_signed_at,
         nda_waived_at,
@@ -774,7 +882,12 @@ export async function getMyRepreneurOpportunity(
       action: "open",
       outcome: "success",
     })
-    return result
+    const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
+    return {
+      ...result,
+      personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null,
+      criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result),
+    }
   }
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
@@ -784,9 +897,14 @@ export async function getMyRepreneurOpportunity(
   )
 
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(supabase, [exposure.match_id])
+  const decisionState = await readRepreneurInterestStates(repreneur.id, [{
+    id: exposure.match_id,
+    interest_expressed_at: interestStateByMatch.get(exposure.match_id)?.interest_expressed_at ?? exposure.interest_expressed_at,
+  }])
   const result = {
     ...exposure,
     ...interestStateByMatch.get(exposure.match_id),
+    interest_rejected: decisionState.rejected.has(exposure.match_id),
     is_locked_for_other_repreneur: isLockedForOtherRepreneur(
       exposure.opportunity_id,
       repreneur.id,
@@ -803,5 +921,10 @@ export async function getMyRepreneurOpportunity(
     action: "open",
     outcome: "success",
   })
-  return result
+  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
+  return {
+    ...result,
+    personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null,
+    criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result),
+  }
 }

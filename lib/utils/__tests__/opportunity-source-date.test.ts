@@ -13,10 +13,12 @@ describe("opportunity source-date precision", () => {
     expect(formatOpportunitySourceDate("2026-01-01", "month")).toBe(
       "janvier 2026",
     )
+    expect(formatOpportunitySourceDate("2026-01-01", "month", { locale: "en-GB" })).toBe("January 2026")
+    expect(formatOpportunitySourceDate("2026-01-01", "day", { locale: "en-GB" })).toContain("1 Jan 2026")
     expect(dayLevelOpportunityDate("2026-01-01", "month")).toBeNull()
   })
 
-  it("keeps month-only values out of day-level stale rules", () => {
+  it("keeps month-only values out of exact-day rules but includes safely old inventory in #187", () => {
     const now = new Date("2026-05-15T12:00:00")
     expect(opportunityDaysOpen("2026-01-01", now, "month")).toBeNull()
     expect(
@@ -30,7 +32,8 @@ describe("opportunity source-date precision", () => {
         new Set(),
         now,
       ),
-    ).toBe(false)
+    ).toBe(true)
+    expect(isCandidateStaleOpportunity({ id: "recent-month", status: "active", dateAdded: "2026-04-01", dateAddedPrecision: "month" }, new Set(), now)).toBe(false)
   })
 
   it("retains day-level behavior for an exact or legacy source date", () => {

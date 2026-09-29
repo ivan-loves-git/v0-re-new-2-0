@@ -20,6 +20,8 @@ export interface ProxyPrivateSignedDownloadOptions {
   contentType: PrivateSignedDownloadContentType
   filename: string | null | undefined
   disposition?: "attachment" | "inline"
+  /** Consume recipient-bound bytes before the route's final live-access check. */
+  bufferBeforeReturn?: boolean
 }
 
 const ACTIVE_CONTENT_TYPES = new Set([
@@ -112,7 +114,10 @@ export async function proxyPrivateSignedStorageDownload(
 
   let upstream: Response
   try {
-    upstream = await fetch(signedUrl, { cache: "no-store", redirect: "error" })
+    upstream = await fetch(signedUrl, {
+      cache: "no-store", redirect: "error",
+      ...(options.bufferBeforeReturn ? { signal: AbortSignal.timeout(30_000) } : {}),
+    })
   } catch {
     return null
   }
@@ -137,7 +142,18 @@ export async function proxyPrivateSignedStorageDownload(
     }
   }
 
-  return new NextResponse(upstream.body, {
+  let body: ReadableStream<Uint8Array> | ArrayBuffer = upstream.body
+  if (options.bufferBeforeReturn) {
+    try {
+      const buffered = await upstream.arrayBuffer()
+      if (buffered.byteLength > 20 * 1024 * 1024) return null
+      body = buffered
+    } catch {
+      return null
+    }
+  }
+
+  return new NextResponse(body, {
     status: 200,
     headers: {
       "Cache-Control": "private, no-store",

@@ -42,6 +42,11 @@ async function main() {
       pages: 1,
     },
     {
+      key: "staffReceivedNda",
+      fileName: "qa-opening-staff-received-nda.pdf",
+      pages: 3,
+    },
+    {
       key: "informationMemorandum",
       fileName: "qa-opening-information-memorandum.pdf",
       pages: 2,

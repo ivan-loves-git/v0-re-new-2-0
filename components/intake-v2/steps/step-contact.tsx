@@ -47,12 +47,12 @@ export function StepContact({
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ]
     if (!validTypes.includes(file.type)) {
-      setCvUpload((prev) => ({ ...prev, error: t("errorFileType") }))
+      setCvUpload((prev) => ({ ...prev, error: "errorFileType" }))
       return
     }
 
     if (file.size > CV_LDC_MAX_FILE_BYTES) {
-      setCvUpload((prev) => ({ ...prev, error: t("errorFileSize") }))
+      setCvUpload((prev) => ({ ...prev, error: "errorFileSize" }))
       return
     }
 
@@ -77,7 +77,7 @@ export function StepContact({
       setCvUpload((prev) => ({
         ...prev,
         uploading: false,
-        error: t("errorUpload"),
+        error: "errorUpload",
       }))
     }
   }
@@ -217,7 +217,7 @@ export function StepContact({
               type="button"
               variant="ghost"
               size="sm"
-              aria-label="Remove uploaded CV"
+              aria-label={t("removeUploadedCv")}
               onClick={removeFile}
             >
               <X className="size-4" />
@@ -251,7 +251,7 @@ export function StepContact({
           </div>
         )}
         {cvUpload.error && (
-          <p className="text-sm text-red-500">{cvUpload.error}</p>
+          <p className="text-sm text-red-500">{t(cvUpload.error)}</p>
         )}
         {errors.cv_url && (
           <p className="text-sm text-red-500">{errors.cv_url}</p>

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/data/current-pursuit", () => ({
   resolvePortalPursuitResource: mocks.resolvePortalPursuitResource,
 }))
+vi.mock("@/lib/recipient-im-download-lock", () => ({ withRecipientImPursuitLock: async (_matchId: string, work: () => Promise<Response>) => work() }))
 
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mocks.createAdminClient,
@@ -85,6 +86,8 @@ const informationMemo = {
 }
 
 describe("repreneur info-memo download route", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal("fetch", mocks.fetch)
@@ -138,6 +141,32 @@ describe("repreneur info-memo download route", () => {
     expect(response.status).toBe(404)
     expect(documentSelect).not.toHaveBeenCalled()
     expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("denies a personalized IM whose immutable recipient is another pursuit even if an old projection is stale", async () => {
+    const { createSignedUrl } = setupAdminClient({
+      document: { ...informationMemo, recipient_match_id: "other-match", recipient_repreneur_id: "other-repreneur" },
+    })
+    expect((await requestMemo()).status).toBe(404)
+    expect(createSignedUrl).not.toHaveBeenCalled()
+  })
+
+  it("does not deliver a personalized response when Drop revokes it during private Storage retrieval", async () => {
+    vi.stubEnv("RECIPIENT_IM_OPERATIONS_DISABLED", "1")
+    const { createSignedUrl } = setupAdminClient({
+      document: { ...informationMemo, recipient_match_id: "match-1", recipient_repreneur_id: "repreneur-1" },
+    })
+    mocks.resolvePortalPursuitResource
+      .mockResolvedValueOnce({ kind: "information-memorandum", documentId: "memo-1" })
+      .mockResolvedValueOnce({ kind: "information-memorandum", documentId: "memo-1" })
+      .mockResolvedValueOnce(null)
+
+    const response = await requestMemo()
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("location")).toBeNull()
+    expect(createSignedUrl).toHaveBeenCalledOnce()
+    expect(mocks.resolvePortalPursuitResource).toHaveBeenCalledTimes(3)
   })
 
   it.each([

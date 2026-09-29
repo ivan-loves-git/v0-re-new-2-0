@@ -19,7 +19,9 @@ vi.mock("@/lib/actions/external-pursuit-attachments", () => ({
 }))
 
 import { ExternalPursuitBoard } from "@/components/pursuits/external-pursuit-board"
+import { StaffPursuitsWorkspace } from "@/components/pursuits/staff-pursuits-workspace"
 import type { ExternalPursuitBoardRecord } from "@/lib/types/external-pursuit"
+import { LanguageProvider } from "@/lib/i18n/language-context"
 
 function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursuitBoardRecord {
   return {
@@ -48,6 +50,60 @@ function external(overrides: Partial<ExternalPursuitBoardRecord>): ExternalPursu
 }
 
 describe("ExternalPursuitBoard component", () => {
+  it("localizes the owner board while keeping original dossier text and stable stage values", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "fr" },
+      createElement(ExternalPursuitBoard, {
+        external: [external({ title: "Original Dossier", nextAction: "Original next action" })],
+        renew: [], isStaff: false,
+      }),
+    ))
+    expect(html).toContain("Vos dossiers de reprise externes sont privés")
+    expect(html).toContain("Identifiée")
+    expect(html).toContain("Original Dossier")
+    expect(html).toContain("Original next action")
+    expect(html).toContain('aria-label="Changer l’étape de Original Dossier"')
+    expect(html).toContain("Aucun dossier")
+  })
+
+  it("shows controlled English availability labels to the owner", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(ExternalPursuitBoard, {
+        external: [external({ availability: "unknown" }), external({ id: "external-2", availability: "limited" })],
+        renew: [], isStaff: false,
+      }),
+    ))
+    expect(html).toContain("Availability: Availability unknown")
+    expect(html).toContain("Availability: Limited availability")
+    expect(html).not.toContain("Availability: unknown")
+    expect(html).not.toContain("Availability: limited")
+  })
+
+  it("localizes previewed dossier facts while staff assistance controls remain English", () => {
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "fr", scope: "preview" },
+      createElement(ExternalPursuitBoard, {
+        external: [external({ title: "Original Dossier" })],
+        renew: [], isStaff: true, selectedOwnerId: "owner-1", selectedOwnerToken: "synthetic-token",
+      }),
+    ))
+    expect(html).toContain("Identifiée")
+    expect(html).toContain("Disponibilité : Disponibilité inconnue")
+    expect(html).toContain("Original Dossier")
+    expect(html).toContain('aria-label="Move Original Dossier stage"')
+    expect(html).toContain(">Edit</button>")
+  })
+
+  it("retains the External workspace and its canonical context alongside the default staff macro-board", () => {
+    const html = renderToStaticMarkup(createElement(StaffPursuitsWorkspace, {
+      external: [external({})], renew: [],
+      externalReNewContext: [{ id: "match-1", title: "Canonical context", stage: "identified", canonicalStage: null, canonicalJourney: "proposed", href: "/opportunities/opportunity-1", ownerName: "Owner One", updatedAt: "2026-08-16T09:00:00Z" }],
+    }))
+    expect(html).toContain("Re-New active pursuit board")
+    expect(html).toContain("Independent target")
+    expect(html).toContain("Canonical context")
+    expect(html).toContain("Open canonical journey")
+    expect(html).toContain('aria-label="Move Independent target stage"')
+    expect(html).toContain('data-state="inactive"')
+  })
   it("renders provenance, omission, availability and labelled stage controls", () => {
     const html = renderToStaticMarkup(createElement(ExternalPursuitBoard, {
       external: [external({})],
@@ -65,11 +121,11 @@ describe("ExternalPursuitBoard component", () => {
       owners: [{ id: "owner-1", name: "Owner One" }],
     }))
 
-    expect(html).toContain("External pursuits are private dossiers for you and authorised Re-New staff")
+    expect(html).toContain("External pursuits are private dossiers for their owner and authorised Re-New staff")
     expect(html).toContain("They are separate from Re-New Deal Flow")
     expect(html).toContain("External")
     expect(html).toContain("Re-New · read-only")
-    expect(html).toContain("Availability: unknown")
+    expect(html).toContain("Availability: Availability unknown")
     expect(html).toContain("Optional details not added")
     expect(html).toContain("Contacts not added")
     expect(html).toContain("aria-label=\"Move Independent target stage\"")
@@ -98,6 +154,33 @@ describe("ExternalPursuitBoard component", () => {
     expect(html).toContain('href="/portal/deals/match-1"')
     expect(html).toContain("See opportunity")
     expect(html).not.toContain("Open canonical journey")
+  })
+
+  it("keeps a selected-owner preview inspectable without exposing staff editing or deletion controls", () => {
+    const html = renderToStaticMarkup(createElement(ExternalPursuitBoard, {
+      external: [external({ ownerRepreneurId: "owner-1", staffInternalNotes: "Internal-only note" })],
+      renew: [],
+      isStaff: true,
+      readOnly: true,
+      selectedOwnerId: "owner-1",
+    }))
+
+    expect(html).toContain("Independent target")
+    expect(html).toContain("View dossier and files")
+    expect(html).not.toContain("Deletion is pending")
+    expect(html).not.toContain("Internal-only note")
+    expect(html).not.toContain("New external pursuit")
+    expect(html).not.toContain('aria-label="Move Independent target stage"')
+    expect(html).not.toContain("Permanently delete")
+
+    const pendingHtml = renderToStaticMarkup(createElement(ExternalPursuitBoard, {
+      external: [external({ deletionStatus: "delete_requested" })],
+      renew: [],
+      isStaff: true,
+      readOnly: true,
+      selectedOwnerId: "owner-1",
+    }))
+    expect(pendingHtml).not.toContain("Permanently delete")
   })
 
   it("keeps a pending staff dossier and its contact context inspectable before purge", () => {

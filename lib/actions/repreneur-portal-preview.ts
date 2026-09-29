@@ -28,8 +28,9 @@ import type {
   RepreneurOpportunityExposure,
   RepreneurOpportunityProfile,
 } from "@/lib/types/opportunity"
+import type { ExternalPursuitBoardRecord } from "@/lib/types/external-pursuit"
 
-const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "active_pursuit", "dropped"]
+const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "withdrawn", "declined", "active_pursuit", "dropped"]
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
@@ -84,6 +85,7 @@ interface PreviewOpportunityMatchRow {
   decline_reason_text: string | null
   pursuit_stage: RepreneurOpportunityExposure["pursuit_stage"]
   pursuit_stage_updated_at: string | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   nda_status: RepreneurOpportunityExposure["nda_status"]
   nda_signed_at: string | null
   nda_waived_at: string | null
@@ -101,8 +103,7 @@ export interface StaffPortalPreviewOption {
   name: string
   email: string | null
   lifecycleStatus: string | null
-  hasPortalAccess: boolean
-  visibleOpportunityCount: number
+  portalRoleLinked: boolean
   isDemo: boolean
 }
 
@@ -141,6 +142,7 @@ function normalizeExposure(
     match_status: row.status,
     pursuit_stage: row.pursuit_stage,
     pursuit_stage_updated_at: row.pursuit_stage_updated_at,
+    pursuit_stage_provenance: row.pursuit_stage_provenance ?? null,
     nda_status: row.nda_status,
     nda_updated_at: row.nda_updated_at,
     visible_documents: [],
@@ -165,6 +167,11 @@ function normalizeExposure(
     date_added_display: formatOpportunitySourceDate(
       opportunity.date_added,
       opportunity.date_added_precision,
+    ),
+    date_added_display_en: formatOpportunitySourceDate(
+      opportunity.date_added,
+      opportunity.date_added_precision,
+      { locale: "en-GB" },
     ),
     decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
@@ -234,6 +241,7 @@ async function listVisibleOpportunitiesForRepreneur(
       decline_reason_text,
       pursuit_stage,
       pursuit_stage_updated_at,
+      pursuit_stage_provenance,
       nda_status,
       nda_signed_at,
       nda_waived_at,
@@ -330,25 +338,13 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
   if (repreneursResult.error) throw new Error(repreneursResult.error.message)
   if (rolesResult.error && rolesResult.error.code !== "42P01") throw new Error(rolesResult.error.message)
   const roles = (rolesResult.data as PortalRoleRow[] | null) ?? []
-  const roleRepreneurIds = new Set(roles.map((role) => role.repreneur_id).filter(Boolean))
-  const roleEmails = new Set(roles.map((role) => normalizeEmail(role.email)).filter(Boolean))
   const repreneurs = (repreneursResult.data as PreviewRepreneurRow[] | null) ?? []
-  const representativeByNamespace = new Map<boolean, string>()
-  for (const repreneur of repreneurs) {
-    if (!representativeByNamespace.has(repreneur.is_demo)) representativeByNamespace.set(repreneur.is_demo, repreneur.id)
-  }
-  const inventoryCounts = await Promise.all(
-    Array.from(representativeByNamespace, async ([isDemo, repreneurId]) => {
-      const { data, error } = await supabase.rpc("w164_repreneur_live_inventory", {
-        p_repreneur_id: repreneurId,
-        p_opportunity_id: null,
-      })
-      if (error) throw new Error(error.message)
-      return [isDemo, data?.length ?? 0] as const
-    }),
-  )
-  const visibleCountByNamespace = new Map(inventoryCounts)
-
+  const existingIds = new Set(repreneurs.map((repreneur) => repreneur.id))
+  const roleRepreneurIds = new Set(roles.map((role) => role.repreneur_id).filter(Boolean))
+  const fallbackRoleEmails = new Set(roles
+    .filter((role) => !role.repreneur_id || !existingIds.has(role.repreneur_id))
+    .map((role) => normalizeEmail(role.email))
+    .filter(Boolean))
   return repreneurs.map((repreneur) => {
     const normalizedEmail = normalizeEmail(repreneur.email)
 
@@ -357,17 +353,103 @@ export async function listStaffPortalPreviewOptions(): Promise<StaffPortalPrevie
       name: fullName(repreneur.first_name, repreneur.last_name),
       email: normalizedEmail,
       lifecycleStatus: repreneur.lifecycle_status,
-      hasPortalAccess: roleRepreneurIds.has(repreneur.id) || Boolean(normalizedEmail && roleEmails.has(normalizedEmail)),
-      visibleOpportunityCount: visibleCountByNamespace.get(repreneur.is_demo) ?? 0,
+      portalRoleLinked: roleRepreneurIds.has(repreneur.id) || Boolean(normalizedEmail && fallbackRoleEmails.has(normalizedEmail)),
       isDemo: repreneur.is_demo,
     }
   })
+}
+
+/** Exact-owner, owner-safe External Pursuit projection for a staff-selected portal. */
+export async function listStaffPortalPreviewExternalPursuits(
+  repreneurId: string,
+): Promise<ExternalPursuitBoardRecord[]> {
+  await requireStaffAccess()
+  if (!isUuid(repreneurId)) return []
+
+  const supabase = createAdminClient()
+  const { data: owner, error: ownerError } = await supabase
+    .from("repreneurs")
+    .select("id, is_demo")
+    .eq("id", repreneurId)
+    .maybeSingle()
+  if (ownerError) throw new Error(ownerError.message)
+  if (!owner || typeof owner.is_demo !== "boolean") return []
+
+  // Do not use the all-owner staff board here: it also contains staff-only notes.
+  const { data: dossiers, error: dossierError } = await supabase
+    .from("external_pursuits")
+    .select("id, owner_repreneur_id, title, stage, availability, deletion_status, external_url, target_company, source_channel, revenue_meur, ebitda_keur, headcount, next_action, responsible_party, due_at, updated_at")
+    .eq("owner_repreneur_id", repreneurId)
+    .eq("deletion_status", "active")
+    .order("updated_at", { ascending: false })
+  if (dossierError) throw new Error(dossierError.message)
+  const active = dossiers ?? []
+  if (active.some((row) => row.owner_repreneur_id !== repreneurId || row.deletion_status !== "active")) {
+    throw new Error("Selected-owner dossier mismatch.")
+  }
+  const dossierIds = active.map((row) => row.id)
+  if (dossierIds.length === 0) return []
+
+  const [notesResult, contactsResult, conversionsResult] = await Promise.all([
+    supabase.from("external_pursuit_notes")
+      .select("external_pursuit_id, shared_notes")
+      .in("external_pursuit_id", dossierIds),
+    supabase.from("external_pursuit_contacts")
+      .select("id, external_pursuit_id, name, organisation, role_title, email, phone")
+      .in("external_pursuit_id", dossierIds)
+      .order("created_at", { ascending: true }),
+    supabase.from("external_pursuit_opportunity_conversions")
+      .select("external_pursuit_id")
+      .in("external_pursuit_id", dossierIds),
+  ])
+  if (notesResult.error) throw new Error(notesResult.error.message)
+  if (contactsResult.error) throw new Error(contactsResult.error.message)
+  if (conversionsResult.error) throw new Error(conversionsResult.error.message)
+  const sharedNotes = new Map((notesResult.data ?? []).map((row) => [row.external_pursuit_id, row.shared_notes]))
+  const convertedIds = new Set((conversionsResult.data ?? []).map((row) => row.external_pursuit_id))
+  const contactsByDossier = new Map<string, ExternalPursuitBoardRecord["contacts"]>()
+  for (const contact of contactsResult.data ?? []) {
+    const records = contactsByDossier.get(contact.external_pursuit_id) ?? []
+    records.push({
+      id: contact.id,
+      name: contact.name,
+      organisation: contact.organisation,
+      roleTitle: contact.role_title,
+      email: contact.email,
+      phone: contact.phone,
+    })
+    contactsByDossier.set(contact.external_pursuit_id, records)
+  }
+
+  return active.map((row) => ({
+    id: row.id,
+    ownerRepreneurId: row.owner_repreneur_id,
+    ownerName: null,
+    title: row.title,
+    stage: row.stage,
+    availability: row.availability,
+    deletionStatus: "active" as const,
+    isOpenCapacity: !["completed", "dropped_archived"].includes(row.stage) && !convertedIds.has(row.id),
+    externalUrl: row.external_url,
+    targetCompany: row.target_company,
+    sourceChannel: row.source_channel,
+    revenueMeur: row.revenue_meur === null ? null : Number(row.revenue_meur),
+    ebitdaKeur: row.ebitda_keur === null ? null : Number(row.ebitda_keur),
+    headcount: row.headcount,
+    contacts: contactsByDossier.get(row.id) ?? [],
+    nextAction: row.next_action,
+    responsibleParty: row.responsible_party,
+    dueAt: row.due_at,
+    sharedNotes: sharedNotes.get(row.id) ?? null,
+    updatedAt: row.updated_at,
+  }))
 }
 
 export async function getStaffPortalPreviewProfile(repreneurId: string): Promise<{
   repreneur: PortalRepreneurProfile | null
 }> {
   await requireStaffAccess()
+  if (!isUuid(repreneurId)) return { repreneur: null }
 
   const supabase = createAdminClient()
   const { data: repreneur, error } = await supabase
@@ -380,12 +462,12 @@ export async function getStaffPortalPreviewProfile(repreneurId: string): Promise
   return { repreneur: normalizePortalRepreneurProfile(repreneur) }
 }
 
-export async function listStaffPortalPreviewOpportunities(repreneurId: string): Promise<{
+export async function listStaffPortalPreviewOpportunities(repreneurId: string, selectedDealId?: string | null): Promise<{
   repreneur: RepreneurOpportunityProfile | null
   opportunities: RepreneurDealFlowOpportunity[]
 }> {
   await requireStaffAccess()
-  const result = await listStaffPreviewRepreneurDealFlow(repreneurId)
+  const result = await listStaffPreviewRepreneurDealFlow(repreneurId, "relevance", selectedDealId)
   return { repreneur: result.repreneur, opportunities: result.deals }
 }
 
@@ -396,6 +478,6 @@ export async function getStaffPortalPreviewOpportunity(
   await requireStaffAccess()
   if (!isUuid(repreneurId) || !isUuid(dealId)) return null
 
-  const result = await listStaffPreviewRepreneurDealFlow(repreneurId)
+  const result = await listStaffPreviewRepreneurDealFlow(repreneurId, "relevance", dealId)
   return result.deals.find((deal) => deal.match_id === dealId || deal.opportunity_id === dealId) ?? null
 }

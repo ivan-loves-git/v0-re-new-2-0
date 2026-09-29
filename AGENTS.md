@@ -2,6 +2,10 @@
 
 # Re-New Platform Project
 
+## Progress updates
+
+Every user-facing progress update must include the known active GitHub Product Change and Ticket links. This includes the first response: use any card links supplied by Ivan before reading the routing adapter. If analysis has no known card, say that no card is active; once a record is identified, include its verified link. Never create a card just to provide a link.
+
 ## Codex owns delivery
 
 Codex is the single accountable development owner. Ivan is the product owner and is not expected to translate requests into developer language, supervise pull requests, follow deployment internals, or coordinate AI tools.
@@ -86,9 +90,17 @@ for WAVE defaults, approved micro-label semantics, preserved product markers and
 design-tool scope. `pnpm design:check` is advisory, not a gate; use judgement
 on its findings and inspect changed screens at desktop and mobile widths.
 
+Reuse installed WAVE and shadcn controls first. For an applicable new UI pattern, use the ReUI MCP to inspect a free preview, the actual component API and examples before adding anything; adapt the pattern to WAVE tokens and verify its browser and accessibility behavior. Ordinary controls remain plain shadcn. ReUI does not authorize product-logic or information-architecture changes.
+
+Design tooling does not change product logic, KPIs, workflows, hierarchy, information architecture, filters, or strategy.
+
 ## External decisions
 
 Slack, email, meeting notes, and supplied documents are evidence inputs, not canonical decisions. A material product, data, operating-model, or governance decision is closed only when its canonical specification or qualifying Decision is updated in GitHub, affected Product Changes and Tickets link to it, and acceptance tests trace back to it. Do not infer approval from an old message, a completed implementation card, or a PDR status.
+
+## Direct Matt calls for Re-New
+
+When Ivan invokes a Matt skill from this application checkout, read the [Re-New routing adapter](https://github.com/re-new-team/renew-governance/blob/main/docs/agents/renew-direct-calls.md), identify the supplied input and read any applicable existing GitHub cards and active Decisions before applying the generic skill. Analysis may begin without a card; do not create one just to satisfy this entry point. Governance owns the tracker and skill routing; this repository owns application code. Publish this pointer only after governance PR #219 is merged and the canonical `main` link resolves. A direct skill call does not expand build, release, data or communication authority. [Decision #210](https://github.com/re-new-team/renew-governance/issues/210) governs current scope where older instructions conflict.
 
 ## Data Model Summary
 

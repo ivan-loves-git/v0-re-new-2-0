@@ -43,6 +43,14 @@ External Pursuits are visible to their owner and authorised Re-New staff and
 never enter matching, source records, confidentiality gates, exports or Re-New
 KPIs. No acknowledgement is required.
 
+Decision #166 / Ticket #167 adds a staff-only macro-board v1.0 candidate under
+Product Change #120. The staff route defaults to the new Re-New view and retains
+this complete existing board, including its read-only Re-New context cards, in
+the External pursuits tab. Switching views retains local filter/editor state.
+The portal route, External stages/actions, ownership and confidentiality rules
+remain unchanged. The five-column mapping and evidence-led version evolution
+are defined in the canonical M&A contract's staff macro-board v1.0 section.
+
 This release creates no outbound notification, email, SMS, push automation,
 export or canonical M&A record. The initial `due_at` field is only an
 in-product due/overdue state; it sends nothing.
@@ -150,6 +158,22 @@ exported or treated as dossier content; a different fulfillment key is rejected.
    are denied.
 3. `shared_notes` are owner-visible. `staff_internal_notes` are physically
    separate and staff-only. No action serializes staff notes to an owner.
+   The #196 selected-owner Tools Portal reuses the existing actor-audited
+   staff create/edit, stage, contact, follow-up, current-status confirmation
+   and private-file paths, but binds every portal mutation to the selected
+   browser-workspace generation and exact dossier owner at its guarded write
+   boundary. A switch invalidates old forms and private-file upload capabilities.
+   File removal checks the selection before touching Storage; once authorized,
+   that same server invocation may finish the exact attachment's database cleanup
+   after a switch, using the original actor, dossier, attachment and retry key with
+   the canonical finalizer's normal authorization checks. This prevents a retained
+   row from pointing to a removed file; it grants no reusable stale capability,
+   and a newly submitted stale removal is rejected before Storage changes.
+   Confirmation updates
+   freshness evidence only, never a canonical Re-New stage. It never projects or writes
+   staff-only notes in the selected-owner portal and never exposes the owner's
+   deletion request or staff fulfillment action there. The existing staff
+   operating board retains its own broader staff authority.
 4. Contacts are repeatable records; they do not create or link canonical M&A
    contacts, firms, offices, opportunity source records, matches or pursuits.
 5. Create, update, contact changes and deletion requests append immutable audit

@@ -19,6 +19,8 @@ interface SendEmailParams {
   bcc?: string[]
   /** Stable provider key for safely replaying one logical delivery. */
   idempotencyKey?: string
+  /** Optional event-ledger fence, called only after normal preflights and immediately before provider I/O. */
+  beforeProviderAttempt?: () => Promise<boolean>
 }
 
 /**
@@ -28,8 +30,9 @@ async function checkDailyLimit(): Promise<boolean> {
   const supabase = createAdminClient()
   const today = new Date().toISOString().split("T")[0]
 
-  const { data } = await supabase.from("email_daily_counts").select("count").eq("date", today).single()
+  const { data, error } = await supabase.from("email_daily_counts").select("count").eq("date", today).maybeSingle()
 
+  if (error) return false // A failed read is not an empty first-day counter.
   return !data || data.count < DAILY_EMAIL_LIMIT
 }
 
@@ -215,7 +218,7 @@ async function updateEmailLogStatus(
  * Main function to send an email
  */
 export async function sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
-  const { to, subject, repreneurId, templateKey, react, metadata = {}, bcc, idempotencyKey } = params
+  const { to, subject, repreneurId, templateKey, react, metadata = {}, bcc, idempotencyKey, beforeProviderAttempt } = params
   const trace = startCriticalOperation("email.repreneur_send")
   let activeIdempotentEmailLogId: string | null = null
   let providerRequestStarted = false
@@ -231,6 +234,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
         return {
           success: false,
           error: "Could not verify durable email delivery state.",
+          providerOutcome: "deferred",
         }
       }
       if (existing.log && terminalEmailStatuses.has(existing.log.status)) {
@@ -270,21 +274,21 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
     const templateActive = await isTemplateActive(templateKey)
     if (!templateActive) {
       trace.failure("precondition_failed")
-      return { success: false, error: "Template is disabled" }
+      return { success: false, error: "Template is disabled", providerOutcome: "blocked" }
     }
 
     // 2. Check marketing consent if required
     const hasConsent = await checkMarketingConsent(repreneurId, templateKey)
     if (!hasConsent) {
       trace.failure("precondition_failed")
-      return { success: false, error: "Marketing consent not granted" }
+      return { success: false, error: "Marketing consent not granted", providerOutcome: "blocked" }
     }
 
     // 3. Check daily rate limit
     const withinLimit = await checkDailyLimit()
     if (!withinLimit) {
       trace.failure("precondition_failed")
-      return { success: false, error: "Daily email limit reached" }
+      return { success: false, error: "Daily email limit reached", providerOutcome: "deferred" }
     }
 
     // 4. Create or rejoin the one durable log for this logical delivery. The
@@ -305,6 +309,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       return {
         success: false,
         error: "Could not create durable email delivery state.",
+        providerOutcome: "deferred",
       }
     }
 
@@ -368,7 +373,14 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
         success: false,
         emailLogId: emailLogId ?? undefined,
         error: "Email blocked because a recipient has opted out of campaign and general outreach.",
+        providerOutcome: "blocked",
       }
+    }
+
+    if (beforeProviderAttempt && !(await beforeProviderAttempt())) {
+      trace.failure("precondition_failed")
+      return { success: false, emailLogId: emailLogId ?? undefined,
+        error: "Event delivery fence no longer matches current records.", providerOutcome: "fenced" }
     }
 
     if (durableEmailLog) {
@@ -393,6 +405,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
           success: false,
           emailLogId: durableEmailLog.id,
           error: "Could not persist the provider delivery attempt.",
+          providerOutcome: "deferred",
         }
       }
       activeIdempotentEmailLogId = durableEmailLog.id
@@ -512,6 +525,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       success: false,
       emailLogId: activeIdempotentEmailLogId ?? undefined,
       error: err instanceof Error ? err.message : "Unknown error",
+      providerOutcome: providerRequestStarted ? "uncertain" : "deferred",
     }
   }
 }
@@ -524,9 +538,11 @@ export async function sendEmailDirect(params: {
   subject: string
   react: ReactElement
   idempotencyKey?: string
-}): Promise<{ success: boolean; resendId?: string; error?: string }> {
-  const { to, subject, react, idempotencyKey } = params
+  beforeProviderAttempt?: () => Promise<boolean>
+}): Promise<{ success: boolean; resendId?: string; error?: string; providerOutcome?: "accepted" | "rejected" | "blocked" | "deferred" | "fenced" | "uncertain" }> {
+  const { to, subject, react, idempotencyKey, beforeProviderAttempt } = params
   const trace = startCriticalOperation("email.repreneur_send")
+  let providerRequestStarted = false
 
   try {
     if (await isMaContactEmailAddressSuppressed(to)) {
@@ -534,9 +550,16 @@ export async function sendEmailDirect(params: {
       return {
         success: false,
         error: "Email blocked because this contact has opted out of campaign and general outreach.",
+        providerOutcome: "blocked",
       }
     }
 
+    if (beforeProviderAttempt && !(await beforeProviderAttempt())) {
+      trace.failure("precondition_failed")
+      return { success: false, error: "Event delivery fence no longer matches current records.", providerOutcome: "fenced" }
+    }
+
+    providerRequestStarted = true
     const { data, error } = await resend.emails.send(
       {
         from: `${FROM_NAME} <${FROM_EMAIL}>`,
@@ -549,16 +572,17 @@ export async function sendEmailDirect(params: {
 
     if (error) {
       trace.failure("provider_rejected")
-      return { success: false, error: error.message }
+      return { success: false, error: error.message, providerOutcome: "rejected" }
     }
 
     trace.success()
-    return { success: true, resendId: data?.id }
+    return { success: true, resendId: data?.id, providerOutcome: data?.id ? "accepted" : "uncertain" }
   } catch (err) {
     trace.failure("provider_unavailable")
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
+      providerOutcome: providerRequestStarted ? "uncertain" : "deferred",
     }
   }
 }

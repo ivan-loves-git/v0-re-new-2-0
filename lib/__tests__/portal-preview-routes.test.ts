@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
   createPortalPreviewDealHrefMap,
+  createPortalPreviewSectionHref,
+  createPortalPreviewSelectionHref,
+  createPortalPreviewDocumentHref,
   resolvePortalPreviewRepreneur,
 } from "@/lib/portal-preview-routes"
 
@@ -26,5 +29,40 @@ describe("portal preview deal routes", () => {
 
     expect(resolvePortalPreviewRepreneur(options, "missing-repreneur")).toBeNull()
     expect(resolvePortalPreviewRepreneur(options, undefined)).toEqual(options[1])
+  })
+
+  it("changes owner without carrying a stale deal, match, dossier or action", () => {
+    expect(createPortalPreviewSelectionHref("other & person")).toBe(
+      "/portal-preview?repreneurId=other+%26+person",
+    )
+    expect(createPortalPreviewSectionHref("other & person", "external-pursuits")).toBe(
+      "/portal-preview?repreneurId=other+%26+person&view=external-pursuits",
+    )
+    expect(createPortalPreviewSelectionHref("other & person", "workspace-1")).toBe(
+      "/portal-preview?repreneurId=other+%26+person&workspaceId=workspace-1",
+    )
+    expect(createPortalPreviewSectionHref("other & person", "profile", "workspace-1")).toBe(
+      "/portal-preview?repreneurId=other+%26+person&view=profile&workspaceId=workspace-1",
+    )
+  })
+
+  it("keeps selected owner and staff workspace through filtered next and return links", () => {
+    expect(createPortalPreviewDealHrefMap("owner-1", [
+      { opportunityId: "opportunity-1", matchId: "match-1" },
+    ], "workspace-1", { query: "metal", status: "awaiting", returnView: "renew-pursuits" })).toEqual({
+      "match-1": "/portal-preview?repreneurId=owner-1&dealId=match-1&workspaceId=workspace-1&q=metal&status=awaiting&returnView=renew-pursuits",
+    })
+  })
+
+  it("builds staff-selected-person document links instead of owner-session URLs", () => {
+    expect(createPortalPreviewDocumentHref("person & one", "match-1", { kind: "nda-template" }, "workspace-1", "generation-1")).toBe(
+      "/portal-preview/deals/match-1/nda-template?repreneurId=person+%26+one&workspaceId=workspace-1&selectionGeneration=generation-1",
+    )
+    expect(createPortalPreviewDocumentHref("person & one", "match-1", {
+      kind: "information-memorandum",
+      documentId: "memo-1",
+    }, "workspace-1", "generation-1")).toBe(
+      "/portal-preview/deals/match-1/documents/memo-1?repreneurId=person+%26+one&workspaceId=workspace-1&selectionGeneration=generation-1",
+    )
   })
 })

@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
+import { deliverResponseNotification } from "@/lib/email/interest-notification-delivery"
 import type { OpportunityDeclineReasonCategory, OpportunityMatchStatus } from "@/lib/types/opportunity"
 
 const REPRENEUR_RESPONSE_ALLOWED_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "declined", "dropped"]
@@ -105,7 +106,7 @@ async function updateMyOpportunityResponse(
     if (error || !data) {
       throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
     }
-    return { opportunityId: match.opportunity_id, userId: access.user?.id ?? "" }
+    return { opportunityId: match.opportunity_id, userId: access.user?.id ?? "", proposedResponse: false }
   }
 
   const { data, error } = await supabase.rpc(
@@ -134,7 +135,7 @@ async function updateMyOpportunityResponse(
     throw new RepreneurOpportunityResponseError("This opportunity is no longer available for your response.")
   }
 
-  return { opportunityId: updated.opportunity_id, userId: access.user?.id ?? "" }
+  return { opportunityId: updated.opportunity_id, userId: access.user?.id ?? "", proposedResponse: true }
 }
 
 function refreshMyOpportunityResponse(matchId: string, opportunityId: string) {
@@ -146,7 +147,7 @@ function refreshMyOpportunityResponse(matchId: string, opportunityId: string) {
 
 export async function markMyOpportunityInterested(matchId: string) {
   const access = await requirePortalAccess()
-  let result: { opportunityId: string; userId: string }
+  let result: { opportunityId: string; userId: string; proposedResponse: boolean }
   try {
     result = await updateMyOpportunityResponse(matchId, "interested", access)
   } catch (error) {
@@ -167,6 +168,11 @@ export async function markMyOpportunityInterested(matchId: string) {
     action: "express_interest",
     outcome: "success",
   })
+  if (result.proposedResponse) {
+    // Persistence and notification have separate outcomes. The committed event
+    // remains retryable by the daily recovery job if this process ends here.
+    await deliverResponseNotification(matchId, "interested").catch(() => "failed")
+  }
   refreshMyOpportunityResponse(matchId, result.opportunityId)
   redirect("/portal/deals")
 }
@@ -177,7 +183,7 @@ export async function declineMyOpportunity(
   formData: FormData,
 ): Promise<RepreneurOpportunityDeclineActionState> {
   const access = await requirePortalAccess()
-  let result: { opportunityId: string; userId: string }
+  let result: { opportunityId: string; userId: string; proposedResponse: boolean }
 
   try {
     result = await updateMyOpportunityResponse(matchId, "declined", access, formData)
@@ -208,6 +214,9 @@ export async function declineMyOpportunity(
     action: "decline",
     outcome: "success",
   })
+  if (result.proposedResponse) {
+    await deliverResponseNotification(matchId, "declined").catch(() => "failed")
+  }
   refreshMyOpportunityResponse(matchId, result.opportunityId)
   redirect("/portal/deals")
 }

@@ -28,6 +28,7 @@ export type ClientPortfolioMatchRow = {
   interest_expressed_at: string | null
   reviewed_at: string | null
   pursuit_stage_updated_at: string | null
+  pursuit_stage_provenance?: "staff_confirmed_history" | null
   opportunity:
     | {
         id: string
@@ -79,7 +80,9 @@ export type ClientPursuitPortfolioRow = {
 
 const stageLabels: Record<OpportunityPursuitStage, string> = {
   interest: "Active pursuit",
+  nda_signed: "NDA signed",
   info_memo_received: "Info memo received",
+  qa_with_ma_firm: "Q&A with M&A firm",
   intermediary_meeting: "Intermediary meeting",
   seller_meeting: "Seller meeting",
   loi: "LOI",

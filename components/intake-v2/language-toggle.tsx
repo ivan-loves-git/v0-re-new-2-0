@@ -7,14 +7,17 @@ import { cn } from '@/lib/utils'
  * Language toggle with flag icons
  * Switches between French and English
  */
-export function LanguageToggle() {
-  const { language, setLanguage } = useLanguage()
+export function LanguageToggle({ chromeLanguage }: { chromeLanguage?: 'fr' | 'en' } = {}) {
+  const { language, setLanguage, saving, saveError } = useLanguage()
+  const copyLanguage = chromeLanguage ?? language
 
   return (
-    <div className="flex items-center gap-1 rounded-md border bg-muted p-1" role="group" aria-label="Language">
+    <div className="flex flex-col items-end gap-1">
+    <div className="flex items-center gap-1 rounded-md border bg-muted p-1" role="group" aria-label={copyLanguage === 'fr' ? 'Langue de l’interface' : 'Interface language'}>
       <button
         type="button"
-        onClick={() => setLanguage('fr')}
+        onClick={() => void setLanguage('fr')}
+        disabled={saving}
         className={cn(
           'flex h-7 min-w-8 items-center justify-center rounded border border-transparent px-2 text-[11px] font-semibold transition-colors',
           language === 'fr'
@@ -29,7 +32,8 @@ export function LanguageToggle() {
       </button>
       <button
         type="button"
-        onClick={() => setLanguage('en')}
+        onClick={() => void setLanguage('en')}
+        disabled={saving}
         className={cn(
           'flex h-7 min-w-8 items-center justify-center rounded border border-transparent px-2 text-[11px] font-semibold transition-colors',
           language === 'en'
@@ -42,6 +46,8 @@ export function LanguageToggle() {
       >
         EN
       </button>
+    </div>
+    {saveError ? <p className="text-xs text-destructive" role="alert">{copyLanguage === 'fr' ? 'Impossible d’enregistrer la langue. Réessayez.' : 'Could not save your language. Please try again.'}</p> : null}
     </div>
   )
 }

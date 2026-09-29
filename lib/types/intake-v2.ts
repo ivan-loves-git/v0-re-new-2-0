@@ -190,7 +190,7 @@ export interface FileUploadState {
   uploading: boolean
   progress: number
   url: string | null
-  error: string | null
+  error: 'errorFileType' | 'errorFileSize' | 'errorUpload' | null
 }
 
 /**

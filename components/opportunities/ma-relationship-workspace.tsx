@@ -57,7 +57,10 @@ import {
   type MaRelationshipWorkspace,
 } from "@/lib/actions/ma-relationships"
 import { setMaContactCampaignEmailSuppression } from "@/lib/actions/ma-contact-email-policy"
-import { filterMaRelationshipTimeline } from "@/lib/ma-relationship-filters"
+import { filterMaRelationshipTimeline, maRelationshipResultSummary } from "@/lib/ma-relationship-filters"
+import { presentMaOfficeOptions } from "@/lib/ma-office-presentation"
+import { MaOfficeCombobox } from "@/components/opportunities/ma-office-combobox"
+import { WavePanel } from "@/components/wave/visual-foundations"
 import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
 import { formatOpportunitySourceDate } from "@/lib/utils/opportunity-source-date"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
@@ -238,7 +241,7 @@ export function MaRelationshipWorkspace({
     timeline: {
       title: "Activity",
       description:
-        "One chronological M&A relationship record, before or alongside an opportunity.",
+        "Relationship history, with or without an opportunity.",
     },
     firms: {
       title: "Firms",
@@ -255,63 +258,41 @@ export function MaRelationshipWorkspace({
     contactFilter,
     opportunityFilter,
   ].filter((filter) => filter !== "all").length
-  const filterSummary = activeFilterCount
-    ? `${activeFilterCount} active filter${activeFilterCount === 1 ? "" : "s"}`
-    : "All offices, contacts and opportunities"
+  const resultSummary = maRelationshipResultSummary(
+    filteredInteractions.length, workspace.interactions.length,
+    workspace.globalActivityWindowSaturated,
+  )
+  const officeDisplay = useMemo(
+    () => new Map(presentMaOfficeOptions(workspace.offices).map((office) => [office.id, office])),
+    [workspace.offices],
+  )
+  const clearFilters = () => {
+    setOfficeFilter("all")
+    setContactFilter("all")
+    setOpportunityFilter("all")
+  }
 
   const timelineFilters = (
-    <Card className="order-2 md:order-1">
-      <CardHeader className="pb-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="text-base">Timeline filters</CardTitle>
-            <CardDescription className="mt-1">
-              Filter the same canonical timeline by office, contact or
-              opportunity.
-            </CardDescription>
-          </div>
-          <span className="pt-0.5 text-xs text-muted-foreground md:hidden">
-            {filterSummary}
-          </span>
+    <WavePanel className="p-4" role="region" aria-label="Activity filters">
+      <div className="grid items-start gap-3 md:grid-cols-3">
+        <RelationshipFilterControls
+          idPrefix="activity"
+          workspace={workspace}
+          officeFilter={officeFilter}
+          contactFilter={contactFilter}
+          opportunityFilter={opportunityFilter}
+          onOfficeChange={setOfficeFilter}
+          onContactChange={setContactFilter}
+          onOpportunityChange={setOpportunityFilter}
+        />
+      </div>
+      {activeFilterCount > 0 ? (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">{activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}</p>
+          <Button variant="ghost" size="sm" onClick={clearFilters}>Clear all</Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="hidden gap-3 md:grid md:grid-cols-3">
-          <RelationshipFilterControls
-            idPrefix="desktop"
-            workspace={workspace}
-            officeFilter={officeFilter}
-            contactFilter={contactFilter}
-            opportunityFilter={opportunityFilter}
-            onOfficeChange={setOfficeFilter}
-            onContactChange={setContactFilter}
-            onOpportunityChange={setOpportunityFilter}
-          />
-        </div>
-        <Collapsible className="md:hidden">
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              All filters
-              <ChevronDown data-icon="inline-end" />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pt-4">
-            <div className="grid gap-3">
-              <RelationshipFilterControls
-                idPrefix="mobile"
-                workspace={workspace}
-                officeFilter={officeFilter}
-                contactFilter={contactFilter}
-                opportunityFilter={opportunityFilter}
-                onOfficeChange={setOfficeFilter}
-                onContactChange={setContactFilter}
-                onOpportunityChange={setOpportunityFilter}
-              />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      </CardContent>
-    </Card>
+      ) : null}
+    </WavePanel>
   )
 
   return (
@@ -342,23 +323,28 @@ export function MaRelationshipWorkspace({
         <section className="space-y-4" aria-label="Relationship timeline">
           <div className="flex flex-col gap-4">
             {timelineFilters}
-            <Card className="order-1 md:order-2">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Relationship timeline
+                  Recent activity
                 </CardTitle>
-                <CardDescription>
-                  {filteredInteractions.length} canonical interaction
-                  {filteredInteractions.length === 1 ? "" : "s"}, newest first.
+                <CardDescription aria-live="polite">
+                  {resultSummary.count} · Newest first
                 </CardDescription>
+                {resultSummary.windowNotice ? (
+                  <p className="text-sm text-muted-foreground">{resultSummary.windowNotice}</p>
+                ) : null}
               </CardHeader>
               <CardContent>
                 {filteredInteractions.length === 0 ? (
-                  <div className="rounded-md border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
-                    No relationship activity matches these filters.
+                  <div className="flex flex-col items-center gap-3 py-8 text-center text-sm text-muted-foreground">
+                    <p>{resultSummary.emptyMessage}</p>
+                    {activeFilterCount > 0 ? (
+                      <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button>
+                    ) : null}
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="divide-y">
                     {filteredInteractions.map((interaction) => {
                       const Icon = channelIcons[interaction.channel]
                       const confirmedProviderDelivery =
@@ -370,7 +356,7 @@ export function MaRelationshipWorkspace({
                       return (
                         <article
                           key={interaction.id}
-                          className="rounded-md border p-4"
+                          className="py-4 first:pt-0 last:pb-0"
                         >
                           <div className="flex flex-col justify-between gap-3 sm:flex-row">
                             <div className="min-w-0">
@@ -429,7 +415,12 @@ export function MaRelationshipWorkspace({
                             </time>
                           </div>
                           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
-                            <span>{interaction.officeLabel}</span>
+                            <span className="break-words" aria-label={officeDisplay.get(interaction.officeId)?.identity}>
+                              {interaction.officeLabel}
+                              {officeDisplay.get(interaction.officeId)?.reference ? (
+                                <span className="block break-all">{officeDisplay.get(interaction.officeId)?.reference}</span>
+                              ) : null}
+                            </span>
                             {interaction.contactLabel ? (
                               <span>
                                 {interaction.contactLabel}
@@ -554,18 +545,8 @@ export function MaRelationshipWorkspace({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="relationship-office">Office *</Label>
-                <Select value={officeId} onValueChange={selectOffice}>
-                  <SelectTrigger id="relationship-office">
-                    <SelectValue placeholder="Choose office" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workspace.offices.map((office) => (
-                      <SelectItem key={office.id} value={office.id}>
-                        {office.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <MaOfficeCombobox id="relationship-office" offices={workspace.offices}
+                  value={officeId} onValueChange={selectOffice} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="relationship-channel">Activity *</Label>
@@ -782,7 +763,7 @@ export function MaRelationshipWorkspace({
 }
 
 interface RelationshipFilterControlsProps {
-  idPrefix: "desktop" | "mobile"
+  idPrefix: "activity"
   workspace: MaRelationshipWorkspace
   officeFilter: string
   contactFilter: string
@@ -808,26 +789,15 @@ function RelationshipFilterControls({
 
   return (
     <>
-      <div className="space-y-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor={officeFilterId}>Office</Label>
-        <Select value={officeFilter} onValueChange={onOfficeChange}>
-          <SelectTrigger id={officeFilterId}>
-            <SelectValue placeholder="All offices" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All offices</SelectItem>
-            {workspace.offices.map((office) => (
-              <SelectItem key={office.id} value={office.id}>
-                {office.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MaOfficeCombobox id={officeFilterId} offices={workspace.offices}
+          value={officeFilter} onValueChange={onOfficeChange} allowAll />
       </div>
-      <div className="space-y-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor={contactFilterId}>Contact</Label>
         <Select value={contactFilter} onValueChange={onContactChange}>
-          <SelectTrigger id={contactFilterId}>
+          <SelectTrigger id={contactFilterId} className="w-full min-w-0">
             <SelectValue placeholder="All contacts" />
           </SelectTrigger>
           <SelectContent>
@@ -840,10 +810,10 @@ function RelationshipFilterControls({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor={opportunityFilterId}>Opportunity</Label>
         <Select value={opportunityFilter} onValueChange={onOpportunityChange}>
-          <SelectTrigger id={opportunityFilterId}>
+          <SelectTrigger id={opportunityFilterId} className="w-full min-w-0">
             <SelectValue placeholder="All opportunities" />
           </SelectTrigger>
           <SelectContent>
