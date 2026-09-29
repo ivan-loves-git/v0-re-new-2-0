@@ -119,6 +119,10 @@ For dashboards and operational pages, prefer shadcn `Card`, `Table`, `Badge`, `T
 
 Slack, email, meeting notes, and supplied documents are evidence inputs, not canonical decisions. A material product, data, operating-model, or governance decision is closed only when its canonical specification or qualifying Decision is updated in GitHub, affected Product Changes and Tickets link to it, and acceptance tests trace back to it. Do not infer approval from an old message, a completed implementation card, or a PDR status.
 
+## Direct Matt calls for Re-New
+
+When Ivan invokes a Matt skill from this application checkout, read the [Re-New routing adapter](https://github.com/re-new-team/renew-governance/blob/main/docs/agents/renew-direct-calls.md), identify the supplied input and read any applicable existing GitHub cards and active Decisions before applying the generic skill. Analysis may begin without a card; do not create one just to satisfy this entry point. Governance owns the tracker and skill routing; this repository owns application code. Publish this pointer only after governance PR #219 is merged and the canonical `main` link resolves. A direct skill call does not expand build, release, data or communication authority. [Decision #210](https://github.com/re-new-team/renew-governance/issues/210) governs current scope where older instructions conflict.
+
 ## Data Model Summary
 
 - **Repreneur:** Profile with lifecycle status (lead/qualified/client)
