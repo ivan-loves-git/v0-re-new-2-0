@@ -111,7 +111,10 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
 
     await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_opportunity_validity_check'")
     await page.reload()
-    const body = page.locator("#review-body")
+    // Cached inactive route markup is not the current interactive editor.
+    const body = page.locator("#review-body:visible")
+    await expect(body).toHaveCount(1)
+    await expect(body).toBeEditable()
     await body.fill((await body.inputValue()) + "\nSynthetic QA group check.")
     await page.getByRole("button", { name: "Save reviewed text" }).click()
     await expect(page.getByText("Review text saved.", { exact: false })).toBeVisible()
