@@ -35,8 +35,8 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
           </div>
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="flex size-16 items-center justify-center rounded-full border bg-red-50">
-                <AlertCircle className="size-8 text-red-700" />
+              <div className="flex size-16 items-center justify-center rounded-full border bg-destructive/10">
+                <AlertCircle className="size-8 text-destructive" />
               </div>
             </div>
             <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.03em]">{content.title}</h1>
@@ -94,7 +94,7 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
     <main id="main-content" className="min-h-svh bg-background px-4 py-6 md:py-10">
       <div className="mx-auto mb-8 max-w-2xl border-b pb-6">
         <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-lg bg-[#081020] text-[#7dd3c7]"><Waves className="size-[18px]" /></span><span className="text-xs font-semibold tracking-[0.12em]">WAVE</span></div>
+          <div className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-lg bg-foreground text-background"><Waves className="size-[18px]" /></span><span className="text-xs font-semibold tracking-[0.12em]">WAVE</span></div>
           <LanguageToggle />
         </div>
         <div className="text-center">
