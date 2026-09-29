@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateBody: vi.fn(),
   deliverCronReminder: vi.fn(),
   cleanupExpiredPrivateUploads: vi.fn(),
+  purgeExpiredRepreneurFeedback: vi.fn(),
   processRecipientImCleanup: vi.fn(),
   runPendingInterestNotifications: vi.fn(),
   runPendingMemoFeedbackReminders: vi.fn(),
@@ -34,6 +35,9 @@ vi.mock("@/lib/email/cron-reminder-delivery", async (importOriginal) => {
 })
 vi.mock("@/lib/private-upload-server", () => ({
   cleanupExpiredPrivateUploads: mocks.cleanupExpiredPrivateUploads,
+}))
+vi.mock("@/lib/repreneur-feedback/cleanup", () => ({
+  purgeExpiredRepreneurFeedback: mocks.purgeExpiredRepreneurFeedback,
 }))
 vi.mock("@/lib/recipient-im-cleanup", () => ({
   processRecipientImCleanup: mocks.processRecipientImCleanup,
@@ -135,6 +139,7 @@ describe("critical route traces", () => {
       examined: 0,
       cleaned: 0,
     })
+    mocks.purgeExpiredRepreneurFeedback.mockResolvedValue(0)
     mocks.processRecipientImCleanup.mockResolvedValue({ examined: 0, deleted: 0, failed: 0, remaining: 0 })
     mocks.runPendingInterestNotifications.mockResolvedValue({ sent: 0, failed: 0, reviewRequired: 0 })
     mocks.runPendingMemoFeedbackReminders.mockResolvedValue({
@@ -225,6 +230,29 @@ describe("critical route traces", () => {
       "cron.abandoned_forms",
     ])
     expect(mocks.processRecipientImCleanup).toHaveBeenCalledWith({ limit: 25 })
+    expect(mocks.purgeExpiredRepreneurFeedback).toHaveBeenCalledOnce()
+  })
+
+  it("reports feedback retention failure without blocking independent reminder work", async () => {
+    mocks.purgeExpiredRepreneurFeedback.mockRejectedValue(new Error("private feedback contents"))
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn(() => chain({ data: [], error: null })),
+    })
+
+    const response = await runDailyCron(
+      new Request("http://localhost/api/cron/abandoned-forms", {
+        headers: { authorization: "Bearer test-cron-secret" },
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      errors: ["repreneur_feedback_cleanup_failed"],
+    })
+    expect(mocks.processRecipientImCleanup).toHaveBeenCalledWith({ limit: 25 })
+    const serialized = vi.mocked(console.info).mock.calls.concat(vi.mocked(console.error).mock.calls)
+      .map(([entry]) => String(entry)).join("\n")
+    expect(serialized).not.toContain("private feedback contents")
   })
 
   it("isolates new notification families behind separate fail-closed daily routes", async () => {
