@@ -109,7 +109,7 @@ export function StepWho({ data, onChange, onNext, onBack, errors = {} }: IntakeV
                     key={option.value}
                     className={`flex items-start space-x-3 p-3 rounded-md border-2 cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                        ? 'bg-accent border-primary ring-1 ring-primary/20'
                         : 'border-border hover:bg-muted/50 hover:border-input'
                     }`}
                     onClick={() => onChange({ [question.field]: option.value })}
@@ -117,7 +117,7 @@ export function StepWho({ data, onChange, onNext, onBack, errors = {} }: IntakeV
                     <RadioGroupItem value={option.value} id={`${question.id}-${option.value}`} className="mt-0.5" />
                     <Label
                       htmlFor={`${question.id}-${option.value}`}
-                      className={`flex-1 cursor-pointer font-normal leading-relaxed ${isSelected ? 'text-blue-900' : ''}`}
+                      className={`flex-1 cursor-pointer font-normal leading-relaxed ${isSelected ? 'text-foreground' : ''}`}
                     >
                       {t(optionTranslationKey as any)}
                     </Label>

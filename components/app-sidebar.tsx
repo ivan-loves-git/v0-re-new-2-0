@@ -209,18 +209,18 @@ export function AppSidebar({
               className="h-12 hover:bg-sidebar-accent/70 data-[state=open]:bg-sidebar-accent"
             >
               <Link href="/dashboard_re" {...linkWarmupProps("/dashboard_re")}>
-                <span className="relative grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/[0.06] text-[#7dd3c7]">
+                <span className="relative grid size-8 shrink-0 place-items-center rounded-lg border border-sidebar-border bg-sidebar-primary text-sidebar-primary-foreground">
                   <Waves className="size-[18px]" strokeWidth={2} />
                   <span
                     aria-hidden="true"
-                    className="absolute -bottom-px left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-[#58a6ff]"
+                    className="absolute -bottom-px left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-sidebar-primary-foreground"
                   />
                 </span>
                 <span className="grid min-w-0 flex-1 leading-tight">
-                  <span className="text-[13px] font-semibold tracking-[0.12em] text-white">
+                  <span className="text-[13px] font-semibold tracking-[0.12em] text-sidebar-foreground">
                     WAVE
                   </span>
-                  <span className="truncate text-[10px] text-sidebar-foreground/55">
+                  <span className="truncate text-[10px] text-sidebar-foreground/70">
                     Re-New operating system
                   </span>
                 </span>
@@ -243,7 +243,7 @@ export function AppSidebar({
                       getIsActive(item.href) || pendingHref === item.href
                     }
                     tooltip={`Repreneurs · ${item.name}`}
-                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_var(--sidebar-foreground)]"
                   >
                     <Link
                       href={item.href}
@@ -280,7 +280,7 @@ export function AppSidebar({
                       getIsActive(item.href) || pendingHref === item.href
                     }
                     tooltip={`Opportunities · ${item.name}`}
-                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_var(--sidebar-foreground)]"
                   >
                     <Link
                       href={item.href}
@@ -316,7 +316,7 @@ export function AppSidebar({
                       getIsActive(item.href) || pendingHref === item.href
                     }
                     tooltip={`M&A · ${item.name}`}
-                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_var(--sidebar-foreground)]"
                   >
                     <Link
                       href={item.href}
@@ -348,7 +348,7 @@ export function AppSidebar({
                       getIsActive(item.href) || pendingHref === item.href
                     }
                     tooltip={`Tools · ${item.name}`}
-                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
+                    className="h-9 data-[active=true]:shadow-[inset_2px_0_0_var(--sidebar-foreground)]"
                   >
                     <Link
                       href={item.href}
@@ -382,7 +382,7 @@ export function AppSidebar({
                         getIsActive(item.href) || pendingHref === item.href
                       }
                       tooltip={`Project · ${item.name}`}
-                      className="h-9 data-[active=true]:shadow-[inset_2px_0_0_#58a6ff]"
+                      className="h-9 data-[active=true]:shadow-[inset_2px_0_0_var(--sidebar-foreground)]"
                     >
                       <Link
                         href={item.href}
@@ -395,7 +395,7 @@ export function AppSidebar({
                           <item.icon className="size-4" />
                           {showRedDot && (
                             <span
-                              className="absolute -top-1 -right-1 size-2 rounded-full bg-amber-400 ring-2 ring-sidebar"
+                              className="absolute -top-1 -right-1 size-2 rounded-full bg-warning ring-2 ring-sidebar"
                               aria-label="Recently updated"
                             />
                           )}
@@ -413,7 +413,7 @@ export function AppSidebar({
 
       <SidebarFooter className="border-t border-sidebar-border/80 p-2.5">
         <div className="px-2 pb-0.5 group-data-[collapsible=icon]:hidden">
-          <span className="font-mono text-[10px] text-sidebar-foreground/45">
+          <span className="font-mono text-[10px] text-sidebar-foreground/70">
             {BUILD_VERSION}
           </span>
         </div>
@@ -428,7 +428,7 @@ export function AppSidebar({
                   >
                     <Avatar className="size-8 rounded-lg">
                       <AvatarImage src={userAvatar} alt={displayName} />
-                      <AvatarFallback className="rounded-lg bg-[#1f6feb] text-xs text-white">
+                      <AvatarFallback className="rounded-lg bg-sidebar-primary text-xs text-sidebar-primary-foreground">
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
@@ -453,7 +453,7 @@ export function AppSidebar({
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                       <Avatar className="size-8 rounded-lg">
                         <AvatarImage src={userAvatar} alt={displayName} />
-                        <AvatarFallback className="rounded-lg bg-[#1f6feb] text-xs text-white">
+                        <AvatarFallback className="rounded-lg bg-sidebar-primary text-xs text-sidebar-primary-foreground">
                           {userInitials}
                         </AvatarFallback>
                       </Avatar>
@@ -486,7 +486,7 @@ export function AppSidebar({
                   <DropdownMenuItem asChild>
                     <a
                       href="/auth/logout"
-                      className="text-red-600 focus:text-red-600"
+                      className="text-destructive focus:text-destructive"
                     >
                       <LogOut className="mr-2 size-4" />
                       Log out
@@ -502,7 +502,7 @@ export function AppSidebar({
                 >
                   <Avatar className="size-8 rounded-lg">
                     <AvatarImage src={userAvatar} alt={displayName} />
-                    <AvatarFallback className="rounded-lg bg-[#1f6feb] text-xs text-white">
+                    <AvatarFallback className="rounded-lg bg-sidebar-primary text-xs text-sidebar-primary-foreground">
                       {userInitials}
                     </AvatarFallback>
                   </Avatar>

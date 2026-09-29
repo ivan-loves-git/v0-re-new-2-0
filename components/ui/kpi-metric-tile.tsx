@@ -37,19 +37,21 @@ export interface KpiMetricTileProps {
   className?: string
 }
 
-const toneClasses: Record<KpiTone, { icon: string; iconBg: string; marker: string }> = {
-  email: { icon: "text-blue-700", iconBg: "bg-blue-50", marker: "bg-blue-600" },
-  repreneur: { icon: "text-teal-700", iconBg: "bg-teal-50", marker: "bg-teal-600" },
-  score: { icon: "text-indigo-700", iconBg: "bg-indigo-50", marker: "bg-indigo-600" },
-  opportunity: { icon: "text-cyan-700", iconBg: "bg-cyan-50", marker: "bg-cyan-600" },
-  attention: { icon: "text-amber-700", iconBg: "bg-amber-50", marker: "bg-amber-600" },
-  risk: { icon: "text-red-700", iconBg: "bg-red-50", marker: "bg-red-600" },
-  neutral: { icon: "text-slate-600", iconBg: "bg-slate-50", marker: "bg-slate-500" },
+// Category metrics stay neutral. Color is reserved for meaningful attention/risk.
+const neutralTone = { icon: "text-muted-foreground", iconBg: "bg-muted" }
+const toneClasses: Record<KpiTone, { icon: string; iconBg: string }> = {
+  email: neutralTone,
+  repreneur: neutralTone,
+  score: neutralTone,
+  opportunity: neutralTone,
+  attention: { icon: "text-warning", iconBg: "bg-warning/10" },
+  risk: { icon: "text-destructive", iconBg: "bg-destructive/10" },
+  neutral: neutralTone,
 }
 
 const trendToneClasses: Record<KpiTrendTone, string> = {
-  positive: "text-green-600/80",
-  negative: "text-red-600/80",
+  positive: "text-success",
+  negative: "text-destructive",
   neutral: "text-muted-foreground",
 }
 
@@ -91,7 +93,6 @@ export function KpiMetricTile({
         className
       )}
     >
-      <span aria-hidden="true" className={cn("absolute inset-x-4 top-0 h-0.5 opacity-80", colors.marker)} />
       <div className="flex h-full min-w-0 flex-col gap-2 p-4">
         <button
           type="button"
@@ -121,7 +122,7 @@ export function KpiMetricTile({
         </div>
 
         <div className="mt-auto flex flex-col items-start gap-[3px]">
-          <div className="text-[26px] font-semibold leading-none tracking-[-0.03em] text-foreground tabular-nums">
+          <div className="font-heading text-[26px] font-semibold leading-none tracking-[-0.03em] text-foreground tabular-nums">
             {value}
           </div>
           <div className={cn("inline-flex items-center gap-0.5 text-[11px] font-semibold leading-none tabular-nums", trendToneClasses[normalized.tone])}>
