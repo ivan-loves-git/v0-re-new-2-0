@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { listStaffEmailReviews } from "@/lib/actions/staff-email-review"
-import { EMAIL_REVIEW_PURPOSES, isEmailReviewSelectable, type EmailReviewDirection, type EmailReviewPurpose, type EmailReviewQueueRow, type EmailReviewSort } from "@/lib/email/review-queue-query"
+import { EMAIL_REVIEW_PURPOSES, emailReviewDetailPath, isEmailReviewSelectable, type EmailReviewDirection, type EmailReviewPurpose, type EmailReviewQueueRow, type EmailReviewSort } from "@/lib/email/review-queue-query"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
 type Queue = Awaited<ReturnType<typeof listStaffEmailReviews>>
@@ -58,8 +58,8 @@ function Recipient({ review }: { review: EmailReviewQueueRow }) {
 
 function preparedAt(value: string) {
   const day = formatDisplayDateTime(value, "en-GB", { day: "numeric", month: "short" })
-  const hour = formatDisplayDateTime(value, "en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-  return `${day} · ${hour}`
+  const hour = formatDisplayDateTime(value, "en-US", { hour: "numeric", hour12: true })
+  return `${day} ${hour}`
 }
 
 function fullPreparedAt(value: string) {
@@ -143,15 +143,24 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
             <SortHead column="message" label="Message" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="purpose" label="Purpose" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="recipient" label="Recipient" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="company" label="Company" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="prepared" label="Prepared" sort={queue.sort} direction={queue.direction} onSort={sortBy} />
             <TableHead>Actions</TableHead>
           </TableRow></TableHeader>
-          <TableBody>{queue.reviews.map((review) => <TableRow key={review.id} className="[&_td]:py-1.5" data-state={selected.has(review.id) ? "selected" : undefined}>
+          <TableBody>{queue.reviews.map((review) => {
+            const detailPath = emailReviewDetailPath(review.id)
+            return <TableRow key={review.id} className="[&_td]:py-1.5" data-state={selected.has(review.id) ? "selected" : undefined}>
             <TableCell><Checkbox aria-label={`Select draft ${review.subject}`} checked={selected.has(review.id)} disabled={!isEmailReviewSelectable(review)} onCheckedChange={(checked) => setSelection({ pageKey, ids: checked === true ? [...selected, review.id] : [...selected].filter((id) => id !== review.id) })} /></TableCell>
-            <TableCell><div className="min-w-0"><Link href={`/emails/review/${review.id}`} className="block truncate font-medium text-foreground hover:underline" title={review.subject}>{review.subject}</Link><span className="block truncate text-xs text-muted-foreground" title={review.body_preview}>{review.body_preview}</span></div></TableCell>
+            <TableCell><div className="min-w-0">{detailPath
+              ? <Link href={detailPath} className="block truncate font-medium text-foreground hover:underline" title={review.subject}>{review.subject}</Link>
+              : <span className="block truncate font-medium text-foreground" title={review.subject}>{review.subject}</span>}
+              <span className="block truncate text-xs text-muted-foreground" title={review.body_preview}>{review.body_preview}</span></div></TableCell>
             <TableCell><Badge variant="outline" className={`max-w-full truncate ${purposeTone[review.purpose_key] ?? purposeTone.ma_other}`}>{review.purpose_label}</Badge></TableCell>
             <TableCell><Recipient review={review} /></TableCell>
             <TableCell><span className={review.company_name ? "block truncate" : "text-muted-foreground"} title={review.company_name ?? "Company not recorded"}>{review.company_name ?? "Not recorded"}</span></TableCell>
             <TableCell><time dateTime={review.created_at} title={fullPreparedAt(review.created_at)} className="flex items-center gap-1.5 text-xs tabular-nums text-muted-foreground"><Clock3 aria-hidden="true" className="size-3.5 shrink-0" />{preparedAt(review.created_at)}</time></TableCell>
-            <TableCell><div className="flex flex-col items-start gap-0.5"><Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs"><Link href={`/emails/review/${review.id}`}>Review</Link></Button><span className="flex gap-1"><Badge variant="secondary" className="px-1 text-[10px] leading-3">{review.state}</Badge><Badge variant="outline" className="px-1 text-[10px] leading-3">{review.namespace}</Badge></span></div></TableCell>
-          </TableRow>)}</TableBody>
+            <TableCell><div className="flex flex-col items-start gap-0.5">{detailPath
+              ? <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs"><Link href={detailPath}>Review</Link></Button>
+              : <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled>Unavailable</Button>}
+              <span className="flex gap-1"><Badge variant="secondary" className="px-1 text-[10px] leading-3">{review.state}</Badge><Badge variant="outline" className="px-1 text-[10px] leading-3">{review.namespace}</Badge></span></div></TableCell>
+          </TableRow>
+          })}</TableBody>
         </Table>
       </div>}
 

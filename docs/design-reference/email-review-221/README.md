@@ -18,7 +18,8 @@ localhost-only, temporary synthetic route with `example.invalid` addresses
 and fictional names on the released neutral Vega theme baseline
 (`8b8be3b78e79df6e3366c87d59e9fea552b8ca0a`). They show desktop/mobile
 and light/dark presentation, including the horizontally scrolled mobile
-columns.
+columns. The Prepared column shows the Paris date and hour; hovering its
+timestamp retains the full date, minute and second.
 The temporary route is removed before commit. The screenshots are a layout
 reference, not a production-data, authentication or database-migration claim.
 

@@ -99,7 +99,8 @@ describe("staff email review timestamps", () => {
     const serverHtml = renderIn("UTC", element)
     const browserHtml = renderIn("Europe/Paris", element)
 
-    expect(serverHtml).toContain("24 Sept · 7:48 PM")
+    expect(serverHtml).toContain("24 Sept 7 PM")
+    expect(serverHtml).toContain('title="24 September 2026 at 7:48:21 pm"')
     expect(serverHtml).toBe(browserHtml)
   })
 })

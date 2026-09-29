@@ -1,3 +1,5 @@
+import { isUuid } from "@/lib/uuid"
+
 export const EMAIL_REVIEW_PURPOSES = [
   { key: "source_freshness", label: "Source freshness" },
   { key: "e4_qualification", label: "E4 qualification" },
@@ -73,6 +75,13 @@ export function parseEmailReviewQueueOptions(input: Record<string, string | unde
 
 export function emailReviewSearchPattern(search: string) {
   return `%${search.replace(/[\\%_]/g, "\\$&")}%`
+}
+
+// Review IDs originate in a UUID column, but validate them again before they
+// become a client-side navigation target. Encode the single path segment so
+// neither route delimiters nor a URL scheme can be introduced by row data.
+export function emailReviewDetailPath(id: string) {
+  return isUuid(id) ? `/emails/review/${encodeURIComponent(id)}` : null
 }
 
 // Ticket #224's selected-send boundary is pending REAL drafts only. Until then,

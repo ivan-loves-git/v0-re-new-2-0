@@ -144,6 +144,7 @@ done < <(
 "${psql_safe[@]}" -f scripts/123_staff_email_handoff_source_actor_alignment.sql
 "${psql_safe[@]}" -f scripts/124_recipient_information_memos.sql
 "${psql_safe[@]}" -f scripts/129_opportunity_freshness_reviews.sql
+"${psql_safe[@]}" -f scripts/130_staff_email_review_queue_projection.sql
 
 # The sanitized structure snapshot deliberately omits the real Acme/Bertrand
 # singleton while retaining its redacted integrity function. Reconstruct the

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  emailReviewSearchPattern, emailReviewSortColumn, isEmailReviewSelectable,
+  emailReviewDetailPath, emailReviewSearchPattern, emailReviewSortColumn, isEmailReviewSelectable,
   parseEmailReviewQueueOptions, type EmailReviewQueueRow,
 } from "@/lib/email/review-queue-query"
 
@@ -43,5 +43,15 @@ describe("staff email queue options", () => {
     expect(isEmailReviewSelectable({ ...row, state: "uncertain" })).toBe(false)
     expect(isEmailReviewSelectable({ ...row, state: "sent" })).toBe(false)
     expect(isEmailReviewSelectable({ ...row, namespace: "DEMO" })).toBe(false)
+  })
+
+  it("builds a review path only from one valid UUID segment", () => {
+    expect(emailReviewDetailPath(row.id)).toBe(`/emails/review/${row.id}`)
+    for (const hostileId of [
+      "javascript:alert(1)", "//example.invalid/escape", "../dashboard",
+      `${row.id}?next=https://example.invalid`, `${row.id}/../../../dashboard`, "%2F%2Fexample.invalid",
+    ]) {
+      expect(emailReviewDetailPath(hostileId)).toBeNull()
+    }
   })
 })
