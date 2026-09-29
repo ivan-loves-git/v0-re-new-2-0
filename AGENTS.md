@@ -109,6 +109,8 @@ For dashboards and operational pages, prefer shadcn `Card`, `Table`, `Badge`, `T
 
 `pnpm design:check` is available and worth running when you finish a batch of UI work. It is a helper, not a gate: use judgement on what it reports, and do not loop on it or block a change because it has findings.
 
+Reuse installed WAVE and shadcn controls first. For an applicable new UI pattern, use the ReUI MCP to inspect a free preview, the actual component API and examples before adding anything; adapt the pattern to WAVE tokens and verify its browser and accessibility behavior. Ordinary controls remain plain shadcn. ReUI does not authorize product-logic or information-architecture changes.
+
 - Approved defaults are encoded in `DESIGN.md`, `app/globals.css`, and `components/wave/visual-foundations.tsx`: neutral full borders, quiet persistent panels, restrained semantic tints, segmented metric summaries, flat page/header surfaces, semantic product colors, and state-only motion.
 - Ivan explicitly retained compact uppercase labels. `.wave-micro-label` and `WaveMicroLabel` are approved for KPI labels, table-style labels, short categories, and compact navigation. Do not flag them, and do not improvise local uppercase/tracking variants.
 - Preserve valid product semantics. Standard tab underlines, navigation selection markers, status meaning, and the WAVE tide marker are not decorative accents merely because they use a border.

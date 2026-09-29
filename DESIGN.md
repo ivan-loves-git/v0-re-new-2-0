@@ -107,7 +107,7 @@ components:
 
 WAVE is a restrained operating surface for a small team doing consequential acquisition work. It should feel mature, compact, familiar, and dependable. Structure comes from spacing, typography, shared borders, and progressive disclosure. Decoration never substitutes for hierarchy.
 
-The WAVE layer governs shadcn building blocks. New screens use the shared classes and components in `app/globals.css` and `components/wave/visual-foundations.tsx`. Impeccable is limited to implementation-level visual polish. It must not propose or change KPIs, product logic, workflows, information hierarchy, information architecture, filters, or strategy.
+The WAVE layer governs shadcn building blocks. New screens use the shared classes and components in `app/globals.css` and `components/wave/visual-foundations.tsx`. For an applicable new pattern, inspect the ReUI MCP preview and actual API, then adapt a free component or example to WAVE; keep ordinary controls in shadcn. Design tooling must not propose or change KPIs, product logic, workflows, information hierarchy, information architecture, filters, or strategy.
 
 ## Colors
 
@@ -186,4 +186,4 @@ Use the WAVE chart facade in `components/wave/charts`. EvilCharts supplies found
 - **Don't** split one compact summary into individually colored statistic cards.
 - **Don't** stagger ordinary product content on page load.
 - **Don't** use repeating diagonal stripes or isolated purple styling.
-- **Don't** let Impeccable alter product semantics, KPIs, workflows, hierarchy, information architecture, filters, or strategy.
+- **Don't** let design tooling alter product semantics, KPIs, workflows, hierarchy, information architecture, filters, or strategy.
