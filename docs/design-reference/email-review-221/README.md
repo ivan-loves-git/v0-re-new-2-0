@@ -13,9 +13,12 @@ under the 27 September `email-review-prototype`. Its two real-data snapshots
 and `src/drafts.ts` were deliberately excluded. No prototype data or
 unreviewed ReUI scaffold was copied into the application.
 
-These four screenshots render the actual `ReviewQueue` component in a
+These five screenshots render the actual `ReviewQueue` component in a
 localhost-only, temporary synthetic route with `example.invalid` addresses
-and fictional names. They show desktop/mobile and light/dark presentation.
+and fictional names on the released neutral Vega theme baseline
+(`8b8be3b78e79df6e3366c87d59e9fea552b8ca0a`). They show desktop/mobile
+and light/dark presentation, including the horizontally scrolled mobile
+columns.
 The temporary route is removed before commit. The screenshots are a layout
 reference, not a production-data, authentication or database-migration claim.
 
@@ -23,6 +26,7 @@ reference, not a production-data, authentication or database-migration claim.
 - `queue-mobile-light.png`
 - `queue-desktop-dark.png`
 - `queue-mobile-dark.png`
+- `queue-mobile-columns-dark.png`
 
 The production queue uses the existing Radix/shadcn controls and the
 service-role-only canonical projection in migration 130. E6 company remains
