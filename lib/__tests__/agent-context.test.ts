@@ -20,6 +20,7 @@ function fixture() {
   git(root, "config", "user.name", "Synthetic QA")
   git(root, "config", "commit.gpgsign", "false")
   writeFileSync(join(root, "AGENTS.md"), "# Current instructions\n")
+  writeFileSync(join(root, "DESIGN.md"), "# Current WAVE design rules\n")
   writeFileSync(join(root, "rename me.txt"), "rename fixture\n")
   writeFileSync(join(root, "delete.txt"), "delete fixture\n")
   writeFileSync(join(root, ".gitignore"), ".env*\n")
@@ -27,7 +28,7 @@ function fixture() {
   return root
 }
 function blob(value: string) { return createHash("sha1").update(`blob ${Buffer.byteLength(value)}\0`).update(value).digest("hex") }
-function runnerFor(root: string, options: { unavailable?: boolean; sha?: string; instructionSha?: string } = {}) {
+function runnerFor(root: string, options: { unavailable?: boolean; sha?: string; instructionSha?: string; designSha?: string } = {}) {
   const calls: string[][] = []
   const runner = (command: string, args: string[], cwd: string) => {
     calls.push([command, ...args])
@@ -41,6 +42,7 @@ function runnerFor(root: string, options: { unavailable?: boolean; sha?: string;
     if (endpoint === "repos/example/project") value = { default_branch: "trunk" }
     else if (endpoint === "repos/example/project/commits/trunk") value = { sha: options.sha ?? git(root, "rev-parse", "HEAD") }
     else if (endpoint.startsWith("repos/example/project/contents/AGENTS.md?ref=")) value = { type: "file", sha: options.instructionSha ?? blob("# Current instructions\n") }
+    else if (endpoint.startsWith("repos/example/project/contents/DESIGN.md?ref=")) value = { type: "file", sha: options.designSha ?? blob("# Current WAVE design rules\n") }
     else return { status: 1, stdout: "", stderr: "HTTP 404" }
     return { status: 0, stdout: JSON.stringify(value), stderr: "" }
   }
@@ -76,6 +78,23 @@ describe("read-only repository context", () => {
     const result = report(root, { runner })
     expect(result.comparison).toBe("same_revision")
     expect(result.instructions[0].comparison).toBe("different")
+  })
+
+  it("reports stale DESIGN.md against the observed GitHub revision", () => {
+    const root = fixture()
+    git(root, "remote", "add", "origin", "https://github.com/example/project.git")
+    const updatedDesign = "# Updated WAVE design rules\n"
+    const { runner, calls } = runnerFor(root, { designSha: blob(updatedDesign) })
+    const result = report(root, { runner })
+    const design = result.instructions.find((item: { path: string }) => item.path === "DESIGN.md")
+    expect(result.comparison).toBe("same_revision")
+    expect(result.instructions.find((item: { path: string }) => item.path === "AGENTS.md").comparison).toBe("identical")
+    expect(design).toMatchObject({
+      comparison: "different",
+      local: { state: "present", sha: blob("# Current WAVE design rules\n") },
+      remote: { state: "present", sha: blob(updatedDesign) },
+    })
+    expect(calls.some((args) => args.includes(`repos/example/project/contents/DESIGN.md?ref=${git(root, "rev-parse", "HEAD")}`))).toBe(true)
   })
 
   it("matches Git blob identity for non-ASCII instruction bytes", () => {

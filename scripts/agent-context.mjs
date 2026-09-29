@@ -5,7 +5,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path"
 import { pathToFileURL } from "node:url"
 
 const instructionPaths = [
-  "AGENTS.md", "CLAUDE.md", "START-HERE.md",
+  "AGENTS.md", "DESIGN.md", "CLAUDE.md", "START-HERE.md",
   "docs/TESTING_RELEASE_PROTOCOL.md", "docs/commit-style.md",
 ]
 
