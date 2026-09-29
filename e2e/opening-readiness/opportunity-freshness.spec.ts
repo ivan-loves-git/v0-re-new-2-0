@@ -90,8 +90,11 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     await page.getByRole("button", { name: "Sign In", exact: true }).click()
     await expect(page).toHaveURL(/\/dashboard_re/)
     await page.goto("/emails?reviewFilter=active")
-    await expect(page.getByText("45-day source freshness")).toBeVisible()
-    await page.locator(`a[href="/emails/review/${reviewId}"]`).click()
+    const reviewRow = page.getByRole("row").filter({
+      has: page.locator(`a[href="/emails/review/${reviewId}"]`),
+    })
+    await expect(reviewRow.getByText("Source freshness", { exact: true })).toBeVisible()
+    await reviewRow.getByRole("link", { name: "Review" }).click()
     await expect(page.getByText("Catalogue template disabled")).toBeVisible()
     await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled()
     await expect(page.getByText("QA-FRESH-A", { exact: false }).first()).toBeVisible()
@@ -108,7 +111,10 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
 
     await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_opportunity_validity_check'")
     await page.reload()
-    const body = page.locator("#review-body")
+    // Cached inactive route markup is not the current interactive editor.
+    const body = page.locator("#review-body:visible")
+    await expect(body).toHaveCount(1)
+    await expect(body).toBeEditable()
     await body.fill((await body.inputValue()) + "\nSynthetic QA group check.")
     await page.getByRole("button", { name: "Save reviewed text" }).click()
     await expect(page.getByText("Review text saved.", { exact: false })).toBeVisible()

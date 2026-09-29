@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   listLegacyBoard: vi.fn(),
   getAttachments: vi.fn(),
   readActions: vi.fn(),
+  readNextActions: vi.fn(),
 }))
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
@@ -20,6 +21,7 @@ vi.mock("@/lib/actions/external-pursuits", () => ({ listExternalPursuitBoard: mo
 vi.mock("@/lib/actions/external-pursuit-board", () => ({ listPortalReNewPursuitBoard: mocks.listLegacyBoard }))
 vi.mock("@/lib/actions/external-pursuit-attachments", () => ({ getExternalPursuitAttachmentMap: mocks.getAttachments }))
 vi.mock("@/lib/data/current-pursuit", () => ({ readPortalDealActionIndicators: mocks.readActions }))
+vi.mock("@/lib/data/portal-next-actions", () => ({ readPortalNextActions: mocks.readNextActions }))
 
 import PortalPursuitsPage from "@/app/portal/pursuits/page"
 import PortalDealDetailPage from "@/app/portal/deals/[matchId]/page"
@@ -36,6 +38,8 @@ describe("owner Pursuits entry", () => {
     mocks.listLegacyBoard.mockResolvedValue([])
     mocks.getAttachments.mockResolvedValue({})
     mocks.readActions.mockResolvedValue({ "match-1": "respond" })
+    mocks.readNextActions.mockResolvedValue({ state: "ready", asOf: "2026-09-30T00:00:00Z",
+      yourActions: [], waiting: [], resources: [] })
     mocks.getOpportunity.mockResolvedValue({
       match_id: "match-1", match_status: "proposed", opportunity_id: "opportunity-1",
       public_title: "Safe selected match", teaser_summary: "Approved public description",
@@ -54,6 +58,7 @@ describe("owner Pursuits entry", () => {
     expect(html).toContain('href="/portal/pursuits?view=external"')
     expect(html).not.toContain("Approved public description")
     expect(mocks.readActions).toHaveBeenCalledWith(["match-1"])
+    expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" }, expect.any(Object))
     expect(mocks.listExternal).not.toHaveBeenCalled()
     expect(mocks.listLegacyBoard).not.toHaveBeenCalled()
   })
@@ -78,16 +83,20 @@ describe("owner Pursuits entry", () => {
   })
 
   it("keeps External dossiers in an explicit separate view with their existing controls", async () => {
+    mocks.readNextActions.mockResolvedValue({ state: "unavailable", asOf: "2026-09-30T00:00:00Z",
+      yourActions: [], waiting: [], resources: [] })
     const html = renderToStaticMarkup(await PortalPursuitsPage({ searchParams: Promise.resolve({ view: "external" }) }))
 
     expect(html).toContain('href="/portal/pursuits"')
     expect(html).toContain("New external pursuit")
     expect(html).toContain('aria-label="Pursuit board"')
     expect(html).toContain("External dossiers remain separate from Re-New pursuits.")
+    expect(html).toContain("Current actions are unavailable")
     expect(html).not.toContain("Re-New cards are a read-only view")
     expect(html).not.toContain('data-wave-workspace="pursuit"')
     expect(mocks.listExternal).toHaveBeenCalledOnce()
     expect(mocks.listOpportunities).not.toHaveBeenCalled()
+    expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" })
     expect(mocks.readActions).not.toHaveBeenCalled()
   })
 })

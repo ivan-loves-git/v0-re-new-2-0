@@ -7,6 +7,7 @@ import { PreviewLanguageScope, StaffEnglishBoundary } from "@/components/i18n/pr
 import { StaffPortalPreviewAreas } from "@/components/repreneurs/staff-portal-preview-areas"
 import { previewUiLanguage } from "@/lib/i18n/server-language"
 import { RepreneurPursuitWorkspace } from "@/components/portal/repreneur-pursuit-workspace"
+import { PortalNextActionsPanel } from "@/components/portal/portal-next-actions-panel"
 import { RepreneurOpportunityList } from "@/components/opportunities/repreneur-opportunity-list"
 import { RepreneurProfileSummary } from "@/components/portal/repreneur-profile-summary"
 import { StaffPortalPreviewSelector } from "@/components/repreneurs/staff-portal-preview-selector"
@@ -25,6 +26,7 @@ import {
 } from "@/lib/actions/repreneur-portal-preview"
 import { requireStaffAccess } from "@/lib/access-control"
 import { readPortalCurrentPursuit, readPortalDealActionIndicators } from "@/lib/data/current-pursuit"
+import { readPortalNextActions } from "@/lib/data/portal-next-actions"
 import {
   createPortalPreviewDealHrefMap,
   createPortalPreviewDocumentHref,
@@ -122,6 +124,11 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   const attachmentsByPursuit = externalPursuits.length
     ? await getExternalPursuitAttachmentMap(externalPursuits.map((pursuit) => pursuit.id))
     : {}
+  const nextActions = selectedRepreneurId && selectedOwnerToken && currentWorkspace && !selectedDealId
+    && (section === "renew-pursuits" || section === "external-pursuits")
+    ? await readPortalNextActions({ kind: "staff-preview", repreneurId: selectedRepreneurId,
+        selectionToken: selectedOwnerToken }, opportunityData)
+    : null
   const staffName = access.user.name?.trim() || access.user.email
 
   return (
@@ -188,6 +195,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
       )}
 
       <PreviewLanguageScope initialLanguage={previewLanguage}>
+      {nextActions ? <PortalNextActionsPanel projection={nextActions} /> : null}
       {selectedRepreneurId && selectedDealId && selectedOpportunity && (
         <RepreneurPursuitWorkspace
           key={JSON.stringify([selectedRepreneurId, workspaceId, selectedDealId, query, status, returnView])}

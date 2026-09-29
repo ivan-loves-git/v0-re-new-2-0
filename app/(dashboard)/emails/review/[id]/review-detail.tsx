@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { approveAndSendStaffEmailReview, cancelStaffEmailReview, editStaffEmailReview, recordOpportunityFreshnessReply, refreshOpportunityFreshnessReview, type StaffEmailReview } from "@/lib/actions/staff-email-review"
+import { PURSUIT_REVIEW_COPY_VERSION } from "@/lib/email/review-copy-version"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
 type ReviewRecord = Awaited<ReturnType<typeof import("@/lib/actions/staff-email-review").getStaffEmailReview>>
@@ -44,6 +45,10 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
   const answeredMembers = new Set(initial.replies.map((reply) => reply.opportunity_id))
   const answeredCount = initial.members.filter((member) => answeredMembers.has(member.opportunity_id)).length
   const allMembersAnswered = initial.members.length > 0 && answeredCount === initial.members.length
+  const catalogueVersionIsReviewVersion = review.source_kind === "ma" || review.source_kind === "freshness"
+  const catalogueChanged = catalogueVersionIsReviewVersion && initial.catalogue?.version !== review.template_version
+  const currentCodeVersion = review.source_kind === "e4" || review.source_kind === "e6" || review.source_kind === "e7"
+    ? PURSUIT_REVIEW_COPY_VERSION[review.source_kind] : null
 
   function run(action: () => Promise<{ message: string; success?: boolean }>) {
     setError("")
@@ -73,7 +78,9 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
       <CardContent className="flex flex-col gap-5">
         {error ? <Alert variant="destructive"><AlertTitle>Action not completed</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
         {review.namespace === "DEMO" ? <Alert><AlertTitle>DEMO draft</AlertTitle><AlertDescription>Production delivery is disabled for this draft.</AlertDescription></Alert> : null}
-        {!initial.catalogueEnabled ? <Alert><AlertTitle>Catalogue template disabled</AlertTitle><AlertDescription>This draft can be reviewed, but Send is blocked while {review.template_key} is inactive or missing in Templates. This review does not change the existing switch.</AlertDescription></Alert> : null}
+        {!initial.catalogueEnabled ? <Alert><AlertTitle>Catalogue template disabled or unavailable</AlertTitle><AlertDescription>This draft can be reviewed, but Send is blocked while {review.template_key} is inactive or missing in Templates. This review does not change the existing switch.</AlertDescription></Alert> : null}
+        {catalogueChanged && initial.catalogue ? <Alert><AlertTitle>Template changed since preparation</AlertTitle><AlertDescription>The retained reviewed message remains below. Its catalogue hash differs from the current template, so the existing send gate will block this draft.</AlertDescription></Alert> : null}
+        {currentCodeVersion && currentCodeVersion !== review.template_version ? <Alert><AlertTitle>Fixed copy version changed</AlertTitle><AlertDescription>The retained review uses an earlier code version. The existing send gate will block this draft.</AlertDescription></Alert> : null}
         {review.source_kind === "freshness" ? <div className="rounded-md border p-3 text-sm"><p className="font-medium">Generating rule · v1</p><Link className="underline" href="/emails/automations/opportunity-freshness">View the internal 45-day rule</Link><p className="mt-2 text-muted-foreground">The rule link is internal only; it is not in the customer message.</p></div> : null}
         {review.state === "uncertain" || review.state === "sending" ? <Alert><AlertTitle>Outcome needs care</AlertTitle><AlertDescription>Retry only this unchanged operation after its two-minute lease. After 23 hours, reconcile with the provider; do not create another draft to resend.</AlertDescription></Alert> : null}
         {review.state === "failed" && review.source_kind !== "ma" ? <Alert><AlertTitle>Conclusive failure</AlertTitle><AlertDescription>The handoff was not accepted. You may retry only this unchanged review while its safe window and current source gates remain valid, or cancel it with a reason.</AlertDescription></Alert> : null}
@@ -82,9 +89,28 @@ export function ReviewDetail({ initial }: { initial: ReviewRecord }) {
           <div><dt className="text-muted-foreground">Source action / event</dt><dd className="break-all">{review.source_kind} · {review.source_operation_id}</dd></div>
           <div><dt className="text-muted-foreground">Opportunity</dt><dd>{review.source_kind === "freshness" ? `${initial.members.length} frozen members below` : <Link className="underline" href={`/opportunities/${review.opportunity_id}`}>{review.opportunity_id}</Link>}</dd></div>
           <div><dt className="text-muted-foreground">Pursuit</dt><dd>{review.match_id ?? "None — ordinary M&A action"}</dd></div>
-          <div><dt className="text-muted-foreground">Template / version</dt><dd className="break-all">{review.template_key} · {review.template_version}</dd></div>
+          <div><dt className="text-muted-foreground">Retained template identity</dt><dd className="break-all">{review.template_key} · {review.template_version}</dd></div>
           <div><dt className="text-muted-foreground">Reviewed version</dt><dd>{review.version}</dd></div>
         </dl>
+        <div className="space-y-3 rounded-md border bg-muted/20 p-4 text-sm">
+          <div><p className="font-medium">Template provenance</p><p className="mt-1 text-muted-foreground">The subject and message below are the retained reviewed copy; staff edits never change a catalogue template.</p></div>
+          {review.source_kind === "e6"
+            ? <p>E6 NDA-ready is governed by retained code version <code className="break-all">{review.template_version}</code>; current code version <code>{currentCodeVersion}</code>. It has no editable catalogue template.</p>
+            : <>
+              {review.source_kind === "e4" || review.source_kind === "e7"
+                ? <p>This handoff uses retained fixed code copy <code>{review.template_version}</code>; current code version <code>{currentCodeVersion}</code>. The linked catalogue record is its current availability gate, not the source of those fixed words.</p>
+                : <p>Retained catalogue version: <code className="break-all">{review.template_version}</code>. The original catalogue source is not stored separately; the reviewed subject and message below are retained.</p>}
+              <Link className="font-medium underline underline-offset-2" href={`/emails?tab=templates#template-${review.template_key}`}>Open {review.template_key} in Templates</Link>
+              {initial.catalogue ? <div className="space-y-1">
+                <p>Current catalogue version: <code className="break-all">{initial.catalogue.version}</code> · {initial.catalogue.is_active ? "active" : "inactive"}</p>
+                <details className="rounded-md border bg-card p-3"><summary className="cursor-pointer font-medium">View current stored template source</summary>
+                  <p className="mt-3 text-muted-foreground">Current stored subject</p><p className="whitespace-pre-wrap break-words">{initial.catalogue.subject ?? "Empty"}</p>
+                  <p className="mt-3 text-muted-foreground">Current stored body</p><pre className="whitespace-pre-wrap break-words font-sans">{initial.catalogue.body_markdown ?? "No stored body"}</pre>
+                  <p className="mt-2 text-xs text-muted-foreground">This is the live catalogue source, not the retained rendered or edited review.</p>
+                </details>
+              </div> : <p className="text-muted-foreground">The current catalogue record could not be read.</p>}
+            </>}
+        </div>
         {review.source_kind === "freshness" ? <div className="space-y-2"><p className="font-medium">Exact opportunity members and source evidence</p>{initial.members.map((member) => {
           const frozen = member.frozen_member
           return <div key={member.opportunity_id} className="rounded-md border p-3 text-sm">

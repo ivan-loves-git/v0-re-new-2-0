@@ -850,7 +850,10 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await emailTabStrip.evaluate((strip) => { strip.scrollLeft = strip.scrollWidth; });
     expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
     await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
-    await page.locator(`a[href="/emails/review/${cancelledReviewId}"]`).click();
+    const cancelledReviewRow = page.getByRole("row").filter({
+      has: page.locator(`a[href="/emails/review/${cancelledReviewId}"]`),
+    });
+    await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();
     expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("Europe/Paris");
     const reviewSurface = page.locator("#main-content:visible").filter({
       has: page.locator("#review-subject:visible"),
