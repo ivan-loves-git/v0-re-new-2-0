@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createGovernanceProjection } from "@/lib/governance-projection/normalize";
+import { parseFounderReportingMarker } from "@/lib/governance-projection/founder-reporting-marker";
+import { summarizeFounderWork } from "@/lib/governance-projection/founder-summary";
+import { parseGovernanceProjection } from "@/lib/governance-projection/projection-validator";
 import {
   governanceProjectionDigest,
   type GovernanceSourceModel,
@@ -83,6 +86,8 @@ const issue = (
   projectStatus: number === 23 || number === 38 ? "In Progress" : "Done",
   decisionState: kind === "Decision" ? "Decided" : null,
   updatedAt: "2026-08-30T00:00:00.000Z",
+  closedAt: number === 23 || number === 38 ? null : "2026-08-30T00:00:00.000Z",
+  stateReason: number === 23 || number === 38 ? null : "COMPLETED" as const,
   marker,
 });
 const source = (): GovernanceSourceModel => ({
@@ -115,6 +120,76 @@ const source = (): GovernanceSourceModel => ({
 });
 
 describe("governance projection normalization", () => {
+  const closedChange = () => {
+    const input = source();
+    input.issues[2].state = "CLOSED";
+    input.issues[2].projectStatus = "Done";
+    input.issues[2].closedAt = "2026-09-27T13:00:00.000Z";
+    input.issues[2].stateReason = "COMPLETED";
+    return input;
+  };
+
+  it("counts completed Product Changes once and keeps child progress separate", () => {
+    const input = closedChange();
+    input.issues[3].state = "CLOSED";
+    input.issues[3].projectStatus = "Done";
+    const output = createGovernanceProjection(input);
+    expect(output.issues.find((item) => item.number === 23)?.reporting).toMatchObject({
+      closedAt: "2026-09-27T13:00:00.000Z", closureDisposition: "completed", release: null,
+    });
+    expect(summarizeFounderWork(output)).toMatchObject({ completed: 1, verifiedProduction: 0, releaseUnknown: 1 });
+  });
+
+  it("separates explicit not-released closure from a verified production release with approved summary", () => {
+    const pending = closedChange();
+    pending.issues[2].founderReporting = parseFounderReportingMarker("<!-- renew-founder-reporting\nschema: 1\nrelease:\n  state: not_released\n-->", 23);
+    expect(summarizeFounderWork(createGovernanceProjection(pending))).toMatchObject({ completed: 1, closedUnreleased: 1, verifiedProduction: 0 });
+
+    const delivered = closedChange();
+    delivered.issues[2].founderReporting = parseFounderReportingMarker(`<!-- renew-founder-reporting\nschema: 1\nrelease:\n  state: verified\n  commit: ${"a".repeat(40)}\n  released_at: 2026-09-27T12:00:00.000Z\n  verified_at: 2026-09-27T12:30:00.000Z\n  proof_url: https://github.com/${repo}/issues/23#issuecomment-456\nsummary:\n  text: "Staff can review the released work."\n  approval_url: https://github.com/${repo}/issues/23#issuecomment-789\n-->`, 23);
+    const output = createGovernanceProjection(delivered);
+    expect(summarizeFounderWork(output)).toMatchObject({ completed: 1, verifiedProduction: 1, closedUnreleased: 0 });
+    expect(output.issues.find((item) => item.number === 23)?.reporting?.founderSummary?.text).toBe("Staff can review the released work.");
+    expect(JSON.stringify(output)).not.toContain("issuecomment prose");
+  });
+
+  it.each(["cancelled", "superseded"] as const)("excludes %s from completed and released totals", (disposition) => {
+    const input = closedChange();
+    input.issues[2].projectStatus = "Cancelled / Superseded";
+    input.issues[2].stateReason = "NOT_PLANNED";
+    input.issues[2].founderReporting = parseFounderReportingMarker(`<!-- renew-founder-reporting\nschema: 1\ndisposition: ${disposition}\n-->`, 23);
+    const work = summarizeFounderWork(createGovernanceProjection(input));
+    expect(work.completed).toBe(0);
+    expect(work.verifiedProduction).toBe(0);
+    expect(work[disposition]).toBe(1);
+  });
+
+  it("leaves reopened or historical ambiguous closures outside completed totals", () => {
+    const reopened = source();
+    reopened.issues[2].founderReporting = parseFounderReportingMarker(`<!-- renew-founder-reporting\nschema: 1\nrelease:\n  state: verified\n  commit: ${"a".repeat(40)}\n  released_at: 2026-09-27T12:00:00.000Z\n  verified_at: 2026-09-27T12:30:00.000Z\n  proof_url: https://github.com/${repo}/issues/23#issuecomment-456\n-->`, 23);
+    reopened.issues[3].state = "CLOSED";
+    reopened.issues[3].projectStatus = "Done";
+    const reopenedProjection = createGovernanceProjection(reopened);
+    expect(reopenedProjection.issues.find((item) => item.number === 23)?.reporting?.closureDisposition).toBeNull();
+    expect(summarizeFounderWork(reopenedProjection)).toMatchObject({ completed: 0, verifiedProduction: 0 });
+
+    const unknown = closedChange();
+    unknown.issues[2].projectStatus = "Cancelled / Superseded";
+    unknown.issues[2].stateReason = "NOT_PLANNED";
+    expect(summarizeFounderWork(createGovernanceProjection(unknown))).toMatchObject({ completed: 0, unverifiedClosures: 1 });
+  });
+  it("round-trips missing historical closure facts as unknown, outside delivered totals", () => {
+    const missing = closedChange();
+    missing.issues[2].closedAt = undefined;
+    missing.issues[2].stateReason = undefined;
+    const projection = createGovernanceProjection(missing);
+    expect(projection.issues.find((item) => item.number === 23)?.reporting).toMatchObject({ closedAt: null, closureDisposition: "unknown" });
+    expect(summarizeFounderWork(projection)).toMatchObject({ completed: 0, verifiedProduction: 0, unverifiedClosures: 1 });
+    expect(parseGovernanceProjection(projection)).not.toBeNull();
+
+    missing.issues[2].closedAt = "2026-09-27T13:00:00.000Z";
+    expect(createGovernanceProjection(missing).issues.find((item) => item.number === 23)?.reporting?.closureDisposition).toBe("unknown");
+  });
   it("projects only allowlisted facts and inherits Product Change placement", () => {
     const result = createGovernanceProjection(source());
     expect(
@@ -130,6 +205,8 @@ describe("governance projection normalization", () => {
   it("preserves the explicit cancelled or superseded terminal status", () => {
     const cancelled = source();
     cancelled.issues[2].state = "CLOSED";
+    cancelled.issues[2].closedAt = "2026-08-30T00:00:00.000Z";
+    cancelled.issues[2].stateReason = "NOT_PLANNED";
     cancelled.issues[2].projectStatus = "Cancelled / Superseded";
     expect(createGovernanceProjection(cancelled).issues.find((entry) => entry.number === 23)?.projectStatus).toBe("Cancelled / Superseded");
   });

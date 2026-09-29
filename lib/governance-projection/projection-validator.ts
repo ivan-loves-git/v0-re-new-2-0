@@ -63,20 +63,43 @@ const registry = z.object({
   approval: z.object({ decision: issueNumber, approvedBy: z.literal("Ivan"), approvedAt: timestamp }).strict(),
   goals: z.array(goal).min(1), milestones: z.array(milestone), kpis: z.array(kpi), guardrails: z.array(guardrail),
 }).strict();
-const issue = z.object({
+const issueV1 = z.object({
   number: issueNumber, title: nonEmpty, url: issueUrl, kind, state: z.enum(["OPEN", "CLOSED"]), projectStatus, decisionState, updatedAt: timestamp,
   assigneeLogins: z.array(login).refine(unique, "duplicate assignee"), parentNumber: issueNumber.nullable(), dependencyNumbers: z.array(issueNumber).refine(unique, "duplicate dependency"),
   pullRequests: z.array(z.object({ url: z.string().regex(/^https:\/\/github\.com\/(?:ivan-loves-git\/v0-re-new-2-0|re-new-team\/renew-governance)\/pull\/[1-9]\d*$/), state: z.enum(["OPEN", "CLOSED", "MERGED"]) }).strict()).refine((items) => unique(items.map((item) => item.url)), "duplicate pull request"),
   placement, provenance: provenance.optional(),
 }).strict();
-const legacy = z.object({ number: issueNumber, title: nonEmpty, url: issueUrl, state: z.literal("CLOSED"), projectStatus: z.enum(["Done", "Cancelled / Superseded"]), parentNumber: issueNumber, reason: z.enum(["legacy_missing_issue_type", "legacy_non_product_change_parent"]), nativeKind: z.enum(["Ticket", "Bug"]).optional() }).strict();
-const projectionSchema = z.object({
-  schemaVersion: z.literal(GOVERNANCE_PROJECTION_SCHEMA_VERSION), sourceRepository: z.literal(GOVERNANCE_SOURCE_REPOSITORY), sourceCommit: z.string().regex(/^[0-9a-f]{40}$/), registryRevision: nonEmpty, retrievedAt: timestamp, snapshotAt: timestamp,
-  registry, issues: z.array(issue), legacyExclusions: z.array(legacy),
+const verifiedRelease = z.object({
+  state: z.literal("verified"),
+  commit: z.string().regex(/^[0-9a-f]{40}$/),
+  releasedAt: timestamp,
+  verifiedAt: timestamp,
+  proofUrl: z.string().regex(/^https:\/\/github\.com\/re-new-team\/renew-governance\/issues\/[1-9]\d*#issuecomment-[1-9]\d*$/),
 }).strict();
+const release = z.union([z.object({ state: z.literal("not_released") }).strict(), verifiedRelease]).nullable();
+const reporting = z.object({
+  closedAt: timestamp.nullable(),
+  closureDisposition: z.enum(["completed", "cancelled", "superseded", "unknown"]).nullable(),
+  release,
+  founderSummary: z.object({
+    text: nonEmpty.max(240).refine((value) => !/[\r\n\x00-\x1f\x7f]/.test(value) && !/https?:\/\/|\b\S+@\S+\b/i.test(value)),
+    approvalUrl: z.string().regex(/^https:\/\/github\.com\/re-new-team\/renew-governance\/issues\/[1-9]\d*#issuecomment-[1-9]\d*$/),
+  }).strict().nullable(),
+  evidenceRevision: z.string().regex(/^[0-9a-f]{64}$/).nullable(),
+}).strict();
+const issueV2 = issueV1.extend({ reporting: reporting.optional() }).strict();
+const legacy = z.object({ number: issueNumber, title: nonEmpty, url: issueUrl, state: z.literal("CLOSED"), projectStatus: z.enum(["Done", "Cancelled / Superseded"]), parentNumber: issueNumber, reason: z.enum(["legacy_missing_issue_type", "legacy_non_product_change_parent"]), nativeKind: z.enum(["Ticket", "Bug"]).optional() }).strict();
+const projectionFields = {
+  sourceRepository: z.literal(GOVERNANCE_SOURCE_REPOSITORY), sourceCommit: z.string().regex(/^[0-9a-f]{40}$/), registryRevision: nonEmpty, retrievedAt: timestamp, snapshotAt: timestamp,
+  registry, legacyExclusions: z.array(legacy),
+};
+const projectionSchema = z.union([
+  z.object({ schemaVersion: z.literal(1), ...projectionFields, issues: z.array(issueV1) }).strict(),
+  z.object({ schemaVersion: z.literal(GOVERNANCE_PROJECTION_SCHEMA_VERSION), ...projectionFields, issues: z.array(issueV2) }).strict(),
+]);
 
 const emptyPlacement = (value: z.infer<typeof placement>) => value.goalId === null && value.milestoneId === null && value.kpiIds.length === 0 && value.guardrailIds.length === 0 && value.decisionNumber === null && !value.temporaryException;
-const decided = (item: z.infer<typeof issue> | undefined) => Boolean(item && item.kind === "Decision" && item.state === "CLOSED" && item.projectStatus === "Done" && item.decisionState === "Decided");
+const decided = (item: z.infer<typeof issueV2> | undefined) => Boolean(item && item.kind === "Decision" && item.state === "CLOSED" && item.projectStatus === "Done" && item.decisionState === "Decided");
 
 /**
  * Parses the persisted allowlist and re-establishes all relationships before a
@@ -109,6 +132,7 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
   if (issues.size !== projection.issues.length || exclusions.size !== projection.legacyExclusions.length || [...exclusions.keys()].some((number) => issues.has(number))) return null;
   if (!decided(issues.get(projection.registry.governanceDecision)) || !decided(issues.get(projection.registry.approval.decision))) return null;
   for (const item of projection.issues) {
+    if (projection.schemaVersion === 2 && item.kind !== "Product Change" && "reporting" in item && item.reporting !== undefined) return null;
     if (item.url !== `https://github.com/${GOVERNANCE_SOURCE_REPOSITORY}/issues/${item.number}` || item.parentNumber === item.number) return null;
     if (item.projectStatus === "Cancelled / Superseded" && item.state !== "CLOSED") return null;
     if (item.kind === "Decision" && (!emptyPlacement(item.placement) || item.decisionState === null || (item.provenance?.state === "pdr_strategic_item" && item.provenance.bootstrap !== "manual") || item.provenance?.state === "direct_github" || item.provenance?.state === "pdr_work_card")) return null;
@@ -120,6 +144,15 @@ export function parseGovernanceProjection(value: unknown): GovernanceProjection 
       if (!parent || parent.kind !== "Product Change" || item.provenance !== undefined || JSON.stringify(item.placement) !== JSON.stringify(parent.placement)) return null;
     }
     if (item.kind === "Product Change") {
+      if (projection.schemaVersion === 2) {
+        const evidence = "reporting" in item ? item.reporting : undefined;
+        if (!evidence || (item.state === "OPEN" ? evidence.closedAt !== null || evidence.closureDisposition !== null : evidence.closureDisposition === null || (evidence.closedAt === null && evidence.closureDisposition !== "unknown"))) return null;
+        if (evidence.closureDisposition === "completed" && (item.state !== "CLOSED" || item.projectStatus !== "Done")) return null;
+        if ((evidence.closureDisposition === "cancelled" || evidence.closureDisposition === "superseded") && (item.state !== "CLOSED" || item.projectStatus !== "Cancelled / Superseded")) return null;
+        if (evidence.release?.state === "verified" && (evidence.release.verifiedAt < evidence.release.releasedAt || !evidence.release.proofUrl.startsWith(`${item.url}#`))) return null;
+        if (evidence.founderSummary && (evidence.release?.state !== "verified" || !evidence.founderSummary.approvalUrl.startsWith(`${item.url}#`))) return null;
+        if (!evidence.evidenceRevision && (evidence.release || evidence.founderSummary || evidence.closureDisposition === "cancelled" || evidence.closureDisposition === "superseded")) return null;
+      }
       if (item.provenance !== undefined && item.provenance.state === "pdr_work_card" && (!item.provenance.pdrReference || !item.provenance.pdrWorkCardId)) return null;
       const p = item.placement;
       if (p.temporaryException) {

@@ -94,7 +94,7 @@ export function validatePdrScreeningDraft(draft: unknown, current: Extract<Curre
 
 export async function generatePdrScreening(input: { request: RequestSource; current: CurrentGovernanceProjection; safetyIdentifier: string; answers?: Array<{ question: string; answer: string }> }): Promise<{ draft: PdrScreeningDraft; context: PdrScreeningContext; usage: ResponseUsage | undefined }> {
   if (input.current.state !== "available") throw new Error("Governance context is unavailable")
-  const freshness = isGovernanceProjectionStale(input.current.projection.snapshotAt) ? "stale" : "fresh"
+  const freshness = isGovernanceProjectionStale(input.current.lastValidatedAt) ? "stale" : "fresh"
   const context: PdrScreeningContext = { snapshotId: input.current.snapshotId, digest: input.current.digest, registryRevision: input.current.projection.registryRevision, snapshotAt: input.current.projection.snapshotAt, freshness }
   const client = getWaveAiOpenAiClient()
   const request = {

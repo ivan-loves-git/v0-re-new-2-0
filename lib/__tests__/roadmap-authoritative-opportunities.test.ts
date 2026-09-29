@@ -226,11 +226,12 @@ describe("authoritative opportunity roadmap entry", () => {
     )
   })
 
-  it("retains the released milestones while allowing later roadmap updates", () => {
+  it("retains historical milestones without claiming current production status", () => {
     expect(LAST_ROADMAP_UPDATE.getTime()).toBeGreaterThanOrEqual(new Date("2026-09-12").getTime())
     expect(roadmap).toContain('version: "0.9.63"')
     expect(roadmap).toContain("Deal Flow is easier and safer to explore")
-    expect(roadmap).toContain("current production build")
+    expect(roadmap).toContain("static archive does not show current delivery or production status")
+    expect(roadmap).not.toContain("current production build")
     expect(roadmap).not.toContain("current June V2 build")
   })
 })

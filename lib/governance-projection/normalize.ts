@@ -4,6 +4,7 @@ import {
   type DecisionState,
   type GithubIssueFact,
   type GovernanceIssueKind,
+  type FounderReportingProjection,
   type GovernanceProvenance,
   type GovernanceProjection,
   type GovernanceSourceModel,
@@ -564,6 +565,14 @@ function validateIssueShape(issue: GithubIssueFact) {
   timestamp(issue.updatedAt, `#${issue.number}.updatedAt`);
   if (issue.kind && !kinds.has(issue.kind))
     throw new Error(`issue #${issue.number} has unsupported Issue Type`);
+  if (issue.kind === "Product Change") {
+    if (issue.state === "OPEN" && issue.closedAt != null)
+      throw new Error(`Product Change #${issue.number} has an open issue with closedAt`);
+    if (issue.closedAt != null) timestamp(issue.closedAt, `#${issue.number}.closedAt`);
+    if (issue.stateReason != null && !["COMPLETED", "NOT_PLANNED", "REOPENED"].includes(issue.stateReason))
+      throw new Error(`Product Change #${issue.number} has unsupported stateReason`);
+  } else if (issue.founderReporting)
+    throw new Error(`issue #${issue.number} cannot own founder reporting`);
   if (issue.kind && issue.projectStatus == null)
     throw new Error(`typed issue #${issue.number} lacks Project status`);
   if (issue.projectStatus != null && !statuses.has(issue.projectStatus))
@@ -754,6 +763,42 @@ function safeIssue(
       }))
       .sort((a, b) => a.url.localeCompare(b.url)),
     placement,
+    ...(issue.kind === "Product Change" ? { reporting: safeFounderReporting(issue) } : {}),
     ...(provenance ? { provenance } : {}),
+  };
+}
+
+function safeFounderReporting(issue: GithubIssueFact): FounderReportingProjection {
+  const evidence = issue.founderReporting;
+  if (evidence?.disposition && (issue.state !== "CLOSED" || issue.projectStatus !== "Cancelled / Superseded"))
+    throw new Error(`Product Change #${issue.number} has disposition outside cancelled status`);
+  if (evidence?.summary && evidence.release?.state !== "verified")
+    throw new Error(`Product Change #${issue.number} has summary without verified release`);
+  if (evidence && !/^[0-9a-f]{64}$/.test(evidence.evidenceRevision))
+    throw new Error(`Product Change #${issue.number} has invalid evidence revision`);
+  const closedAt = issue.state === "CLOSED" && issue.closedAt != null
+    ? timestamp(issue.closedAt, `#${issue.number}.closedAt`) : null;
+  const closureDisposition = issue.state === "OPEN" ? null
+    : !closedAt ? "unknown"
+    : issue.projectStatus === "Done" && issue.stateReason === "COMPLETED" ? "completed"
+    : issue.projectStatus === "Cancelled / Superseded" && evidence?.disposition ? evidence.disposition
+    : "unknown";
+  const release = evidence?.release ?? null;
+  if (release?.state === "verified") {
+    if (!SHA.test(release.commit) || !/^https:\/\/github\.com\/re-new-team\/renew-governance\/issues\/[1-9]\d*#issuecomment-[1-9]\d*$/.test(release.proofUrl) || !release.proofUrl.startsWith(`${issue.url}#`))
+      throw new Error(`Product Change #${issue.number} has invalid release proof`);
+    const releasedAt = timestamp(release.releasedAt, `#${issue.number}.releasedAt`);
+    const verifiedAt = timestamp(release.verifiedAt, `#${issue.number}.verifiedAt`);
+    if (verifiedAt < releasedAt) throw new Error(`Product Change #${issue.number} verifies before release`);
+  }
+  const summary = evidence?.summary ?? null;
+  if (summary && (!summary.approvalUrl.startsWith(`${issue.url}#issuecomment-`) || summary.text.length > 240 || /[\r\n\x00-\x1f\x7f]/.test(summary.text)))
+    throw new Error(`Product Change #${issue.number} has invalid approved summary`);
+  return {
+    closedAt,
+    closureDisposition,
+    release,
+    founderSummary: summary,
+    evidenceRevision: evidence?.evidenceRevision ?? null,
   };
 }

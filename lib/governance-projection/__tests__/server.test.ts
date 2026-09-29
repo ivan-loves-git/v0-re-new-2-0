@@ -3,7 +3,10 @@ import { createGovernanceProjection } from "@/lib/governance-projection/normaliz
 import { governanceProjectionDigest } from "@/lib/governance-projection/model";
 
 const maybeSingle = vi.fn();
-const select = vi.fn(() => ({ eq: () => ({ maybeSingle }) }));
+const select = vi.fn(() => ({ eq: () => ({ maybeSingle: async () => {
+  const result = await maybeSingle();
+  return result?.data ? { ...result, data: { last_validated_at: "2026-08-30T00:00:01.000Z", ...result.data } } : result;
+} }) }));
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({ from: () => ({ select }) }),
 }));
@@ -24,7 +27,7 @@ const validProjection = () =>
     issues: [
       { number: 36, title: "Decision", url: `https://github.com/${repo}/issues/36`, repository: repo, kind: "Decision", state: "CLOSED", projectStatus: "Done", decisionState: "Decided", updatedAt: "2026-08-30T00:00:00.000Z", marker: { decision_state: "decided", approved_by: "Ivan", approval_keys: ["governance-key"] } },
       { number: 46, title: "Approval", url: `https://github.com/${repo}/issues/46`, repository: repo, kind: "Decision", state: "CLOSED", projectStatus: "Done", decisionState: "Decided", updatedAt: "2026-08-30T00:00:00.000Z", marker: { decision_state: "decided", approved_by: "Ivan", approval_keys: ["strategy-registry:2026-08-30-initial-1"] } },
-      { number: 23, title: "Historical Product Change", url: `https://github.com/${repo}/issues/23`, repository: repo, kind: "Product Change", state: "CLOSED", projectStatus: "Done", decisionState: "Decided", updatedAt: "2026-08-30T00:00:00.000Z" },
+      { number: 23, title: "Historical Product Change", url: `https://github.com/${repo}/issues/23`, repository: repo, kind: "Product Change", state: "CLOSED", closedAt: "2026-08-30T00:00:00.000Z", stateReason: "COMPLETED", projectStatus: "Done", decisionState: "Decided", updatedAt: "2026-08-30T00:00:00.000Z" },
     ],
   });
 
@@ -73,6 +76,15 @@ describe("current governance projection reader", () => {
     await expect(readCurrentGovernanceProjection()).resolves.toEqual({ state: "unavailable", reason: "read_failed" });
   });
 
+  it("fails closed when current-pointer validation time is missing or precedes collection", async () => {
+    const projection = validProjection();
+    for (const last_validated_at of [null, "2026-08-29T23:59:59.000Z"]) {
+      maybeSingle.mockResolvedValueOnce({ data: { snapshot_id: "id", snapshot_digest: governanceProjectionDigest(projection), payload: projection, last_validated_at }, error: null });
+      const { readCurrentGovernanceProjection } = await import("@/lib/governance-projection/server");
+      await expect(readCurrentGovernanceProjection()).resolves.toEqual({ state: "unavailable", reason: "read_failed" });
+    }
+  });
+
   it("accepts validated Genesis Decision strategic-item provenance", async () => {
     const projection = structuredClone(validProjection());
     const genesisDecision = projection.issues.find((item) => item.number === 36);
@@ -106,6 +118,8 @@ describe("current governance projection reader", () => {
 
   it("accepts a pre-provenance v1 Product Change with its stored Decision state", async () => {
     const projection = structuredClone(validProjection());
+    projection.schemaVersion = 1;
+    for (const issue of projection.issues) delete issue.reporting;
     const productChange = projection.issues.find((item) => item.number === 23);
     if (!productChange) throw new Error("test fixture missing Product Change");
     delete productChange.provenance;
@@ -116,6 +130,7 @@ describe("current governance projection reader", () => {
     expect(result.state).toBe("available");
     if (result.state === "available") {
       expect(result.digest).toBe(storedDigest);
+      expect(result.lastValidatedAt).toBe("2026-08-30T00:00:01.000Z");
       const parsedProductChange = result.projection.issues.find((item) => item.number === 23);
       expect(parsedProductChange).toMatchObject({ number: 23, kind: "Product Change", decisionState: "Decided" });
       expect(parsedProductChange?.provenance).toBeUndefined();
@@ -124,6 +139,8 @@ describe("current governance projection reader", () => {
 
   it("accepts the explicit cancelled or superseded terminal status", async () => {
     const projection = structuredClone(validProjection());
+    projection.schemaVersion = 1;
+    for (const issue of projection.issues) delete issue.reporting;
     const productChange = projection.issues.find((item) => item.number === 23);
     if (!productChange) throw new Error("test fixture missing Product Change");
     productChange.projectStatus = "Cancelled / Superseded";

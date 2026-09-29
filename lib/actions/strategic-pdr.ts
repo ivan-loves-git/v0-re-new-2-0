@@ -106,7 +106,7 @@ export async function generateStrategicPdrScreening(formData: FormData): Promise
     const parsed = pdrScreeningAnswersSchema.safeParse(JSON.parse(rawAnswers)); const rawDraft = text(formData, "prior_draft", 12_000); const priorToken = text(formData, "prior_preview_token", 16_000)
     const priorDraft = JSON.parse(rawDraft) as unknown; const priorDigest = pdrScreeningDraftDigest(pdrScreeningSaveSchema.shape.draft.parse(priorDraft))
     const prior = validatePdrScreeningPreviewToken(priorToken, { actor: access.user.id, requestId, draftDigest: priorDigest })
-    const sameSnapshot = prior && prior.context.snapshotId === current.snapshotId && prior.context.digest === current.digest && prior.context.registryRevision === current.projection.registryRevision && prior.context.snapshotAt === current.projection.snapshotAt && prior.context.freshness === (isGovernanceProjectionStale(current.projection.snapshotAt) ? "stale" : "fresh")
+    const sameSnapshot = prior && prior.context.snapshotId === current.snapshotId && prior.context.digest === current.digest && prior.context.registryRevision === current.projection.registryRevision && prior.context.snapshotAt === current.projection.snapshotAt && prior.context.freshness === (isGovernanceProjectionStale(current.lastValidatedAt) ? "stale" : "fresh")
     if (!parsed.success || !prior || !sameSnapshot || !Array.isArray((priorDraft as PdrScreeningDraft).clarificationQuestions) || parsed.data.some((item) => !(priorDraft as PdrScreeningDraft).clarificationQuestions.includes(item.question))) throw new Error()
     answers = parsed.data
   } catch { throw new Error("Clarification answers are invalid or no longer match the preview.") } }
@@ -135,7 +135,7 @@ export async function saveStrategicPdrScreening(input: unknown) {
   if (!parsed.success) throw new Error("The screening preview is invalid.")
   const current = await readCurrentGovernanceProjection()
   if (current.state !== "available") throw new Error("The GitHub governance snapshot is unavailable. Nothing was saved.")
-  const freshness = isGovernanceProjectionStale(current.projection.snapshotAt) ? "stale" : "fresh"
+  const freshness = isGovernanceProjectionStale(current.lastValidatedAt) ? "stale" : "fresh"
   const preview = validatePdrScreeningPreviewToken(parsed.data.previewToken, { actor: access.user.id, requestId: parsed.data.requestId, draftDigest: pdrScreeningDraftDigest(parsed.data.draft) })
   if (!preview) throw new Error("The screening preview expired or is invalid. Generate a new preview.")
   if (current.snapshotId !== preview.context.snapshotId || current.digest !== preview.context.digest || current.projection.registryRevision !== preview.context.registryRevision || current.projection.snapshotAt !== preview.context.snapshotAt || freshness !== preview.context.freshness) {

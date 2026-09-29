@@ -1,7 +1,7 @@
 /**
  * Manual operator command. Run from a credentialed Codex shell:
  *   pnpm governance:refresh                    # fetch + validate only
- *   pnpm governance:refresh -- --apply --confirm <revision>:<digest>
+ *   pnpm governance:refresh -- --apply --confirm <revision>:<digest> --evidence-checked <digest>
  * No browser/runtime WAVE process calls GitHub; this is the only collector.
  */
 import { execFileSync } from "node:child_process";
@@ -10,6 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { refreshGovernanceProjection } from "@/lib/governance-projection/refresh";
 import { createProjectionOperatorAdapters } from "@/lib/governance-projection/operator-adapters";
 import { parseGovernanceMarker } from "@/lib/governance-projection/marker";
+import { parseFounderReportingMarker } from "@/lib/governance-projection/founder-reporting-marker";
 import {
   type LegacyExclusion,
   type GithubIssueFact,
@@ -19,7 +20,10 @@ import {
 const repo = "re-new-team/renew-governance";
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
-const valueAfter = (flag: string) => args[args.indexOf(flag) + 1];
+const valueAfter = (flag: string) => {
+  const index = args.indexOf(flag);
+  return index < 0 ? undefined : args[index + 1];
+};
 
 function gh(args: string[]) {
   return execFileSync("gh", args, { encoding: "utf8" });
@@ -42,7 +46,7 @@ function collect(): GovernanceSourceModel {
   const items: Record<string, unknown>[] = [];
   let cursor: string | null = null;
   do {
-    const query = `query($cursor:String) { organization(login:"re-new-team") { projectV2(number:1) { items(first:100, after:$cursor) { nodes { content { ... on Issue { number title url state updatedAt body repository{nameWithOwner} issueType{name} parent{number issueType{name}} assignees(first:20){nodes{login} pageInfo{hasNextPage}} blockedBy(first:100){nodes{number repository{nameWithOwner}} pageInfo{hasNextPage}} closedByPullRequestsReferences(first:100){nodes{url state} pageInfo{hasNextPage}} } } fieldValues(first:50){nodes{... on ProjectV2ItemFieldSingleSelectValue{name field{... on ProjectV2SingleSelectField{name}}}} pageInfo{hasNextPage}} } pageInfo{hasNextPage endCursor} } } } }`;
+    const query = `query($cursor:String) { organization(login:"re-new-team") { projectV2(number:1) { items(first:100, after:$cursor) { nodes { content { ... on Issue { number title url state stateReason closedAt updatedAt body repository{nameWithOwner} issueType{name} parent{number issueType{name}} assignees(first:20){nodes{login} pageInfo{hasNextPage}} blockedBy(first:100){nodes{number repository{nameWithOwner}} pageInfo{hasNextPage}} closedByPullRequestsReferences(first:100){nodes{url state} pageInfo{hasNextPage}} } } fieldValues(first:50){nodes{... on ProjectV2ItemFieldSingleSelectValue{name field{... on ProjectV2SingleSelectField{name}}}} pageInfo{hasNextPage}} } pageInfo{hasNextPage endCursor} } } } }`;
     const response = JSON.parse(
       gh([
         "api",
@@ -108,6 +112,12 @@ function collect(): GovernanceSourceModel {
     )
       throw new Error("Project contains a non-governance issue");
     const kind = (issue.issueType as { name?: string } | null)?.name;
+    const founderReporting = parseFounderReportingMarker(
+      typeof issue.body === "string" ? issue.body : null,
+      Number(issue.number),
+    );
+    if (founderReporting && kind !== "Product Change")
+      throw new Error(`issue #${issue.number} cannot own founder reporting`);
     const fields =
       (item.fieldValues as { nodes?: Record<string, unknown>[] })?.nodes ?? [];
     const field = (name: string) =>
@@ -171,6 +181,8 @@ function collect(): GovernanceSourceModel {
           .nameWithOwner,
         kind,
         state: issue.state === "CLOSED" ? "CLOSED" : "OPEN",
+        closedAt: issue.closedAt as string | null,
+        stateReason: issue.stateReason as GithubIssueFact["stateReason"],
         projectStatus: field("Status") ?? null,
         decisionState: field("Decision state") ?? null,
         updatedAt: String(issue.updatedAt),
@@ -200,6 +212,7 @@ function collect(): GovernanceSourceModel {
           )?.nodes ?? []
         ).map((entry) => ({ url: entry.url, state: entry.state })),
         marker: parseGovernanceMarker(typeof issue.body === "string" ? issue.body : null),
+        founderReporting,
       },
     ];
   });
@@ -233,7 +246,7 @@ async function main() {
     apply
       ? createProjectionOperatorAdapters(client!, async () => collect())
       : { collect: async () => collect(), currentDigest: async () => "", apply: async () => ({ digest: "", applied: false }), readback: async () => "" },
-    { apply, confirm: valueAfter("--confirm") },
+    { apply, confirm: valueAfter("--confirm"), evidenceChecked: valueAfter("--evidence-checked") },
   );
   console.log(
     JSON.stringify(
