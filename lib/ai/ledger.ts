@@ -19,7 +19,7 @@ import {
   type WaveAiMetrics,
   type WaveAiRunMetricRow,
 } from "@/lib/ai/metrics"
-import { readCompleteLedgerPages, type LedgerIncompleteReason } from "@/lib/ai/ledger-pagination"
+import { readCompleteLedgerPages, ledgerKeysetFilter, compareLedgerCursor, LEDGER_UUID, type LedgerIncompleteReason } from "@/lib/ai/ledger-pagination"
 import type { WaveAiTokenUsage } from "@/lib/ai/usage"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -187,7 +187,7 @@ function within(value: string, window: WaveAiCohortWindow) {
 }
 
 function validRun(row: WaveAiRunMetricRow, window: WaveAiCohortWindow) {
-  return typeof row.generation_id === "string" && row.generation_id.length > 0
+  return typeof row.generation_id === "string" && LEDGER_UUID.test(row.generation_id)
     && row.environment === "production" && row.is_test === false
     && ["email_draft", "next_action", "match_review", "pdr_screening"].includes(row.feature)
     && ["requested", "succeeded", "failed"].includes(row.status)
@@ -200,8 +200,11 @@ function validRun(row: WaveAiRunMetricRow, window: WaveAiCohortWindow) {
     && Number.isFinite(Number(row.estimated_cost_usd)) && Number(row.estimated_cost_usd) >= 0
 }
 
-function validEvent(row: WaveAiEventMetricRow, window: WaveAiCohortWindow, runIds: Set<string>) {
-  return typeof row.generation_id === "string" && runIds.has(row.generation_id)
+type LedgerEventRow = WaveAiEventMetricRow & { id: string }
+
+function validEvent(row: LedgerEventRow, window: WaveAiCohortWindow, runIds: Set<string>) {
+  return typeof row.id === "string" && LEDGER_UUID.test(row.id)
+    && typeof row.generation_id === "string" && runIds.has(row.generation_id)
     && typeof row.event_type === "string" && within(row.occurred_at, window)
 }
 
@@ -220,13 +223,15 @@ export async function getWaveAiDashboardSnapshot(days: 7 | 30): Promise<WaveAiLe
   }
   const runs = await readCompleteLedgerPages<WaveAiRunMetricRow>({
     cap: LEDGER_RUN_CAP, pageSize: LEDGER_PAGE_SIZE, key: (row) => row.generation_id,
-    fetchPage: async (from, through) => {
-      const result = await supabase.from("ai_generation_runs")
+    compare: (a, b) => compareLedgerCursor(a.started_at, a.generation_id, b.started_at, b.generation_id),
+    fetchPage: async (after, limit) => {
+      let query = supabase.from("ai_generation_runs")
         .select("generation_id,feature,status,environment,is_test,error_code,input_tokens,cached_input_tokens,cache_write_tokens,output_tokens,reasoning_tokens,estimated_cost_usd,latency_ms,started_at,completed_at", { count: "exact" })
         .eq("environment", "production").eq("is_test", false)
         .gte("started_at", windowStart).lte("started_at", asOf)
         .order("started_at", { ascending: true }).order("generation_id", { ascending: true })
-        .range(from, through)
+      if (after) query = query.or(ledgerKeysetFilter("started_at", "generation_id", after.started_at, after.generation_id))
+      const result = await query.limit(limit)
       return { data: result.data as WaveAiRunMetricRow[] | null, count: result.count, error: result.error }
     },
   })
@@ -240,21 +245,24 @@ export async function getWaveAiDashboardSnapshot(days: 7 | 30): Promise<WaveAiLe
   const ids = [...runIds]
   for (let offset = 0; offset < ids.length; offset += LEDGER_EVENT_BATCH) {
     const batch = ids.slice(offset, offset + LEDGER_EVENT_BATCH)
-    const pageSet = await readCompleteLedgerPages<WaveAiEventMetricRow>({
+    const batchIds = new Set(batch)
+    const pageSet = await readCompleteLedgerPages<LedgerEventRow>({
       cap: LEDGER_EVENT_CAP - events.length, pageSize: LEDGER_PAGE_SIZE,
-      key: (row) => `${row.generation_id}:${row.event_type}`,
-      fetchPage: async (from, through) => {
-        const result = await supabase.from("ai_generation_events")
-          .select("generation_id,event_type,occurred_at", { count: "exact" })
+      key: (row) => row.id,
+      compare: (a, b) => compareLedgerCursor(a.occurred_at, a.id, b.occurred_at, b.id),
+      fetchPage: async (after, limit) => {
+        let query = supabase.from("ai_generation_events")
+          .select("id,generation_id,event_type,occurred_at", { count: "exact" })
           .in("generation_id", batch)
           .gte("occurred_at", windowStart).lte("occurred_at", asOf)
-          .order("occurred_at", { ascending: true }).order("generation_id", { ascending: true })
-          .order("event_type", { ascending: true }).range(from, through)
-        return { data: result.data as WaveAiEventMetricRow[] | null, count: result.count, error: result.error }
+          .order("occurred_at", { ascending: true }).order("id", { ascending: true })
+        if (after) query = query.or(ledgerKeysetFilter("occurred_at", "id", after.occurred_at, after.id))
+        const result = await query.limit(limit)
+        return { data: result.data as LedgerEventRow[] | null, count: result.count, error: result.error }
       },
     })
     if (pageSet.state === "incomplete") return { ...base, state: "incomplete", reason: pageSet.reason }
-    if (!pageSet.rows.every((row) => validEvent(row, window, runIds))) {
+    if (!pageSet.rows.every((row) => validEvent(row, window, batchIds))) {
       return { ...base, state: "incomplete", reason: "invalid_row" }
     }
     events.push(...pageSet.rows)

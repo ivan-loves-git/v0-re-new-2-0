@@ -170,7 +170,10 @@ Ticket #231 adds a staff-only `/tools/product-intelligence` page with fixed 7- a
 Supabase AI ledger aggregates from production, non-test runs and events linked
 to those selected runs inside the same window. A missing count, changed page,
 read error, invalid row or exceeded row cap makes the whole ledger view
-**Incomplete**; partial totals are withheld. The existing WAVE AI usage page
+**Incomplete**; partial totals are withheld. Reads use stable timestamp/UUID
+keyset cursors with PostgreSQL microseconds preserved, exact remaining counts
+and a final full-cohort recount. This bounds pagination and detects changed
+membership/counts; it is not a database transaction snapshot. The existing WAVE AI usage page
 uses that same reader. The recorded USD amount is a ledger pricing estimate,
 not a bill or complete provider spend. A copy, successful send or confirmed
 action is labelled recorded follow-through, not measured business value;
