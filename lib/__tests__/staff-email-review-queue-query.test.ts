@@ -11,6 +11,7 @@ const row = {
   version: 1, created_at: "2026-09-29T10:00:00Z", recipient_name: "Example Person",
   recipient_avatar_url: null, company_name: "Example Firm",
   purpose_key: "ma_process_follow_up", purpose_label: "Process follow-up",
+  archived_at: null, archive_eligible: true,
 } satisfies EmailReviewQueueRow
 
 describe("staff email queue options", () => {
@@ -38,11 +39,14 @@ describe("staff email queue options", () => {
     expect(emailReviewSearchPattern("20%_\\")).toBe("%20\\%\\_\\\\%")
   })
 
-  it("selects only pending REAL reviews for future page-scoped operations", () => {
+  it("selects only source-cleared pending or failed reviews for page-scoped shelving", () => {
     expect(isEmailReviewSelectable(row)).toBe(true)
+    expect(isEmailReviewSelectable({ ...row, archived_at: "2026-09-29T11:00:00Z" })).toBe(true)
+    expect(isEmailReviewSelectable({ ...row, state: "failed" })).toBe(true)
+    expect(isEmailReviewSelectable({ ...row, archive_eligible: false })).toBe(false)
     expect(isEmailReviewSelectable({ ...row, state: "uncertain" })).toBe(false)
     expect(isEmailReviewSelectable({ ...row, state: "sent" })).toBe(false)
-    expect(isEmailReviewSelectable({ ...row, namespace: "DEMO" })).toBe(false)
+    expect(isEmailReviewSelectable({ ...row, namespace: "DEMO" })).toBe(true)
   })
 
   it("builds a relative review URL object only from one valid UUID segment", () => {

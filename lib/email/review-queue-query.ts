@@ -14,7 +14,7 @@ export const EMAIL_REVIEW_PURPOSES = [
 ] as const
 
 export type EmailReviewPurpose = (typeof EMAIL_REVIEW_PURPOSES)[number]["key"]
-export type EmailReviewView = "active" | "all"
+export type EmailReviewView = "active" | "archived" | "all"
 export type EmailReviewSort = "message" | "purpose" | "recipient" | "company" | "prepared"
 export type EmailReviewDirection = "asc" | "desc"
 
@@ -27,6 +27,8 @@ export interface EmailReviewQueueRow {
   recipient_email: string
   namespace: "REAL" | "DEMO"
   state: "pending" | "sending" | "sent" | "failed" | "uncertain" | "cancelled"
+  archived_at: string | null
+  archive_eligible: boolean
   version: number
   created_at: string
   recipient_name: string | null
@@ -64,7 +66,7 @@ export function parseEmailReviewQueueOptions(input: Record<string, string | unde
   const purpose = EMAIL_REVIEW_PURPOSES.find((value) => value.key === input.reviewPurpose)?.key ?? "all"
   return {
     page: Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 1_000_000) : 1,
-    view: input.reviewFilter === "all" ? "all" : "active",
+    view: input.reviewFilter === "all" || input.reviewFilter === "archived" ? input.reviewFilter : "active",
     search: (input.reviewSearch ?? "").replace(/\s+/g, " ").trim().slice(0, 120),
     purpose,
     sort,
@@ -83,8 +85,8 @@ export function emailReviewDetailHref(id: string) {
   return isUuid(id) ? { pathname: `/emails/review/${encodeURIComponent(id)}` } : null
 }
 
-// Ticket #224's selected-send boundary is pending REAL drafts only. Until then,
-// selection is a page-scoped review aid and never dispatches or archives mail.
+// #223 selection is page-scoped and only offers the transition backed by the
+// current source ledger. The RPC still rechecks everything under row locks.
 export function isEmailReviewSelectable(row: EmailReviewQueueRow) {
-  return row.state === "pending" && row.namespace === "REAL"
+  return row.archive_eligible && (row.archived_at !== null || row.state === "pending" || row.state === "failed")
 }
