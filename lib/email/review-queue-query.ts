@@ -77,11 +77,10 @@ export function emailReviewSearchPattern(search: string) {
   return `%${search.replace(/[\\%_]/g, "\\$&")}%`
 }
 
-// Review IDs originate in a UUID column, but validate them again before they
-// become a client-side navigation target. Encode the single path segment so
-// neither route delimiters nor a URL scheme can be introduced by row data.
-export function emailReviewDetailPath(id: string) {
-  return isUuid(id) ? `/emails/review/${encodeURIComponent(id)}` : null
+// Use a relative URL object with a single validated, encoded path segment.
+// App Router requires the concrete pathname instead of a [id] route template.
+export function emailReviewDetailHref(id: string) {
+  return isUuid(id) ? { pathname: `/emails/review/${encodeURIComponent(id)}` } : null
 }
 
 // Ticket #224's selected-send boundary is pending REAL drafts only. Until then,

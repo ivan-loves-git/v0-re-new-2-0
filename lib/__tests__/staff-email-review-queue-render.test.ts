@@ -33,8 +33,8 @@ function render(reviews: EmailReviewQueueRow[]) {
 describe("staff email queue navigation and compact time", () => {
   it("shows the Paris date and hour without compact minutes, retaining the exact timestamp title", () => {
     const html = render([row(validId)])
-    const time = html.match(/<time\b[^>]*>([\s\S]*?)<\/time>/)?.[1]?.replace(/<[^>]*>/g, "")
-    expect(time).toBe("27 Sept 4 AM")
+    expect(html).toContain(">27 Sept 4 AM</time>")
+    expect(html).not.toContain(">27 Sept 4:37 AM</time>")
     expect(html).toMatch(/<time\b[^>]*title="[^"]*4:37:00[^"]*"/)
   })
 
