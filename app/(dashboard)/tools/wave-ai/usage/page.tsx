@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { SectionPageHeader } from "@/components/ui/section-page-header"
 import { WaveAiUsageDashboard } from "@/components/wave-ai/usage-dashboard"
 import { requireStaffAccess } from "@/lib/access-control"
-import { getWaveAiDashboardMetrics } from "@/lib/ai/ledger"
+import { getWaveAiDashboardSnapshot } from "@/lib/ai/ledger"
 
 export default async function WaveAiUsagePage({
   searchParams,
@@ -16,13 +16,13 @@ export default async function WaveAiUsagePage({
   await requireStaffAccess()
   const params = await searchParams
   const days: 7 | 30 = params.window === "30" ? 30 : 7
-  const metrics = await getWaveAiDashboardMetrics(days)
+  const snapshot = await getWaveAiDashboardSnapshot(days)
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <SectionPageHeader
         title="WAVE AI usage"
-        subtitle="Volume, useful outcomes, reliability and estimated OpenAI cost"
+        subtitle="Recorded production usage, follow-through and estimated ledger cost"
         icon={BarChart3}
         tone="neutral"
         actions={
@@ -33,7 +33,7 @@ export default async function WaveAiUsagePage({
           </div>
         }
       />
-      <WaveAiUsageDashboard metrics={metrics} days={days} />
+      <WaveAiUsageDashboard snapshot={snapshot} />
     </div>
   )
 }
