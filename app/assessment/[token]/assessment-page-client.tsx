@@ -69,8 +69,8 @@ export function AssessmentPageClient({ status, token, repreneurName }: Assessmen
           </div>
           <div className="text-center">
             <div className="flex justify-center mb-6">
-              <div className="flex size-16 items-center justify-center rounded-full border bg-teal-50">
-                <CheckCircle2 className="size-8 text-teal-700" />
+              <div className="flex size-16 items-center justify-center rounded-full border bg-success/10">
+                <CheckCircle2 className="size-8 text-success" />
               </div>
             </div>
             <h1 className="mb-4 text-[28px] font-semibold tracking-[-0.03em]">{content.title}</h1>

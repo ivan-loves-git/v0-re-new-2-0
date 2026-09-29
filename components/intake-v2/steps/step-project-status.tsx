@@ -84,7 +84,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
               key={option.value}
               className={`flex items-start space-x-3 p-3 rounded-md border-2 cursor-pointer ${
                 priorityValue === option.value
-                  ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                  ? 'bg-accent border-primary ring-1 ring-primary/20'
                   : 'border-border hover:bg-muted/50 hover:border-input'
               }`}
               onClick={() => onChange({ q11_priority_choice: option.value })}
@@ -92,7 +92,7 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
               <RadioGroupItem value={option.value} id={`q11-priority-${option.value}`} className="mt-0.5" />
               <Label
                 htmlFor={`q11-priority-${option.value}`}
-                className={`cursor-pointer font-normal leading-relaxed flex-1 ${priorityValue === option.value ? 'text-blue-900' : ''}`}
+                className={`cursor-pointer font-normal leading-relaxed flex-1 ${priorityValue === option.value ? 'text-foreground' : ''}`}
               >
                 {t(option.value === 'preferred' ? 'priorityChoicePreferred' : 'priorityChoiceOther')}
               </Label>
@@ -128,8 +128,8 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
                 className={`flex items-start space-x-3 p-3 rounded-md border-2 cursor-pointer ${
                   isSelected
                     ? isHighest
-                      ? 'bg-blue-100 border-blue-500 ring-1 ring-blue-300'
-                      : 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                      ? 'bg-accent border-primary ring-2 ring-primary/30'
+                      : 'bg-accent border-primary ring-1 ring-primary/20'
                     : 'border-border hover:bg-muted/50 hover:border-input'
                 }`}
                 onClick={() => toggleOption(option.value)}
@@ -143,12 +143,12 @@ export function StepProjectStatus({ data, onChange, onNext, onBack, errors = {} 
                 <div className="flex-1">
                   <Label
                     htmlFor={`q11-${option.value}`}
-                    className={`cursor-pointer font-normal leading-relaxed ${isSelected ? 'text-blue-900' : ''}`}
+                    className={`cursor-pointer font-normal leading-relaxed ${isSelected ? 'text-foreground' : ''}`}
                   >
                     {t(optionTranslationKey as any)}
                   </Label>
                   {isHighest && selectedValues.length > 1 && (
-                    <span className="ml-2 text-xs text-blue-700 font-medium bg-blue-200 px-2 py-0.5 rounded">
+                    <span className="ml-2 text-xs text-primary-foreground font-medium bg-primary px-2 py-0.5 rounded">
                       {t('mostAdvancedStep')}
                     </span>
                   )}

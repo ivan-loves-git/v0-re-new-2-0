@@ -137,7 +137,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
               key={option.value}
               className={`flex items-center gap-3 p-3 rounded-md border-2 cursor-pointer ${
                 isSelected
-                  ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                  ? 'bg-accent border-primary ring-1 ring-primary/20'
                   : 'border-border hover:bg-muted/50 hover:border-input'
               }`}
               onClick={() => toggleMultiSelect(question.field, option.value)}
@@ -149,7 +149,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
               />
               <Label
                 htmlFor={`${question.id}-${option.value}`}
-                className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-blue-900' : ''}`}
+                className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-foreground' : ''}`}
               >
                 {t(optionTranslationKey as any)}
               </Label>
@@ -244,7 +244,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
                 key={option.value}
                 className={`flex items-center gap-3 p-3 rounded-md border-2 cursor-pointer ${
                   isSelected
-                    ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-200'
+                    ? 'bg-accent border-primary ring-1 ring-primary/20'
                     : 'border-border hover:bg-muted/50 hover:border-input'
                 }`}
                 onClick={() => onChange({ q16_equity: option.value })}
@@ -252,7 +252,7 @@ export function StepWhen({ data, onChange, onNext, onBack, errors = {} }: Intake
                 <RadioGroupItem value={option.value} id={`q16-${option.value}`} />
                 <Label
                   htmlFor={`q16-${option.value}`}
-                  className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-blue-900' : ''}`}
+                  className={`flex-1 cursor-pointer font-normal ${isSelected ? 'text-foreground' : ''}`}
                 >
                   {t(optionTranslationKey as any)}
                 </Label>

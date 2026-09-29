@@ -33,8 +33,8 @@ export default function AssessmentSuccessPage() {
         <div className="text-center">
           {/* Success icon */}
           <div className="flex justify-center mb-6">
-            <div className="wave-success-confirm flex size-16 items-center justify-center rounded-full border bg-teal-50">
-              <CheckCircle2 className="size-8 text-teal-700" />
+            <div className="wave-success-confirm flex size-16 items-center justify-center rounded-full border bg-success/10">
+              <CheckCircle2 className="size-8 text-success" />
             </div>
           </div>
 
