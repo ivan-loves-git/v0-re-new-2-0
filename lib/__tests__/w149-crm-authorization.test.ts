@@ -158,6 +158,11 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "lib/actions/portal-access.ts": boundary("staff", ["getRepreneurPortalAccessStatus", "enableRepreneurPortalAccess", "disableRepreneurPortalAccess", "resendRepreneurPortalAccessLink"]),
   "lib/actions/portal-pursuit-nda.ts": boundary("portal_owner", ["submitPortalPursuitSignedNda"]),
   "lib/actions/renew-opportunity-recommendation.ts": boundary("staff", ["renewOpportunityRecommendationAction"]),
+  "lib/actions/repreneur-feedback.ts": boundary("portal_owner", ["submitRepreneurFeedback", "setRepreneurFeedbackStatus", "redactRepreneurFeedback", "deleteRepreneurFeedback"], {
+    setRepreneurFeedbackStatus: "staff",
+    redactRepreneurFeedback: "staff",
+    deleteRepreneurFeedback: "staff",
+  }),
   "lib/actions/repreneur-opportunities.ts": boundary("portal_owner", ["listMyRepreneurOpportunities", "listMyRepreneurDealFlow", "getMyRepreneurOpportunity", "listStaffPreviewRepreneurDealFlow"], { listStaffPreviewRepreneurDealFlow: "staff" }),
   "lib/actions/repreneur-opportunity-responses.ts": boundary("portal_owner", ["markMyOpportunityInterested", "declineMyOpportunity"]),
   "lib/actions/repreneur-opportunity-review.ts": boundary("portal_owner", ["recordMyOpportunityViewed", "setMyOpportunityReviewed"]),
