@@ -16,7 +16,7 @@ export default function IntakeV2Page() {
     <main id="main-content" className="min-h-svh bg-background px-4 py-6 md:py-10">
       <div className="mx-auto mb-8 max-w-2xl border-b pb-6">
         <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-lg bg-[#081020] text-[#7dd3c7]"><Waves className="size-[18px]" /></span><span className="text-xs font-semibold tracking-[0.12em]">WAVE</span></div>
+          <div className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-lg bg-foreground text-background"><Waves className="size-[18px]" /></span><span className="text-xs font-semibold tracking-[0.12em]">WAVE</span></div>
           <LanguageToggle />
         </div>
         <div className="text-center">

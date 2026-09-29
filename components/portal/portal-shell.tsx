@@ -39,7 +39,7 @@ export function PortalShell({ children, userEmail, userName }: PortalShellProps)
       <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 md:px-6">
           <div className="flex items-center gap-3">
-            <span className="relative grid size-9 place-items-center rounded-lg bg-[#081020] text-[#7dd3c7]"><Waves className="size-[18px]" /><span aria-hidden="true" className="absolute -bottom-px left-1/2 h-0.5 w-3 -translate-x-1/2 bg-primary" /></span>
+            <span className="relative grid size-9 place-items-center rounded-lg bg-foreground text-background"><Waves className="size-[18px]" /><span aria-hidden="true" className="absolute -bottom-px left-1/2 h-0.5 w-3 -translate-x-1/2 bg-background" /></span>
               <div className="grid leading-tight"><span className="text-xs font-semibold tracking-[0.12em]">WAVE</span><span className="hidden text-[10px] text-muted-foreground sm:block">{u("Repreneur portal")}</span></div>
           </div>
 

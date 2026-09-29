@@ -8,28 +8,25 @@ import { GlobalSkipLink } from "@/components/i18n/global-skip-link"
 import "./globals.css"
 
 import {
-  Inter as V0_Font_Inter,
+  Figtree as V0_Font_Figtree,
+  Geist as V0_Font_Geist,
   Geist_Mono as V0_Font_Geist_Mono,
-  Source_Serif_4 as V0_Font_Source_Serif_4,
 } from "next/font/google"
 
 // Initialize fonts
-const _inter = V0_Font_Inter({
+const _figtree = V0_Font_Figtree({
   subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-inter",
+  variable: "--font-figtree",
+})
+const _geist = V0_Font_Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
 })
 const _geistMono = V0_Font_Geist_Mono({
   subsets: ["latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-geist-mono",
 })
-const _sourceSerif_4 = V0_Font_Source_Serif_4({
-  subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
-  variable: "--font-source-serif",
-})
-
 export const metadata: Metadata = {
   title: "Re-New Platform",
   description:
@@ -72,7 +69,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
-        className={`${_inter.variable} ${_geistMono.variable} ${_sourceSerif_4.variable} font-sans antialiased`}
+        className={`${_figtree.variable} ${_geist.variable} ${_geistMono.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
         <GlobalSkipLink />
@@ -83,20 +80,35 @@ export default function RootLayout({
           closeButton
           expand
           visibleToasts={4}
-          style={{ "--width": "520px" } as React.CSSProperties}
+          style={
+            {
+              "--width": "520px",
+              "--normal-bg": "var(--card)",
+              "--normal-border": "var(--border)",
+              "--normal-text": "var(--card-foreground)",
+              "--success-bg": "var(--card)",
+              "--success-border": "var(--success)",
+              "--success-text": "var(--success)",
+              "--info-bg": "var(--card)",
+              "--info-border": "var(--info)",
+              "--info-text": "var(--info)",
+              "--warning-bg": "var(--card)",
+              "--warning-border": "var(--warning)",
+              "--warning-text": "var(--warning)",
+              "--error-bg": "var(--card)",
+              "--error-border": "var(--destructive)",
+              "--error-text": "var(--destructive)",
+            } as React.CSSProperties
+          }
           toastOptions={{
             duration: 4500,
             classNames: {
               toast: "min-h-14 rounded-lg border px-4 py-3 shadow-md",
-              success: "border-emerald-200 bg-emerald-50 text-emerald-950",
-              error: "border-red-200 bg-red-50 text-red-950",
-              warning: "border-amber-200 bg-amber-50 text-amber-950",
-              info: "border-blue-200 bg-blue-50 text-blue-950",
               title: "text-sm font-semibold leading-5",
               description: "text-sm leading-5 opacity-90",
               icon: "mt-0.5",
               closeButton:
-                "border bg-background text-muted-foreground shadow-sm hover:bg-muted",
+                "border-border! bg-background! text-muted-foreground! shadow-sm hover:bg-muted!",
             },
           }}
         />
