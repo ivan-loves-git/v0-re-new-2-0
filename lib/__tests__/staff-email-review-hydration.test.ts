@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 import type { StaffEmailReview } from "@/lib/actions/staff-email-review"
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  usePathname: () => "/emails" }))
 vi.mock("@/lib/actions/staff-email-review", () => ({
   approveAndSendStaffEmailReview: vi.fn(),
   cancelStaffEmailReview: vi.fn(),
@@ -57,6 +58,8 @@ const initial: Parameters<typeof ReviewDetail>[0]["initial"] = {
     detail: {},
   }],
   catalogueEnabled: true,
+  catalogue: { template_key: review.template_key, subject: "Synthetic subject", body_markdown: "Synthetic body",
+    body_editable: true, is_active: true, version: "test-version" },
   asOf: "2026-09-24T19:00:00.000Z",
   members: [],
   replies: [],
@@ -84,11 +87,19 @@ describe("staff email review timestamps", () => {
   })
 
   it("shows the same Paris preparation time in the queue on server and browser", () => {
-    const element = createElement(ReviewQueue, { reviews: { reviews: [review], total: 1, page: 1, pageSize: 25, filter: "active" } })
+    const element = createElement(ReviewQueue, { queue: {
+      reviews: [{ id: review.id, source_kind: review.source_kind, template_key: review.template_key,
+        subject: review.subject, body_preview: review.body_text, recipient_email: review.recipient_email,
+        namespace: review.namespace, state: review.state, version: review.version, created_at: review.created_at,
+        recipient_name: "Synthetic Source", recipient_avatar_url: null, company_name: "Example Firm",
+        purpose_key: "ma_process_follow_up", purpose_label: "Process follow-up" }],
+      total: 1, page: 1, pageSize: 25, activeCount: 0, allCount: 1,
+      view: "all", search: "", purpose: "all", sort: "prepared", direction: "desc",
+    } })
     const serverHtml = renderIn("UTC", element)
     const browserHtml = renderIn("Europe/Paris", element)
 
-    expect(serverHtml).toContain("24/09/2026 19:48:21")
+    expect(serverHtml).toContain("24 Sept · 7:48 PM")
     expect(serverHtml).toBe(browserHtml)
   })
 })
@@ -127,5 +138,31 @@ describe("grouped freshness response coverage", () => {
     expect(one).toContain("1 of 1 member answered")
     expect(two).not.toContain("Awaiting source response")
     expect(one).not.toContain("days ago")
+  })
+})
+
+describe("retained and current template provenance", () => {
+  it("keeps reviewed words distinct from a changed current catalogue source", () => {
+    const html = renderToStaticMarkup(createElement(ReviewDetail, {
+      initial: { ...initial, catalogue: { ...initial.catalogue!, version: "current-version",
+        subject: "New catalogue subject", body_markdown: "New catalogue body" } },
+    }))
+    expect(html).toContain("Template changed since preparation")
+    expect(html).toContain("test-version")
+    expect(html).toContain("current-version")
+    expect(html).toContain("Synthetic subject")
+    expect(html).toContain("New catalogue subject")
+  })
+
+  it("identifies E6 as code-owned without fabricating a catalogue detail", () => {
+    const html = renderToStaticMarkup(createElement(ReviewDetail, {
+      initial: { ...initial, review: { ...review, source_kind: "e6",
+        template_key: "code:e6_nda_ready", template_version: "w112-e6-v1", state: "pending" },
+        catalogue: null, catalogueEnabled: true },
+    }))
+    expect(html).toContain("no editable catalogue template")
+    expect(html).toContain("w112-e6-v1")
+    expect(html).not.toContain("Open code:e6_nda_ready")
+    expect(html).not.toContain("Catalogue template disabled")
   })
 })
