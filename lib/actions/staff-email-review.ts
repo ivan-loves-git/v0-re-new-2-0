@@ -26,6 +26,7 @@ export interface StaffEmailReview {
   recipient_email: string; namespace: "REAL" | "DEMO"; template_key: string; template_version: string;
   subject: string; body_text: string; attachment_snapshot: Array<{ artifact_id: string; document_id: string; content_sha256: string; file_name: string; mime_type: string; size_bytes: number }>;
   state: "pending" | "sending" | "sent" | "failed" | "uncertain" | "cancelled"; version: number;
+  archived_at: string | null; archived_by: string | null; restored_at: string | null; restored_by: string | null;
   created_by: string; created_at: string; edited_by: string | null; edited_at: string | null;
   approved_by: string | null; approved_at: string | null; attempted_at: string | null;
   outcome_at: string | null; provider_message_id: string | null; delivery_evidence_id: string | null;
@@ -50,23 +51,26 @@ export async function listStaffEmailReviews(options: EmailReviewQueueOptions) {
   const activeStates = ["pending", "sending", "uncertain", "failed"]
   const filtered = (columns: string, head = false) => {
     let query = db.from("staff_email_review_queue").select(columns, { count: "exact", head })
-    if (options.view === "active") query = query.in("state", activeStates)
+    if (options.view === "active") query = query.is("archived_at", null).in("state", activeStates)
+    if (options.view === "archived") query = query.not("archived_at", "is", null)
     if (options.purpose !== "all") query = query.eq("purpose_key", options.purpose)
     if (options.search) query = query.ilike("search_text", emailReviewSearchPattern(options.search))
     return query
   }
-  const [filteredCount, activeCount, allCount] = await Promise.all([
+  const [filteredCount, activeCount, archivedCount, allCount] = await Promise.all([
     filtered("id", true),
-    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }).in("state", activeStates),
+    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }).is("archived_at", null).in("state", activeStates),
+    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }).not("archived_at", "is", null),
     db.from("staff_email_review_queue").select("id", { count: "exact", head: true }),
   ])
-  if (filteredCount.error || activeCount.error || allCount.error) {
+  if (filteredCount.error || activeCount.error || archivedCount.error || allCount.error ||
+    [filteredCount.count, activeCount.count, archivedCount.count, allCount.count].some((count) => typeof count !== "number")) {
     throw new Error("The review queue is unavailable.")
   }
   const total = filteredCount.count ?? 0
   const page = Math.min(options.page, Math.max(1, Math.ceil(total / pageSize)))
   const sortColumn = emailReviewSortColumn(options.sort)
-  let query = filtered("id,source_kind,template_key,subject,body_preview,recipient_email,namespace,state,version,created_at,recipient_name,recipient_avatar_url,company_name,purpose_key,purpose_label")
+  let query = filtered("id,source_kind,template_key,subject,body_preview,recipient_email,namespace,state,version,created_at,recipient_name,recipient_avatar_url,company_name,purpose_key,purpose_label,archived_at,archive_eligible")
     .order(sortColumn, { ascending: options.direction === "asc", nullsFirst: false })
   if (sortColumn !== "created_at") query = query.order("created_at", { ascending: false })
   const { data, error } = await query.order("id", { ascending: false })
@@ -75,7 +79,7 @@ export async function listStaffEmailReviews(options: EmailReviewQueueOptions) {
   return {
     ...options,
     reviews: (data ?? []) as unknown as EmailReviewQueueRow[], total, page, pageSize,
-    activeCount: activeCount.count ?? 0, allCount: allCount.count ?? 0,
+    activeCount: activeCount.count!, archivedCount: archivedCount.count!, allCount: allCount.count!,
   }
 }
 
@@ -83,9 +87,9 @@ export async function getStaffEmailReview(id: string) {
   await requireStaffAccess()
   const review = await reviewById(id)
   const db = createAdminClient()
-  const [{ data, error }, template, memberResult, replyResult] = await Promise.all([
+  const [{ data, error }, template, memberResult, replyResult, archiveEligibility] = await Promise.all([
     db.from("staff_email_review_events").select("id,event_kind,actor,occurred_at,version,detail")
-      .eq("review_id", id).order("occurred_at", { ascending: true }).limit(100),
+      .eq("review_id", id).order("occurred_at", { ascending: false }).limit(100),
     review.source_kind === "e6" ? Promise.resolve({ data: null, error: null }) :
       db.from("email_templates").select("template_key,subject,body_markdown,body_editable,is_active")
         .eq("template_key", review.template_key).maybeSingle(),
@@ -96,15 +100,16 @@ export async function getStaffEmailReview(id: string) {
       ? db.from("opportunity_freshness_replies").select("id,opportunity_id,outcome,reply_at,evidence,recorded_by,recorded_at")
           .eq("review_id", id).order("reply_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
+    db.rpc("staff_email_review_archive_source_clear", { p_review_id: id }),
   ])
-  if (error || memberResult.error || replyResult.error) throw new Error("The review history is unavailable.")
+  if (error || memberResult.error || replyResult.error || archiveEligibility.error) throw new Error("The review history is unavailable.")
   const catalogue = template.data ? {
     ...template.data,
     version: createHash("sha256").update(JSON.stringify([
       template.data.subject, template.data.body_markdown, template.data.body_editable,
     ])).digest("hex"),
   } : null
-  return { review, events: data ?? [],
+  return { review, events: (data ?? []).reverse(), archiveEligible: archiveEligibility.data === true,
     catalogue,
     catalogueEnabled: review.source_kind === "e6" || (!template.error && template.data?.is_active === true),
     asOf: new Date().toISOString(),
@@ -247,6 +252,59 @@ export async function cancelStaffEmailReview(id: string, version: number, reason
   return { success: true as const, message: "Draft cancelled with a retained reason." }
 }
 
+type ArchiveTransition = "archive" | "restore"
+type ArchiveSelection = { id: string; version: number }
+
+async function changeArchiveState(input: ArchiveSelection, actor: string, transition: ArchiveTransition) {
+  requireId(input.id)
+  if (!Number.isSafeInteger(input.version) || input.version < 1) throw new Error("Refresh the exact review version.")
+  const { data, error } = await createAdminClient().rpc(
+    transition === "archive" ? "staff_email_review_archive" : "staff_email_review_restore",
+    { p_review_id: input.id, p_version: input.version, p_actor: actor },
+  )
+  if (error || !Number.isSafeInteger(data)) {
+    throw new Error("This draft changed or its delivery evidence no longer permits this action. Refresh and inspect it.")
+  }
+  return data as number
+}
+
+export async function archiveStaffEmailReview(id: string, version: number) {
+  const { user } = await requireStaffAccess()
+  await changeArchiveState({ id, version }, user.id, "archive")
+  revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
+  return { success: true as const, message: "Draft put aside. No email was sent." }
+}
+
+export async function restoreStaffEmailReview(id: string, version: number) {
+  const { user } = await requireStaffAccess()
+  await changeArchiveState({ id, version }, user.id, "restore")
+  revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
+  return { success: true as const, message: "Same draft restored for review. Sending still requires current checks." }
+}
+
+export async function changeStaffEmailReviewArchiveSelection(
+  items: ArchiveSelection[], transition: ArchiveTransition,
+) {
+  const { user } = await requireStaffAccess()
+  if (!Array.isArray(items) || items.length < 1 || items.length > 25 ||
+    !["archive", "restore"].includes(transition) ||
+    items.some((item) => !item || !isUuid(item.id) || !Number.isSafeInteger(item.version) || item.version < 1) ||
+    new Set(items.map((item) => item.id)).size !== items.length) {
+    throw new Error("Choose up to 25 distinct drafts from the current page.")
+  }
+  const outcomes: Array<{ id: string; outcome: "archived" | "restored" | "blocked" }> = []
+  for (const item of items) {
+    try {
+      await changeArchiveState(item, user.id, transition)
+      outcomes.push({ id: item.id, outcome: transition === "archive" ? "archived" : "restored" })
+    } catch {
+      outcomes.push({ id: item.id, outcome: "blocked" })
+    }
+  }
+  revalidatePath("/emails")
+  return { outcomes, message: `${outcomes.filter((item) => item.outcome !== "blocked").length} of ${items.length} drafts ${transition === "archive" ? "archived" : "restored"}. Refresh blocked items before retrying.` }
+}
+
 async function currentAttemptPayload(review: StaffEmailReview) {
   if (review.namespace !== "REAL") throw new Error("DEMO drafts cannot deliver from the production review queue.")
   let request: { from: string; to: string[]; subject: string; html: string; text: string }
@@ -323,6 +381,7 @@ async function readSourceDeliveryOutcome(review: StaffEmailReview): Promise<{
 export async function approveAndSendStaffEmailReview(id: string, version: number) {
   const { user } = await requireStaffAccess()
   const review = await reviewById(id)
+  if (review.archived_at) throw new Error("This draft is archived. Restore and review it before any send.")
   if (review.version !== version) throw new Error("This review changed. Refresh before approving its exact version.")
   if (review.source_kind === "freshness") {
     const result = await sendOpportunityFreshnessReview(review, version, user.id)

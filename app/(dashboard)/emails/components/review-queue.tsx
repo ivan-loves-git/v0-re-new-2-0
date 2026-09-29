@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
+import { toast } from "sonner"
 import { ArrowDown, ArrowUp, Clock3, Search } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { listStaffEmailReviews } from "@/lib/actions/staff-email-review"
+import { archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, restoreStaffEmailReview, type listStaffEmailReviews } from "@/lib/actions/staff-email-review"
 import { EMAIL_REVIEW_PURPOSES, emailReviewDetailHref, isEmailReviewSelectable, type EmailReviewDirection, type EmailReviewPurpose, type EmailReviewQueueRow, type EmailReviewSort } from "@/lib/email/review-queue-query"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
@@ -86,12 +87,54 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
   const [pending, startTransition] = useTransition()
   const [search, setSearch] = useState(queue.search)
   const [selection, setSelection] = useState<{ pageKey: string; ids: string[] }>({ pageKey: "", ids: [] })
+  const [outcomes, setOutcomes] = useState<Array<{ label: string; outcome: string }>>([])
   const eligible = queue.reviews.filter(isEmailReviewSelectable)
-  const pageKey = eligible.map((review) => review.id).sort().join(":")
+  const pageKey = [queue.view,queue.page,queue.search,queue.purpose,
+    eligible.map((review) => `${review.id}:${review.version}:${review.archived_at ?? "active"}`).sort().join(":")].join("|")
   const selected = new Set(selection.pageKey === pageKey ? selection.ids : [])
+  const selectedRows = eligible.filter((review) => selected.has(review.id))
+  const selectedActive = selectedRows.filter((review) => review.archived_at === null)
+  const selectedArchived = selectedRows.filter((review) => review.archived_at !== null)
   const allSelected = eligible.length > 0 && eligible.every((review) => selected.has(review.id))
 
+  function runRow(review: EmailReviewQueueRow) {
+    const restoring = review.archived_at !== null
+    startTransition(async () => {
+      try {
+        const result = restoring
+          ? await restoreStaffEmailReview(review.id, review.version)
+          : await archiveStaffEmailReview(review.id, review.version)
+        toast.success(result.message)
+      } catch (cause) {
+        toast.error(cause instanceof Error ? cause.message : "This draft changed. Refresh and inspect it.")
+      }
+      router.refresh()
+    })
+  }
+
+  function runSelected(rows: EmailReviewQueueRow[], transition: "archive" | "restore") {
+    if (!rows.length || rows.length > 25 ||
+      !window.confirm(`${transition === "archive" ? "Archive" : "Restore"} these ${rows.length} selected drafts on this page? No email will be sent.`)) return
+    startTransition(async () => {
+      try {
+        const result = await changeStaffEmailReviewArchiveSelection(
+          rows.map((review) => ({ id: review.id, version: review.version })), transition,
+        )
+        setOutcomes(result.outcomes.map((item) => ({
+          label: rows.find((review) => review.id === item.id)?.subject ?? "Selected draft",
+          outcome: item.outcome,
+        })))
+        setSelection({ pageKey: "", ids: [] })
+        toast.message(result.message)
+      } catch (cause) {
+        toast.error(cause instanceof Error ? cause.message : "Selected drafts could not be updated.")
+      }
+      router.refresh()
+    })
+  }
+
   function navigate(changes: Record<string, string | null>) {
+    setOutcomes([])
     const params = new URLSearchParams({
       reviewFilter: queue.view, reviewSearch: queue.search, reviewPurpose: queue.purpose,
       reviewSort: queue.sort, reviewDirection: queue.direction, reviewPage: String(queue.page),
@@ -118,8 +161,23 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
 
     <div className="mt-5 flex flex-wrap items-center gap-1 border-b pb-3 text-sm" aria-label="Queue views">
       <Button type="button" size="sm" variant={queue.view === "active" ? "secondary" : "ghost"} aria-current={queue.view === "active" ? "page" : undefined} onClick={() => navigate({ reviewFilter: "active", reviewPage: null })}>Active backlog <span className="ml-1 tabular-nums">{queue.activeCount}</span></Button>
+      <Button type="button" size="sm" variant={queue.view === "archived" ? "secondary" : "ghost"} aria-current={queue.view === "archived" ? "page" : undefined} onClick={() => navigate({ reviewFilter: "archived", reviewPage: null })}>Archived <span className="ml-1 tabular-nums">{queue.archivedCount}</span></Button>
       <Button type="button" size="sm" variant={queue.view === "all" ? "secondary" : "ghost"} aria-current={queue.view === "all" ? "page" : undefined} onClick={() => navigate({ reviewFilter: "all", reviewPage: null })}>All history <span className="ml-1 tabular-nums">{queue.allCount}</span></Button>
     </div>
+
+    <div className="flex flex-wrap items-center gap-2 border-b pb-3 text-sm">
+      <span className="text-muted-foreground">{selected.size} selected on this page</span>
+      <Button type="button" size="sm" variant="outline" disabled={pending || selectedActive.length === 0}
+        onClick={() => runSelected(selectedActive, "archive")}>Archive selected ({selectedActive.length})</Button>
+      <Button type="button" size="sm" variant="outline" disabled={pending || selectedArchived.length === 0}
+        onClick={() => runSelected(selectedArchived, "restore")}>Restore selected ({selectedArchived.length})</Button>
+    </div>
+    {outcomes.length ? <div role="status" className="rounded-md border p-3 text-sm">
+      <p className="font-medium">Selected-page results</p>
+      <ul className="mt-2 space-y-1">{outcomes.map((item, index) => <li key={`${index}:${item.label}`}>
+        {item.label}: {item.outcome === "blocked" ? "Changed or ineligible; refresh and inspect" : item.outcome}
+      </li>)}</ul>
+    </div> : null}
 
     <div className="flex flex-wrap items-end gap-2 py-3">
       <form className="flex min-w-[220px] flex-1 items-center gap-2" onSubmit={(event) => { event.preventDefault(); navigate({ reviewSearch: search.trim(), reviewPage: null }) }} role="search">
@@ -135,9 +193,9 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
     {queue.reviews.length === 0
       ? <p className="rounded-md border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">{queue.total === 0 && !queue.search && queue.purpose === "all" ? "No prepared emails in this view." : "No emails match this view, search and purpose. Try another filter."}</p>
       : <div className="-mx-3 sm:-mx-5">
-        <p className="px-3 pb-2 text-xs text-muted-foreground sm:px-5">Table scrolls horizontally on narrow screens. Selection covers eligible REAL pending drafts on this page only.</p>
-        <Table className="min-w-[1090px] table-fixed">
-          <colgroup><col className="w-11" /><col className="w-[300px]" /><col className="w-[155px]" /><col className="w-[225px]" /><col className="w-[165px]" /><col className="w-[120px]" /><col className="w-[85px]" /></colgroup>
+        <p className="px-3 pb-2 text-xs text-muted-foreground sm:px-5">Table scrolls horizontally on narrow screens. Selection covers eligible drafts on this page only; sending remains an individual review action.</p>
+        <Table className="min-w-[1060px] table-fixed">
+          <colgroup><col className="w-11" /><col className="w-[270px]" /><col className="w-[140px]" /><col className="w-[205px]" /><col className="w-[150px]" /><col className="w-[110px]" /><col className="w-[140px]" /></colgroup>
           <TableHeader><TableRow>
             <TableHead className="w-11"><Checkbox aria-label="Select all eligible drafts on this page" checked={allSelected ? true : selected.size > 0 ? "indeterminate" : false} disabled={eligible.length === 0} onCheckedChange={(checked) => setSelection({ pageKey, ids: checked === true ? eligible.map((review) => review.id) : [] })} /></TableHead>
             <SortHead column="message" label="Message" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="purpose" label="Purpose" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="recipient" label="Recipient" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="company" label="Company" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="prepared" label="Prepared" sort={queue.sort} direction={queue.direction} onSort={sortBy} />
@@ -158,7 +216,9 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
             <TableCell><div className="flex flex-col items-start gap-0.5">{detailHref
               ? <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs"><Link href={detailHref}>Review</Link></Button>
               : <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled>Unavailable</Button>}
-              <span className="flex gap-1"><Badge variant="secondary" className="px-1 text-[10px] leading-3">{review.state}</Badge><Badge variant="outline" className="px-1 text-[10px] leading-3">{review.namespace}</Badge></span></div></TableCell>
+              {isEmailReviewSelectable(review) ? <Button type="button" size="sm" variant="ghost" className="h-7 px-2 text-xs"
+                disabled={pending} onClick={() => runRow(review)}>{review.archived_at ? "Restore" : "Archive"}</Button> : null}
+              <span className="flex flex-wrap gap-1">{review.archived_at ? <Badge variant="outline" className="px-1 text-[10px] leading-3">Archived</Badge> : null}<Badge variant="secondary" className="px-1 text-[10px] leading-3">{review.state}</Badge><Badge variant="outline" className="px-1 text-[10px] leading-3">{review.namespace}</Badge></span></div></TableCell>
           </TableRow>
           })}</TableBody>
         </Table>

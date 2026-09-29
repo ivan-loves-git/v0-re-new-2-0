@@ -20,13 +20,14 @@ function row(id: string): EmailReviewQueueRow {
     created_at: "2026-09-27T02:37:00Z", recipient_name: "Example Person",
     recipient_avatar_url: null, company_name: "Example Firm",
     purpose_key: "ma_process_follow_up", purpose_label: "Process follow-up",
+    archived_at: null, archive_eligible: true,
   }
 }
 
 function render(reviews: EmailReviewQueueRow[]) {
   return renderToStaticMarkup(createElement(ReviewQueue, { queue: {
     ...parseEmailReviewQueueOptions({}), reviews, total: reviews.length,
-    pageSize: 25, activeCount: reviews.length, allCount: reviews.length,
+    pageSize: 25, activeCount: reviews.length, archivedCount: 0, allCount: reviews.length,
   } }))
 }
 

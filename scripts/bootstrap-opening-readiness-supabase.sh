@@ -134,7 +134,7 @@ while IFS= read -r migration; do
 done < <(
   find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
     | LC_ALL=C sort \
-    | awk -F/ '$NF >= "20260830113100"'
+    | awk -F/ '$NF >= "20260830113100" && $NF != "20260929230707_reversible_staff_email_archive.sql"'
 )
 
 # The additive #186 review queue is a numbered application migration. The
@@ -145,6 +145,9 @@ done < <(
 "${psql_safe[@]}" -f scripts/124_recipient_information_memos.sql
 "${psql_safe[@]}" -f scripts/129_opportunity_freshness_reviews.sql
 "${psql_safe[@]}" -f scripts/130_staff_email_review_queue_projection.sql
+# #223 depends on the numbered review/freshness/queue foundations above;
+# the production migration itself remains the single source for this overlay.
+"${psql_safe[@]}" -f supabase/migrations/20260929230707_reversible_staff_email_archive.sql
 
 # The sanitized structure snapshot deliberately omits the real Acme/Bertrand
 # singleton while retaining its redacted integrity function. Reconstruct the
