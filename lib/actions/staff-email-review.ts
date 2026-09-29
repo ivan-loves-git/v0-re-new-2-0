@@ -1,5 +1,6 @@
 "use server"
 
+import { createHash } from "node:crypto"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getMaReviewContext, getMaReviewTemplateVersion, renderMaWorkflowContent, buildMaReviewedRequest, sendMaSourceWorkflowEmailPayload } from "@/lib/ma-workflows"
@@ -8,6 +9,8 @@ import { fixedIntermediaryHandoffCopy, buildPursuitNdaReadyRequest } from "@/lib
 import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
 import { sameAttachmentSnapshot } from "@/lib/staff-email-review-guard"
 import { sendOpportunityFreshnessReview } from "@/lib/opportunity-freshness-send"
+import { emailReviewSearchPattern, emailReviewSortColumn, type EmailReviewQueueOptions, type EmailReviewQueueRow } from "@/lib/email/review-queue-query"
+import { PURSUIT_REVIEW_COPY_VERSION } from "@/lib/email/review-copy-version"
 import { isUuid } from "@/lib/uuid"
 import { revalidatePath } from "next/cache"
 
@@ -40,16 +43,40 @@ async function reviewById(id: string): Promise<StaffEmailReview> {
   return data as StaffEmailReview
 }
 
-export async function listStaffEmailReviews(page = 1, filter: "active" | "all" = "active") {
+export async function listStaffEmailReviews(options: EmailReviewQueueOptions) {
   await requireStaffAccess()
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1
+  const db = createAdminClient()
   const pageSize = 25
-  let query = createAdminClient().from("staff_email_reviews").select("*", { count: "exact" })
-  if (filter === "active") query = query.in("state", ["pending", "sending", "uncertain", "failed"])
-  const { data, count, error } = await query.order("created_at", { ascending: false })
-    .order("id", { ascending: false }).range((safePage - 1) * pageSize, safePage * pageSize - 1)
+  const activeStates = ["pending", "sending", "uncertain", "failed"]
+  const filtered = (columns: string, head = false) => {
+    let query = db.from("staff_email_review_queue").select(columns, { count: "exact", head })
+    if (options.view === "active") query = query.in("state", activeStates)
+    if (options.purpose !== "all") query = query.eq("purpose_key", options.purpose)
+    if (options.search) query = query.ilike("search_text", emailReviewSearchPattern(options.search))
+    return query
+  }
+  const [filteredCount, activeCount, allCount] = await Promise.all([
+    filtered("id", true),
+    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }).in("state", activeStates),
+    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }),
+  ])
+  if (filteredCount.error || activeCount.error || allCount.error) {
+    throw new Error("The review queue is unavailable.")
+  }
+  const total = filteredCount.count ?? 0
+  const page = Math.min(options.page, Math.max(1, Math.ceil(total / pageSize)))
+  const sortColumn = emailReviewSortColumn(options.sort)
+  let query = filtered("id,source_kind,template_key,subject,body_preview,recipient_email,namespace,state,version,created_at,recipient_name,recipient_avatar_url,company_name,purpose_key,purpose_label")
+    .order(sortColumn, { ascending: options.direction === "asc", nullsFirst: false })
+  if (sortColumn !== "created_at") query = query.order("created_at", { ascending: false })
+  const { data, error } = await query.order("id", { ascending: false })
+    .range((page - 1) * pageSize, page * pageSize - 1)
   if (error) throw new Error("The review queue is unavailable.")
-  return { reviews: (data ?? []) as StaffEmailReview[], total: count ?? 0, page: safePage, pageSize, filter }
+  return {
+    ...options,
+    reviews: (data ?? []) as unknown as EmailReviewQueueRow[], total, page, pageSize,
+    activeCount: activeCount.count ?? 0, allCount: allCount.count ?? 0,
+  }
 }
 
 export async function getStaffEmailReview(id: string) {
@@ -59,8 +86,9 @@ export async function getStaffEmailReview(id: string) {
   const [{ data, error }, template, memberResult, replyResult] = await Promise.all([
     db.from("staff_email_review_events").select("id,event_kind,actor,occurred_at,version,detail")
       .eq("review_id", id).order("occurred_at", { ascending: true }).limit(100),
-    review.source_kind === "e6" ? Promise.resolve({ data: { is_active: true }, error: null }) :
-      db.from("email_templates").select("is_active").eq("template_key", review.template_key).maybeSingle(),
+    review.source_kind === "e6" ? Promise.resolve({ data: null, error: null }) :
+      db.from("email_templates").select("template_key,subject,body_markdown,body_editable,is_active")
+        .eq("template_key", review.template_key).maybeSingle(),
     review.source_kind === "freshness"
       ? db.from("opportunity_freshness_members").select("opportunity_id,episode_key,frozen_member").eq("review_id", id).order("opportunity_id")
       : Promise.resolve({ data: [], error: null }),
@@ -70,7 +98,15 @@ export async function getStaffEmailReview(id: string) {
       : Promise.resolve({ data: [], error: null }),
   ])
   if (error || memberResult.error || replyResult.error) throw new Error("The review history is unavailable.")
-  return { review, events: data ?? [], catalogueEnabled: !template.error && template.data?.is_active === true,
+  const catalogue = template.data ? {
+    ...template.data,
+    version: createHash("sha256").update(JSON.stringify([
+      template.data.subject, template.data.body_markdown, template.data.body_editable,
+    ])).digest("hex"),
+  } : null
+  return { review, events: data ?? [],
+    catalogue,
+    catalogueEnabled: review.source_kind === "e6" || (!template.error && template.data?.is_active === true),
     asOf: new Date().toISOString(),
     members: (memberResult.data ?? []) as Array<{ opportunity_id: string; episode_key: string; frozen_member: Record<string, string | null> }>,
     replies: (replyResult.data ?? []) as Array<{ id: string; opportunity_id: string; outcome: string; reply_at: string; evidence: string; recorded_by: string; recorded_at: string }>,
@@ -135,7 +171,7 @@ export async function preparePursuitEmailReview(matchId: string, type: "e4" | "e
       opportunityId: handoff.opportunityId, matchId, upstreamId: handoff.upstreamId,
       contactLinkId: null, recipientEmail: request.to[0],
       namespace: context.opportunity.is_demo ? "DEMO" : "REAL", templateKey: "code:e6_nda_ready",
-      templateVersion: "w112-e6-v1", subject: request.subject, body: request.text, attachmentSnapshot: [],
+      templateVersion: PURSUIT_REVIEW_COPY_VERSION.e6, subject: request.subject, body: request.text, attachmentSnapshot: [],
     })
   }
   const blankPresent = context.upstream.metadata?.blank_nda_present_at_validation
@@ -149,7 +185,7 @@ export async function preparePursuitEmailReview(matchId: string, type: "e4" | "e
   return persistPreparation({ sourceKind: type, sourceOperationId: handoff.upstreamId,
     opportunityId: handoff.opportunityId, matchId, upstreamId: handoff.upstreamId,
     contactLinkId: ma.contactLinkId, recipientEmail: ma.recipientEmail,
-    namespace: ma.namespace, templateKey: "ma_nda_info_memo_request", templateVersion: `w112-${type}-v1`,
+    namespace: ma.namespace, templateKey: "ma_nda_info_memo_request", templateVersion: PURSUIT_REVIEW_COPY_VERSION[type],
     subject: rendered.subject, body: rendered.body, attachmentSnapshot: handoff.snapshot,
   })
 }
@@ -235,7 +271,7 @@ async function currentAttemptPayload(review: StaffEmailReview) {
       const copy = fixedIntermediaryHandoffCopy(review.source_kind, Boolean(blank))
       const rendered = await renderMaWorkflowContent(review.opportunity_id, copy.subject, copy.body)
       if (handoff.upstreamId !== review.source_operation_id || rendered.subject !== review.subject || rendered.body !== review.body_text ||
-          review.template_version !== `w112-${review.source_kind}-v1` ||
+          review.template_version !== PURSUIT_REVIEW_COPY_VERSION[review.source_kind] ||
           !sameAttachmentSnapshot(handoff.snapshot, review.attachment_snapshot)) {
         throw new Error("The handoff gate, fixed copy or signed PDFs changed after review.")
       }
@@ -246,7 +282,7 @@ async function currentAttemptPayload(review: StaffEmailReview) {
     if (!review.match_id) throw new Error("Pursuit identity is missing.")
     const { handoff, context } = await preparePursuitHandoff(createAdminClient(), review.match_id, "e6")
     const current = buildPursuitNdaReadyRequest(review.match_id, context)
-    if (handoff.upstreamId !== review.source_operation_id || review.template_key !== "code:e6_nda_ready" || review.template_version !== "w112-e6-v1" ||
+    if (handoff.upstreamId !== review.source_operation_id || review.template_key !== "code:e6_nda_ready" || review.template_version !== PURSUIT_REVIEW_COPY_VERSION.e6 ||
         current.to[0] !== review.recipient_email || current.subject !== review.subject || current.text !== review.body_text || context.opportunity.is_demo) {
       throw new Error("The NDA-ready gate, recipient or governed copy changed after review.")
     }

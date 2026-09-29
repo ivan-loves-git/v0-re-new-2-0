@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   parseSelection: vi.fn(),
   createAdminClient: vi.fn(),
   previewLanguage: vi.fn(),
+  readNextActions: vi.fn(),
 }))
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
@@ -31,6 +32,7 @@ vi.mock("@/lib/data/current-pursuit", () => ({
   readPortalCurrentPursuit: mocks.readJourney,
   readPortalDealActionIndicators: mocks.readActions,
 }))
+vi.mock("@/lib/data/portal-next-actions", () => ({ readPortalNextActions: mocks.readNextActions }))
 vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToken: mocks.selectionToken, parseStaffPortalSelection: mocks.parseSelection }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
 vi.mock("@/lib/i18n/server-language", () => ({ previewUiLanguage: mocks.previewLanguage }))
@@ -62,6 +64,8 @@ describe("staff Tools portal page", () => {
       select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { updated_at: "2026-09-27T08:00:00Z" } }) }) }),
     }) })
     mocks.previewLanguage.mockResolvedValue("en")
+    mocks.readNextActions.mockResolvedValue({ state: "ready", asOf: "2026-09-30T00:00:00Z",
+      yourActions: [], waiting: [], resources: [] })
   })
 
   it("renders the shared selected-deal workspace with staff-scoped navigation and assistance", async () => {
@@ -115,6 +119,8 @@ describe("staff Tools portal page", () => {
     expect(html).not.toContain("Discovery only")
     expect(html).toContain(`href="/portal-preview?repreneurId=${ownerId}&amp;dealId=${matchId}&amp;workspaceId=${workspaceId}&amp;returnView=renew-pursuits"`)
     expect(mocks.readActions).toHaveBeenCalledWith([matchId], { kind: "staff-preview", repreneurId: ownerId })
+    expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "staff-preview", repreneurId: ownerId,
+      selectionToken: "staff-selection-token" }, expect.any(Object))
   })
 
   it("denies a stale staff workspace without rendering a selected deal or actions", async () => {

@@ -92,17 +92,51 @@ describe("staff email review public actions", () => {
 
   it("does not list staff drafts for an unauthenticated or repreneur caller", async () => {
     m.staff.mockRejectedValue(new Error("Staff access required"))
-    await expect(listStaffEmailReviews()).rejects.toThrow("Staff access")
+    await expect(listStaffEmailReviews({ page: 1, view: "active", search: "", purpose: "all", sort: "prepared", direction: "desc" })).rejects.toThrow("Staff access")
     expect(m.from).not.toHaveBeenCalled()
   })
 
   it("keeps records beyond the old latest-50 boundary navigable", async () => {
     const range = vi.fn().mockResolvedValue({ data: [{ ...row, id: "older-review" }], count: 51, error: null })
-    const listQuery = { in: () => listQuery, order: () => listQuery, range }
+    const listQuery = {
+      in: () => listQuery, eq: () => listQuery, ilike: () => listQuery,
+      order: () => listQuery, range,
+      then: (resolve: (value: { count: number; error: null }) => void) => Promise.resolve({ count: 51, error: null }).then(resolve),
+    }
     m.from.mockReturnValue({ select: () => listQuery })
-    const page = await listStaffEmailReviews(3, "all")
+    const page = await listStaffEmailReviews({ page: 3, view: "all", search: "", purpose: "all", sort: "prepared", direction: "desc" })
     expect(range).toHaveBeenCalledWith(50, 74)
     expect(page).toMatchObject({ total: 51, page: 3, pageSize: 25, reviews: [{ id: "older-review" }] })
+  })
+
+  it("applies active/purpose/search and stable sort before selecting the requested page", async () => {
+    const operations: string[] = []
+    m.from.mockImplementation(() => ({
+      select: (_columns: string, options: { head: boolean }) => {
+        const record = !options.head
+        const q = {
+          in: () => { if (record) operations.push("active"); return q },
+          eq: (...[, value]: [string, string]) => { if (record) operations.push(`purpose:${value}`); return q },
+          ilike: (...[, value]: [string, string]) => { if (record) operations.push(`search:${value}`); return q },
+          order: (key: string, options: { ascending: boolean }) => { if (record) operations.push(`order:${key}:${options.ascending}`); return q },
+          range: (first: number, last: number) => {
+            operations.push(`range:${first}-${last}`)
+            return Promise.resolve({ data: [], error: null })
+          },
+          then: (resolve: (value: { count: number; error: null }) => void) =>
+            Promise.resolve({ count: 50, error: null }).then(resolve),
+        }
+        return q
+      },
+    }))
+    await listStaffEmailReviews({
+      page: 2, view: "active", search: "Acme", purpose: "e7_signed_copies",
+      sort: "purpose", direction: "asc",
+    })
+    expect(operations).toEqual([
+      "active", "purpose:e7_signed_copies", "search:%Acme%",
+      "order:purpose_sort:true", "order:created_at:false", "order:id:false", "range:25-49",
+    ])
   })
 
   it("sends grouped staff edits to the freshness RPC with its exact body parameter", async () => {

@@ -187,6 +187,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
               {items.map((item) => (
                 <div
                   key={item.key}
+                  id={`template-${item.key}`}
                   className="flex min-w-0 flex-col justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
                 >
                   <div className="min-w-0 flex-1">

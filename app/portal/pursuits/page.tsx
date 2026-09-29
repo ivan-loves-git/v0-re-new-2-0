@@ -4,6 +4,8 @@ import { listMyRepreneurOpportunities } from "@/lib/actions/repreneur-opportunit
 import { readPortalDealActionIndicators } from "@/lib/data/current-pursuit"
 import { listExternalPursuitBoard } from "@/lib/actions/external-pursuits"
 import { getExternalPursuitAttachmentMap } from "@/lib/actions/external-pursuit-attachments"
+import { readPortalNextActions } from "@/lib/data/portal-next-actions"
+import { unavailablePortalNextActions } from "@/lib/portal-next-actions"
 
 export default async function PortalPursuitsPage({ searchParams }: {
   searchParams: Promise<{ view?: string; q?: string; status?: string }>
@@ -11,13 +13,20 @@ export default async function PortalPursuitsPage({ searchParams }: {
   await connection()
   const search = await searchParams
   if (search.view === "external") {
-    const external = await listExternalPursuitBoard()
+    // The panel has its own fail-closed read. An unavailable summary must not
+    // make the existing External board unavailable.
+    const [external, nextActions] = await Promise.all([
+      listExternalPursuitBoard(), readPortalNextActions({ kind: "portal" }),
+    ])
     const attachmentsByPursuit = await getExternalPursuitAttachmentMap(external.map((record) => record.id))
     return <PortalPursuitsContent view="external" deals={[]} actions={{}} responseAsOf={new Date().toISOString()}
-      external={external} attachmentsByPursuit={attachmentsByPursuit} />
+      external={external} attachmentsByPursuit={attachmentsByPursuit}
+      nextActions={nextActions ?? unavailablePortalNextActions()} />
   }
 
-  const { opportunities } = await listMyRepreneurOpportunities()
+  const source = await listMyRepreneurOpportunities()
+  const { opportunities } = source
+  const nextActions = await readPortalNextActions({ kind: "portal" }, source)
   const actions = await readPortalDealActionIndicators(opportunities.map((deal) => deal.match_id))
   const status = search.status === "active" || search.status === "awaiting" || search.status === "ended"
     ? search.status : "all"
@@ -35,5 +44,6 @@ export default async function PortalPursuitsPage({ searchParams }: {
     location: deal.location,
   }))} actions={actions} responseAsOf={new Date().toISOString()}
     initialQuery={typeof search.q === "string" ? search.q.slice(0, 120) : ""} initialStatus={status}
-    external={[]} attachmentsByPursuit={{}} />
+    external={[]} attachmentsByPursuit={{}}
+    nextActions={nextActions ?? unavailablePortalNextActions()} />
 }
