@@ -147,9 +147,9 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
             const detailHref = emailReviewDetailHref(review.id)
             return <TableRow key={review.id} className="[&_td]:py-1.5" data-state={selected.has(review.id) ? "selected" : undefined}>
             <TableCell><Checkbox aria-label={`Select draft ${review.subject}`} checked={selected.has(review.id)} disabled={!isEmailReviewSelectable(review)} onCheckedChange={(checked) => setSelection({ pageKey, ids: checked === true ? [...selected, review.id] : [...selected].filter((id) => id !== review.id) })} /></TableCell>
-            <TableCell><div className="min-w-0">{detailHref
-              ? <Link href={detailHref} className="block truncate font-medium text-foreground hover:underline" title={review.subject}>{review.subject}</Link>
-              : <span className="block truncate font-medium text-foreground" title={review.subject}>{review.subject}</span>}
+            <TableCell><div className="min-w-0"><div title={review.subject}>{detailHref
+              ? <Link href={detailHref} className="block truncate font-medium text-foreground hover:underline">{review.subject}</Link>
+              : <span className="block truncate font-medium text-foreground">{review.subject}</span>}</div>
               <span className="block truncate text-xs text-muted-foreground" title={review.body_preview}>{review.body_preview}</span></div></TableCell>
             <TableCell><Badge variant="outline" className={`max-w-full truncate ${purposeTone[review.purpose_key] ?? purposeTone.ma_other}`}>{review.purpose_label}</Badge></TableCell>
             <TableCell><Recipient review={review} /></TableCell>

@@ -38,6 +38,16 @@ describe("staff email queue navigation and compact time", () => {
     expect(html).toMatch(/<time\b[^>]*title="[^"]*4:37:00[^"]*"/)
   })
 
+  it("treats hostile message text as escaped text and tooltip, never navigation", () => {
+    const subject = 'javascript:alert(1) "<img src=x onerror=alert(2)>'
+    const html = render([{ ...row(validId), subject }])
+    expect(html.match(new RegExp(`href="/emails/review/${validId}"`, "g"))).toHaveLength(2)
+    expect(html).toContain('title="javascript:alert(1) &quot;&lt;img src=x onerror=alert(2)&gt;"')
+    expect(html).not.toContain('href="javascript:')
+    expect(html).not.toContain('<img src=x')
+    expect(html).not.toMatch(/<a\b[^>]*\btitle=/)
+  })
+
   it("renders both real review links and no navigation for a hostile ID", () => {
     const html = render([row(validId), row("javascript:alert(1)")])
     expect(html.match(new RegExp(`href="/emails/review/${validId}"`, "g"))).toHaveLength(2)
