@@ -14,9 +14,12 @@ import { WaveAiLedgerError, WaveAiRateLimitError, type WaveAiErrorCode } from "@
 import type { PdrScreeningLedgerErrorCode } from "@/lib/ai/pdr-screening-output-error"
 import {
   summarizeWaveAiMetrics,
+  type WaveAiCohortWindow,
   type WaveAiEventMetricRow,
+  type WaveAiMetrics,
   type WaveAiRunMetricRow,
 } from "@/lib/ai/metrics"
+import { readCompleteLedgerPages, type LedgerIncompleteReason } from "@/lib/ai/ledger-pagination"
 import type { WaveAiTokenUsage } from "@/lib/ai/usage"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -163,29 +166,98 @@ export async function recordWaveAiGenerationEvent(input: {
   if (error) throw new WaveAiLedgerError()
 }
 
-export async function getWaveAiDashboardMetrics(days: 7 | 30) {
+const LEDGER_PAGE_SIZE = 500
+const LEDGER_RUN_CAP = 10_000
+const LEDGER_EVENT_CAP = 20_000
+const LEDGER_EVENT_BATCH = 100
+
+export type WaveAiLedgerSnapshot = {
+  days: 7 | 30
+  asOf: string
+  windowStart: string
+} & (
+  | { state: "complete"; metrics: WaveAiMetrics }
+  | { state: "incomplete"; reason: LedgerIncompleteReason | "invalid_row" }
+)
+
+function within(value: string, window: WaveAiCohortWindow) {
+  const time = Date.parse(value)
+  return Number.isFinite(time) && time >= Date.parse(window.fromInclusive)
+    && time <= Date.parse(window.throughInclusive)
+}
+
+function validRun(row: WaveAiRunMetricRow, window: WaveAiCohortWindow) {
+  return typeof row.generation_id === "string" && row.generation_id.length > 0
+    && row.environment === "production" && row.is_test === false
+    && ["email_draft", "next_action", "match_review", "pdr_screening"].includes(row.feature)
+    && ["requested", "succeeded", "failed"].includes(row.status)
+    && typeof row.error_code === "string" && within(row.started_at, window)
+    && (row.status === "requested" ? row.completed_at === null
+      : typeof row.completed_at === "string" && within(row.completed_at, window))
+    && (row.latency_ms === null || Number.isFinite(row.latency_ms) && row.latency_ms >= 0)
+    && [row.input_tokens, row.cached_input_tokens, row.cache_write_tokens,
+      row.output_tokens, row.reasoning_tokens].every((value) => Number.isSafeInteger(value) && value >= 0)
+    && Number.isFinite(Number(row.estimated_cost_usd)) && Number(row.estimated_cost_usd) >= 0
+}
+
+function validEvent(row: WaveAiEventMetricRow, window: WaveAiCohortWindow, runIds: Set<string>) {
+  return typeof row.generation_id === "string" && runIds.has(row.generation_id)
+    && typeof row.event_type === "string" && within(row.occurred_at, window)
+}
+
+/** Exact-count bounded cohort; no raw rows or identifiers leave this server function. */
+export async function getWaveAiDashboardSnapshot(days: 7 | 30): Promise<WaveAiLedgerSnapshot> {
   await requireStaffAccess()
-  const supabase = createAdminClient()
-  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-  const { data: runs, error: runsError } = await supabase
-    .from("ai_generation_runs")
-    .select("generation_id, feature, status, error_code, input_tokens, cached_input_tokens, cache_write_tokens, output_tokens, reasoning_tokens, estimated_cost_usd, latency_ms, started_at, completed_at")
-    .gte("started_at", cutoff)
-    .order("started_at", { ascending: false })
-    .limit(5000)
+  const asOf = new Date().toISOString()
+  const windowStart = new Date(Date.parse(asOf) - days * 24 * 60 * 60 * 1000).toISOString()
+  const window = { fromInclusive: windowStart, throughInclusive: asOf }
+  const base = { days, asOf, windowStart }
+  let supabase: ReturnType<typeof createAdminClient>
+  try {
+    supabase = createAdminClient()
+  } catch {
+    return { ...base, state: "incomplete", reason: "read_failed" }
+  }
+  const runs = await readCompleteLedgerPages<WaveAiRunMetricRow>({
+    cap: LEDGER_RUN_CAP, pageSize: LEDGER_PAGE_SIZE, key: (row) => row.generation_id,
+    fetchPage: async (from, through) => {
+      const result = await supabase.from("ai_generation_runs")
+        .select("generation_id,feature,status,environment,is_test,error_code,input_tokens,cached_input_tokens,cache_write_tokens,output_tokens,reasoning_tokens,estimated_cost_usd,latency_ms,started_at,completed_at", { count: "exact" })
+        .eq("environment", "production").eq("is_test", false)
+        .gte("started_at", windowStart).lte("started_at", asOf)
+        .order("started_at", { ascending: true }).order("generation_id", { ascending: true })
+        .range(from, through)
+      return { data: result.data as WaveAiRunMetricRow[] | null, count: result.count, error: result.error }
+    },
+  })
+  if (runs.state === "incomplete") return { ...base, state: "incomplete", reason: runs.reason }
+  if (!runs.rows.every((row) => validRun(row, window))) {
+    return { ...base, state: "incomplete", reason: "invalid_row" }
+  }
 
-  if (runsError) throw new WaveAiLedgerError()
-
-  const { data: events, error: eventsError } = await supabase
-    .from("ai_generation_events")
-    .select("generation_id, event_type, reason_code, occurred_at")
-    .gte("occurred_at", cutoff)
-    .order("occurred_at", { ascending: false })
-    .limit(10000)
-
-  if (eventsError) throw new WaveAiLedgerError()
-  return summarizeWaveAiMetrics(
-    (runs ?? []) as WaveAiRunMetricRow[],
-    (events ?? []) as WaveAiEventMetricRow[],
-  )
+  const events: WaveAiEventMetricRow[] = []
+  const runIds = new Set(runs.rows.map((row) => row.generation_id))
+  const ids = [...runIds]
+  for (let offset = 0; offset < ids.length; offset += LEDGER_EVENT_BATCH) {
+    const batch = ids.slice(offset, offset + LEDGER_EVENT_BATCH)
+    const pageSet = await readCompleteLedgerPages<WaveAiEventMetricRow>({
+      cap: LEDGER_EVENT_CAP - events.length, pageSize: LEDGER_PAGE_SIZE,
+      key: (row) => `${row.generation_id}:${row.event_type}`,
+      fetchPage: async (from, through) => {
+        const result = await supabase.from("ai_generation_events")
+          .select("generation_id,event_type,occurred_at", { count: "exact" })
+          .in("generation_id", batch)
+          .gte("occurred_at", windowStart).lte("occurred_at", asOf)
+          .order("occurred_at", { ascending: true }).order("generation_id", { ascending: true })
+          .order("event_type", { ascending: true }).range(from, through)
+        return { data: result.data as WaveAiEventMetricRow[] | null, count: result.count, error: result.error }
+      },
+    })
+    if (pageSet.state === "incomplete") return { ...base, state: "incomplete", reason: pageSet.reason }
+    if (!pageSet.rows.every((row) => validEvent(row, window, runIds))) {
+      return { ...base, state: "incomplete", reason: "invalid_row" }
+    }
+    events.push(...pageSet.rows)
+  }
+  return { ...base, state: "complete", metrics: summarizeWaveAiMetrics(runs.rows, events, window) }
 }

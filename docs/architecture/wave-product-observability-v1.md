@@ -1,6 +1,6 @@
 # WAVE product observability v1
 
-- **Status:** Foundation in progress; platform-wide coverage and cockpit are planned delivery slices
+- **Status:** Foundation in progress; a bounded, staff-only ledger cockpit is the #231 technical slice. PostHog-backed product learning and human pilot evidence remain unverified.
 - **Scope:** Product learning and iteration across public, authenticated, staff, repreneur and staff M&A workflows
 - **Related AI contract:** [wave-ai-assistance-v1.md](./wave-ai-assistance-v1.md)
 - **Canonical business contract:** [../data-models/ma-advisory-data-model-v1.md](../data-models/ma-advisory-data-model-v1.md)
@@ -155,7 +155,7 @@ The current PostHog foundation is not closed until plan-supported event retentio
 
 ## Dashboards and staff cockpit
 
-### Current PostHog operational dashboards
+### Intended PostHog operational dashboards (not live-verified by #231)
 
 1. **WAVE — Product adoption** — public-to-auth journey, active staff/repreneurs and key workflow completion.
 2. **WAVE AI — Outcomes and cost** — request-to-render-to-human-action funnel, model reliability, latency and failures.
@@ -163,9 +163,27 @@ The current PostHog foundation is not closed until plan-supported event retentio
 
 A transport 200 OK is not evidence of observability. Critical events must be confirmed stored and queryable in the isolated project.
 
-### Planned WAVE product-intelligence cockpit
+### Bounded WAVE product-intelligence cockpit
 
-A staff-only WAVE view will present PostHog aggregates, not raw events, for:
+Ticket #231 adds a staff-only `/tools/product-intelligence` page with fixed 7- and
+30-day windows and a captured as-of time. It presents only exact-count, bounded
+Supabase AI ledger aggregates from production, non-test runs and events linked
+to those selected runs inside the same window. A missing count, changed page,
+read error, invalid row or exceeded row cap makes the whole ledger view
+**Incomplete**; partial totals are withheld. The existing WAVE AI usage page
+uses that same reader. The recorded USD amount is a ledger pricing estimate,
+not a bill or complete provider spend. A copy, successful send or confirmed
+action is labelled recorded follow-through, not measured business value;
+helpful/not-helpful votes are recorded feedback only. Empty rate and latency
+denominators display N/A, while observed zero counts remain zero. No model
+badge is hardcoded across a mixed cohort.
+
+The intended PostHog source remains unavailable to this technical slice:
+authoritative project and saved-query evidence could not be read because the
+`llm_skill:read` capability was missing. The page says **Missing** and shows no
+PostHog KPI, query ID, adoption or pilot claim. The next evidence step is to
+verify approved access, saved queries and freshness before adding any of these
+planned aggregate views:
 
 - 7- and 30-day role, route, workflow and funnel views;
 - public/auth acquisition and activation;
@@ -181,9 +199,11 @@ The cockpit must not duplicate raw event storage or display prompts, drafts, not
 
 Product intelligence turns usage data into controlled change:
 
-1. Review saved 7- and 30-day views on a regular product cadence.
+1. Once their definitions and links are verified, review saved 7- and 30-day
+   views on a regular product cadence.
 2. Identify a concrete friction, drop-off, reliability or adoption signal.
-3. Record the evidence, hypothesis and proposed experiment or change in the PDR.
+3. Record the evidence, hypothesis and proposed experiment or change in the
+   linked GitHub Product Change and Decision under [Decision #210](https://github.com/re-new-team/renew-governance/issues/210).
 4. Implement only accepted scope through the normal WAVE release controls.
 5. Recheck the same cohort/funnel after release and record whether the hypothesis held.
 
@@ -208,7 +228,7 @@ The observability stream is acceptable when:
 - server-confirmed success/failure coverage exists for defined staff CRM and M&A workflows;
 - the WAVE cockpit is staff-only and sources product aggregates from saved PostHog queries;
 - AI cost and reliability remain sourced from the Supabase ledger;
-- the product-review cadence has produced a traceable PDR proposal from observed evidence;
+- the product-review cadence has produced a traceable GitHub proposal from observed evidence;
 - build, lint, tests, data-model check and pnpm design:check pass.
 
 The AI-specific provider, model, projection, ledger and human-control requirements remain in [wave-ai-assistance-v1.md](./wave-ai-assistance-v1.md).
