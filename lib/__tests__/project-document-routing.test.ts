@@ -13,8 +13,8 @@ describe("project document routing", () => {
   it("keeps current authority separate from public-safe delivery material, private evidence and archives", () => {
     for (const rule of [
       "The private `re-new-team/renew-governance` repository and its `Re-New Product Delivery` Project own approved product scope",
-      "The protected WAVE Strategic PDR owns founder-request intake, original wording, AI screening, Ivan's disposition",
-      "it does not own or mirror delivery state",
+      "Under Decision #210, Strategic PDR leaves the application",
+      "The archive is not a current intake, planning or reporting system",
       "Public-safe delivery communication and release reporting",
       "The existing private Pushapp project repository",
       "legacy source locations, not approval to keep sensitive content public",
@@ -30,11 +30,9 @@ describe("project document routing", () => {
       "Do not enumerate, read, relocate, commit or use them as general agent context without separate explicit authority.",
     )
     expect(routing).toContain(
-      "A document move, rename, deletion, GitHub visibility or access change, or any change to a local-only boundary requires a separate explicit decision from Ivan",
+      "other document migrations, GitHub visibility/access changes and local-only boundary changes require their own authority",
     )
-    expect(routing).toContain("None is approved by this routing policy;")
-    expect(routing).toContain(
-      "legacy source locations remain an unresolved exposure queue until that decision is made",
-    )
+    expect(routing).toContain("Actual export and production retirement require the #214 archive and live proof")
+    expect(routing).toContain("This file does not establish destination provisioning or archive completeness")
   })
 })
