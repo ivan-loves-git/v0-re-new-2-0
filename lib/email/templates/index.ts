@@ -128,7 +128,7 @@ export const TEMPLATE_METADATA: Record<
 > = {
   opportunity_discovery_digest: {
     name: "New public opportunities",
-    description: "Future-only three-day discovery summary. Separate opt-out, exact public-copy approval, and staff activation required. Inactive by default.",
+    description: "Future-only three-day discovery summary. Explicit marketing consent, separate opt-out, exact public-copy approval, and staff activation required. Inactive by default.",
     category: "status",
     audience: "rep",
     manualSend: false,
