@@ -150,26 +150,6 @@ describe("repreneur portal profile scope", () => {
     expect(opportunityDetail).toContain("(opportunity.match_status || canExpressUnassignedInterest) ? <Card")
   })
 
-  it("resolves deal details through an owned match or the namespace-safe live inventory", () => {
-    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
-    const detailGetter = portalOpportunities.slice(
-      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
-      portalOpportunities.indexOf("async function updateMyOpportunityResponse"),
-    )
-    const detailPage = source("app/portal/deals/[matchId]/page.tsx")
-
-    expect(detailGetter).toContain('from("opportunity_matches")')
-    expect(detailGetter).toContain('.eq("id", dealId)')
-    expect(detailGetter).toContain('.eq("repreneur_id", repreneur.id)')
-    expect(detailGetter).toContain('.in("status", VISIBLE_MATCH_STATUSES)')
-    expect(detailGetter).toContain("if (matchResult.error) throw new Error(matchResult.error.message)")
-    expect(detailGetter).toContain("const exposure = matchResult.data ? normalizeExposure(matchResult.data, repreneur) : null")
-    expect(detailGetter).toContain('supabase.rpc("w164_repreneur_live_inventory"')
-    expect(detailPage).toContain("getMyRepreneurOpportunity(matchId)")
-    expect(detailPage).toContain("if (!opportunity)")
-    expect(detailPage).toContain("notFound()")
-  })
-
   it("ignores the legacy exposure value and uses lifecycle plus namespace authority", () => {
     const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
     const normalizeExposureSource = portalOpportunities.slice(

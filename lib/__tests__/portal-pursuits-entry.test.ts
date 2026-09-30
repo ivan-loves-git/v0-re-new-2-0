@@ -9,10 +9,11 @@ const mocks = vi.hoisted(() => ({
   getAttachments: vi.fn(),
   readActions: vi.fn(),
   readNextActions: vi.fn(),
+  notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND") }),
 }))
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), notFound: mocks.notFound }))
 vi.mock("@/lib/actions/repreneur-opportunities", () => ({
   listMyRepreneurOpportunities: mocks.listOpportunities,
   getMyRepreneurOpportunity: mocks.getOpportunity,
@@ -98,6 +99,14 @@ describe("owner Pursuits entry", () => {
     expect(mocks.listOpportunities).toHaveBeenCalledOnce()
     expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" }, expect.any(Object), { external: [] })
     expect(mocks.readActions).not.toHaveBeenCalled()
+  })
+
+  it("returns not found when the detail reader cannot authorize the selected deal", async () => {
+    mocks.getOpportunity.mockResolvedValue(null)
+    await expect(PortalDealDetailPage({ params: Promise.resolve({ matchId: "match-1" }),
+      searchParams: Promise.resolve({}),
+    })).rejects.toThrow("NEXT_NOT_FOUND")
+    expect(mocks.notFound).toHaveBeenCalledOnce()
   })
 
   it("keeps the authorized External board available when its optional owned-match summary fails", async () => {

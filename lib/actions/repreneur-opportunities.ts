@@ -869,7 +869,7 @@ async function getOpportunityForProfile(repreneur: RepreneurDealFlowProfile, dea
           date_added_precision
         )
       `)
-      .eq("id", dealId)
+      .or(`id.eq.${dealId},opportunity_id.eq.${dealId}`)
       .eq("repreneur_id", repreneur.id)
       .eq("opportunity.is_demo", repreneur.is_demo === true)
       .in("status", VISIBLE_MATCH_STATUSES)
