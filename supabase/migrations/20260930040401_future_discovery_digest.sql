@@ -317,11 +317,14 @@ END $fn$;
 CREATE TRIGGER d136_invalidate_copy AFTER UPDATE OF public_title,teaser_summary ON public.opportunities
   FOR EACH ROW EXECUTE FUNCTION public.d136_invalidate_copy();
 
+-- Release-only SQL primitive. It is not exposed through PostgREST or the app
+-- service role; the release operator binds externally verified live SHA proof.
 CREATE FUNCTION public.d136_initialize_cutover(p_actor text,p_release_sha text) RETURNS timestamptz
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $fn$
 DECLARE v public.discovery_digest_cutover%ROWTYPE;
 BEGIN
-  IF NOT public.d136_staff_actor(p_actor)
+  IF session_user IS DISTINCT FROM 'postgres'
+    OR NOT public.d136_staff_actor(p_actor)
     OR p_release_sha !~ '^[0-9a-f]{40}$' THEN
     RAISE EXCEPTION 'discovery_digest_cutover_proof_required';
   END IF;
@@ -745,7 +748,7 @@ REVOKE ALL ON FUNCTION public.d136_template_guard(),public.d136_pair_hash(text,t
 GRANT EXECUTE ON FUNCTION public.d136_identity_ready(uuid),public.d136_recipient_ready(uuid),
   public.d136_copy_ready(uuid),
   public.d136_opt_out(text),public.d136_approve_copy(uuid,text,text,text),
-  public.d136_initialize_cutover(text,text),public.d136_toggle(text,boolean),
+  public.d136_toggle(text,boolean),
   public.create_ordinary_discovery_opportunity(text,uuid,uuid[],uuid,text,public.opportunity_status,text,jsonb),
   public.d136_materialize_next_window(),public.d136_claim(uuid),
   public.d136_begin_provider_attempt(uuid,uuid,text,jsonb),public.d136_complete(uuid,uuid,text,text),

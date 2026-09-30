@@ -18,7 +18,7 @@ trap cleanup EXIT
 "$pg_bin/createdb" -h "$cluster_dir" -p "$port" -U renew_digest_admin renew_digest_fixture
 psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h "$cluster_dir" -p "$port" -U renew_digest_admin -d renew_digest_fixture)
 "${psql[@]}" >/dev/null <<'SQL'
-CREATE ROLE postgres NOLOGIN;
+CREATE ROLE postgres LOGIN SUPERUSER;
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE ROLE service_role NOLOGIN BYPASSRLS;
@@ -69,6 +69,14 @@ BEGIN
 END $$;
 SQL
 "${psql[@]}" -f "$repo_root/supabase/migrations/20260930040401_future_discovery_digest.sql" >/dev/null
+for denied_role in anon authenticated service_role; do
+  if "${psql[@]}" -At -c "SET ROLE $denied_role; SELECT public.d136_initialize_cutover('staff-d136','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')" >"$cluster_dir/release-denial.txt" 2>&1; then
+    echo "$denied_role could invoke privileged cutover" >&2; exit 1
+  fi
+  if ! grep -q 'permission denied for function d136_initialize_cutover' "$cluster_dir/release-denial.txt"; then
+    echo "$denied_role cutover denial was not an EXECUTE ACL denial" >&2; exit 1
+  fi
+done
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/discovery-digest-after.sql" >/dev/null
 
 # Actual database-role denial, beyond catalogue privilege introspection.

@@ -11,6 +11,9 @@ DO $$ BEGIN
     OR has_table_privilege('authenticated','public.discovery_digest_reconciliations','SELECT')
     OR has_function_privilege('authenticated','public.d136_toggle(text,boolean)','EXECUTE')
     OR has_function_privilege('anon','public.d136_claim(uuid)','EXECUTE')
+    OR has_function_privilege('anon','public.d136_initialize_cutover(text,text)','EXECUTE')
+    OR has_function_privilege('authenticated','public.d136_initialize_cutover(text,text)','EXECUTE')
+    OR has_function_privilege('service_role','public.d136_initialize_cutover(text,text)','EXECUTE')
     OR has_function_privilege('authenticated','public.d136_reconcile(uuid,text,text,boolean,text)','EXECUTE') THEN
     RAISE EXCEPTION 'raw digest role boundary failed'; END IF;
 END $$;
@@ -36,6 +39,7 @@ DO $$ BEGIN
     OR (SELECT count(*) FROM public.discovery_digest_first_availability WHERE epoch_id IS NULL)<>1 THEN
     RAISE EXCEPTION 'precutover ordinary origin not held ineligible'; END IF;
 END $$;
+SET SESSION AUTHORIZATION postgres;
 SELECT public.d136_initialize_cutover('staff-d136','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 DO $$ DECLARE first_time timestamptz; BEGIN
   SELECT initialized_at INTO first_time FROM public.discovery_digest_cutover;
@@ -54,6 +58,7 @@ DO $$ DECLARE first_time timestamptz; BEGIN
     IF SQLERRM='generic template toggle bypassed guard' THEN RAISE; END IF;
   END;
 END $$;
+RESET SESSION AUTHORIZATION;
 SELECT public.d136_toggle('staff-d136',true);
 
 SELECT public.create_ordinary_discovery_opportunity(
