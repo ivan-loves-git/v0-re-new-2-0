@@ -11,7 +11,7 @@ import { PortalProfileContent } from "@/components/portal/portal-profile-content
 import { PortalPursuitsContent } from "@/components/portal/portal-pursuits-content"
 import { parseRepreneurDealSort } from "@/lib/utils/repreneur-deal-flow"
 import { unavailablePortalNextActions } from "@/lib/portal-next-actions"
-import { RepreneurPursuitWorkspace } from "@/components/portal/repreneur-pursuit-workspace"
+import { RepreneurPursuitWorkspace, type SidebarDeal } from "@/components/portal/repreneur-pursuit-workspace"
 import { StaffPortalPreviewSelector } from "@/components/repreneurs/staff-portal-preview-selector"
 import { StaffPortalPreviewTabs } from "@/components/repreneurs/staff-portal-preview-tabs"
 import { StaffOpportunityResponseControls } from "@/components/repreneurs/staff-opportunity-response-controls"
@@ -90,18 +90,24 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   // Only the selected screen reads its required projection. The cross-space
   // next-actions panel needs owned matches, never the full live Deal Flow.
   const readable = Boolean(selectedRepreneurId && currentWorkspace && !invalidDealSelection)
-  const [profileData, dealFlow, ownedData, externalPursuits, selectedOpportunity] = await Promise.all([
+  const [profileData, dealFlow, ownedSource, externalPursuits, selectedOpportunity] = await Promise.all([
     readable && section === "profile" && !selectedDealId
       ? getStaffPortalPreviewProfile(selectedRepreneurId!) : Promise.resolve({ repreneur: null }),
     readable && section === "deals" && !selectedDealId
       ? listStaffPortalPreviewOpportunities(selectedRepreneurId!, undefined, sort) : Promise.resolve(null),
     readable && (selectedDealId || section !== "deals")
-      ? listStaffPortalPreviewOwnedOpportunities(selectedRepreneurId!) : Promise.resolve({ repreneur: null, opportunities: [] }),
+      ? listStaffPortalPreviewOwnedOpportunities(selectedRepreneurId!).catch((error: unknown) => {
+          // External owned matches are supplemental summary inputs. Required
+          // profile, Re-New and detail reads retain their normal failure boundary.
+          if (section === "external-pursuits" && !selectedDealId) return null
+          throw error
+        }) : Promise.resolve({ repreneur: null, opportunities: [] }),
     readable && section === "external-pursuits" && !selectedDealId
       ? listStaffPortalPreviewExternalPursuits(selectedRepreneurId!) : Promise.resolve([]),
     readable && selectedDealId
       ? getStaffPortalPreviewOpportunity(selectedRepreneurId!, selectedDealId) : Promise.resolve(null),
   ])
+  const ownedData = ownedSource ?? { repreneur: null, opportunities: [] }
   const opportunityData = dealFlow ?? ownedData
   const detailHrefByOpportunityId = selectedRepreneurId
     ? createPortalPreviewDealHrefMap(selectedRepreneurId, opportunityData.opportunities.map((opportunity) => ({
@@ -111,6 +117,19 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     match_id: string
     match_status: NonNullable<typeof deal.match_status>
   } => Boolean(deal.match_id && deal.match_status))
+  const sidebarDeals: SidebarDeal[] = workspaceDeals.map((deal) => ({
+    match_id: deal.match_id,
+    match_status: deal.match_status,
+    pursuit_stage: deal.pursuit_stage,
+    interest_rejected: deal.interest_rejected,
+    recommendation_expires_at: deal.recommendation_expires_at,
+    public_title: deal.public_title,
+    canonical_sector: deal.canonical_sector,
+    sector: deal.sector,
+    activity: deal.activity,
+    geography_label: deal.geography_label,
+    location: deal.location,
+  }))
   const [actions, previewJourney, opportunityVersion, attachmentsByPursuit] = await Promise.all([
     selectedRepreneurId && currentWorkspace && (selectedOpportunity || section === "renew-pursuits")
       ? readPortalDealActionIndicators(workspaceDeals.map((deal) => deal.match_id), {
@@ -128,7 +147,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   const opportunityUpdatedAt = opportunityVersion?.data?.updated_at ?? null
   const nextActions = selectedRepreneurId && selectedOwnerToken && currentWorkspace && !selectedDealId
     && (section === "renew-pursuits" || section === "external-pursuits")
-    ? await readPortalNextActions({ kind: "staff-preview", repreneurId: selectedRepreneurId,
+    ? ownedSource === null ? unavailablePortalNextActions()
+      : await readPortalNextActions({ kind: "staff-preview", repreneurId: selectedRepreneurId,
         selectionToken: selectedOwnerToken }, ownedData, {
           indicators: section === "renew-pursuits" ? actions : undefined,
           external: section === "external-pursuits" ? externalPursuits : undefined,
@@ -204,19 +224,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         <RepreneurPursuitWorkspace
           key={JSON.stringify([selectedRepreneurId, workspaceId, selectedDealId, query, status, returnView])}
           opportunity={selectedOpportunity}
-          deals={workspaceDeals.map((deal) => ({
-            match_id: deal.match_id,
-            match_status: deal.match_status,
-            pursuit_stage: deal.pursuit_stage,
-            interest_rejected: deal.interest_rejected,
-            recommendation_expires_at: deal.recommendation_expires_at,
-            public_title: deal.public_title,
-            canonical_sector: deal.canonical_sector,
-            sector: deal.sector,
-            activity: deal.activity,
-            geography_label: deal.geography_label,
-            location: deal.location,
-          }))}
+          deals={sidebarDeals}
           actions={actions}
           journey={previewJourney}
           responseAsOf={new Date().toISOString()}
@@ -294,7 +302,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
           {section === "renew-pursuits" || section === "external-pursuits" ? <TabsContent value={section}>
             <PortalPursuitsContent key={`${selectedRepreneurId}:${workspaceId}:${section}`}
               view={section === "external-pursuits" ? "external" : "renew"}
-              deals={workspaceDeals.map((deal) => ({ ...deal, match_id: deal.match_id, match_status: deal.match_status }))}
+              deals={section === "renew-pursuits" ? sidebarDeals : []}
               actions={actions} responseAsOf={new Date().toISOString()}
               initialQuery={query} initialStatus={status}
               external={externalPursuits} attachmentsByPursuit={attachmentsByPursuit}

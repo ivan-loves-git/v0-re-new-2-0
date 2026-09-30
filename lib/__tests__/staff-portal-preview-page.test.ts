@@ -1,3 +1,4 @@
+import { isValidElement, type ComponentProps, type ReactNode } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -41,12 +42,33 @@ vi.mock("@/lib/staff-portal-selection", () => ({ currentStaffPortalSelectionToke
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }))
 vi.mock("@/lib/i18n/server-language", () => ({ previewUiLanguage: mocks.previewLanguage }))
 
+import { PortalPursuitsContent } from "@/components/portal/portal-pursuits-content"
 import StaffPortalPreviewPage from "@/app/(dashboard)/portal-preview/page"
 
 const ownerId = "00000000-0000-4000-8000-000000000001"
 const matchId = "00000000-0000-4000-8000-000000000002"
 const otherMatchId = "00000000-0000-4000-8000-000000000003"
 const workspaceId = "00000000-0000-4000-8000-000000000004"
+
+// Inspect the public server-to-client screen payload, not just visible HTML.
+function findPursuitsContentProps(node: ReactNode): ComponentProps<typeof PortalPursuitsContent> | null {
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findPursuitsContentProps(child)
+      if (found) return found
+    }
+  }
+  if (!isValidElement(node)) return null
+  if (node.type === PortalPursuitsContent) return node.props as ComponentProps<typeof PortalPursuitsContent>
+  return findPursuitsContentProps((node.props as { children?: ReactNode }).children)
+}
+
+const allowedSidebarDeal = {
+  match_id: matchId, match_status: "proposed", pursuit_stage: null,
+  interest_rejected: false, recommendation_expires_at: null,
+  public_title: "Allowed public title", canonical_sector: "Industrie manufacturière",
+  sector: "Industrie", activity: "Manufacturing", geography_label: "France", location: "France",
+}
 
 describe("staff Tools portal page", () => {
   beforeEach(async () => {
@@ -237,5 +259,51 @@ describe("staff Tools portal page", () => {
     expect(html).toContain('>Opportunités</button>')
     expect(html).toContain('>Profil</button>')
     expect(html).toContain("Safe live one")
+  })
+
+  it("keeps the selected-owner External board available when optional owned-match summary fails", async () => {
+    mocks.listOwned.mockRejectedValue(new Error("Owned match summary unavailable"))
+    const html = renderToStaticMarkup(await StaffPortalPreviewPage({ searchParams: Promise.resolve({
+      repreneurId: ownerId, workspaceId, view: "external-pursuits",
+    }) }))
+    expect(html).toContain('aria-label="Pursuit board"')
+    expect(html).toContain("New external pursuit")
+    expect(html).toContain("Acting as Re-New staff for Ada Owner")
+    expect(html).toContain("Current actions are unavailable")
+    expect(mocks.readNextActions).not.toHaveBeenCalled()
+  })
+
+  it("does not conceal a required External board read failure", async () => {
+    mocks.listExternal.mockRejectedValue(new Error("External board denied"))
+    await expect(StaffPortalPreviewPage({ searchParams: Promise.resolve({
+      repreneurId: ownerId, workspaceId, view: "external-pursuits",
+    }) })).rejects.toThrow("External board denied")
+  })
+
+  it.each([
+    { view: "profile", dealId: undefined },
+    { view: "renew-pursuits", dealId: undefined },
+    { view: "external-pursuits", dealId: matchId },
+  ])("retains the required owned-match failure boundary for $view with deal $dealId", async ({ view, dealId }) => {
+    mocks.listOwned.mockRejectedValue(new Error("Required owned matches unavailable"))
+    await expect(StaffPortalPreviewPage({ searchParams: Promise.resolve({
+      repreneurId: ownerId, workspaceId, view, dealId,
+    }) })).rejects.toThrow("Required owned matches unavailable")
+  })
+
+  it.each([
+    { view: "renew-pursuits", expected: [allowedSidebarDeal] },
+    { view: "external-pursuits", expected: [] },
+  ])("sends only the sidebar allowlist needed by the $view client screen", async ({ view, expected }) => {
+    mocks.listOwned.mockResolvedValue({ repreneur: { id: ownerId, is_demo: false }, opportunities: [{
+      ...allowedSidebarDeal, opportunity_id: "00000000-0000-4000-8000-000000000011",
+      revenue_meur: 3, ebitda_keur: 400, decline_reason_text: "Private response explanation",
+      nda_status: "signed", nda_updated_at: "2026-09-30", visible_documents: ["private-document"],
+    }] })
+    const page = await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId, workspaceId, view }) })
+    const screen = findPursuitsContentProps(page)
+    expect(screen).not.toBeNull()
+    expect(screen?.deals).toEqual(expected)
+    expect(JSON.stringify(screen?.deals)).not.toMatch(/revenue_meur|ebitda_keur|decline_reason_text|nda_status|nda_updated_at|private-document/)
   })
 })

@@ -13,12 +13,14 @@ export default async function PortalPursuitsPage({ searchParams }: {
   await connection()
   const search = await searchParams
   if (search.view === "external") {
-    // The panel has its own fail-closed read. An unavailable summary must not
-    // make the existing External board unavailable.
+    // Owned matches supplement the summary, not the authorized External board.
+    // A failed summary read is unavailable, never a fabricated empty queue.
     const [external, source] = await Promise.all([
-      listExternalPursuitBoard(), listMyRepreneurOpportunities(),
+      listExternalPursuitBoard(), listMyRepreneurOpportunities().catch(() => null),
     ])
-    const nextActions = await readPortalNextActions({ kind: "portal" }, source, { external })
+    const nextActions = source
+      ? await readPortalNextActions({ kind: "portal" }, source, { external })
+      : unavailablePortalNextActions()
     const attachmentsByPursuit = await getExternalPursuitAttachmentMap(external.map((record) => record.id))
     return <PortalPursuitsContent view="external" deals={[]} actions={{}} responseAsOf={new Date().toISOString()}
       external={external} attachmentsByPursuit={attachmentsByPursuit}

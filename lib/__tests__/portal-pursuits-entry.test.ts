@@ -99,4 +99,18 @@ describe("owner Pursuits entry", () => {
     expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" }, expect.any(Object), { external: [] })
     expect(mocks.readActions).not.toHaveBeenCalled()
   })
+
+  it("keeps the authorized External board available when its optional owned-match summary fails", async () => {
+    mocks.listOpportunities.mockRejectedValue(new Error("Owned match summary unavailable"))
+    const html = renderToStaticMarkup(await PortalPursuitsPage({ searchParams: Promise.resolve({ view: "external" }) }))
+    expect(html).toContain('aria-label="Pursuit board"')
+    expect(html).toContain("New external pursuit")
+    expect(html).toContain("Current actions are unavailable")
+    expect(mocks.readNextActions).not.toHaveBeenCalled()
+  })
+
+  it("does not conceal a required External board read failure", async () => {
+    mocks.listExternal.mockRejectedValue(new Error("External board denied"))
+    await expect(PortalPursuitsPage({ searchParams: Promise.resolve({ view: "external" }) })).rejects.toThrow("External board denied")
+  })
 })
