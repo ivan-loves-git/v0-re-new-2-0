@@ -92,12 +92,23 @@ async function openOwnerDocuments(page: Page) {
 
 async function approvePreparedReview(page: Page) {
   await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
-  await expect(page.getByRole("heading", { name: "Review & send" })).toBeVisible();
-  page.once("dialog", async (dialog) => { await dialog.accept(); });
-  await page.getByRole("button", { name: "Approve and send" }).click();
-  await expect(page.getByText("Provider accepted the reviewed email.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Review message", exact: true })).toBeVisible();
+  const subject = await page.getByRole("textbox", { name: "Subject", exact: true }).inputValue();
+  const body = await page.getByRole("textbox", { name: "Message", exact: true }).inputValue();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Confirm send", exact: true });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText(subject);
+  await expect(confirmation).toContainText(body);
+  const confirmSend = confirmation.getByRole("button", { name: "Send", exact: true });
+  await expect(confirmSend).toBeDisabled();
+  await confirmation.getByRole("checkbox", { name: "Acknowledge complete message", exact: true }).check();
+  await expect(confirmSend).toBeEnabled();
+  await confirmSend.click();
+  await expect(confirmation.getByText("Provider accepted the reviewed email.", { exact: false })).toBeVisible();
   await page.reload();
   const visibleReview = page.locator("#main-content:visible");
+  await visibleReview.locator("summary").filter({ hasText: /^More details$/ }).click();
   const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
     .filter({ hasText: "Provider receipt qa-allowlist-accepted." });
   await expect(receipt).toContainText("Sent means accepted by the provider, not delivered or read.");
@@ -841,8 +852,10 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.getByRole("button", { name: "Prepare for review" }).click();
     await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
     const cancelledReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
-    await expect(page.getByText("Catalogue template disabled")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled();
+    const directReview = page.locator("#main-content:visible");
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click();
+    await expect(directReview.getByText("Catalogue template disabled or unavailable", { exact: true })).toBeVisible();
+    await expect(directReview.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/emails");
     await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
@@ -855,17 +868,18 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     });
     await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();
     expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("Europe/Paris");
-    const reviewSurface = page.locator("#main-content:visible").filter({
-      has: page.locator("#review-subject:visible"),
-    });
+    const reviewSurface = page.getByRole("dialog", { name: "Review message", exact: true });
+    await expect(reviewSurface).toBeVisible();
     const subjectField = reviewSurface.locator("#review-subject:visible");
     await expect(subjectField).toBeVisible();
-    const sendButton = reviewSurface.getByRole("button", { name: "Approve and send" });
+    const sendButton = reviewSurface.getByRole("button", { name: "Send", exact: true });
+    await expect(sendButton).toBeDisabled();
     const sendBox = await sendButton.boundingBox();
     expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390);
     await subjectField.fill("QA reviewed subject - no send");
     await reviewSurface.getByRole("button", { name: "Save reviewed text" }).click();
     await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
+    await expect(reviewSurface).toBeHidden();
     const hydrationErrors: string[] = [];
     const recordHydrationError = (message: string) => {
       if (/react\.dev\/errors\/418|react error #418|hydration failed|hydration mismatch|server.rendered HTML didn.t match the client|text content does not match server.rendered HTML|tree hydrated but some attributes/i.test(message)) {
@@ -880,7 +894,12 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     page.on("console", collectConsoleError);
     try {
       await page.reload();
+      await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();
+      await expect(reviewSurface).toBeVisible();
       await expect(subjectField).toHaveValue("QA reviewed subject - no send");
+      await expect(sendButton).toBeDisabled();
+      await reviewSurface.locator("summary").filter({ hasText: /^More details$/ }).click();
+      await expect(reviewSurface.getByText("Catalogue template disabled or unavailable", { exact: true })).toBeVisible();
       await reviewSurface.locator("#review-cancel-reason:visible").fill("Disposable draft superseded before any send");
       await expect(reviewSurface.getByRole("button", { name: "Cancel with reason" })).toBeEnabled();
       expect(hydrationErrors).toEqual([]);
@@ -890,7 +909,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     }
     await reviewSurface.getByRole("button", { name: "Cancel with reason" }).click();
     await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
-    await page.reload();
+    await page.goto(`/emails/review/${cancelledReviewId}`);
     await expect(page.getByText("cancelled", { exact: true }).first()).toBeVisible();
     const cancelled = await one<{ state: string; subject: string; cancel_reason: string; events: number }>(client,
       `SELECT r.state,r.subject,r.cancel_reason,
