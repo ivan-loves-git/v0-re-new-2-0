@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import { PortalNavigationLink as Link } from "@/components/portal/portal-navigation-link"
 import type { ReactNode } from "react"
 import { ArrowRight, CheckCircle2, Target } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"

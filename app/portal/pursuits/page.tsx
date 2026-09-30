@@ -15,9 +15,10 @@ export default async function PortalPursuitsPage({ searchParams }: {
   if (search.view === "external") {
     // The panel has its own fail-closed read. An unavailable summary must not
     // make the existing External board unavailable.
-    const [external, nextActions] = await Promise.all([
-      listExternalPursuitBoard(), readPortalNextActions({ kind: "portal" }),
+    const [external, source] = await Promise.all([
+      listExternalPursuitBoard(), listMyRepreneurOpportunities(),
     ])
+    const nextActions = await readPortalNextActions({ kind: "portal" }, source, { external })
     const attachmentsByPursuit = await getExternalPursuitAttachmentMap(external.map((record) => record.id))
     return <PortalPursuitsContent view="external" deals={[]} actions={{}} responseAsOf={new Date().toISOString()}
       external={external} attachmentsByPursuit={attachmentsByPursuit}
@@ -26,8 +27,8 @@ export default async function PortalPursuitsPage({ searchParams }: {
 
   const source = await listMyRepreneurOpportunities()
   const { opportunities } = source
-  const nextActions = await readPortalNextActions({ kind: "portal" }, source)
   const actions = await readPortalDealActionIndicators(opportunities.map((deal) => deal.match_id))
+  const nextActions = await readPortalNextActions({ kind: "portal" }, source, { indicators: actions })
   const status = search.status === "active" || search.status === "awaiting" || search.status === "ended"
     ? search.status : "all"
   return <PortalPursuitsContent view="renew" deals={opportunities.map((deal) => ({

@@ -23,6 +23,7 @@ vi.mock("@/lib/data/locked-opportunity-interest-state", () => ({
 import {
   getStaffPortalPreviewOpportunity,
   listStaffPortalPreviewOpportunities,
+  listStaffPortalPreviewOwnedOpportunities,
   listStaffPortalPreviewOptions,
 } from "@/lib/actions/repreneur-portal-preview"
 
@@ -162,4 +163,36 @@ describe("Staff Portal Preview DEMO counts", () => {
       ],
     })
   })
+
+  it("keeps the owned-match view narrow and excludes a historical cross-namespace parent", async () => {
+    const originalFrom = mocks.from.getMockImplementation()!
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "opportunity_matches") return query({ data: [
+        { id: "match-real", status: "dropped", updated_at: "2026-09-01", opportunity: {
+          id: opportunityId, is_demo: false, status: "active", repreneur_exposure: "staff_only",
+          public_title: "Owned historical deal", sector: "Industrie" } },
+        { id: "match-demo", status: "proposed", opportunity: {
+          id: "demo-opportunity", is_demo: true, status: "active", public_title: "Wrong namespace" } },
+      ], error: null })
+      if (table === "opportunity_interest_events") return query({ data: [], error: null })
+      return originalFrom(table)
+    })
+    mocks.rpc.mockResolvedValue({ data: [], error: null })
+    const source = await listStaffPortalPreviewOwnedOpportunities(repreneurId)
+    expect(source.opportunities).toHaveLength(1)
+    expect(source.opportunities[0]).toMatchObject({ match_id: "match-real", match_status: "dropped",
+      public_title: "Owned historical deal", deal_bucket: "declined", canonical_sector: "Industrie manufacturière",
+      visible_documents: [] })
+    expect(source.opportunities[0]).not.toHaveProperty("personal_review")
+    expect(mocks.rpc).not.toHaveBeenCalledWith("w164_repreneur_live_inventory", expect.anything())
+  })
+
+  it("denies staff-only reads before constructing a service client", async () => {
+    mocks.requireStaffAccess.mockRejectedValue(new Error("staff denied"))
+    await expect(listStaffPortalPreviewOwnedOpportunities(repreneurId)).rejects.toThrow("staff denied")
+    await expect(getStaffPortalPreviewOpportunity(repreneurId, opportunityId)).rejects.toThrow("staff denied")
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
 })

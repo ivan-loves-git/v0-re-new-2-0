@@ -1237,6 +1237,26 @@ records the approved v1.0 contract; GitHub Ticket #167 owns release evidence.
 
 ## Repreneur pursuit workspace projection (#188 / Ticket #207)
 
+**Shared customer screen foundation (#241 / Ticket #243, 30 September 2026):**
+The real portal and selected-owner staff preview use the same complete Deals,
+Profile, Re-New/External Pursuits and deal-detail composition, including applicable
+headings, guidance, sorting, navigation and FR/EN interface. The staff shell,
+selector, identity attribution and existing #183 assistance remain separate.
+Profile uses the same owned-match projection as the customer instead of full
+live inventory; detail resolves the exact owner-safe match or opportunity plus
+an owned-match sidebar. Each selected screen loads only its required inputs,
+including narrow cross-space facts needed by the existing next-actions panel.
+Safe duplicate projections may be reused within one request, never as a
+persistent cross-user data or permission cache. Every mutation and private
+resource continues to recheck role, exact owner, current workspace generation
+and current authorization independently. Customer personal Viewed/Reviewed,
+account preferences, feedback, certifications, consents and signatures remain
+personal; preview states their unavailability. This foundation changes no schema,
+status, entitlement, domain validation, notification, lifecycle, retention or
+migration rule. The existing [portal architecture contract](../architecture/portal-next-actions-v1.md#shared-portal-foundation-241--ticket-243)
+owns composition, loading, navigation feedback and acceptance mapping; #243
+owns candidate verification and separately authorized release evidence.
+
 **Entry navigation correction (#218, 27 September 2026):** The owner
 `/portal/pursuits` entry and the selected-owner staff Portal preview
 `Re-New Pursuits` tab open this same matched list/detail workspace in its

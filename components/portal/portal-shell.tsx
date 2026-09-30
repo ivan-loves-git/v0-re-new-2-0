@@ -2,6 +2,7 @@
 
 import type React from "react"
 import Link from "next/link"
+import { PortalNavigationLink } from "@/components/portal/portal-navigation-link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { BriefcaseBusiness, ListTree, LogOut, MessageSquareText, UserRound, Waves } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -58,10 +59,10 @@ export function PortalShell({ children, userEmail, userName }: PortalShellProps)
                 : u(item.name)
               return (
                 <Button key={item.href} asChild variant="ghost" size="sm" className={cn("relative rounded-none px-2 sm:px-3", active && "text-foreground after:absolute after:inset-x-2 after:-bottom-[13px] after:h-0.5 after:bg-primary")}>
-                  <Link href={href} aria-current={active ? "page" : undefined} aria-label={label} className={cn("gap-2", active && "font-semibold")}>
+                  <PortalNavigationLink href={href} aria-current={active ? "page" : undefined} aria-label={label} className={cn("gap-2", active && "font-semibold")}>
                     <Icon data-icon="inline-start" />
                     <span className="hidden sm:inline">{label}</span>
-                  </Link>
+                  </PortalNavigationLink>
                 </Button>
               )
             })}

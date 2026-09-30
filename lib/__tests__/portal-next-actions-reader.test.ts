@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
   readPortalDealActionIndicators: vi.fn(),
   readPortalCurrentPursuit: vi.fn(),
   listMyRepreneurOpportunities: vi.fn(),
-  listStaffPortalPreviewOpportunities: vi.fn(),
+  listStaffPortalPreviewOwnedOpportunities: vi.fn(),
 }))
 
 vi.mock("@/lib/access-control", () => ({
@@ -25,7 +25,7 @@ vi.mock("@/lib/actions/repreneur-opportunities", () => ({
   listMyRepreneurOpportunities: mocks.listMyRepreneurOpportunities,
 }))
 vi.mock("@/lib/actions/repreneur-portal-preview", () => ({
-  listStaffPortalPreviewOpportunities: mocks.listStaffPortalPreviewOpportunities,
+  listStaffPortalPreviewOwnedOpportunities: mocks.listStaffPortalPreviewOwnedOpportunities,
 }))
 
 import { readPortalNextActions } from "@/lib/data/portal-next-actions"
@@ -68,7 +68,7 @@ describe("Ticket #132 current-owner read boundary", () => {
     mocks.readPortalCurrentPursuit.mockResolvedValue(null)
     mocks.createAdminClient.mockReturnValue({ from: vi.fn(() => query.builder) })
     mocks.listMyRepreneurOpportunities.mockResolvedValue(safeSource)
-    mocks.listStaffPortalPreviewOpportunities.mockResolvedValue(safeSource)
+    mocks.listStaffPortalPreviewOwnedOpportunities.mockResolvedValue(safeSource)
   })
 
   it("authorizes the owner before constructing a service client", async () => {
@@ -123,4 +123,26 @@ describe("Ticket #132 current-owner read boundary", () => {
     expect(result?.yourActions[0].href).toContain(`repreneurId=${ownerId}`)
     expect(result?.yourActions[0].href).not.toContain("/portal/deals/")
   })
+
+  it("reuses same-request owner-safe board and indicator inputs while retaining cross-space actions", async () => {
+    const source = { ...safeSource, opportunities: [{ match_id: matchId, match_status: "proposed",
+      public_title: "Recommendation", recommendation_expires_at: null }] }
+    const external = [{ id: "external-1", ownerRepreneurId: ownerId, deletionStatus: "active",
+      title: "Owner dossier", nextAction: "Call adviser", responsibleParty: "owner", dueAt: null,
+      stage: "identified", sharedNotes: "PRIVATE NOTES", contacts: [{ name: "PRIVATE CONTACT" }] }]
+    const result = await readPortalNextActions({ kind: "portal" }, source as never,
+      { indicators: { [matchId]: "respond" }, external: external as never })
+    expect(result?.yourActions.map((action) => action.title)).toEqual(expect.arrayContaining(["Recommendation", "Owner dossier"]))
+    expect(mocks.createAdminClient).not.toHaveBeenCalled()
+    expect(mocks.readPortalDealActionIndicators).not.toHaveBeenCalled()
+    expect(JSON.stringify(result)).not.toMatch(/PRIVATE NOTES|PRIVATE CONTACT/)
+  })
+
+  it("rejects a reused External board belonging to another owner", async () => {
+    const result = await readPortalNextActions({ kind: "portal" }, safeSource as never, {
+      external: [{ ownerRepreneurId: otherId, deletionStatus: "active" }] as never,
+    })
+    expect(result?.state).toBe("unavailable")
+  })
+
 })

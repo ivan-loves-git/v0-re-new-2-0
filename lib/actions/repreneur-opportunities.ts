@@ -292,6 +292,10 @@ function withDealBucket(
 function withDealBucket(
   opportunity: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity,
   isBroadDiscoveryEligible: boolean,
+): (RepreneurOpportunityExposure | RepreneurDealFlowOpportunity) | null
+function withDealBucket(
+  opportunity: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity,
+  isBroadDiscoveryEligible: boolean,
 ): (RepreneurOpportunityExposure | RepreneurDealFlowOpportunity) | null {
   const dealBucket = classifyRepreneurDeal({
     opportunityId: opportunity.opportunity_id,
@@ -315,8 +319,9 @@ async function ownerCriteriaForDeal(
   supabase: ReturnType<typeof createAdminClient>,
   repreneur: RepreneurDealFlowProfile,
   opportunity: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity,
+  currentGeography?: Awaited<ReturnType<typeof loadMatchingGeographyContext>>,
 ): Promise<OwnerCriterionComparison[]> {
-  const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
+  const geography = currentGeography ?? await loadMatchingGeographyContext(supabase, [repreneur.id])
   const ownerWithGeography = withMatchingGeographyTargets(repreneur, geography)
   const dealWithGeography = withMatchingGeography(opportunity, geography)
   const outcomes = compareOwnerOpportunityCriteria(ownerWithGeography, dealWithGeography)
@@ -484,13 +489,25 @@ function withoutRelevanceScore(opportunity: RepreneurDealFlowSortCandidate): Rep
   }
 }
 
-export async function listMyRepreneurOpportunities(): Promise<{
+export async function listMyRepreneurOpportunities() {
+  const repreneur = await getCurrentRepreneurProfile()
+  return repreneur ? listOwnedOpportunitiesForProfile(repreneur) : { repreneur: null, opportunities: [] }
+}
+
+/** The same owned-match projection, without customer identity or personal review evidence. */
+export async function listStaffPreviewOwnedOpportunities(repreneurId: string) {
+  await requireStaffAccess()
+  if (!isUuid(repreneurId)) return { repreneur: null, opportunities: [] }
+  const { data, error } = await createAdminClient().from("repreneurs")
+    .select("id, first_name, last_name, email, is_demo").eq("id", repreneurId).maybeSingle()
+  if (error) throw new Error(error.message)
+  return data ? listOwnedOpportunitiesForProfile(normalizeProfile(data)) : { repreneur: null, opportunities: [] }
+}
+
+async function listOwnedOpportunitiesForProfile(repreneur: RepreneurOpportunityProfile): Promise<{
   repreneur: RepreneurOpportunityProfile | null
   opportunities: RepreneurOpportunityExposure[]
 }> {
-  const repreneur = await getCurrentRepreneurProfile()
-  if (!repreneur) return { repreneur: null, opportunities: [] }
-
   const supabase = createAdminClient()
   const { data, error } = await supabase
     .from("opportunity_matches")
@@ -790,7 +807,25 @@ export async function getMyRepreneurOpportunity(
   if (!isUuid(dealId)) return null
   const repreneur = await getCurrentRepreneurDealFlowProfile()
   if (!repreneur) return null
+  const result = await getOpportunityForProfile(repreneur, dealId)
+  if (!result) return null
+  const access = await requirePortalAccess()
+  queueM2RepreneurEvent({ userId: access.user.id, routeTemplate: "/portal/deals/:matchId",
+    workflow: "portal_deals", action: "open", outcome: "success" })
+  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
+  return { ...result, personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null }
+}
 
+export async function getStaffPreviewRepreneurOpportunity(repreneurId: string, dealId: string) {
+  await requireStaffAccess()
+  if (!isUuid(repreneurId) || !isUuid(dealId)) return null
+  const repreneur = await getRepreneurDealFlowProfileById(createAdminClient(), repreneurId)
+  if (!repreneur) return null
+  const result = await getOpportunityForProfile(repreneur, dealId)
+  return result ? withDealBucket(result, result.match_id === null || result.match_status === "withdrawn") : null
+}
+
+async function getOpportunityForProfile(repreneur: RepreneurDealFlowProfile, dealId: string) {
   const supabase = createAdminClient()
   const [matchResult, opportunityResult] = await Promise.all([
     supabase
@@ -874,20 +909,7 @@ export async function getMyRepreneurOpportunity(
         activeOwnerByOpportunity,
       ),
     })
-    const access = await requirePortalAccess()
-    queueM2RepreneurEvent({
-      userId: access.user.id,
-      routeTemplate: "/portal/deals/:matchId",
-      workflow: "portal_deals",
-      action: "open",
-      outcome: "success",
-    })
-    const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
-    return {
-      ...result,
-      personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null,
-      criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result),
-    }
+    return { ...result, criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result, geography ?? undefined) }
   }
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
@@ -913,18 +935,5 @@ export async function getMyRepreneurOpportunity(
     visible_documents: [],
     memo_availability: undefined,
   }
-  const access = await requirePortalAccess()
-  queueM2RepreneurEvent({
-    userId: access.user.id,
-    routeTemplate: "/portal/deals/:matchId",
-    workflow: "portal_deals",
-    action: "open",
-    outcome: "success",
-  })
-  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, [result.opportunity_id])
-  return {
-    ...result,
-    personal_review: reviews ? reviews.get(result.opportunity_id) ?? { viewed: false, reviewed: false } : null,
-    criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result),
-  }
+  return { ...result, criteria_comparison: await ownerCriteriaForDeal(supabase, repreneur, result) }
 }

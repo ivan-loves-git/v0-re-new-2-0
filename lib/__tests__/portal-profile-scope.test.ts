@@ -192,34 +192,6 @@ describe("repreneur portal profile scope", () => {
     expect(detailGetter).not.toContain('.neq("repreneur_exposure", "staff_only")')
   })
 
-  it("keeps neutral inventory visible while suppressing only personalized ranking for an incomplete thesis", () => {
-    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
-    const dealFlowProjection = portalOpportunities.slice(
-      portalOpportunities.indexOf("async function listRepreneurDealFlowForProfile"),
-      portalOpportunities.indexOf("export async function listMyRepreneurDealFlow"),
-    )
-    const detailGetter = portalOpportunities.slice(
-      portalOpportunities.indexOf("export async function getMyRepreneurOpportunity"),
-      portalOpportunities.indexOf("async function updateMyOpportunityResponse"),
-    )
-    const dealsPage = source("app/portal/deals/page.tsx")
-    const dealsContent = source("components/portal/portal-deals-content.tsx")
-
-    expect(dealFlowProjection).toContain("const statefulDeals = matchedOpportunities")
-    expect(dealFlowProjection).toContain('const staffRecommended = deals.filter((opportunity) => opportunity.deal_bucket === "recommended")')
-    expect(dealFlowProjection).toContain("const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)")
-    expect(dealFlowProjection).not.toContain("isAcceptedPaidMatchingClient")
-    expect(dealFlowProjection).toContain("const automaticMatching = thesisCompleteness")
-    expect(dealFlowProjection).toMatch(
-      /automaticMatching\.complete[\s\S]*toDealFlowOpportunity[\s\S]*toNeutralDealFlowOpportunity\(withMatchingGeography\(opportunity, geography\)\)/,
-    )
-    expect(dealFlowProjection).not.toContain("const liveDeals = automaticMatching.complete ?")
-    expect(detailGetter).not.toContain("if (!thesisCompleteness.complete) return null")
-    expect(dealsPage).toContain("<PortalDealsContent result={result} sort={sort} />")
-    expect(dealsContent).toContain("Your current Re-New selections remain available")
-    expect(dealsContent).toContain('href="/portal/profile#target-thesis"')
-  })
-
   it("uses staff-only client and valid-email selection without invitation, offer or score gates", () => {
     const opportunityMatches = source("lib/actions/opportunity-matches.ts")
     const serverEligibility = opportunityMatches.slice(
@@ -262,57 +234,4 @@ describe("repreneur portal profile scope", () => {
     expect(activeOwnerRead).toContain('.eq("repreneur.is_demo", false)')
   })
 
-  it("filters opportunity parents to the current REAL or DEMO namespace before normalization", () => {
-    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
-    const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
-
-    expect((portalOpportunities.match(/opportunity:opportunities!inner\(/g) ?? [])).toHaveLength(3)
-    expect(portalOpportunities).toContain('.eq("opportunity.is_demo", repreneur.is_demo === true)')
-    expect(staffPreview).toContain("opportunity:opportunities!inner(")
-    expect(staffPreview).toContain('.eq("opportunity.is_demo", repreneur.is_demo === true)')
-    expect(staffPreview).toContain("isOpportunityInRepreneurNamespace(opportunity, repreneur)")
-  })
-
-  it("keeps Staff Portal Preview aligned with exact staff-only and dropped portal history", () => {
-    const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
-    const portalOpportunities = source("lib/actions/repreneur-opportunities.ts")
-    const opportunityList = source("components/opportunities/repreneur-opportunity-list.tsx")
-    const normalizePreview = staffPreview.slice(
-      staffPreview.indexOf("function normalizeExposure"),
-      staffPreview.indexOf("async function getActivePursuitOwners"),
-    )
-
-    expect(staffPreview).toContain('"active_pursuit", "dropped"')
-    expect(normalizePreview).not.toContain('opportunity.repreneur_exposure === "staff_only"')
-    expect(staffPreview).toContain('listStaffPreviewRepreneurDealFlow(repreneurId, "relevance", selectedDealId)')
-    expect(portalOpportunities).toContain('supabase.rpc("w164_repreneur_live_inventory"')
-    expect(opportunityList).toContain('opportunity.match_status === "declined" || opportunity.match_status === "dropped"')
-  })
-
-  it("feeds Portal Preview the same safe canonical fields used by Deal Flow filters", () => {
-    const staffPreview = source("lib/actions/repreneur-portal-preview.ts")
-    const normalizePreview = staffPreview.slice(
-      staffPreview.indexOf("function normalizeExposure"),
-      staffPreview.indexOf("async function getActivePursuitOwners"),
-    )
-    const previewList = staffPreview.slice(
-      staffPreview.indexOf("async function listVisibleOpportunitiesForRepreneur"),
-      staffPreview.indexOf("export async function listStaffPortalPreviewOptions"),
-    )
-    const portalExposureTypes = source("lib/types/opportunity.ts").slice(
-      source("lib/types/opportunity.ts").indexOf("export interface RepreneurOpportunityExposure"),
-      source("lib/types/opportunity.ts").indexOf("export function getOpportunityStatusLabel"),
-    )
-
-    expect(normalizePreview).toContain("geography_node_id: opportunity.geography_node_id")
-    expect(normalizePreview).toContain("canonical_sector: normalizeOpportunitySector(opportunity.sector)")
-    expect(previewList).toContain("withRepreneurGeographyLabel(exposure, geography)")
-    expect(previewList).toContain("loadMatchingGeographyContext(supabase, [repreneur.id])")
-    expect(portalExposureTypes).toContain("geography_node_id")
-    expect(portalExposureTypes).toContain("geography_label")
-    expect(portalExposureTypes).toContain("canonical_sector")
-    for (const rawOrInternalField of ["description", "internal_notes", "source_id", "source_label"]) {
-      expect(portalExposureTypes).not.toContain(rawOrInternalField)
-    }
-  })
 })
