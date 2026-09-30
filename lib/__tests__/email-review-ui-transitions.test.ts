@@ -90,6 +90,35 @@ describe("review queue search navigation", () => {
     expect(state.value).toBe("newer")
     expect(state.urlValue).toBe("older")
   })
+  it("retains newer typing when an older double-space search settles in canonical form", () => {
+    let state = initialReviewSearch("")
+    state = reviewSearchReducer(state, { type: "typed", value: "Adam  Smith" })
+    state = reviewSearchReducer(state, {
+      type: "submitted",
+      value: "Adam  Smith",
+    })
+    state = reviewSearchReducer(state, {
+      type: "typed",
+      value: "Adam  Smith Jr",
+    })
+    state = reviewSearchReducer(state, { type: "url", value: "Adam Smith" })
+    expect(state.value).toBe("Adam  Smith Jr")
+    expect(state.urlValue).toBe("Adam Smith")
+    const params = reviewQueueNavigationParams(
+      "",
+      {
+        view: "active",
+        page: 1,
+        search: "",
+        purpose: "all",
+        sort: "prepared",
+        direction: "asc",
+      },
+      "Adam  Smith Jr",
+      { reviewPage: null },
+    )
+    expect(params.get("reviewSearch")).toBe("Adam Smith Jr")
+  })
   it("accepts back/forward URL navigation and retires outstanding input requests", () => {
     let state = initialReviewSearch("previous")
     state = reviewSearchReducer(state, { type: "typed", value: "newer" })

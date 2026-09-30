@@ -179,8 +179,8 @@ export function BulkEmailConfirmation({
               <summary className="cursor-pointer">
                 <span className="font-medium break-all">
                   {name ?? message.recipient_email}
-                </span>
-                {name ? <p className="text-xs text-muted-foreground break-all">{message.recipient_email}</p> : null}
+                </span>{" "}
+                {name ? <span className="text-muted-foreground text-xs">{message.recipient_email}</span> : null}
                 <p className="mt-1 text-sm">{message.subject}</p>
                 {batch.confirmed_at ? (
                   <Badge

@@ -106,6 +106,7 @@ describe("staff email review timestamps", () => {
       },
     }))
     expect(html).toContain("Fictional Person")
+    expect(html).toContain('Fictional Person</span> <span class="text-muted-foreground text-xs">qa-review@re-new.invalid</span>')
     expect(html).toContain("Saved fictional subject")
     expect(html).toContain("Final line of saved message")
     expect(html).toContain("Reviewed version 3")

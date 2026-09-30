@@ -1,7 +1,12 @@
-import type {
-  EmailReviewQueueOptions,
-  EmailReviewQueueRow,
+import {
+  parseEmailReviewQueueOptions,
+  type EmailReviewQueueOptions,
+  type EmailReviewQueueRow,
 } from "./review-queue-query"
+
+export function canonicalReviewSearch(value: string) {
+  return parseEmailReviewQueueOptions({ reviewSearch: value }).search
+}
 
 export function emailReviewSelectionContext(
   options: EmailReviewQueueOptions,
@@ -38,7 +43,7 @@ export function reviewQueueNavigationParams(
   const params = new URLSearchParams(currentQuery)
   for (const [name, value] of Object.entries({
     reviewFilter: options.view,
-    reviewSearch: draftSearch.trim(),
+    reviewSearch: canonicalReviewSearch(draftSearch),
     reviewPurpose: options.purpose,
     reviewSort: options.sort,
     reviewDirection: options.direction,
@@ -49,8 +54,10 @@ export function reviewQueueNavigationParams(
     if (value === null || value === "") params.delete(name)
     else params.set(name, value)
   }
-  if ((params.get("reviewSearch") ?? "") !== options.search)
-    params.delete("reviewPage")
+  const search = canonicalReviewSearch(params.get("reviewSearch") ?? "")
+  if (search) params.set("reviewSearch", search)
+  else params.delete("reviewSearch")
+  if (search !== options.search) params.delete("reviewPage")
   return params
 }
 
@@ -66,7 +73,8 @@ export type ReviewSearchAction = {
 }
 
 export function initialReviewSearch(value: string): ReviewSearchState {
-  return { value, urlValue: value, revision: 0, submitted: {} }
+  const canonical = canonicalReviewSearch(value)
+  return { value: canonical, urlValue: canonical, revision: 0, submitted: {} }
 }
 
 // A settled request may normalize its own input, but cannot replace words typed
@@ -77,29 +85,30 @@ export function reviewSearchReducer(
 ): ReviewSearchState {
   if (action.type === "typed")
     return { ...state, value: action.value, revision: state.revision + 1 }
+  const canonical = canonicalReviewSearch(action.value)
   if (action.type === "submitted")
     return {
       ...state,
-      submitted: { ...state.submitted, [action.value]: state.revision },
+      submitted: { ...state.submitted, [canonical]: state.revision },
     }
   if (action.type === "history")
     return {
-      value: action.value,
-      urlValue: action.value,
+      value: canonical,
+      urlValue: canonical,
       revision: state.revision + 1,
       submitted: {},
     }
-  if (action.value === state.urlValue) return state
-  const submittedRevision = state.submitted[action.value]
+  if (canonical === state.urlValue) return state
+  const submittedRevision = state.submitted[canonical]
   const submitted = { ...state.submitted }
-  delete submitted[action.value]
+  delete submitted[canonical]
   return {
     ...state,
     submitted,
-    urlValue: action.value,
+    urlValue: canonical,
     value:
       submittedRevision === undefined || submittedRevision === state.revision
-        ? action.value
+        ? canonical
         : state.value,
   }
 }

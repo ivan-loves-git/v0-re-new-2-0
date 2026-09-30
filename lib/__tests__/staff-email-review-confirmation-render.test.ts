@@ -66,7 +66,7 @@ describe("complete-message confirmation inside the queue dialog", () => {
     }
     const html = render(initial)
     expect(html).toContain("Fictional Person")
-    expect(html).toMatch(/<p class="[^"]*text-xs[^"]*">person1@example.invalid<\/p>/)
+    expect(html).toContain('Fictional Person</span> <span class="text-muted-foreground text-xs">person1@example.invalid</span>')
     expect(html).not.toContain("Wrong Person")
   })
 })

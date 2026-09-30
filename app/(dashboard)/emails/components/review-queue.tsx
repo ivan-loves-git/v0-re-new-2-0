@@ -105,6 +105,7 @@ import { BulkEmailConfirmation } from "../bulk/[id]/bulk-confirmation"
 import { SingleEmailConfirmation } from "./single-confirmation"
 import {
   initialReviewSearch,
+  canonicalReviewSearch,
   emailReviewSelectionContext,
   reviewQueueNavigationParams,
   reviewSearchReducer,
@@ -266,6 +267,7 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
     initialReviewSearch,
   )
   const search = searchState.value
+  const canonicalSearch = canonicalReviewSearch(search)
   const [dense, setDense] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [selection, setSelection] = useState<{
@@ -361,7 +363,7 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
       Object.keys(changes).every((name) =>
         ["reviewSort", "reviewDirection", "reviewPage"].includes(name),
       ) &&
-      search.trim() === queue.search
+      canonicalSearch === queue.search
     if (!pureSort) clearSelection()
     const params = reviewQueueNavigationParams(
       searchParams.toString(),
@@ -394,12 +396,12 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
   }, [])
   useEffect(() => {
     if (
-      search.trim() === urlSearch ||
-      searchState.submitted[search.trim()] === searchState.revision
+      canonicalSearch === urlSearch ||
+      searchState.submitted[canonicalSearch] === searchState.revision
     )
       return
     const timer = setTimeout(
-      () => navigate({ reviewSearch: search.trim(), reviewPage: null }),
+      () => navigate({ reviewSearch: canonicalSearch, reviewPage: null }),
       300,
     )
     return () => clearTimeout(timer)
@@ -407,6 +409,7 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     search,
+    canonicalSearch,
     urlSearch,
     searchState.revision,
     searchState.submitted,

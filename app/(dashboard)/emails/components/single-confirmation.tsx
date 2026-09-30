@@ -58,11 +58,11 @@ export function SingleEmailConfirmation({
         <summary className="cursor-pointer">
           <span className="font-medium break-all">
             {name ?? review.recipient_email}
-          </span>
+          </span>{" "}
           {name ? (
-            <p className="text-xs text-muted-foreground break-all">
+            <span className="text-muted-foreground text-xs">
               {review.recipient_email}
-            </p>
+            </span>
           ) : null}
           <p className="mt-1 text-sm">{review.subject}</p>
         </summary>
