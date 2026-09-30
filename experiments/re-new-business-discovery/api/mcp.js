@@ -16,7 +16,7 @@ const safeCardOutput = {
 const buyerAccessOutput = {
   fictional: z.literal(true),
   accessUrl: z.literal("https://app.re-new.team/auth/login"),
-  instructions: z.string().describe("Generic access steps: Request access, then Repreneur (buyer)."),
+  instructions: z.string().describe("Generic access steps: click Request it to open Request access, then choose Repreneur (buyer)."),
 };
 const noAuthMetadata = { "re-new.trial/authentication": "none" };
 const response = (payload) => ({
