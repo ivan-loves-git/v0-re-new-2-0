@@ -169,6 +169,10 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     await expect(englishOpportunityCard).toHaveCount(1)
     await expect(englishOpportunityCard.getByText(originalTeaser, { exact: true })).toBeVisible()
     await firstPage.getByRole("button", { name: "Français", exact: true }).click()
+    // Finish the account save and visible locale update before a full navigation.
+    await expect.poll(() => accountLanguage(client, fixture.repreneurs.real.userId)).toBe("fr")
+    await expect(firstPage.locator("html")).toHaveAttribute("lang", "fr")
+    await expect(firstPage.getByRole("button", { name: "Français", exact: true })).toBeEnabled()
     expect(await ownerState(client, fixture.repreneurs.real.id, fixture.ids.realOpportunity)).toEqual(beforeDetailSwitch)
     expect((await client.query("SELECT public_title,teaser_summary,description,sector,location FROM public.opportunities WHERE id=$1", [fixture.ids.realOpportunity])).rows).toEqual(originalContent)
 
