@@ -90,9 +90,34 @@ async function openOwnerDocuments(page: Page) {
   await expect(workspace.getByRole("tabpanel", { name: "Documents" })).toBeVisible();
 }
 
+async function readyReviewQueue(page: Page) {
+  const display = page.getByRole("region", { name: "Staff email review queue", exact: true })
+    .getByRole("button", { name: "Display", exact: true });
+  const density = page.getByText("Row density", { exact: true });
+  // Visible server markup alone does not prove the queue's client interactions.
+  await expect(async () => {
+    if (!(await density.isVisible())) await display.click();
+    expect(await density.isVisible()).toBe(true);
+  }).toPass({ timeout: 15_000 });
+  await page.keyboard.press("Escape");
+  await expect(density).toBeHidden();
+}
+
+async function dismissNotifications(page: Page) {
+  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true });
+  let remaining = await closeButtons.count();
+  // Dismiss through the normal controls; hovering a covering toast pauses expiry.
+  while (remaining) {
+    await closeButtons.first().click();
+    await expect.poll(() => closeButtons.count()).toBeLessThan(remaining);
+    remaining = await closeButtons.count();
+  }
+}
+
 async function approvePreparedReview(page: Page) {
   await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { name: "Review message", exact: true })).toBeVisible();
+  await dismissNotifications(page);
   const subject = await page.getByRole("textbox", { name: "Subject", exact: true }).inputValue();
   const body = await page.getByRole("textbox", { name: "Message", exact: true }).inputValue();
   await page.getByRole("button", { name: "Send", exact: true }).click();
@@ -863,6 +888,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await emailTabStrip.evaluate((strip) => { strip.scrollLeft = strip.scrollWidth; });
     expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
     await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
+    await readyReviewQueue(page);
     const cancelledReviewRow = page.getByRole("row").filter({
       has: page.locator(`a[href="/emails/review/${cancelledReviewId}"]`),
     });
@@ -894,6 +920,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     page.on("console", collectConsoleError);
     try {
       await page.reload();
+      await readyReviewQueue(page);
       await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();
       await expect(reviewSurface).toBeVisible();
       await expect(subjectField).toHaveValue("QA reviewed subject - no send");

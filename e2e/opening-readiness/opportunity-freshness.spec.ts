@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 import { Client } from "pg"
 import { OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
 
@@ -22,6 +22,30 @@ if (!databaseUrl || !password || !cronSecret || process.env.CI !== "true" ||
 }
 
 test.use({ timezoneId: "Europe/Paris" })
+
+async function readyReviewQueue(page: Page) {
+  const display = page.getByRole("region", { name: "Staff email review queue", exact: true })
+    .getByRole("button", { name: "Display", exact: true })
+  const density = page.getByText("Row density", { exact: true })
+  // Visible server markup alone does not prove the queue's client interactions.
+  await expect(async () => {
+    if (!(await density.isVisible())) await display.click()
+    expect(await density.isVisible()).toBe(true)
+  }).toPass({ timeout: 15_000 })
+  await page.keyboard.press("Escape")
+  await expect(density).toBeHidden()
+}
+
+async function dismissNotifications(page: Page) {
+  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true })
+  let remaining = await closeButtons.count()
+  // Dismiss through the normal controls; hovering a covering toast pauses expiry.
+  while (remaining) {
+    await closeButtons.first().click()
+    await expect.poll(() => closeButtons.count()).toBeLessThan(remaining)
+    remaining = await closeButtons.count()
+  }
+}
 
 test("staff can review one generated contact group on desktop/mobile; non-staff cannot open its rule", async ({ page, browser, request }) => {
   test.setTimeout(180_000)
@@ -94,6 +118,7 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
       has: page.locator(`a[href="/emails/review/${reviewId}"]`),
     })
     await expect(reviewRow.getByText("Source freshness", { exact: true })).toBeVisible()
+    await readyReviewQueue(page)
     await reviewRow.getByRole("link", { name: "Review", exact: true }).click()
     const reviewSheet = page.getByRole("dialog", { name: "Review message", exact: true })
     await expect(reviewSheet).toBeVisible()
@@ -129,6 +154,7 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     await page.reload()
     await expect(body).toHaveValue(reviewedBody)
     const reviewedSubject = await directReview.getByRole("textbox", { name: "Subject", exact: true }).inputValue()
+    await dismissNotifications(page)
     await sendButton.click()
     const confirmation = page.getByRole("dialog", { name: "Confirm send", exact: true })
     await expect(confirmation).toBeVisible()
