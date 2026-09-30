@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import { PortalNavigationLink } from "@/components/portal/portal-navigation-link"
 import { BriefcaseBusiness } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -16,9 +16,11 @@ type DealFlow = Awaited<ReturnType<typeof listMyRepreneurDealFlow>>
 export function PortalDealsContent({
   result,
   sort,
+  staffPreview,
 }: {
   result: DealFlow
   sort: RepreneurDealSort
+  staffPreview?: { profileHref: string; detailHrefByOpportunityId: Record<string, string> }
 }) {
   const u = useUiCopy()
   const { repreneur, deals, automaticMatching, demoProfile } = result
@@ -44,11 +46,12 @@ export function PortalDealsContent({
         <AlertDescription className="flex flex-col gap-3">
           <span>{u("Your current Re-New selections remain available. Add the missing acquisition-project information so WAVE can recommend further opportunities that fit your criteria.")}</span>
           <Button asChild className="w-fit" size="sm" variant="outline">
-            <Link href="/portal/profile#target-thesis">{u("Edit acquisition project")}</Link>
+            <PortalNavigationLink href={staffPreview?.profileHref ?? "/portal/profile#target-thesis"}>{u("Edit acquisition project")}</PortalNavigationLink>
           </Button>
         </AlertDescription>
       </Alert> : null}
-      <RepreneurOpportunityList repreneur={repreneur} opportunities={deals} returnSort={sort === "relevance" ? undefined : sort} />
+      <RepreneurOpportunityList repreneur={repreneur} opportunities={deals} returnSort={sort === "relevance" ? undefined : sort}
+        detailHrefByOpportunityId={staffPreview?.detailHrefByOpportunityId} readOnly={Boolean(staffPreview)} />
     </section>
   </div>
 }

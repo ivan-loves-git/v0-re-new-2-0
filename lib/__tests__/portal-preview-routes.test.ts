@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   createPortalPreviewDealHrefMap,
+  createPortalPreviewHref,
   createPortalPreviewSectionHref,
   createPortalPreviewSelectionHref,
   createPortalPreviewDocumentHref,
@@ -65,4 +66,16 @@ describe("portal preview deal routes", () => {
       "/portal-preview/deals/match-1/documents/memo-1?repreneurId=person+%26+one&workspaceId=workspace-1&selectionGeneration=generation-1",
     )
   })
+
+  it("retains the selected Deal Flow sort through preview detail and return navigation", () => {
+    const detail = createPortalPreviewDealHrefMap("owner-1", [{ opportunityId: "opportunity-1", matchId: null }],
+      "workspace-1", { sort: "deal_size" })
+    const selected = new URL(detail["opportunity-1"], "https://app.example.test")
+    expect(selected.searchParams.get("sort")).toBe("deal_size")
+    expect(selected.searchParams.get("repreneurId")).toBe("owner-1")
+    const back = new URL(createPortalPreviewHref("owner-1", undefined, "workspace-1", { sort: "deal_size" }), "https://app.example.test")
+    expect(back.searchParams.get("sort")).toBe("deal_size")
+    expect(back.searchParams.get("workspaceId")).toBe("workspace-1")
+  })
+
 })

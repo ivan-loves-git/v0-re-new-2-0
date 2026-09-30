@@ -8,6 +8,30 @@ Authority: [Product Change #114](https://github.com/re-new-team/renew-governance
 
 The panel sits above the default `/portal/pursuits` workspace and remains visible in its External view. The selected-owner staff preview uses the same narrow projection with workspace-scoped links. `/portal/deals` is a discovery entry, so there is no second mount there. Every link opens an existing route, which rechecks current owner, namespace, gate and resource authorization at use time.
 
+## Shared portal foundation (#241 / Ticket #243)
+
+[Product Change #241](https://github.com/re-new-team/renew-governance/issues/241) and [Ticket #243](https://github.com/re-new-team/renew-governance/issues/243) approve the application-only foundation before redesign. Deals, Profile and Pursuits use the same complete customer compositions in the real portal and selected-owner staff preview: headings, acquisition-project guidance, sorting, Re-New/External navigation and FR/EN interface copy. Deal detail retains the existing shared pursuit workspace. The staff dashboard shell, owner selector, identity banner and attributed assistance remain outside that customer composition. [Decision #183](https://github.com/re-new-team/renew-governance/issues/183) continues to own permissions: preview never records personal Viewed/Reviewed, certification, account preferences or feedback submission. Those personal capabilities are explicitly unavailable; existing approved staff assistance remains attributed to the staff actor.
+
+| Selected screen | Required read |
+| --- | --- |
+| Deals | Canonical full Deal Flow, including automatic-matching completeness, DEMO classification and the selected sort |
+| Profile | Owner-safe profile and owned matches; customer account preference state only in the actual portal |
+| Re-New Pursuits | Owned matches, action indicators and the existing cross-space next-actions projection |
+| External Pursuits | Exact-owner External board and attachments, plus narrow owned matches required by the cross-space next-actions panel; no live Deal Flow inventory |
+| Deal detail | Exact authorized match-or-opportunity and a separate owned-match sidebar, current pursuit projection and permitted attributed staff controls |
+
+A stale explicit staff workspace is rejected before any selected-screen data load. Preview guidance, sort, deal, return and resource links retain the selected owner/workspace. Navigation reads never stand in for login, personal evidence or permission grants. The panel still shows all currently authorized Re-New and External action types in either Pursuits view: selected-screen loading does not silently hide cross-space guidance.
+
+Opening an owned opportunity ID resolves the same exact-owner, Active, same-namespace match as opening its match ID. Its current status, interest token and row version remain available to the existing permitted controls; only a genuinely unmatched opportunity uses the discovery projection. Mutation handlers still revalidate those facts independently.
+
+Duplicate safe pursuit projections share React server `cache` within one render request, keyed by exact owner and match; role access is resolved before using that read. The External screen supplies its already-read exact-owner follow-up fields and the Re-New screen supplies its already-read indicators to the panel, avoiding duplicate queries without serializing private board fields. Geography already loaded for a selected detail is reused for its criteria comparison. There is no persistent, cross-request or cross-user data/permission cache. Mutation handlers and NDA/IM download routes remain independent fresh authorization boundaries, including selected-owner generation and current grant checks.
+
+Navigation shows a translated accessible loading status through transitions/route fallbacks. Only deliberate link hover or focus initiates prefetch; there is no blanket data warm-up. A selected tab remains controlled by committed server content, and pending status does not prove content completion. Readiness evidence records click feedback separately from complete-screen rendering, production-like fresh/repeat desktop/mobile distributions, environment and any unachieved target (repeat about 1 second, typical content below 2 seconds). No timing improvement is asserted from unit tests.
+
+The candidate `vercel.json` places server functions in `fra1`, nearer the verified database region `eu-central-2` than the observed baseline `iad1`. This is an application-wide backend placement change, including API, server actions and cron functions, not a portal-only setting. It adds no cache, authentication, data, provider-plan or permission change. Deployment and timing proof remain separately owned; the region setting by itself proves no latency gain. Application rollback restores the previous composition/readers and removes the explicit region to restore the project's prior configured placement. Existing cron schedules and build-ignore behavior are preserved.
+
+Acceptance traces: `portal-foundation-screens.test.ts` exercises complete rendering, guidance, personal-only availability and FR/EN fallback; `staff-portal-preview-page.test.ts` exercises selected-screen loads, committed route content, metadata/sort and stale workspace denial; `staff-portal-preview-demo-count.test.ts` exercises canonical safe read adapters, owned-history/namespace eligibility and staff denial; `portal-next-actions-reader.test.ts` exercises reused safe projections, cross-space guidance and owner mismatch. Existing pursuit, language, selection, confidentiality and personal-review regressions remain required. Standards/Spec review, exact-candidate `pnpm verify`, desktop/mobile read-only QA, actual region and timing evidence belong to #243. A verified draft candidate remains Review until separately authorized release and exact live proof.
+
 ## Current predicates
 
 | Group | Display only when | Link |

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import Link from "next/link"
+import { PortalNavigationLink as Link } from "@/components/portal/portal-navigation-link"
 import { ArrowUpRight, BookOpenText, Clock3, ListChecks } from "lucide-react"
 import { useUiLanguage } from "@/components/i18n/ui-text"
 import { displayLocale } from "@/lib/i18n/ui-language"
@@ -137,7 +137,7 @@ export function PortalNextActionsPanel({ projection }: { projection: PortalNextA
             {projection.resources.map((item, index) => <li key={`${item.href}:${item.kind}:${index}`} className="space-y-1.5 py-3 first:pt-0 last:pb-0">
               <p className="text-sm font-medium">{item.kind === "nda_template" ? c.template : c.memorandum}</p>
               <p className="break-words text-sm">{item.title}</p>
-              <Link href={item.href} className="inline-flex min-h-9 items-center gap-1 text-sm font-medium underline underline-offset-4 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              <Link prefetch={false} href={item.href} className="inline-flex min-h-9 items-center gap-1 text-sm font-medium underline underline-offset-4 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
                 {c.openResource}<ArrowUpRight className="size-3.5" aria-hidden="true" />
               </Link>
             </li>)}

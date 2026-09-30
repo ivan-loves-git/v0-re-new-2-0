@@ -3,6 +3,10 @@ import type { Language } from "./translations"
 // English identifiers keep the existing UI corpus reviewable next to its French wording.
 // Only interface copy belongs here. Never pass user, opportunity, document, or legal text.
 export const uiFrench = {
+  "Loading…": "Chargement…",
+  "Share feedback": "Votre avis",
+  "Unavailable in staff preview": "Indisponible dans l’aperçu équipe",
+  "Account preferences and feedback can only be submitted by the repreneur in their own portal.": "Les préférences du compte et les avis ne peuvent être envoyés que par le repreneur depuis son propre portail.",
   "Close": "Fermer",
   "Interface language": "Langue de l’interface",
   "Interface only. Original content, documents and emails may remain in their original language.": "Ce choix concerne uniquement l’interface. Les contenus, documents et e-mails peuvent conserver leur langue d’origine.",

@@ -2,7 +2,7 @@ import "server-only"
 
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import { listMyRepreneurOpportunities } from "@/lib/actions/repreneur-opportunities"
-import { listStaffPortalPreviewOpportunities } from "@/lib/actions/repreneur-portal-preview"
+import { listStaffPortalPreviewOwnedOpportunities } from "@/lib/actions/repreneur-portal-preview"
 import { readPortalCurrentPursuit, readPortalDealActionIndicators, type PortalPursuitViewer } from "@/lib/data/current-pursuit"
 import { safeRepreneurOpportunityTitle } from "@/lib/opportunity-confidentiality"
 import { createPortalPreviewDocumentHref, createPortalPreviewHref } from "@/lib/portal-preview-routes"
@@ -11,6 +11,8 @@ import { buildPortalNextActions, unavailablePortalNextActions, type NextActionDe
 import { verifyStaffPortalSelection, type StaffPortalSelection } from "@/lib/staff-portal-selection"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
+import type { ExternalPursuitBoardRecord } from "@/lib/types/external-pursuit"
+import type { PortalDealAction } from "@/lib/data/current-pursuit"
 import type { RepreneurDealFlowOpportunity, RepreneurOpportunityExposure, RepreneurOpportunityProfile } from "@/lib/types/opportunity"
 
 export type PortalNextActionsViewer = { kind: "portal" } | {
@@ -78,6 +80,7 @@ async function readOwnerExternalFollowUps(repreneurId: string): Promise<External
 export async function readPortalNextActions(
   viewer: PortalNextActionsViewer,
   currentSource?: PortalNextActionsSource,
+  currentReads?: { indicators?: Record<string, PortalDealAction>; external?: ExternalPursuitBoardRecord[] },
 ): Promise<PortalNextActionsProjection | null> {
   const owner = await resolveNextActionsOwner(viewer)
   if (!owner) return null
@@ -86,7 +89,7 @@ export async function readPortalNextActions(
   try {
     const source = currentSource ?? (viewer.kind === "portal"
       ? await listMyRepreneurOpportunities()
-      : await listStaffPortalPreviewOpportunities(owner.repreneurId))
+      : await listStaffPortalPreviewOwnedOpportunities(owner.repreneurId))
     if (source.repreneur?.id !== owner.repreneurId || typeof source.repreneur.is_demo !== "boolean") {
       return unavailablePortalNextActions(asOf)
     }
@@ -100,9 +103,15 @@ export async function readPortalNextActions(
     const activeIds = matched.filter((deal) => deal.match_status === "active_pursuit")
       .map((deal) => deal.match_id!)
     const [indicators, journeys, externalRows] = await Promise.all([
-      readPortalDealActionIndicators(proposedIds, owner.pursuitViewer),
+      currentReads?.indicators ?? readPortalDealActionIndicators(proposedIds, owner.pursuitViewer),
       Promise.all(activeIds.map((matchId) => readPortalCurrentPursuit({ matchId, viewer: owner.pursuitViewer }))),
-      readOwnerExternalFollowUps(owner.repreneurId),
+      currentReads?.external
+        ? currentReads.external.map((row) => {
+            if (row.ownerRepreneurId !== owner.repreneurId || row.deletionStatus !== "active") throw new Error("Owner External Pursuit mismatch.")
+            return { id: row.id, title: row.title, next_action: row.nextAction, responsible_party: row.responsibleParty,
+              due_at: row.dueAt, stage: row.stage, deletion_status: row.deletionStatus }
+          })
+        : readOwnerExternalFollowUps(owner.repreneurId),
     ])
     const journeyByMatch = new Map(activeIds.map((matchId, index) => [matchId, journeys[index]]))
     const preview = owner.selection

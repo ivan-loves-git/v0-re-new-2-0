@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, type ReactNode } from "react"
-import Link from "next/link"
+import { PortalNavigationLink as Link } from "@/components/portal/portal-navigation-link"
 import { ChevronLeft, ChevronRight, Search, PanelLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,7 @@ import { createPortalPreviewHref, type PortalPreviewSection } from "@/lib/portal
 import type { PortalCurrentPursuit, PortalDealAction } from "@/lib/data/current-pursuit"
 import type { OwnerCriterionComparison, RepreneurDealFlowOpportunity, RepreneurOpportunityExposure } from "@/lib/types/opportunity"
 import { cn } from "@/lib/utils"
+import type { RepreneurDealSort } from "@/lib/utils/repreneur-deal-flow"
 
 type Deal = RepreneurDealFlowOpportunity | RepreneurOpportunityExposure
 export type SidebarDeal = Pick<RepreneurOpportunityExposure,
@@ -26,6 +27,7 @@ export type SidebarDeal = Pick<RepreneurOpportunityExposure,
   "sector" | "activity" | "geography_label" | "location" | "interest_rejected" | "recommendation_expires_at">
 type StatusFilter = "all" | "active" | "awaiting" | "ended"
 interface StaffPreviewWorkspaceAdapter {
+  sort?: RepreneurDealSort
   repreneurId: string
   workspaceId: string | null
   returnView: PortalPreviewSection
@@ -173,7 +175,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   const nextDeal = currentIndex >= 0 && currentIndex < visible.length - 1 ? visible[currentIndex + 1] : null
   const hrefFor = (deal: SidebarDeal) => {
     if (staffPreview) return createPortalPreviewHref(staffPreview.repreneurId, deal.match_id, staffPreview.workspaceId, {
-      query, status, returnView: staffPreview.returnView,
+      query, status, returnView: staffPreview.returnView, sort: staffPreview.sort,
     })
     const params = new URLSearchParams()
     if (query) params.set("q", query)
@@ -184,7 +186,7 @@ export function RepreneurPursuitWorkspace({ opportunity, deals, actions, journey
   }
   const listHrefFor = (nextQuery: string, nextStatus: StatusFilter) => staffPreview
     ? createPortalPreviewHref(staffPreview.repreneurId, undefined, staffPreview.workspaceId, {
-        query: nextQuery, status: nextStatus, view: staffPreview.returnView,
+        query: nextQuery, status: nextStatus, view: staffPreview.returnView, sort: staffPreview.sort,
       }) : returnHref === "/portal/pursuits" ? ownerPursuitListHref(nextQuery, nextStatus) : returnHref
   const listHref = listHrefFor(query, status)
   const updateFilters = (nextQuery: string, nextStatus: StatusFilter) => {

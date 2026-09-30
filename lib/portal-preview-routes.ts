@@ -1,3 +1,5 @@
+import type { RepreneurDealSort } from "@/lib/utils/repreneur-deal-flow"
+
 export interface PortalPreviewOpportunityRoute {
   opportunityId: string
   matchId: string | null
@@ -15,6 +17,7 @@ export interface PortalPreviewNavigation {
   status?: PortalPreviewPursuitStatus
   returnView?: PortalPreviewSection
   view?: PortalPreviewSection
+  sort?: RepreneurDealSort
 }
 
 /**
@@ -37,6 +40,7 @@ function portalPreviewHref(repreneurId: string, dealId?: string, workspaceId?: s
   const params = new URLSearchParams({ repreneurId })
   if (dealId) params.set("dealId", dealId)
   if (workspaceId) params.set("workspaceId", workspaceId)
+  if (navigation?.sort && navigation.sort !== "relevance") params.set("sort", navigation.sort)
   if (navigation?.query) params.set("q", navigation.query.slice(0, 120))
   if (navigation?.status && navigation.status !== "all") params.set("status", navigation.status)
   if (dealId && navigation?.returnView && navigation.returnView !== "deals") params.set("returnView", navigation.returnView)
