@@ -592,7 +592,7 @@ export async function createOpportunityIntake(
   const { data, error } = await trace.failOnThrow(
     async () => {
       const supabase = createAdminClient()
-      return supabase.rpc("create_opportunity_with_office_context_v2", {
+      return supabase.rpc("create_ordinary_discovery_opportunity", {
         p_reference: parsed.reference ?? "",
         p_source_office_id: parsed.sourceOfficeId,
         p_affiliation_ids: parsed.affiliationIds,

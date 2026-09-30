@@ -32,6 +32,8 @@ import {
   OpportunityDemoControl,
 } from "@/components/opportunities/opportunity-demo-control"
 import { OpportunityBroadDiscoveryControl } from "@/components/opportunities/opportunity-broad-discovery-control"
+import { DiscoveryDigestCopyControl } from "@/components/opportunities/discovery-digest-copy-control"
+import type { DiscoveryDigestCopyState } from "@/lib/actions/discovery-digest"
 import {
   OpportunityStatusBadge,
   OpportunityVisibilityBadge,
@@ -77,6 +79,7 @@ const OPPORTUNITY_DETAIL_TABS = new Set(OPPORTUNITY_DETAIL_TAB_VALUES)
 
 interface OpportunityDetailProps {
   opportunity: OpportunityWithSource
+  discoveryDigestCopyState: DiscoveryDigestCopyState
   documents: OpportunityDocument[]
   pendingCleanups: PendingUnusedRetainedDocumentCleanup[]
   ndaArtifacts: OpportunityNdaArtifact[]
@@ -150,6 +153,7 @@ function recommendationVariant(
 
 export function OpportunityDetail({
   opportunity,
+  discoveryDigestCopyState,
   documents,
   pendingCleanups,
   ndaArtifacts,
@@ -459,6 +463,9 @@ export function OpportunityDetail({
                         {opportunity.teaser_summary || "-"}
                       </p>
                     </div>
+                    <DiscoveryDigestCopyControl opportunityId={opportunity.id}
+                      publicTitle={opportunity.public_title} teaserSummary={opportunity.teaser_summary}
+                      initial={discoveryDigestCopyState} />
                   </section>
                 </CardContent>
               </Card>

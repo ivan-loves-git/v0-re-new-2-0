@@ -1356,10 +1356,61 @@ evidence, private notes, workbook history, source relationship history or
 future event capture is added. Rollback restores the previous presentation and
 retains canonical responses, evidence and current permission rules.
 
+## Future-only public opportunity discovery digest — #136 / Decision #128
+
+The three-day discovery digest is a distinct, consent-required **non-manual**
+repreneur email. Its catalogue row is seeded inactive. Migration time does not
+start the feed, enroll anyone or authorize email. After the exact application
+release is verified, the root release operator may initialize the privileged
+PostgreSQL-only cutover once with the externally verified release SHA and an
+attributed staff actor. Browser, application service and generic staff actions
+cannot call this initializer. A separate staff catalogue
+action starts an activation epoch; each OFF-to-ON transition starts a new epoch
+with fixed `[activation, activation + 3 days)` windows. The bounded daily job
+materializes only completed windows. Empty windows send nothing. A window above
+the explicit 20-public-item or 500-recipient bound is retained as
+`review_required`, with exact counts, instead of silently discarding a page.
+
+Only a future authenticated ordinary staff opportunity creation through
+`create_ordinary_discovery_opportunity` may register an immutable
+`ordinary_staff_create` origin. The wrapper retains the existing v2 argument
+shape, validates the staff actor, calls the canonical creator and registers
+origin/first availability atomically. Its first REAL active/public transition
+is recorded once. A pre-cutover or OFF-period first event has no epoch and
+cannot be replayed after activation. Generic inserts, imports, the old v2 RPC,
+external-pursuit conversion and existing opportunities receive no origin or
+backfill; current `created_at`, import dates and status do not prove newness.
+
+Staff must separately approve the exact nonblank public title **and** the
+currently approved public teaser they reviewed. The approval retains actor,
+time and pair hash. A changed title/teaser invalidates it. Portal-safe legacy
+fallbacks, placeholder titles and a public description alone cannot approve
+an email item. The frozen delivery contains only canonical recipient email,
+first name, catalogue subject and approved public title/teaser pairs. Source,
+private notes, documents, NDA, Match Fit, IDs and confidential context are not
+rendered in the email. The portal link goes to the general Deals area.
+
+| Gate | Current proof at claim and just before provider I/O |
+| --- | --- |
+| Identity | One REAL repreneur with canonical email, one exact owner role/auth-user/credential link, `access_enabled_at`, and no duplicate or staff identity conflict. |
+| Permission | Explicit general marketing consent, no address suppression, no one-way digest opt-out, active consent-required catalogue row and active epoch. The authenticated owner alone can add the idempotent digest opt-out; general consent and other emails remain unchanged. |
+| Opportunity | Immutable post-cutover ordinary origin, first availability in the same active epoch/window, current REAL active/anonymized state and unchanged exact public-copy approval. |
+| Delivery | One frozen recipient/epoch/window row, stable provider operation key, two-minute lease and current gates. Each claim and outcome has a private attempt row. A conclusive provider rejection may retry that same operation; a known uncertain response is receipt-only immediately, while a lost response reaches staff review after the 23-hour fence. Neither auto-replays. Staff receipt reconciliation retains the actor, time and provider receipt or opaque conclusive-rejection evidence reference. Only an authoritative provider receipt is `sent`; it is not an inbox claim. |
+
+Turning the catalogue OFF suppresses unstarted work and closes that epoch.
+Started or uncertain attempts retain receipt evidence and cannot be deleted by
+parent cleanup. Deleting a parent with started/sent/review evidence is blocked;
+unstarted work can be suppressed. The service-only private tables deny browser
+roles raw reads and writes. The isolated `CRON_SECRET` daily route processes a
+bounded serial batch and reports materialization caps and review-required
+counts. A code rollback may leave the additive ledger intact and the catalogue
+OFF; it never clears unknown provider outcomes or changes business rows.
+
 ## Change log
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-09-30 | #114 Ticket #136 implementation candidate | Adds the default-OFF, future-only three-day digest origin, exact public-copy approval, owner opt-out and durable recipient/receipt ledger described above. All verification uses fictional fixtures and mocked provider calls; production cutover, activation and customer email are separate operational steps. | GitHub Product Change #114 / Decision #128 / Ticket #136; CLI-generated migration `20260930040401` and disposable PostgreSQL rehearsal |
 | 2026-09-30 | #30 Ticket #121 implementation candidate | Adds future-only private signed Matching 2.2 provenance, read-time staff Fresh/Stale/Unknown, cohesive source snapshots and bounded guarded refresh after relevant saves. Historic matches remain Unknown until naturally scored; human clocks and fields, portal Fit hiding, and the exact scorer stay unchanged. Production migration and release proof remain separate. | GitHub Product Change #30 / Decision #123 / Ticket #121; CLI-generated migration `20260930020751` and disposable PostgreSQL rehearsal |
 | 2026-09-30 | #221 Ticket #224 implementation candidate | A staff-confirmed, max-five current-page batch records exact reviewed messages and individual acknowledgments, then claims and reserves one source operation per serial request. Repeats cannot redispatch claimed items; source-linked receipts, pre-I/O blocks, conclusive failures, uncertainty and unattempted messages remain distinct. The existing single-message provider and recovery paths retain their gates. No production migration or customer send is asserted here. | GitHub Product Change #221 / Decision #220 / Ticket #224; additive migration `20260929235619` and disposable PostgreSQL races |
 | 2026-09-30 | #221 Ticket #223 implementation candidate | Reversible staff-only shelving keeps the exact draft, source operation, attempted delivery truth, frozen attachments and parent retention. Archive and restore append versioned actor events; older provider-entry paths are fenced until the same draft is restored and all current send gates pass. No production migration or customer send is asserted here. | GitHub Product Change #221 / Decision #220 / Ticket #223; additive migration `20260929230707` and disposable PostgreSQL races |
