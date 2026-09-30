@@ -1,52 +1,7 @@
-# Roadmap Workflow
+# Roadmap timeline
 
-The in-app roadmap (`/guide/roadmap`) documents milestones for the Re-New team.
+`/guide/roadmap` is a historical editorial timeline for the Re-New team. It is not the current scope, status, founder-reporting or delivery authority. Current Product Changes, Decisions, Tickets, Bugs and release evidence live in the private [Re-New Product Delivery Project](https://github.com/orgs/re-new-team/projects/1); accepted strategic definitions live in `re-new-team/renew-governance/strategy/registry.yaml`.
 
-## When to update
+There is no routine per-delivery update, PDR projection refresh, version increment or founder-report obligation attached to this page. Ivan decides whether a separate editorial timeline update is useful. When he asks for one, Codex edits `components/guide/development-roadmap.tsx` and, only if a new timeline entry was actually added, `lib/data/roadmap-status.ts` so the existing notification dot reflects that edit. Use public-safe, founder-readable wording and verify the factual claim against GitHub and release evidence. A timeline edit never changes GitHub status or authorizes distribution.
 
-Proactively add entries after:
-- New features (user-facing functionality)
-- Important bug fixes (especially "was broken, now works" fixes)
-- Architecture decisions (why we chose X over Y)
-- Key learnings (gotchas, surprises, things to remember)
-
-## When NOT to update
-
-- Small fixes, typos, config changes
-- Refactors with no user-visible impact
-- Chores (dependencies, build config)
-
-## How to update
-
-1. Edit `components/guide/development-roadmap.tsx` — add new entry at TOP of `roadmapEvents` array.
-2. Update `lib/data/roadmap-status.ts` — set `LAST_ROADMAP_UPDATE` to today's date (triggers red dot notification).
-3. Increment version number:
-   - Current: **0.7.0** (~70% to 1.0)
-   - Increment by 0.0.1 for small updates, 0.1.0 for bigger milestones
-   - **1.0.0** = Production launch with real users
-4. Commit: `📝 docs(roadmap): add [milestone name]`
-5. **Always tell Ivan**: "Roadmap updated with [milestone name] (vX.X.X)" so he knows it was done.
-
-## Entry format
-
-```typescript
-{
-  period: "Jan 12, 2026",
-  version: "0.7.1",
-  title: "Milestone Name",
-  isCompleted: true,
-  events: [
-    { title: "Feature name", type: "feature", description: "What it does" },
-    { title: "Bug fixed", type: "fix", description: "What was broken, now works" },
-    { title: "Decision made", type: "decision", description: "Why we chose this approach" },
-  ],
-}
-```
-
-Event types: `feature`, `fix`, `style`, `refactor`, `decision`, `learning`.
-
-## Roadmap language
-
-Entries must be **founder-friendly**, not developer jargon:
-- ❌ "QuestionnaireFormV2 now embedded directly in repreneur profile"
-- ✅ "Edit answers directly on profile"
+The protected Strategic PDR page is retired by the #212 candidate. [The retirement contract](architecture/strategic-pdr-retirement-v1.md) records the archive and recovery boundary; #214 owns authorized production activation and live archive proof.

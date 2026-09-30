@@ -21,6 +21,8 @@ For technical configuration, inspect `package.json`, `app/`, `components/` and `
 
 ## Domain and confidentiality
 
+For Strategic PDR retirement, [the #212 contract](docs/architecture/strategic-pdr-retirement-v1.md) owns removed application surfaces, private historical preservation and on-request summaries; [#214](https://github.com/re-new-team/renew-governance/issues/214) owns archive and cutover proof. No historical request migration or purge is authorized.
+
 Read [ma-advisory-data-model-v1.md](docs/data-models/ma-advisory-data-model-v1.md) before changing M&A business meaning, schema, validation, visibility, imports, exports or role-specific projections. It owns the released contract; keep relevant code and that contract in step. Run `pnpm data-model:check` for those changes with the intended comparison, using `DATA_MODEL_BASE_REF` when needed. It stays outside lint and does not prove business correctness. Resolve a contract/implementation conflict explicitly before release.
 
 A material product, data, operating or governance decision requires a current canonical specification or qualifying GitHub Decision, links from affected cards, and acceptance traceability. Slack, email and meetings supply evidence rather than changing canonical rules by themselves. `.planning/`, local task/backlog files and old PDR Work Cards are historical unless a current card cites them; Notion and Linear are inactive.
