@@ -64,7 +64,7 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-staff-email-review-queue.sh'
 
-      - name: Rehearse #224 bounded bulk claim and source reservation races
+      - name: "Rehearse #224 bounded bulk claim and source reservation races"
         run: |
           docker run --rm \
             --user postgres \
