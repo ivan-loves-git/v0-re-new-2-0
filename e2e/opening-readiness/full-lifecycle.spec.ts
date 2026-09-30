@@ -130,9 +130,14 @@ async function approvePreparedReview(page: Page) {
   await confirmation.getByRole("checkbox", { name: "Acknowledge complete message", exact: true }).check();
   await expect(confirmSend).toBeEnabled();
   await confirmSend.click();
-  await expect(confirmation.getByText("Provider accepted the reviewed email.", { exact: false })).toBeVisible();
-  await page.reload();
   const visibleReview = page.locator("#main-content:visible");
+  // Sending advances the saved version and can remount away the confirmation.
+  await expect(visibleReview.getByText("Accepted by provider", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(visibleReview.getByText("Accepted by provider", { exact: true })).toBeVisible();
+  await expect(visibleReview.getByRole("textbox", { name: "Subject", exact: true })).toHaveValue(subject);
+  await expect(visibleReview.getByRole("textbox", { name: "Message", exact: true })).toHaveValue(body);
+  await expect(visibleReview.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
   await visibleReview.locator("summary").filter({ hasText: /^More details$/ }).click();
   const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
     .filter({ hasText: "Provider receipt qa-allowlist-accepted." });

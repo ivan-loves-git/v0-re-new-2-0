@@ -165,7 +165,17 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     await confirmation.getByRole("checkbox", { name: "Acknowledge complete message", exact: true }).check()
     await expect(confirmSend).toBeEnabled()
     await confirmSend.click()
-    await expect(confirmation.getByText("Provider accepted the grouped email.", { exact: false })).toBeVisible()
+    // Sending advances the saved version and can remount away the confirmation.
+    await expect(directReview.getByText("Accepted by provider", { exact: true })).toBeVisible()
+    await page.reload()
+    await expect(directReview.getByText("Accepted by provider", { exact: true })).toBeVisible()
+    await expect(directReview.getByRole("textbox", { name: "Subject", exact: true })).toHaveValue(reviewedSubject)
+    await expect(body).toHaveValue(reviewedBody)
+    await expect(sendButton).toBeDisabled()
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    const publicReceipt = directReview.locator('[data-slot="alert-description"]:visible')
+      .filter({ hasText: "Provider receipt qa-allowlist-accepted." })
+    await expect(publicReceipt).toContainText("Sent means accepted by the provider, not delivered or read.")
     const receipt = await client.query<{ provider_message_id: string; members: number }>(`
       SELECT delivery.provider_message_id,count(member.opportunity_id)::int AS members
       FROM public.opportunity_freshness_deliveries delivery
