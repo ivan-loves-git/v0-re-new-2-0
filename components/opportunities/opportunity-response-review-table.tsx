@@ -144,6 +144,7 @@ export function OpportunityResponseReviewTable({ responses }: OpportunityRespons
                         <span className="text-xs text-muted-foreground">
                           Platform: {getOpportunityMatchRecommendationLabel(response.platform_recommendation)}
                           {response.platform_score !== null && response.platform_score !== undefined ? ` · ${response.platform_score}` : ""}
+                          {` · ${response.platform_freshness ?? "Unknown"}`}
                         </span>
                       </div>
                     </TableCell>

@@ -381,6 +381,72 @@ function sectorCriterion(
   return review("Sector fit", "the current data is incomplete")
 }
 
+/**
+ * Only inputs that Matching 2.2 can currently consume are signed for saved
+ * score freshness. This is deliberately branch-sensitive: a canonical thesis
+ * shadows its legacy alias, canonical geography shadows text geography, and
+ * an untargeted numeric measure does not consume opportunity evidence.
+ * Record identity, names, notes and qualification scores never enter it.
+ */
+export function matchingEffectiveInputs(
+  repreneur: ScoringRepreneur,
+  opportunity: ScoringOpportunity,
+) {
+  const asSet = (values: string[]) => [...new Set(values)].sort()
+  const sectorTargets = asSet(targetThesisMatchTerms(
+    preferredList(repreneur.q13_target_sectors_v2, repreneur.sector_preferences),
+    WHEN_QUESTIONS.q13.options,
+    "sector",
+  ).map(normalizeText))
+  const sectorSource = sectorTargets.length && !sectorTargets.includes("all")
+    ? asSet(normalizeList(
+      opportunity.sector,
+      opportunity.activity,
+      sectorCompatibilityValues(opportunity.sector),
+      reviewedActivitySectorAliases(opportunity.activity),
+    ))
+    : null
+  const targetPaths = repreneur.target_geography_paths_stable_keys ?? []
+  const canonicalGeography = Boolean(opportunity.geography_node_id) || targetPaths.length > 0
+  const geography = canonicalGeography
+    ? {
+      mode: "canonical" as const,
+      opportunityMapped: Boolean(opportunity.geography_node_id),
+      targets: targetPaths.map((path) => [...path]).sort((a, b) =>
+        JSON.stringify(a) < JSON.stringify(b) ? -1 : JSON.stringify(a) > JSON.stringify(b) ? 1 : 0),
+      opportunity: opportunity.geography_path_stable_keys ?? [],
+    }
+    : {
+      mode: "legacy" as const,
+      targets: asSet(canonicalTargetThesisValues(
+        preferredList(repreneur.q12_geo_zones, repreneur.target_location),
+        WHEN_QUESTIONS.q12.options,
+        "geography",
+      )),
+      location: normalizeList(opportunity.location),
+    }
+  const range = (minimum: number | null, maximum: number | null, value: number | null) => {
+    if (minimum === null && maximum === null) return null
+    const valid = (minimum === null || minimum >= 0) && (maximum === null || maximum >= 0)
+      && (minimum === null || maximum === null || minimum <= maximum)
+    return { minimum, maximum, value: valid ? value : null }
+  }
+  const marginMinimum = toNumber(repreneur.target_ebitda_margin_min_pct)
+  return {
+    namespace: [repreneur.is_demo ?? null, opportunity.is_demo ?? null],
+    sector: { targets: sectorTargets, source: sectorSource },
+    geography,
+    revenue: range(toNumber(repreneur.target_revenue_min_meur), toNumber(repreneur.target_revenue_max_meur), toNumber(opportunity.revenue_meur)),
+    ebitda: range(toNumber(repreneur.target_ebitda_min_keur), toNumber(repreneur.target_ebitda_max_keur), toNumber(opportunity.ebitda_keur)),
+    margin: marginMinimum === null ? null : {
+      minimum: marginMinimum,
+      revenue: marginMinimum >= 0 ? toNumber(opportunity.revenue_meur) : null,
+      ebitda: marginMinimum >= 0 ? toNumber(opportunity.ebitda_keur) : null,
+    },
+    headcount: range(toNumber(repreneur.target_staff_size_min), toNumber(repreneur.target_staff_size_max), toNumber(opportunity.headcount)),
+  }
+}
+
 export type OwnerCriterionKey = "sector" | "geography" | "revenue" | "ebitda" | "margin" | "team"
 export type OwnerCriterionOutcome = "within_target" | "outside_target" | "not_specified" | "unknown"
 

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { AlertCircle, CheckCircle2, CircleSlash2, Info, RotateCcw, Save, Trash2, UsersRound } from "lucide-react"
 import { toast } from "sonner"
 import { StaffAssignmentEmailStatus } from "@/components/opportunities/staff-assignment-email-status"
+import { StaffFitTableScroll } from "@/components/opportunities/staff-fit-table-scroll"
 import { StaffInterestRejectionControl } from "@/components/opportunities/staff-interest-rejection-control"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -554,7 +555,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
               <AlertDescription>Any interested repreneur can be validated into the active pursuit.</AlertDescription>
             </Alert>
           )}
-          <div className="overflow-x-auto rounded-md border">
+          <StaffFitTableScroll className="rounded-md border">
             <Table className="min-w-[900px]">
               <TableHeader>
                 <TableRow>
@@ -594,9 +595,15 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                           {match.status === "withdrawn" && match.interest_withdrawal && <p className="max-w-56 text-xs text-muted-foreground">{match.interest_withdrawal.reason} · {match.interest_withdrawal.origin === "staff" ? "Re-New staff" : "Repreneur"} ({match.interest_withdrawal.actor})</p>}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={recommendationVariant(match.platform_recommendation)}>
-                            {getOpportunityMatchRecommendationLabel(match.platform_recommendation)}
-                          </Badge>
+                          <div className="flex flex-col items-start gap-1">
+                            <Badge variant={recommendationVariant(match.platform_recommendation)}>
+                              {getOpportunityMatchRecommendationLabel(match.platform_recommendation)}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground" aria-label={`Fit freshness: ${match.platform_freshness ?? "Unknown"}`}
+                              title={match.platform_freshness === "Fresh" ? "Fit reflects current recorded inputs" : match.platform_freshness === "Stale" ? "Recorded inputs changed since this Fit was scored" : "No verifiable current scoring provenance"}>
+                              {match.platform_freshness ?? "Unknown"}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant={recommendationVariant(match.human_recommendation)}>
@@ -717,7 +724,7 @@ export function OpportunityMatchesPanel({ opportunityId, matches, candidates }: 
                 )}
               </TableBody>
             </Table>
-          </div>
+          </StaffFitTableScroll>
         </CardContent>
       </Card>
     </div>
