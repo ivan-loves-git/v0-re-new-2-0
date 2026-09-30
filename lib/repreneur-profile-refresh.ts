@@ -30,7 +30,7 @@ function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []
 }
 
-function revalidateRepreneurProfilePaths(repreneurId: string, matchRows: Array<{ id: string; opportunity_id: string }>) {
+function revalidateRepreneurProfilePaths(repreneurId: string) {
   revalidatePath("/portal/profile")
   revalidatePath("/portal/deals")
   revalidatePath("/opportunities/reviews")
@@ -38,11 +38,6 @@ function revalidateRepreneurProfilePaths(repreneurId: string, matchRows: Array<{
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/pipeline")
   revalidatePath("/dashboard_re")
-
-  for (const match of matchRows) {
-    revalidatePath(`/portal/deals/${match.id}`)
-    revalidatePath(`/opportunities/${match.opportunity_id}`)
-  }
 
   revalidateRepreneurDashboardTags()
   revalidateOpportunityDashboardTags()
@@ -59,11 +54,26 @@ export async function refreshStoredRepreneurMatches(
   const supabase = createAdminClient()
   const result = await refreshStoredRepreneurMatchesWithClient(supabase, repreneurId)
   if (options.revalidate !== false) {
-    const { data: matches, error } = await supabase.from("opportunity_matches").select("id, opportunity_id").eq("repreneur_id", repreneurId)
-    if (error) throw new Error(error.message)
-    revalidateRepreneurProfilePaths(repreneurId, matches ?? [])
+    revalidateRepreneurProfilePaths(repreneurId)
   }
   return result
+}
+
+/** A completed profile save is never rolled back by a later Fit refresh miss. */
+export async function settleRepreneurFitAfterSave(repreneurId: string) {
+  try {
+    const result = await refreshStoredRepreneurMatches(repreneurId)
+    return {
+      current: result.currentRows,
+      notRelevant: result.notRelevantRows,
+      refreshed: result.refreshedRows,
+      driftSkipped: result.driftSkippedRows,
+      failed: result.failedMatchRows.length,
+      incomplete: result.incomplete,
+    }
+  } catch {
+    return { current: 0, notRelevant: 0, refreshed: 0, driftSkipped: 0, failed: 1, incomplete: true }
+  }
 }
 
 /**
@@ -114,5 +124,6 @@ export async function recalculateRepreneurScoresAndMatches(repreneurId: string) 
     .eq("id", repreneurId)
 
   if (updateError) throw new Error(updateError.message)
-  await refreshStoredRepreneurMatches(repreneurId)
+  // WHO/WHEN qualification and LDC evidence are not Matching 2.2 inputs.
+  // Thesis writers explicitly request a guarded Fit refresh after their save.
 }

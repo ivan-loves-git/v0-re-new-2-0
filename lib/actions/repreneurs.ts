@@ -23,6 +23,37 @@ import {
   parseExplicitDemoClassification,
 } from "@/lib/demo-classification"
 
+async function settleRepreneurFitAfterSave(repreneurId: string) {
+  const { settleRepreneurFitAfterSave: settle } = await import("@/lib/repreneur-profile-refresh")
+  return settle(repreneurId)
+}
+
+async function captureRepreneurFitBefore(supabase: ReturnType<typeof createAdminClient>, repreneurId: string) {
+  try {
+    const { captureRepreneurFitSource } = await import("@/lib/match-source-change")
+    return await captureRepreneurFitSource(supabase, repreneurId)
+  } catch { return null }
+}
+
+async function settleRepreneurFitIfChanged(
+  supabase: ReturnType<typeof createAdminClient>,
+  repreneurId: string,
+  before: Awaited<ReturnType<typeof captureRepreneurFitBefore>>,
+) {
+  try {
+    const { captureRepreneurFitSource, fitSourceChanged } = await import("@/lib/match-source-change")
+    const after = await captureRepreneurFitSource(supabase, repreneurId)
+    if (fitSourceChanged(before, after)) await settleRepreneurFitAfterSave(repreneurId)
+  } catch { /* The source save remains successful; old Fit remains Unknown or Stale. */ }
+}
+
+const MATCHING_REPRENEUR_FIELDS = new Set([
+  "q12_geo_zones", "q13_target_sectors_v2", "sector_preferences", "target_location",
+  "target_revenue_min_meur", "target_revenue_max_meur", "target_ebitda_min_keur",
+  "target_ebitda_max_keur", "target_ebitda_margin_min_pct", "target_staff_size_min",
+  "target_staff_size_max", "is_demo",
+])
+
 function optionalWebUrl(value: FormDataEntryValue | null) {
   const normalized = String(value ?? "").trim()
   if (!normalized) return undefined
@@ -213,12 +244,14 @@ export async function updateRepreneur(id: string, formData: FormData) {
     updates.consent_source = (formData.get("consent_source") as string) || "manual"
   }
 
+  const fitBefore = await captureRepreneurFitBefore(supabase, id)
   const { error } = await supabase.from("repreneurs").update(updates).eq("id", id)
 
   if (error) {
     throw new Error(repreneurWriteErrorMessage(error))
   }
 
+  await settleRepreneurFitIfChanged(supabase, id, fitBefore)
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
   revalidateRepreneurDashboardTags()
@@ -284,6 +317,7 @@ export async function updateRepreneurField(id: string, field: string, value: str
 
   console.log(`[updateRepreneurField] Updating ${field} for ${id}`)
 
+  const fitBefore = field === "sector_preferences" ? await captureRepreneurFitBefore(supabase, id) : null
   const { error } = await supabase.from("repreneurs").update({ [field]: value }).eq("id", id)
 
   if (error) {
@@ -292,6 +326,8 @@ export async function updateRepreneurField(id: string, field: string, value: str
   }
 
   console.log(`[updateRepreneurField] Database update successful, revalidating paths...`)
+
+  if (field === "sector_preferences") await settleRepreneurFitIfChanged(supabase, id, fitBefore)
 
   try {
     revalidatePath("/repreneurs")
@@ -1007,6 +1043,8 @@ export async function updateTier1Answer(
   await requireStaffAccess()
   const supabase = createAdminClient()
 
+  const fitBefore = MATCHING_REPRENEUR_FIELDS.has(field) ? await captureRepreneurFitBefore(supabase, id) : null
+
   // First update the single field
   const { data: updateResult, error: updateError } = await supabase
     .from("repreneurs")
@@ -1022,6 +1060,8 @@ export async function updateTier1Answer(
   if (updateError) {
     throw new Error(updateError.message)
   }
+
+  if (MATCHING_REPRENEUR_FIELDS.has(field)) await settleRepreneurFitIfChanged(supabase, id, fitBefore)
 
   // Fetch all current questionnaire data to recalculate score
   const { data: repreneur, error: fetchError } = await supabase
@@ -1110,6 +1150,9 @@ export async function updateTier1Answers(
   await requireStaffAccess()
   const supabase = createAdminClient()
 
+  const hasFitFields = Object.keys(answers).some((field) => MATCHING_REPRENEUR_FIELDS.has(field))
+  const fitBefore = hasFitFields ? await captureRepreneurFitBefore(supabase, id) : null
+
   // Update all fields at once
   const { data: updateResult, error: updateError } = await supabase
     .from("repreneurs")
@@ -1125,6 +1168,8 @@ export async function updateTier1Answers(
   if (updateError) {
     throw new Error(updateError.message)
   }
+
+  if (hasFitFields) await settleRepreneurFitIfChanged(supabase, id, fitBefore)
 
   // Fetch all current questionnaire data to recalculate score
   const { data: repreneur, error: fetchError } = await supabase
@@ -1301,6 +1346,7 @@ export interface QuestionnaireV2Input {
 export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input) {
   await requireStaffAccess()
   const supabase = createAdminClient()
+  const fitBefore = await captureRepreneurFitBefore(supabase, id)
   const targetSectors = canonicalSectorSelections(data.q13_target_sectors_v2, false)
   if (targetSectors.length === 0) throw new Error("Select at least one approved sector")
 
@@ -1385,6 +1431,7 @@ export async function saveQuestionnaireV2(id: string, data: QuestionnaireV2Input
     throw new Error(error.message)
   }
 
+  await settleRepreneurFitIfChanged(supabase, id, fitBefore)
   revalidatePath("/repreneurs")
   revalidatePath(`/repreneurs/${id}`)
   revalidatePath("/pipeline")

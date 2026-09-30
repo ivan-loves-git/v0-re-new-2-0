@@ -9,6 +9,8 @@ import { deliverRecommendationAssignment, withAssignmentEmailStatus } from "@/li
 import { deliverInterestNotification, deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
 import { interestRejectionFeedback } from "@/lib/interest-rejection-feedback"
 import { calculateOpportunityMatchScore } from "@/lib/utils/opportunity-match-scoring"
+import { withStaffFitFreshness } from "@/lib/staff-fit-freshness"
+import { refreshStoredMatchWithClient } from "@/lib/repreneur-match-refresh-core"
 import {
   loadMatchingGeographyContext,
   withMatchingGeography,
@@ -274,37 +276,6 @@ async function ensureMatchNamespaceAndEmail(
   }
 }
 
-async function calculateStoredPlatformMatch(opportunityId: string, repreneurId: string) {
-  const supabase = createAdminClient()
-
-  const [{ data: opportunity, error: opportunityError }, { data: repreneur, error: repreneurError }] = await Promise.all([
-    supabase
-      .from("opportunities")
-      .select("id, is_demo, sector, activity, location, revenue_meur, ebitda_keur, headcount, geography_node_id")
-      .eq("id", opportunityId)
-      .maybeSingle(),
-    supabase
-      .from("repreneurs")
-      .select(`id, is_demo, ${REPRENEUR_MATCHING_INPUT_FIELDS}`)
-      .eq("id", repreneurId)
-      .maybeSingle(),
-  ])
-
-  if (opportunityError) throw new Error(opportunityError.message)
-  if (repreneurError) throw new Error(repreneurError.message)
-  if (!opportunity) throw formError("Opportunity was not found.", "opportunity_id")
-  if (!repreneur) throw formError("Repreneur was not found.", "repreneur_id")
-  if (opportunity.is_demo !== repreneur.is_demo) {
-    throw formError("Recommendations must stay inside the same REAL or DEMO data namespace.", "repreneur_id")
-  }
-
-  const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
-  return calculateOpportunityMatchScore(
-    withMatchingGeographyTargets(repreneur, geography),
-    withMatchingGeography(opportunity, geography),
-  )
-}
-
 function revalidateMatchPaths(opportunityId: string, matchId?: string) {
   revalidatePath("/opportunities/reviews")
   revalidatePath(`/opportunities/${opportunityId}`)
@@ -330,7 +301,9 @@ export async function listOpportunityMatches(opportunityId: string): Promise<Opp
       Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
     ))
     .map(normalizeMatch)
-  return withStaffInterestRejections(await withAssignmentEmailStatus(matches, access.user.id), access.user.id)
+  return withStaffInterestRejections(await withAssignmentEmailStatus(
+    await withStaffFitFreshness(supabase, matches), access.user.id,
+  ), access.user.id)
 }
 
 export async function listOpportunityMatchesForRepreneur(repreneurId: string): Promise<RepreneurOpportunityMatch[]> {
@@ -376,12 +349,12 @@ export async function listOpportunityMatchesForRepreneur(repreneurId: string): P
     .order("updated_at", { ascending: false })
 
   if (error) throw new Error(error.message)
-  return withAssignmentEmailStatus((data ?? [])
+  return withAssignmentEmailStatus(await withStaffFitFreshness(supabase, (data ?? [])
     .filter((row) => isOpportunityInRepreneurNamespace(
       Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity,
       Array.isArray(row.repreneur) ? row.repreneur[0] : row.repreneur,
     ))
-    .map(normalizeRepreneurMatch), access.user.id)
+    .map(normalizeRepreneurMatch)), access.user.id)
 }
 
 export async function listOpportunityPursuitEvents(opportunityId: string): Promise<OpportunityPursuitEvent[]> {
@@ -470,7 +443,7 @@ export async function listOpportunityMatchResponses(): Promise<OpportunityMatchR
     ...response,
     ...(activeByOpportunity.get(response.opportunity_id) ?? {}),
   }))
-  return withStaffInterestRejections(withLocks, access.user.id)
+  return withStaffInterestRejections(await withStaffFitFreshness(supabase, withLocks), access.user.id)
 }
 
 export async function listOpportunityMatchCandidates(opportunityId: string): Promise<OpportunityMatchCandidate[]> {
@@ -614,19 +587,13 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     const humanRecommendation = readRecommendation(formData, "human_recommendation")
     const humanNotes = readString(formData, "human_notes")
     const hasHumanReview = humanRecommendation !== "not_evaluated" || Boolean(humanNotes)
-    const platformMatch = await calculateStoredPlatformMatch(opportunityId, repreneurId)
-
     const supabase = createAdminClient()
     const matchValues = {
         opportunity_id: opportunityId,
         repreneur_id: repreneurId,
         status,
-        platform_recommendation: platformMatch.recommendation,
-        platform_score: platformMatch.score,
-        platform_reasons: platformMatch.reasons,
         human_recommendation: humanRecommendation,
         human_notes: humanNotes,
-        created_by: access.user.id,
         reviewed_by: hasHumanReview ? access.user.id : null,
         reviewed_at: hasHumanReview ? new Date().toISOString() : null,
       }
@@ -641,7 +608,7 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
           .maybeSingle()
       : await supabase
           .from("opportunity_matches")
-          .insert(matchValues)
+          .insert({ ...matchValues, created_by: access.user.id })
           .select("id")
           .maybeSingle()
 
@@ -652,13 +619,20 @@ export async function saveOpportunityMatch(formData: FormData): Promise<Opportun
     if (existingMatch && !updatedMatch) {
       throw formError("This recommendation changed while you were editing it. Refresh to see the latest staff notes.")
     }
+    // The human save owns only human fields. A separate short CAS calculates
+    // Fit from one current source snapshot; failure leaves an honest Unknown.
+    let fitPending = false
+    if (updatedMatch) {
+      try { fitPending = await refreshStoredMatchWithClient(supabase, updatedMatch.id) === "drift" }
+      catch { fitPending = true }
+    }
     revalidatePath(`/opportunities/${opportunityId}`)
     revalidatePath(`/repreneurs/${repreneurId}`)
     if (!existingMatch && updatedMatch && status === "proposed") {
       const notification = await deliverRecommendationAssignment(updatedMatch.id, access.user.id)
-      return { ok: true, message: notification.message }
+      return { ok: true, message: fitPending ? `${notification.message} Fit is awaiting refresh.` : notification.message }
     }
-    return { ok: true }
+    return { ok: true, ...(fitPending ? { message: "Recommendation saved. Fit is awaiting refresh." } : {}) }
   } catch (error) {
     return actionFailure(error)
   }

@@ -10,7 +10,8 @@ import {
   PORTAL_REPRENEUR_PROFILE_SELECT,
   type PortalRepreneurProfile,
 } from "@/lib/data/portal-profile"
-import { recalculateRepreneurScoresAndMatches } from "@/lib/repreneur-profile-refresh"
+import { recalculateRepreneurScoresAndMatches, settleRepreneurFitAfterSave } from "@/lib/repreneur-profile-refresh"
+import { captureRepreneurFitSource, fitSourceChanged } from "@/lib/match-source-change"
 import { canonicalTargetThesisValues } from "@/lib/repreneur-target-thesis"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -181,6 +182,7 @@ async function prepareTargetThesisForRepreneur(repreneurId: string, input: Targe
 async function updateTargetThesisForRepreneur(repreneurId: string, input: TargetThesisInput) {
   const values = await prepareTargetThesisForRepreneur(repreneurId, input)
   const supabase = createAdminClient()
+  const fitBefore = await captureRepreneurFitSource(supabase, repreneurId).catch(() => null)
   const { error } = await supabase
     .from("repreneurs")
     .update({
@@ -194,6 +196,10 @@ async function updateTargetThesisForRepreneur(repreneurId: string, input: Target
   // Migration 092 atomically mirrors exact France-first legacy values into
   // repreneur_geography_targets. Foreign/custom values stay legacy-only.
   await recalculateRepreneurScoresAndMatches(repreneurId)
+  try {
+    const fitAfter = await captureRepreneurFitSource(supabase, repreneurId)
+    if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(repreneurId)
+  } catch { /* Thesis save remains successful; Fit stays Unknown or Stale. */ }
 }
 
 /** Updates only the authenticated repreneur's matching thesis. */
@@ -226,13 +232,14 @@ export async function updateRepreneurTargetThesis(
   if (!selection) return { code: "staff_workspace_changed" }
   const supabase = createAdminClient()
   const values = await prepareTargetThesisForRepreneur(repreneurId, input)
+  const fitBefore = await captureRepreneurFitSource(supabase, repreneurId).catch(() => null)
   let expected = expectedUpdatedAt
   if (!expected) {
     const { data, error } = await supabase.from("repreneurs").select("updated_at").eq("id", repreneurId).maybeSingle()
     if (error || !data) throw new Error("Repreneur profile not found")
     expected = data.updated_at
   }
-  const { error } = await supabase.rpc("w196_update_staff_target_thesis", {
+  const { data: saveReceipt, error } = await supabase.rpc("w196_update_staff_target_thesis", {
     p_repreneur_id: repreneurId,
     p_expected_updated_at: expected,
     p_values: values,
@@ -243,7 +250,17 @@ export async function updateRepreneurTargetThesis(
     p_workspace_generation: selection.generation,
   })
   if (error) return { code: "staff_profile_changed" }
-  await recalculateRepreneurScoresAndMatches(repreneurId)
+  if (!saveReceipt?.reusedExisting) {
+    await recalculateRepreneurScoresAndMatches(repreneurId)
+    const changedFields: string[] = Array.isArray(saveReceipt?.changedFields) ? saveReceipt.changedFields : []
+    if (changedFields.some((field) => field === "q12_geo_zones" || field === "q13_target_sectors_v2"
+      || field.startsWith("target_revenue_") || field.startsWith("target_ebitda_") || field.startsWith("target_staff_size_"))) {
+      try {
+        const fitAfter = await captureRepreneurFitSource(supabase, repreneurId)
+        if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(repreneurId)
+      } catch { /* Attributed staff save remains successful; Fit stays Unknown or Stale. */ }
+    }
+  }
   revalidatePath(`/repreneurs/${repreneurId}`)
   revalidatePath("/portal-preview")
 }

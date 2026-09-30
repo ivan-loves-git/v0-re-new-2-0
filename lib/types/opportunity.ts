@@ -775,6 +775,8 @@ export interface OpportunityMatch extends OpportunityConfidentialityGate {
   platform_recommendation: OpportunityMatchRecommendation
   platform_score?: number | null
   platform_reasons: string[]
+  /** Staff-only read-time status; never stored on the public match row. */
+  platform_freshness?: "Fresh" | "Stale" | "Unknown"
   human_recommendation: OpportunityMatchRecommendation
   human_notes?: string | null
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null
@@ -833,6 +835,7 @@ export interface OpportunityMatchResponse {
   status: Extract<OpportunityMatchStatus, "interested" | "withdrawn" | "declined">
   platform_recommendation: OpportunityMatchRecommendation
   platform_score?: number | null
+  platform_freshness?: "Fresh" | "Stale" | "Unknown"
   human_recommendation: OpportunityMatchRecommendation
   human_notes?: string | null
   decline_reason_categories?: OpportunityDeclineReasonCategory[] | null

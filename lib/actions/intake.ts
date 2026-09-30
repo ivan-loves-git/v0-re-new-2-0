@@ -14,6 +14,18 @@ import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-conten
 // High score threshold for alert email
 const HIGH_SCORE_THRESHOLD = 70
 
+async function settleRepreneurFitAfterSave(repreneurId: string) {
+  const { settleRepreneurFitAfterSave: settle } = await import("@/lib/repreneur-profile-refresh")
+  return settle(repreneurId)
+}
+
+async function captureRepreneurFitSourceForSave(supabase: ReturnType<typeof createAdminClient>, repreneurId: string) {
+  try {
+    const { captureRepreneurFitSource } = await import("@/lib/match-source-change")
+    return await captureRepreneurFitSource(supabase, repreneurId)
+  } catch { return null }
+}
+
 // Return type for all intake actions
 type IntakeResult<T = unknown> =
   | { success: true; data: T }
@@ -232,6 +244,7 @@ export async function updateIntakeGoals(
 ): Promise<IntakeResult> {
   try {
     const supabase = createAdminClient()
+    const fitBefore = await captureRepreneurFitSourceForSave(supabase, id)
 
     const { error } = await supabase
       .from("repreneurs")
@@ -250,6 +263,12 @@ export async function updateIntakeGoals(
       console.error("Error updating intake goals:", error)
       return { success: false, error: "Failed to save your acquisition goals." }
     }
+
+    try {
+      const { fitSourceChanged } = await import("@/lib/match-source-change")
+      const fitAfter = await captureRepreneurFitSourceForSave(supabase, id)
+      if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(id)
+    } catch { /* Goals save remains successful; unresolved Fit stays Unknown or Stale. */ }
 
     // Update abandonment tracking
     void (async () => {

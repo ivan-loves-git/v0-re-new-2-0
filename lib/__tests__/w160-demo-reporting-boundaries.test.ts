@@ -50,8 +50,8 @@ describe("W-160 production reporting boundary", () => {
 
   it("refreshes scores only within the same REAL or DEMO namespace", () => {
     const refresh = source("lib/repreneur-match-refresh-core.ts")
-    expect(refresh).toContain("const repreneurIsDemo = (repreneur as RepreneurMatchRecord).is_demo")
-    expect(refresh).toContain("opportunity.is_demo !== repreneurIsDemo")
+    expect(refresh).toContain("snapshot.repreneur.is_demo !== snapshot.opportunity.is_demo")
+    expect(refresh).toContain("match_score_commit_guarded")
   })
 
   it("removes historical cross-namespace matches from every staff operating reader", () => {
