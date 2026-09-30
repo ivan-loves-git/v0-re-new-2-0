@@ -577,8 +577,13 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       .getByRole("button", { name: "Express interest", exact: true })
       .click();
     await expect(
-      realPage.getByText("Interest received", { exact: true }),
+      realPage.getByText("Interest sent, awaiting Re-New validation", { exact: true }),
     ).toBeVisible();
+    await expect(realPage.getByRole("alert").filter({
+      hasText: "Re-New can now review this signal and decide the next step.",
+    })).toContainText("Interest sent");
+    await expect(realPage.getByRole("button", { name: "Interest sent", exact: true })).toBeDisabled();
+    await expect(realPage.getByRole("button", { name: "Withdraw interest", exact: true })).toBeEnabled();
     const notificationMatch = await one<{
       status: string;
       interest_expressed_at: Date | null;
