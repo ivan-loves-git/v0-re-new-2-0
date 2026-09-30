@@ -23,7 +23,7 @@ describe("installed image optimizer security boundary", () => {
   // https://github.com/vercel/next.js/pull/97949
   it("uses libheif with the AVIF decoder security fixes", () => {
     expect(sharp.versions.heif).toBeDefined()
-    const [major, minor, patch] = sharp.versions.heif.split(".").map(Number)
+    const [major, minor, patch] = (sharp.versions.heif ?? "0.0.0").split(".").map(Number)
     const patched = major > 1 || (major === 1 && (minor > 23 || (minor === 23 && patch >= 2)))
     expect(patched).toBe(true)
   })
