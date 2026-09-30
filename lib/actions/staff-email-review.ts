@@ -1,13 +1,16 @@
 "use server"
 
+import { createHash } from "node:crypto"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getMaReviewContext, getMaReviewTemplateVersion, renderMaWorkflowContent, buildMaReviewedRequest, sendMaSourceWorkflowEmailPayload } from "@/lib/ma-workflows"
+import { getMaReviewContext, getMaReviewTemplateVersion, renderMaWorkflowContent } from "@/lib/ma-workflows"
 import { preparePursuitHandoff } from "@/lib/pursuit-handoff-delivery"
 import { fixedIntermediaryHandoffCopy, buildPursuitNdaReadyRequest } from "@/lib/pursuit-handoff-copy"
-import { sendPursuitIntermediaryHandoff, sendPursuitNdaReadyNotice } from "@/lib/actions/opportunity-pursuit-handoffs"
-import { sameAttachmentSnapshot } from "@/lib/staff-email-review-guard"
 import { sendOpportunityFreshnessReview } from "@/lib/opportunity-freshness-send"
+import { emailReviewSearchPattern, emailReviewSortColumn, type EmailReviewQueueOptions, type EmailReviewQueueRow } from "@/lib/email/review-queue-query"
+import { PURSUIT_REVIEW_COPY_VERSION } from "@/lib/email/review-copy-version"
+import { currentStaffEmailAttempt } from "@/lib/email/staff-email-attempt"
+import { dispatchReservedStaffEmailReview } from "@/lib/email/staff-email-reserved-dispatch"
 import { isUuid } from "@/lib/uuid"
 import { revalidatePath } from "next/cache"
 
@@ -23,8 +26,10 @@ export interface StaffEmailReview {
   recipient_email: string; namespace: "REAL" | "DEMO"; template_key: string; template_version: string;
   subject: string; body_text: string; attachment_snapshot: Array<{ artifact_id: string; document_id: string; content_sha256: string; file_name: string; mime_type: string; size_bytes: number }>;
   state: "pending" | "sending" | "sent" | "failed" | "uncertain" | "cancelled"; version: number;
+  archived_at: string | null; archived_by: string | null; restored_at: string | null; restored_by: string | null;
   created_by: string; created_at: string; edited_by: string | null; edited_at: string | null;
   approved_by: string | null; approved_at: string | null; attempted_at: string | null;
+  attempted_payload?: Record<string, unknown> | null;
   outcome_at: string | null; provider_message_id: string | null; delivery_evidence_id: string | null;
   delivery_error: string | null; cancelled_by: string | null; cancelled_at: string | null; cancel_reason: string | null;
 }
@@ -40,27 +45,55 @@ async function reviewById(id: string): Promise<StaffEmailReview> {
   return data as StaffEmailReview
 }
 
-export async function listStaffEmailReviews(page = 1, filter: "active" | "all" = "active") {
+export async function listStaffEmailReviews(options: EmailReviewQueueOptions) {
   await requireStaffAccess()
-  const safePage = Number.isSafeInteger(page) && page > 0 ? page : 1
+  const db = createAdminClient()
   const pageSize = 25
-  let query = createAdminClient().from("staff_email_reviews").select("*", { count: "exact" })
-  if (filter === "active") query = query.in("state", ["pending", "sending", "uncertain", "failed"])
-  const { data, count, error } = await query.order("created_at", { ascending: false })
-    .order("id", { ascending: false }).range((safePage - 1) * pageSize, safePage * pageSize - 1)
+  const activeStates = ["pending", "sending", "uncertain", "failed"]
+  const filtered = (columns: string, head = false) => {
+    let query = db.from("staff_email_review_queue").select(columns, { count: "exact", head })
+    if (options.view === "active") query = query.is("archived_at", null).in("state", activeStates)
+    if (options.view === "archived") query = query.not("archived_at", "is", null)
+    if (options.purpose !== "all") query = query.eq("purpose_key", options.purpose)
+    if (options.search) query = query.ilike("search_text", emailReviewSearchPattern(options.search))
+    return query
+  }
+  const [filteredCount, activeCount, archivedCount, allCount] = await Promise.all([
+    filtered("id", true),
+    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }).is("archived_at", null).in("state", activeStates),
+    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }).not("archived_at", "is", null),
+    db.from("staff_email_review_queue").select("id", { count: "exact", head: true }),
+  ])
+  if (filteredCount.error || activeCount.error || archivedCount.error || allCount.error ||
+    [filteredCount.count, activeCount.count, archivedCount.count, allCount.count].some((count) => typeof count !== "number")) {
+    throw new Error("The review queue is unavailable.")
+  }
+  const total = filteredCount.count ?? 0
+  const page = Math.min(options.page, Math.max(1, Math.ceil(total / pageSize)))
+  const sortColumn = emailReviewSortColumn(options.sort)
+  let query = filtered("id,source_kind,template_key,subject,body_preview,recipient_email,namespace,state,version,created_at,recipient_name,recipient_avatar_url,company_name,purpose_key,purpose_label,archived_at,archive_eligible")
+    .order(sortColumn, { ascending: options.direction === "asc", nullsFirst: false })
+  if (sortColumn !== "created_at") query = query.order("created_at", { ascending: false })
+  const { data, error } = await query.order("id", { ascending: false })
+    .range((page - 1) * pageSize, page * pageSize - 1)
   if (error) throw new Error("The review queue is unavailable.")
-  return { reviews: (data ?? []) as StaffEmailReview[], total: count ?? 0, page: safePage, pageSize, filter }
+  return {
+    ...options,
+    reviews: (data ?? []) as unknown as EmailReviewQueueRow[], total, page, pageSize,
+    activeCount: activeCount.count!, archivedCount: archivedCount.count!, allCount: allCount.count!,
+  }
 }
 
 export async function getStaffEmailReview(id: string) {
   await requireStaffAccess()
   const review = await reviewById(id)
   const db = createAdminClient()
-  const [{ data, error }, template, memberResult, replyResult] = await Promise.all([
+  const [{ data, error }, template, memberResult, replyResult, archiveEligibility] = await Promise.all([
     db.from("staff_email_review_events").select("id,event_kind,actor,occurred_at,version,detail")
-      .eq("review_id", id).order("occurred_at", { ascending: true }).limit(100),
-    review.source_kind === "e6" ? Promise.resolve({ data: { is_active: true }, error: null }) :
-      db.from("email_templates").select("is_active").eq("template_key", review.template_key).maybeSingle(),
+      .eq("review_id", id).order("occurred_at", { ascending: false }).limit(100),
+    review.source_kind === "e6" ? Promise.resolve({ data: null, error: null }) :
+      db.from("email_templates").select("template_key,subject,body_markdown,body_editable,is_active")
+        .eq("template_key", review.template_key).maybeSingle(),
     review.source_kind === "freshness"
       ? db.from("opportunity_freshness_members").select("opportunity_id,episode_key,frozen_member").eq("review_id", id).order("opportunity_id")
       : Promise.resolve({ data: [], error: null }),
@@ -68,9 +101,18 @@ export async function getStaffEmailReview(id: string) {
       ? db.from("opportunity_freshness_replies").select("id,opportunity_id,outcome,reply_at,evidence,recorded_by,recorded_at")
           .eq("review_id", id).order("reply_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
+    db.rpc("staff_email_review_archive_source_clear", { p_review_id: id }),
   ])
-  if (error || memberResult.error || replyResult.error) throw new Error("The review history is unavailable.")
-  return { review, events: data ?? [], catalogueEnabled: !template.error && template.data?.is_active === true,
+  if (error || memberResult.error || replyResult.error || archiveEligibility.error) throw new Error("The review history is unavailable.")
+  const catalogue = template.data ? {
+    ...template.data,
+    version: createHash("sha256").update(JSON.stringify([
+      template.data.subject, template.data.body_markdown, template.data.body_editable,
+    ])).digest("hex"),
+  } : null
+  return { review, events: (data ?? []).reverse(), archiveEligible: archiveEligibility.data === true,
+    catalogue,
+    catalogueEnabled: review.source_kind === "e6" || (!template.error && template.data?.is_active === true),
     asOf: new Date().toISOString(),
     members: (memberResult.data ?? []) as Array<{ opportunity_id: string; episode_key: string; frozen_member: Record<string, string | null> }>,
     replies: (replyResult.data ?? []) as Array<{ id: string; opportunity_id: string; outcome: string; reply_at: string; evidence: string; recorded_by: string; recorded_at: string }>,
@@ -135,7 +177,7 @@ export async function preparePursuitEmailReview(matchId: string, type: "e4" | "e
       opportunityId: handoff.opportunityId, matchId, upstreamId: handoff.upstreamId,
       contactLinkId: null, recipientEmail: request.to[0],
       namespace: context.opportunity.is_demo ? "DEMO" : "REAL", templateKey: "code:e6_nda_ready",
-      templateVersion: "w112-e6-v1", subject: request.subject, body: request.text, attachmentSnapshot: [],
+      templateVersion: PURSUIT_REVIEW_COPY_VERSION.e6, subject: request.subject, body: request.text, attachmentSnapshot: [],
     })
   }
   const blankPresent = context.upstream.metadata?.blank_nda_present_at_validation
@@ -149,7 +191,7 @@ export async function preparePursuitEmailReview(matchId: string, type: "e4" | "e
   return persistPreparation({ sourceKind: type, sourceOperationId: handoff.upstreamId,
     opportunityId: handoff.opportunityId, matchId, upstreamId: handoff.upstreamId,
     contactLinkId: ma.contactLinkId, recipientEmail: ma.recipientEmail,
-    namespace: ma.namespace, templateKey: "ma_nda_info_memo_request", templateVersion: `w112-${type}-v1`,
+    namespace: ma.namespace, templateKey: "ma_nda_info_memo_request", templateVersion: PURSUIT_REVIEW_COPY_VERSION[type],
     subject: rendered.subject, body: rendered.body, attachmentSnapshot: handoff.snapshot,
   })
 }
@@ -211,89 +253,70 @@ export async function cancelStaffEmailReview(id: string, version: number, reason
   return { success: true as const, message: "Draft cancelled with a retained reason." }
 }
 
-async function currentAttemptPayload(review: StaffEmailReview) {
-  if (review.namespace !== "REAL") throw new Error("DEMO drafts cannot deliver from the production review queue.")
-  let request: { from: string; to: string[]; subject: string; html: string; text: string }
-  let attachments = review.attachment_snapshot
-  if (review.source_kind === "ma" || review.source_kind === "e4" || review.source_kind === "e7") {
-    const version = await getMaReviewTemplateVersion(review.template_key, true)
-    if (review.source_kind === "ma" && version !== review.template_version) {
-      throw new Error("The catalogue template changed after preparation. This draft cannot be sent.")
-    }
-    const ma = await getMaReviewContext(review.opportunity_id, review.contact_link_id)
-    if (ma.namespace !== "REAL" || ma.recipientEmail.trim().toLowerCase() !== review.recipient_email.trim().toLowerCase()) {
-      throw new Error("The canonical opportunity recipient changed after review. No email was sent.")
-    }
-    if (review.source_kind === "ma" && review.template_key === "ma_nda_info_memo_request" && !ma.activeMatchId) {
-      throw new Error("The required active pursuit is no longer current.")
-    }
-    if (review.source_kind !== "ma") {
-      if (!review.match_id) throw new Error("Pursuit identity is missing.")
-      const { handoff, context } = await preparePursuitHandoff(createAdminClient(), review.match_id, review.source_kind)
-      const blank = context.upstream.metadata?.blank_nda_present_at_validation
-      if (review.source_kind === "e4" && typeof blank !== "boolean") throw new Error("The E4 validation no longer has its NDA request.")
-      const copy = fixedIntermediaryHandoffCopy(review.source_kind, Boolean(blank))
-      const rendered = await renderMaWorkflowContent(review.opportunity_id, copy.subject, copy.body)
-      if (handoff.upstreamId !== review.source_operation_id || rendered.subject !== review.subject || rendered.body !== review.body_text ||
-          review.template_version !== `w112-${review.source_kind}-v1` ||
-          !sameAttachmentSnapshot(handoff.snapshot, review.attachment_snapshot)) {
-        throw new Error("The handoff gate, fixed copy or signed PDFs changed after review.")
-      }
-      attachments = handoff.snapshot
-    }
-    request = buildMaReviewedRequest(review.subject, review.body_text, review.recipient_email)
-  } else {
-    if (!review.match_id) throw new Error("Pursuit identity is missing.")
-    const { handoff, context } = await preparePursuitHandoff(createAdminClient(), review.match_id, "e6")
-    const current = buildPursuitNdaReadyRequest(review.match_id, context)
-    if (handoff.upstreamId !== review.source_operation_id || review.template_key !== "code:e6_nda_ready" || review.template_version !== "w112-e6-v1" ||
-        current.to[0] !== review.recipient_email || current.subject !== review.subject || current.text !== review.body_text || context.opportunity.is_demo) {
-      throw new Error("The NDA-ready gate, recipient or governed copy changed after review.")
-    }
-    request = current
+type ArchiveTransition = "archive" | "restore"
+type ArchiveSelection = { id: string; version: number }
+
+async function changeArchiveState(input: ArchiveSelection, actor: string, transition: ArchiveTransition) {
+  requireId(input.id)
+  if (!Number.isSafeInteger(input.version) || input.version < 1) throw new Error("Refresh the exact review version.")
+  const { data, error } = await createAdminClient().rpc(
+    transition === "archive" ? "staff_email_review_archive" : "staff_email_review_restore",
+    { p_review_id: input.id, p_version: input.version, p_actor: actor },
+  )
+  if (error || !Number.isSafeInteger(data)) {
+    throw new Error("This draft changed or its delivery evidence no longer permits this action. Refresh and inspect it.")
   }
-  return { ...request, attachments }
+  return data as number
 }
 
-async function readSourceDeliveryOutcome(review: StaffEmailReview): Promise<{
-  state: "sent" | "failed" | null; providerMessageId: string | null; evidenceId: string | null
-}> {
-  const db = createAdminClient()
-  if (review.source_kind === "ma") {
-    const { data, error } = await db.from("ma_interactions")
-      .select("id,delivery_status,provider_message_id")
-      .eq("client_operation_key", review.source_operation_id)
-      .eq("opportunity_id", review.opportunity_id)
-      .eq("template_key", review.template_key)
-      .eq("recipient_email_snapshot", review.recipient_email)
-      .eq("title", review.subject)
-      .eq("body_markdown", review.body_text).maybeSingle()
-    if (error || !data) return { state: null, providerMessageId: null, evidenceId: null }
-    return { state: data.delivery_status === "sent" && data.provider_message_id ? "sent"
-      : data.delivery_status === "failed" ? "failed" : null,
-      providerMessageId: data.provider_message_id ?? null, evidenceId: data.id ?? null }
+export async function archiveStaffEmailReview(id: string, version: number) {
+  const { user } = await requireStaffAccess()
+  await changeArchiveState({ id, version }, user.id, "archive")
+  revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
+  return { success: true as const, message: "Draft put aside. No email was sent." }
+}
+
+export async function restoreStaffEmailReview(id: string, version: number) {
+  const { user } = await requireStaffAccess()
+  await changeArchiveState({ id, version }, user.id, "restore")
+  revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
+  return { success: true as const, message: "Same draft restored for review. Sending still requires current checks." }
+}
+
+export async function changeStaffEmailReviewArchiveSelection(
+  items: ArchiveSelection[], transition: ArchiveTransition,
+) {
+  const { user } = await requireStaffAccess()
+  if (!Array.isArray(items) || items.length < 1 || items.length > 25 ||
+    !["archive", "restore"].includes(transition) ||
+    items.some((item) => !item || !isUuid(item.id) || !Number.isSafeInteger(item.version) || item.version < 1) ||
+    new Set(items.map((item) => item.id)).size !== items.length) {
+    throw new Error("Choose up to 25 distinct drafts from the current page.")
   }
-  const { data, error } = await db.from("opportunity_pursuit_handoff_deliveries")
-    .select("delivery_status,provider_message_id,evidence_id")
-    .eq("upstream_evidence_id", review.source_operation_id)
-    .eq("match_id", review.match_id)
-    .eq("handoff_type", review.source_kind).maybeSingle()
-  if (error || !data) return { state: null, providerMessageId: null, evidenceId: null }
-  return { state: data.delivery_status === "sent" && data.provider_message_id && data.evidence_id ? "sent"
-    : data.delivery_status === "failed" ? "failed" : null,
-    providerMessageId: data.provider_message_id ?? null, evidenceId: data.evidence_id ?? null }
+  const outcomes: Array<{ id: string; outcome: "archived" | "restored" | "blocked" }> = []
+  for (const item of items) {
+    try {
+      await changeArchiveState(item, user.id, transition)
+      outcomes.push({ id: item.id, outcome: transition === "archive" ? "archived" : "restored" })
+    } catch {
+      outcomes.push({ id: item.id, outcome: "blocked" })
+    }
+  }
+  revalidatePath("/emails")
+  return { outcomes, message: `${outcomes.filter((item) => item.outcome !== "blocked").length} of ${items.length} drafts ${transition === "archive" ? "archived" : "restored"}. Refresh blocked items before retrying.` }
 }
 
 export async function approveAndSendStaffEmailReview(id: string, version: number) {
   const { user } = await requireStaffAccess()
   const review = await reviewById(id)
+  if (review.archived_at) throw new Error("This draft is archived. Restore and review it before any send.")
   if (review.version !== version) throw new Error("This review changed. Refresh before approving its exact version.")
   if (review.source_kind === "freshness") {
     const result = await sendOpportunityFreshnessReview(review, version, user.id)
     revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
     return result
   }
-  const payload = await currentAttemptPayload(review)
+  const { payload } = await currentStaffEmailAttempt(review)
   const db = createAdminClient()
   const { data: token, error: reserveError } = await db.rpc("staff_email_review_reserve", {
     p_review_id: id, p_version: version, p_payload: payload, p_actor: user.id,
@@ -306,53 +329,9 @@ export async function approveAndSendStaffEmailReview(id: string, version: number
       : "This review is stale, in flight or blocked by another uncertain send. Refresh its state.")
   }
 
-  // Reservation preserves the first approving actor for the older M&A RPC's
-  // same-actor replay constraint; the queue event records every actual caller.
+  // Keep the original approving actor for MA's unchanged-operation replay.
   const reserved = await reviewById(id)
-  let result: { success: boolean; message: string; operationState?: "pending" | "failed" | "sent"; eventId?: string }
-  try {
-    if (review.source_kind === "ma") {
-      result = await sendMaSourceWorkflowEmailPayload(review.opportunity_id, {
-        templateKey: review.template_key, subject: review.subject, body: review.body_text,
-        contactId: review.contact_link_id, clientOperationKey: review.source_operation_id,
-      }, undefined, { recipientEmail: review.recipient_email, templateVersion: review.template_version, actorId: reserved.approved_by! })
-    } else if (review.source_kind === "e6") {
-      result = await sendPursuitNdaReadyNotice(review.match_id!, id)
-    } else {
-      result = await sendPursuitIntermediaryHandoff(review.match_id!, review.source_kind, id)
-    }
-  } catch (error) {
-    result = { success: false, operationState: "pending", message: error instanceof Error ? error.message : "The delivery result is uncertain." }
-  }
-  const priorOutcomeUnknown = review.state === "uncertain" || review.state === "sending"
-  let source: Awaited<ReturnType<typeof readSourceDeliveryOutcome>> | null = null
-  if (result.success || priorOutcomeUnknown) {
-    try { source = await readSourceDeliveryOutcome(review) }
-    catch { /* Unreadable evidence is unknown, never a conclusive failure. */ }
-  }
-  // A later pre-I/O veto cannot erase an earlier unknown provider outcome.
-  // Only the source's finalized operation record can resolve it.
-  let state: "sent" | "uncertain" | "failed" = source?.state === "sent" ? "sent"
-    : priorOutcomeUnknown ? source?.state === "failed" ? "failed" : "uncertain"
-    : result.success || result.operationState === "pending" || result.operationState === "sent" ? "uncertain" : "failed"
-  if (result.success && source?.state !== "sent") state = "uncertain"
-  const providerMessageId = state === "sent" ? source?.providerMessageId ?? null : null
-  const evidenceId = state === "sent" ? source?.evidenceId ?? null : null
-  const outcomeMessage = state === "uncertain" && result.success
-    ? "The source reported provider acceptance, but its receipt could not be read. Do not create another send; reconcile this unchanged operation."
-    : priorOutcomeUnknown && state === "uncertain"
-      ? `${result.message} The earlier provider outcome remains uncertain; do not cancel or start another operation.`
-      : priorOutcomeUnknown && state === "failed"
-        ? "The source delivery record confirms a conclusive failure. The same reviewed message may be retried."
-    : result.message
-  const { error: finishError } = await db.rpc("staff_email_review_finish", {
-    p_review_id: id, p_token: token, p_state: state,
-    p_provider_message_id: providerMessageId, p_delivery_evidence_id: evidenceId,
-    p_error: state === "sent" ? null : outcomeMessage, p_actor: user.id,
-  })
-  if (finishError) throw new Error("Delivery may have completed, but its review outcome was not finalized. Do not start another send; reconcile this record.")
+  const result = await dispatchReservedStaffEmailReview(review, user.id, token, undefined, reserved.approved_by ?? user.id)
   revalidatePath(`/emails/review/${id}`); revalidatePath("/emails")
-  return { success: state === "sent", reviewId: id, state, message: state === "sent"
-    ? "Provider accepted the reviewed email. This does not confirm inbox delivery or reading."
-    : outcomeMessage }
+  return result
 }

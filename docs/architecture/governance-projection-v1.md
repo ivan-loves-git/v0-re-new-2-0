@@ -1,6 +1,6 @@
 # Governance projection v1
 
-> **Historical contract.** The #212 candidate retires the WAVE projection reader and manual refresh under [Decision #210](https://github.com/re-new-team/renew-governance/issues/210). Existing snapshots remain historical data for the [private archive contract](strategic-pdr-retirement-v1.md). The refresh steps below are not current delivery duties; production cutover remains held by #214.
+> **Historical contract.** The #212 candidate retires the WAVE projection reader and manual refresh under [Decision #210](https://github.com/re-new-team/renew-governance/issues/210). Existing snapshots remain historical data for the [private archive contract](strategic-pdr-retirement-v1.md). The refresh steps below are not current delivery duties; #214 owns authorized production activation and live proof.
 
 `re-new-team/renew-governance` is the authority. WAVE stores only the immutable, allowlisted snapshot created by `pnpm governance:refresh`; neither the browser nor ordinary WAVE/AI reads require a GitHub token.
 

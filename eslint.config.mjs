@@ -8,7 +8,10 @@ const localIgnores = {
     '_archive/**',
     'coverage/**',
     'node_modules/**',
-    'scripts/**',
+    'scripts/**/*',
+    '!scripts/agent-context.mjs',
+    '!scripts/agent-pr-status.mjs',
+    '!scripts/check-ma-data-model-sync.mjs',
     'scripts/e2e-tests/**',
     'tsconfig.tsbuildinfo',
   ],
@@ -50,6 +53,13 @@ const eslintConfig = [
   ...nextTypescript,
   prototypeRules,
   waveDesignBoundaries,
+  {
+    files: ['scripts/agent-context.mjs', 'scripts/agent-pr-status.mjs', 'scripts/check-ma-data-model-sync.mjs'],
+    rules: {
+      'no-undef': 'error',
+      'no-unused-vars': 'error',
+    },
+  },
 ]
 
 export default eslintConfig

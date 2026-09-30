@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { saveOpportunityMatch } from "@/lib/actions/opportunity-matches"
 import { StaffRecommendationRenewAction } from "@/components/opportunities/staff-recommendation-renew-action"
 import { StaffAssignmentEmailStatus } from "@/components/opportunities/staff-assignment-email-status"
+import { StaffFitTableScroll } from "@/components/opportunities/staff-fit-table-scroll"
 import {
   FieldError,
   FormFieldLabel,
@@ -163,7 +164,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
             No opportunity matches are connected to this repreneur yet.
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <StaffFitTableScroll className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -195,6 +196,10 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                           {getOpportunityMatchRecommendationLabel(match.platform_recommendation)}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{scoreLabel(match.platform_score)}</span>
+                        <span className="text-xs text-muted-foreground" aria-label={`Fit freshness: ${match.platform_freshness ?? "Unknown"}`}
+                          title={match.platform_freshness === "Fresh" ? "Fit reflects current recorded inputs" : match.platform_freshness === "Stale" ? "Recorded inputs changed since this Fit was scored" : "No verifiable current scoring provenance"}>
+                          {match.platform_freshness ?? "Unknown"}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -226,7 +231,7 @@ export function RepreneurOpportunityMatchesCard({ repreneurId, matches, candidat
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </StaffFitTableScroll>
         )}
       </CardContent>
     </Card>

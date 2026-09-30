@@ -16,6 +16,7 @@ import {
 } from "@/lib/observability/critical-operation"
 import { cleanupExpiredPrivateUploads } from "@/lib/private-upload-server"
 import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
+import { purgeExpiredRepreneurFeedback } from "@/lib/repreneur-feedback/cleanup"
 import { isBookingReminderDue } from "@/lib/booking-request-reminder"
 
 export const maxDuration = 60
@@ -46,6 +47,15 @@ export async function GET(request: Request) {
   try {
     const supabase = createAdminClient()
     const now = new Date()
+    // Run this independent retention task before reminder reads, which may
+    // return early on error. Never invoke the cron route for local proof: it
+    // also sends live reminder email when authorized.
+    let feedbackCleanupFailed = false
+    try {
+      await purgeExpiredRepreneurFeedback()
+    } catch {
+      feedbackCleanupFailed = true
+    }
     const cutoffTime = new Date(now.getTime() - ABANDONMENT_HOURS * 60 * 60 * 1000)
 
     // Find abandoned forms:
@@ -472,6 +482,7 @@ export async function GET(request: Request) {
     activeSubjobTrace = null
 
     const allErrors = [
+      ...(feedbackCleanupFailed ? ["repreneur_feedback_cleanup_failed"] : []),
       ...errors,
       ...interviewErrors,
       ...bookingErrors,

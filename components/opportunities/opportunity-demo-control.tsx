@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { FlaskConical } from "lucide-react"
+import { FlaskConical, LockKeyhole } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -10,6 +10,7 @@ import {
 } from "@/components/demo-classification-control-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { DemoClassificationControlState } from "@/lib/demo-classification"
 import {
   AlertDialog,
@@ -78,6 +79,39 @@ export function OpportunityDemoControl({
   const description = nextIsDemo
     ? "This moves the opportunity into DEMO-only Deal Flow, removes it from REAL discovery and production reporting, and keeps the record available to staff."
     : "This moves the opportunity into REAL Deal Flow and production reporting. If it is Active, it can become visible to REAL repreneurs under the normal lifecycle rule."
+
+  if (controlState.lockReason === "matched") {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <OpportunityClassificationBadge isDemo={isDemo} />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                aria-label="Why is the Demo / Real setting locked?"
+              >
+                <LockKeyhole aria-hidden="true" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              aria-label="Demo / Real setting locked"
+              className="w-[min(20rem,calc(100vw-2rem))] space-y-2"
+            >
+              <p className="text-sm font-semibold">Demo / Real setting locked</p>
+              <p className="text-sm text-muted-foreground">
+                This opportunity already has repreneur matches, so it cannot be switched between Demo and Real. You can still edit its details and manage its pursuits.
+              </p>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <DemoClassificationAuditLine state={controlState} />
+      </div>
+    )
+  }
 
   if (controlState.lockReason) {
     return <DemoClassificationLockNotice state={controlState} />

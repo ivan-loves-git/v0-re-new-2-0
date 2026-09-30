@@ -8,7 +8,8 @@ import { classifyResendDeliveryOutcome, fingerprintResendDeliveryRequest } from 
 
 /** One grouped provider attempt and one receipt cover the immutable members.
  * No single-opportunity M&A source send is fabricated for the siblings. */
-export async function sendOpportunityFreshnessReview(review: StaffEmailReview, version: number, actorId: string) {
+export async function sendOpportunityFreshnessReview(review: StaffEmailReview, version: number, actorId: string,
+  reservedToken?: string) {
   if (process.env.OPPORTUNITY_FRESHNESS_DISPATCH_ENABLED === "false") {
     throw new Error("Grouped freshness sending is temporarily disabled. Draft history is retained.")
   }
@@ -22,10 +23,12 @@ export async function sendOpportunityFreshnessReview(review: StaffEmailReview, v
   const request = buildMaReviewedRequest(review.subject, review.body_text, review.recipient_email)
   const fingerprint = fingerprintResendDeliveryRequest(request, `freshness:${review.id}`)
   const db = createAdminClient()
-  const { data: token, error: reserveError } = await db.rpc("opportunity_freshness_reserve", {
-    p_review_id: review.id, p_version: version, p_payload: request,
-    p_fingerprint: fingerprint, p_actor: actorId,
-  })
+  const { data: token, error: reserveError } = reservedToken
+    ? { data: reservedToken, error: null }
+    : await db.rpc("opportunity_freshness_reserve", {
+        p_review_id: review.id, p_version: version, p_payload: request,
+        p_fingerprint: fingerprint, p_actor: actorId,
+      })
   if (reserveError || typeof token !== "string") {
     throw new Error(reserveError?.message?.includes("reconciliation_required")
       ? "The unchanged 23-hour retry window expired; reconcile this group, do not send a new operation."
@@ -66,5 +69,6 @@ export async function sendOpportunityFreshnessReview(review: StaffEmailReview, v
     p_actor: actorId,
   })
   if (finishError) throw new Error("The provider may have accepted this grouped email, but its review receipt was not finalized. Reconcile this operation; do not create another send.")
-  return { success: state === "sent", reviewId: review.id, state, message }
+  return { success: state === "sent", reviewId: review.id, state,
+    blockedBeforeIo: state === "failed" && !providerStarted && !priorUnknown, message }
 }

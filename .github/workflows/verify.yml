@@ -2,11 +2,18 @@ name: Verify
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# A newer candidate replaces only its own PR run. Main and explicitly
+# dispatched runs each keep their coverage, without sharing a cancellation key.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
@@ -54,6 +61,26 @@ jobs:
       - name: Run repository verification
         run: pnpm verify
 
+      - name: "Rehearse #121 guarded Match Fit provenance and independent-session races"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-match-fit-freshness.sh'
+
+      - name: "Rehearse #136 future-only discovery digest and receipt fences"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-discovery-digest.sh'
+
       - name: Rehearse #186 private review queue and independent-session send race
         run: |
           docker run --rm \
@@ -63,6 +90,16 @@ jobs:
             --env TMPDIR=/tmp \
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-staff-email-review-queue.sh'
+
+      - name: "Rehearse #224 bounded bulk claim and source reservation races"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-staff-email-bulk.sh'
 
       - name: Rehearse #187 grouped freshness and independent-session fences
         run: |

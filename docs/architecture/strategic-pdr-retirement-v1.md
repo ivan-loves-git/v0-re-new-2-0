@@ -1,6 +1,6 @@
-# Strategic PDR retirement and private recovery — #212 candidate
+# Strategic PDR retirement and private recovery — #212 release contract
 
-**Status:** Build/review candidate under [Decision #210](https://github.com/re-new-team/renew-governance/issues/210). Production cutover, live export, database operations, merge and communication remain held by [Ticket #214](https://github.com/re-new-team/renew-governance/issues/214). Nothing in this document proves a live archive exists. The original source records, attachments and SQL migrations are retained; no deletion or retention expiry is authorized.
+**Status:** Release preparation under [Decision #210](https://github.com/re-new-team/renew-governance/issues/210) and Ivan's explicit 30 September 2026 release authority recorded on [#212](https://github.com/re-new-team/renew-governance/issues/212) and [#214](https://github.com/re-new-team/renew-governance/issues/214). #214 owns archive handling, production activation and exact live proof. Nothing in this document proves a live archive exists or that production has changed. The original source records, attachments and SQL migrations are retained; no deletion, retention expiry, request migration or outbound message is authorized.
 
 ## Application retirement map
 
@@ -24,7 +24,7 @@ The shared WAVE AI ledger/usage dashboard and its old `pdr_screening` event valu
 
 The archive has private JSONL datasets, byte files, a private reference index (`pdr:goal/<slug>`, `pdr:milestone/<slug>`, `pdr:proposal/<UUID>`, `pdr:request/<UUID>`, `pdr:work-card/<UUID>`, `W-###` and `pdr:legacy-code/<code>`), per-dataset and per-object SHA-256 digests, counts and a manifest digest. An old W-code resolves when unique; a collision with a current W-number or another legacy code is reported as ambiguous, requiring lookup by original UUID. Export checks a repeat database snapshot and then a second source read for changes; a source freeze is still required because storage can change independently. `verify` recomputes every content and byte digest, checks table/object counts and original relationships, including proposal conversion references, proves registered attachments have existing bytes and matching sizes, and checks saved checksums when present. New staff attachments may have a null source checksum, so the tool computes and stores the digest from the **downloaded bytes**. All storage objects are preserved, including unlinked legacy objects; their count is surfaced for #214 review. A missing linked object or parent blocks archive acceptance. Legacy inline attachment JSON stays in the full row even where no private attachment link exists; #214 must reconcile any such source reference and external/legacy byte before declaring real completeness.
 
-Operator commands after separate live authority (never in normal build):
+Operator commands under the explicit #214 live authority (never in normal build):
 
 ```text
 pnpm exec tsx scripts/pdr-archive.ts export --dest <private-root> --expected-project-ref iiuqcdnmxhtyispnykgf --confirm-live-export issue-214-authorized --source-frozen yes

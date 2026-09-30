@@ -49,6 +49,16 @@ beforeEach(() => {
 })
 
 describe("staff Templates preview renders real notification email HTML", () => {
+  it("previews the discovery digest with only fictional public copy and no recipient lookup", async () => {
+    const preview = await getRenderedTemplate("opportunity_discovery_digest")
+    expect(preview.subject).toBe("De nouvelles opportunités à découvrir")
+    expect(preview.bodyEditable).toBe(false)
+    expect(preview.html).toContain("Atelier industriel — exemple fictif")
+    expect(preview.html).not.toContain("source_office")
+    expect(mocks.from).not.toHaveBeenCalled()
+    expect(mocks.sendEmail).not.toHaveBeenCalled()
+  })
+
   it.each(notificationKeys)("previews %s with safe sample data and saved custom copy", async (key) => {
     const preview = await getRenderedTemplate(key)
 

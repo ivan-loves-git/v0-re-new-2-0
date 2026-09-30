@@ -29,14 +29,14 @@ function isGeographyNodeLevel(
   return value === "country" || value === "macro_zone" || value === "region"
 }
 
-function buildGeographyPaths(nodes: GeographyNodeRow[]) {
+export function buildGeographyPaths(nodes: Pick<GeographyNodeRow, "id" | "stable_key" | "parent_id">[]) {
   const nodeById = new Map(nodes.map((node) => [node.id, node]))
   const pathByNodeId = new Map<string, string[]>()
 
   for (const node of nodes) {
     const path: string[] = []
     const visited = new Set<string>()
-    let current: GeographyNodeRow | undefined = node
+    let current: Pick<GeographyNodeRow, "id" | "stable_key" | "parent_id"> | undefined = node
     let isComplete = true
 
     while (current) {

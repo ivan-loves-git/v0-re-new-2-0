@@ -55,17 +55,21 @@ interface PreviewState {
 export function EmailTemplates({ templates }: EmailTemplatesProps) {
   const [localTemplates, setLocalTemplates] = useState(templates)
   const [loading, setLoading] = useState<string | null>(null)
+  const [toggleError, setToggleError] = useState<string | null>(null)
   const [preview, setPreview] = useState<PreviewState | null>(null)
 
   const handleToggle = async (templateKey: string, enabled: boolean) => {
     setLoading(templateKey)
+    setToggleError(null)
     try {
       await toggleTemplateEnabled(templateKey as keyof typeof TEMPLATE_METADATA, enabled)
       setLocalTemplates((prev) =>
         prev.map((t) => (t.template_key === templateKey ? { ...t, is_active: enabled } : t))
       )
     } catch {
-      console.error("Failed to toggle email template")
+      setToggleError(templateKey === "opportunity_discovery_digest"
+        ? "Discovery digest was not changed. Release cutover and current staff authorization are required before activation."
+        : "Email template was not changed. Please try again.")
     } finally {
       setLoading(null)
     }
@@ -149,7 +153,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       const item = {
         key,
         ...meta,
-        isEnabled: template?.is_active ?? (meta.copyEditable === true ? false : true),
+        isEnabled: template?.is_active ?? (key === "opportunity_discovery_digest" || meta.copyEditable === true ? false : true),
       }
       if (!acc[meta.category]) {
         acc[meta.category] = []
@@ -172,6 +176,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
 
   return (
     <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+      {toggleError ? <p role="alert" className="text-sm text-destructive xl:col-span-2">{toggleError}</p> : null}
       {Object.entries(groupedTemplates).map(([category, items]) => (
         <Card key={category} className="min-w-0">
           <CardHeader>
@@ -187,6 +192,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
               {items.map((item) => (
                 <div
                   key={item.key}
+                  id={`template-${item.key}`}
                   className="flex min-w-0 flex-col justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
                 >
                   <div className="min-w-0 flex-1">

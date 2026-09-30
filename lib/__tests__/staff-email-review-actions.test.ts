@@ -20,7 +20,7 @@ vi.mock("@/lib/pursuit-handoff-copy", () => ({
   buildPursuitNdaReadyRequest: m.e6Copy, fixedIntermediaryHandoffCopy: m.fixedCopy,
 }))
 
-import { approveAndSendStaffEmailReview, editStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
+import { approveAndSendStaffEmailReview, archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, editStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview, restoreStaffEmailReview } from "@/lib/actions/staff-email-review"
 
 const reviewId = "18600000-0000-4000-8000-000000000010"
 const opportunityId = "18600000-0000-4000-8000-000000000011"
@@ -32,6 +32,7 @@ const row = {
   recipient_email: "source@example.test", namespace: "REAL", template_key: "ma_opportunity_validity_check",
   template_version: "copy-v1", subject: "Current subject", body_text: "Current body",
   attachment_snapshot: [], state: "pending", version: 1, approved_by: "staff-1",
+  archived_at: null,
 }
 
 function query(result: unknown) {
@@ -92,17 +93,53 @@ describe("staff email review public actions", () => {
 
   it("does not list staff drafts for an unauthenticated or repreneur caller", async () => {
     m.staff.mockRejectedValue(new Error("Staff access required"))
-    await expect(listStaffEmailReviews()).rejects.toThrow("Staff access")
+    await expect(listStaffEmailReviews({ page: 1, view: "active", search: "", purpose: "all", sort: "prepared", direction: "desc" })).rejects.toThrow("Staff access")
     expect(m.from).not.toHaveBeenCalled()
   })
 
   it("keeps records beyond the old latest-50 boundary navigable", async () => {
     const range = vi.fn().mockResolvedValue({ data: [{ ...row, id: "older-review" }], count: 51, error: null })
-    const listQuery = { in: () => listQuery, order: () => listQuery, range }
+    const listQuery = {
+      in: () => listQuery, is: () => listQuery, not: () => listQuery, eq: () => listQuery, ilike: () => listQuery,
+      order: () => listQuery, range,
+      then: (resolve: (value: { count: number; error: null }) => void) => Promise.resolve({ count: 51, error: null }).then(resolve),
+    }
     m.from.mockReturnValue({ select: () => listQuery })
-    const page = await listStaffEmailReviews(3, "all")
+    const page = await listStaffEmailReviews({ page: 3, view: "all", search: "", purpose: "all", sort: "prepared", direction: "desc" })
     expect(range).toHaveBeenCalledWith(50, 74)
     expect(page).toMatchObject({ total: 51, page: 3, pageSize: 25, reviews: [{ id: "older-review" }] })
+  })
+
+  it("applies active/purpose/search and stable sort before selecting the requested page", async () => {
+    const operations: string[] = []
+    m.from.mockImplementation(() => ({
+      select: (_columns: string, options: { head: boolean }) => {
+        const record = !options.head
+        const q = {
+          in: () => { if (record) operations.push("active"); return q },
+          is: () => { if (record) operations.push("unarchived"); return q },
+          not: () => q,
+          eq: (...[, value]: [string, string]) => { if (record) operations.push(`purpose:${value}`); return q },
+          ilike: (...[, value]: [string, string]) => { if (record) operations.push(`search:${value}`); return q },
+          order: (key: string, options: { ascending: boolean }) => { if (record) operations.push(`order:${key}:${options.ascending}`); return q },
+          range: (first: number, last: number) => {
+            operations.push(`range:${first}-${last}`)
+            return Promise.resolve({ data: [], error: null })
+          },
+          then: (resolve: (value: { count: number; error: null }) => void) =>
+            Promise.resolve({ count: 50, error: null }).then(resolve),
+        }
+        return q
+      },
+    }))
+    await listStaffEmailReviews({
+      page: 2, view: "active", search: "Acme", purpose: "e7_signed_copies",
+      sort: "purpose", direction: "asc",
+    })
+    expect(operations).toEqual([
+      "unarchived", "active", "purpose:e7_signed_copies", "search:%Acme%",
+      "order:purpose_sort:true", "order:created_at:false", "order:id:false", "range:25-49",
+    ])
   })
 
   it("sends grouped staff edits to the freshness RPC with its exact body parameter", async () => {
@@ -214,5 +251,44 @@ describe("staff email review public actions", () => {
     expect(result.state).toBe("uncertain")
     expect(result.message).toContain("receipt could not be read")
     expect(m.rpc).toHaveBeenCalledWith("staff_email_review_finish", expect.objectContaining({ p_state: "uncertain", p_provider_message_id: null, p_delivery_evidence_id: null }))
+  })
+
+  it("binds archive and restore to current staff and exact version without provider I/O", async () => {
+    m.rpc.mockImplementation(async (name) => ({ data: name === "staff_email_review_archive" ? 2 : name === "staff_email_review_restore" ? 3 : null, error: null }))
+    expect((await archiveStaffEmailReview(reviewId, 1)).message).toContain("No email was sent")
+    expect((await restoreStaffEmailReview(reviewId, 2)).message).toContain("Same draft")
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_archive", { p_review_id: reviewId, p_version: 1, p_actor: "staff-1" })
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_restore", { p_review_id: reviewId, p_version: 2, p_actor: "staff-1" })
+    expect(m.sourceSend).not.toHaveBeenCalled()
+  })
+
+  it("fails closed on stale archive, invalid IDs, and non-staff callers", async () => {
+    m.rpc.mockResolvedValue({ data: null, error: { message: "stale" } })
+    await expect(archiveStaffEmailReview(reviewId, 1)).rejects.toThrow("changed")
+    await expect(archiveStaffEmailReview("not-a-review", 1)).rejects.toThrow("valid review")
+    expect(m.rpc).toHaveBeenCalledTimes(1)
+    m.staff.mockRejectedValue(new Error("Staff access required"))
+    await expect(restoreStaffEmailReview(reviewId, 2)).rejects.toThrow("Staff access")
+    expect(m.sourceSend).not.toHaveBeenCalled()
+  })
+
+  it("reports mixed current-page archive outcomes without treating a stale row as success", async () => {
+    const secondId = "18600000-0000-4000-8000-000000000020"
+    m.rpc.mockImplementation(async (_name, args) => ({ data: args.p_review_id === reviewId ? 2 : null,
+      error: args.p_review_id === reviewId ? null : { message: "stale" } }))
+    const result = await changeStaffEmailReviewArchiveSelection([
+      { id: reviewId, version: 1 }, { id: secondId, version: 1 },
+    ], "archive")
+    expect(result.outcomes).toEqual([{ id: reviewId, outcome: "archived" }, { id: secondId, outcome: "blocked" }])
+    expect(result.message).toContain("1 of 2")
+    expect(m.sourceSend).not.toHaveBeenCalled()
+  })
+
+  it("rejects duplicate, oversized, or tampered page selections before RPCs", async () => {
+    await expect(changeStaffEmailReviewArchiveSelection([{ id: reviewId, version: 1 }, { id: reviewId, version: 1 }], "archive")).rejects.toThrow("distinct")
+    await expect(changeStaffEmailReviewArchiveSelection(Array.from({ length: 26 }, (_, i) => ({
+      id: `18600000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`, version: 1,
+    })), "restore")).rejects.toThrow("up to 25")
+    expect(m.rpc).not.toHaveBeenCalled()
   })
 })

@@ -83,7 +83,7 @@ export function WaveSegmentedMetric({
       className={cn("wave-segmented-metric", className)}
       {...props}
     >
-      <div className="text-xl font-semibold tabular-nums text-foreground">{value}</div>
+      <div className="font-heading text-xl font-semibold tabular-nums text-foreground">{value}</div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   )

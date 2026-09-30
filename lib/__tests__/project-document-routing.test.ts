@@ -32,7 +32,7 @@ describe("project document routing", () => {
     expect(routing).toContain(
       "other document migrations, GitHub visibility/access changes and local-only boundary changes require their own authority",
     )
-    expect(routing).toContain("Actual export and production retirement remain held by #214")
-    expect(routing).toContain("The destination is not yet provisioned or populated")
+    expect(routing).toContain("Actual export and production retirement require the #214 archive and live proof")
+    expect(routing).toContain("This file does not establish destination provisioning or archive completeness")
   })
 })

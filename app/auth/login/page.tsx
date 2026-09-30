@@ -191,30 +191,30 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-svh flex-col bg-background lg:flex-row">
-      <aside className="flex w-full flex-col justify-between bg-[#081020] px-6 py-5 text-white lg:min-h-svh lg:w-[42%] lg:px-12 lg:py-10 xl:px-16">
+      <aside className="flex w-full flex-col justify-between border-b border-sidebar-border bg-sidebar px-6 py-5 text-sidebar-foreground lg:min-h-svh lg:w-[42%] lg:border-b-0 lg:border-r lg:px-12 lg:py-10 xl:px-16">
         <div className="flex items-center gap-3">
-          <span className="relative grid size-10 place-items-center rounded-lg border border-white/10 bg-white/[0.06] text-[#7dd3c7]">
+          <span className="relative grid size-10 place-items-center rounded-lg border border-sidebar-border bg-sidebar-primary text-sidebar-primary-foreground">
             <Waves className="size-5" />
-            <span aria-hidden="true" className="absolute -bottom-px left-1/2 h-0.5 w-4 -translate-x-1/2 bg-[#58a6ff]" />
+            <span aria-hidden="true" className="absolute -bottom-px left-1/2 h-0.5 w-4 -translate-x-1/2 bg-sidebar-primary-foreground" />
           </span>
           <span className="grid leading-tight">
             <span className="text-sm font-semibold tracking-[0.14em]">WAVE</span>
-            <span className="text-[10px] text-white/50">by Re-New</span>
+            <span className="text-[10px] text-sidebar-foreground/70">by Re-New</span>
           </span>
         </div>
 
         <div className="hidden max-w-lg py-16 lg:block">
-          <p className="wave-micro-label text-[#7dd3c7]">{u("Re-New operating system")}</p>
-          <h2 className="mt-5 font-serif text-4xl font-medium leading-[1.12] tracking-[-0.035em] xl:text-5xl">
+          <p className="wave-micro-label text-sidebar-foreground/70">{u("Re-New operating system")}</p>
+          <h2 className="mt-5 font-heading text-4xl font-medium leading-[1.12] tracking-[-0.035em] xl:text-5xl">
             {u("Steer the acquisition journey with clarity.")}
           </h2>
-          <p className="mt-6 max-w-md text-base leading-7 text-white/60">
+          <p className="mt-6 max-w-md text-base leading-7 text-sidebar-foreground/70">
             {u("One trusted workspace for repreneurs, opportunities, decisions, and the work that moves them forward.")}
           </p>
         </div>
 
-        <div className="hidden items-center gap-2 text-xs text-white/65 lg:flex">
-          <span className="size-1.5 rounded-full bg-[#7dd3c7]" />
+        <div className="hidden items-center gap-2 text-xs text-sidebar-foreground/70 lg:flex">
+          <span className="size-1.5 rounded-full bg-success" />
           {u("Secure Re-New workspace")}
         </div>
       </aside>
@@ -321,9 +321,9 @@ export default function LoginPage() {
           ) : requestSubmitted ? (
             /* Confirmation Screen */
             <div className="text-center py-4">
-              <div className="size-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="size-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <svg
-                  className="size-8 text-emerald-600"
+                  className="size-8 text-success"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth={2}

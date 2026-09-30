@@ -124,7 +124,7 @@ describe("staff manual recommendation candidates", () => {
     form.set("expected_updated_at", updatedAt)
     form.set("human_notes", "Retain this existing relationship history.")
 
-    await expect(saveOpportunityMatch(form)).resolves.toEqual({ ok: true })
+    await expect(saveOpportunityMatch(form)).resolves.toMatchObject({ ok: true })
   })
 
   it("lets authenticated staff select a deal in the staff-only CRM dossier without inviting the profile", async () => {

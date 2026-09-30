@@ -110,9 +110,9 @@ Approved chart behavior:
 
 Before completing a UI change, an AI coding tool must verify:
 
-- the Impeccable post-edit hook findings were corrected rather than acknowledged and left in place
-- `pnpm design:check` returns clean; high-confidence detector findings are a release blocker
-- broad or multi-screen work received an Impeccable `polish` pass for higher-order artifacts the deterministic detector cannot see
+- installed WAVE and shadcn controls were reused; for an applicable new pattern, the ReUI MCP preview, actual API and examples were reviewed before adding a component
+- `pnpm design:check` ran the advisory WAVE visual policy, and findings relevant to the changed surface were assessed against the browser result
+- broad or multi-screen work received a manual review of hierarchy, states, responsiveness and accessibility
 - recognizable AI implementation artifacts were removed across the changed surfaces, including repeated equal-card grids, decorative accent borders, ghost cards, decorative gradients or stripes, excessive glass or rounding, and repeated tiny uppercase eyebrow scaffolding
 - implementation cleanup did not silently become product strategy: KPI, workflow, information architecture, and product-model changes require explicit product approval
 - the page uses the approved product components rather than a one-off variant

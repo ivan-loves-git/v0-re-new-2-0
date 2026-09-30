@@ -1,13 +1,13 @@
 # Re-New project status routing
 
-**Last updated:** 2026-09-27
-**Status:** #212 build candidate; existing production PDR behavior continues until the separately authorized #214 cutover.
+**Last updated:** 2026-09-30
+**Status:** #212 release preparation under Ivan's recorded authority; #214 owns archive and production proof. This routing document does not establish a completed cutover.
 **Purpose:** Keep GitHub delivery, private historical evidence and canonical product contracts in their distinct roles.
 
 ## Current authority
 
 1. The private `re-new-team/renew-governance` repository and its `Re-New Product Delivery` Project own approved product scope, Product Changes, Decisions, Tickets, Bugs, owners, dependencies, discussion, delivery status and release evidence. Scope authorized directly by Ivan may start there without a PDR record.
-2. Under Decision #210, Strategic PDR leaves the application. Original wording, screening, disposition, IDs, relationships and attachments remain historical evidence for a private archive outside WAVE. The archive is not a current intake, planning or reporting system. Actual export and production retirement remain held by #214.
+2. Under Decision #210, Strategic PDR leaves the application. Original wording, screening, disposition, IDs, relationships and attachments remain historical evidence for a private archive outside WAVE. The archive is not a current intake, planning or reporting system. Actual export and production retirement require the #214 archive and live proof.
 3. `docs/data-models/ma-advisory-data-model-v1.md` owns the released business meaning for M&A firms, offices, contacts, opportunities, interactions, confidentiality, visibility and cutover mapping.
 4. `AGENTS.md` is the repository instruction entry point. `docs/TESTING_RELEASE_PROTOCOL.md` describes how work is built and released. `CLAUDE.md` is only a compatibility pointer to `AGENTS.md`.
 
@@ -22,7 +22,7 @@ Use the smallest document class needed for the question. The repository is not a
 | Class | Approved home and use | Boundary |
 | --- | --- | --- |
 | Current product planning and delivery state | Private GitHub governance repository and Product Delivery Project | GitHub is the complete delivery authority. Do not recreate its current state in platform documents or PDR Work Cards. |
-| Historical Strategic PDR evidence | Proposed private local archive under [the #212 retirement contract](architecture/strategic-pdr-retirement-v1.md), after separate #214 approval and verification | Preserve original rows, IDs, relationships and attachment bytes. No request migration, active intake or substitute reporting page. The destination is not yet provisioned or populated. |
+| Historical Strategic PDR evidence | Private local archive under [the #212 retirement contract](architecture/strategic-pdr-retirement-v1.md), operated under the explicit #214 release authority | Preserve original rows, IDs, relationships and attachment bytes. No request migration, active intake or substitute reporting page. This file does not establish destination provisioning or archive completeness. |
 | Released product and technical contracts | `docs/data-models/`, current `docs/architecture/`, `AGENTS.md`, and `docs/TESTING_RELEASE_PROTOCOL.md` | Use the relevant contract or instruction for implementation. Update a contract only when an approved change alters the meaning it owns. |
 | Public-safe delivery communication and release reporting | The platform repository's deliberately public-safe roadmap, release evidence and technical reports | Keep only material that is safe for a public code repository and useful to operating or verifying the product. It does not authorize scope, replace a contract or become a new planning tracker. |
 | Raw internal communication, candidate or people material, sensitive founder reporting and sent-message evidence | The existing private Pushapp project repository, after a separately approved history-aware migration | Existing platform paths such as `docs/communications/`, `docs/reports/` and `docs/emails-sent/` are legacy source locations, not approval to keep sensitive content public. Retain sent evidence as sent; never rewrite it into an editable draft. |

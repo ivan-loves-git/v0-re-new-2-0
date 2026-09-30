@@ -5,6 +5,8 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { appendConfirmedWaveAiOutcome } from "@/lib/ai/next-action-outcome"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { captureOpportunityFitSource, fitSourceChanged } from "@/lib/match-source-change"
+import { refreshStoredOpportunityMatchesWithClient } from "@/lib/repreneur-match-refresh-core"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { opportunityIntakeTraceCategory as classifyOpportunityIntakeTrace } from "@/lib/utils/opportunity-intake-trace"
 import {
@@ -590,7 +592,7 @@ export async function createOpportunityIntake(
   const { data, error } = await trace.failOnThrow(
     async () => {
       const supabase = createAdminClient()
-      return supabase.rpc("create_opportunity_with_office_context_v2", {
+      return supabase.rpc("create_ordinary_discovery_opportunity", {
         p_reference: parsed.reference ?? "",
         p_source_office_id: parsed.sourceOfficeId,
         p_affiliation_ids: parsed.affiliationIds,
@@ -645,6 +647,9 @@ export async function updateOpportunityIntake(
     return parsed
   }
 
+  const fitClient = createAdminClient()
+  const fitBefore = await captureOpportunityFitSource(fitClient, opportunityId).catch(() => null)
+
   const { error } = await trace.failOnThrow(
     async () => {
       const supabase = createAdminClient()
@@ -666,6 +671,16 @@ export async function updateOpportunityIntake(
     trace.failure(opportunityIntakeTraceCategory(error))
     return normalizeDbError(error)
   }
+
+  // A historic Unknown match must not be scored by an unrelated office edit.
+  // Within a changed source, each match still checks its own consumed inputs.
+  try {
+    const fitAfter = await captureOpportunityFitSource(fitClient, opportunityId)
+    if (fitSourceChanged(fitBefore, fitAfter)) {
+      await refreshStoredOpportunityMatchesWithClient(fitClient, opportunityId, { previousOpportunity: fitBefore!.value })
+    }
+  }
+  catch { /* A successful opportunity save remains successful. */ }
 
   try {
     revalidateOpportunityIntake(opportunityId)

@@ -5,6 +5,7 @@ import { EmailTemplates } from "./components/email-templates"
 import { ManualSend } from "./components/manual-send"
 import { ReviewQueue } from "./components/review-queue"
 import { listStaffEmailReviews } from "@/lib/actions/staff-email-review"
+import { parseEmailReviewQueueOptions } from "@/lib/email/review-queue-query"
 import { getEmailStats, getEmailLogs, getTemplateSettings, getDailyEmailCounts } from "@/lib/actions/emails"
 import { connection } from "next/server"
 import { Mail } from "lucide-react"
@@ -12,19 +13,23 @@ import { SectionPageHeader } from "@/components/ui/section-page-header"
 
 
 export default async function EmailsPage({ searchParams }: {
-  searchParams: Promise<{ reviewPage?: string; reviewFilter?: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   await connection()
   const params = await searchParams
-  const reviewPage = Number(params.reviewPage ?? "1")
-  const reviewFilter = params.reviewFilter === "all" ? "all" : "active"
+  const value = (name: string) => typeof params[name] === "string" ? params[name] as string : undefined
+  const reviewOptions = parseEmailReviewQueueOptions({
+    reviewPage: value("reviewPage"), reviewFilter: value("reviewFilter"),
+    reviewSearch: value("reviewSearch"), reviewPurpose: value("reviewPurpose"),
+    reviewSort: value("reviewSort"), reviewDirection: value("reviewDirection"),
+  })
 
   const [stats, logsData, templates, dailyCounts, reviews] = await Promise.all([
     getEmailStats(30),
     getEmailLogs({ limit: 50 }),
     getTemplateSettings(),
     getDailyEmailCounts(14),
-    listStaffEmailReviews(reviewPage, reviewFilter),
+    listStaffEmailReviews(reviewOptions),
   ])
 
   return (
@@ -32,7 +37,7 @@ export default async function EmailsPage({ searchParams }: {
       <SectionPageHeader title="Email operations" subtitle="Monitor delivery, manage templates, and send workflow communications" icon={Mail} tone="neutral" />
 
 
-      <Tabs defaultValue="review" className="w-full">
+      <Tabs defaultValue={value("tab") === "templates" ? "templates" : "review"} className="w-full">
         <div className="overflow-x-auto border-b border-border/80">
           <TabsList className="w-max border-b-0">
             <TabsTrigger value="review">Review &amp; send</TabsTrigger>
@@ -43,7 +48,7 @@ export default async function EmailsPage({ searchParams }: {
           </TabsList>
         </div>
 
-        <TabsContent value="review" className="mt-6"><ReviewQueue reviews={reviews} /></TabsContent>
+        <TabsContent value="review" className="mt-6"><ReviewQueue key={`${reviews.view}:${reviews.page}:${reviews.search}:${reviews.purpose}`} queue={reviews} /></TabsContent>
 
         <TabsContent value="overview" className="mt-6">
           <EmailOverview stats={stats} dailyCounts={dailyCounts} />

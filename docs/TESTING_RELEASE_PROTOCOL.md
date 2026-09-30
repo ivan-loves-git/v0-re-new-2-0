@@ -1,91 +1,47 @@
 # How we build and release
 
-**Status:** Canonical. Replaces the tiered QA lane retired on 2026-08-24.
+Canonical application delivery procedure. [Decision #233](https://github.com/re-new-team/renew-governance/issues/233) removes duplicated procedure while retaining the existing gates.
 
-## Standing authority
+## Authority and ownership
 
-D-GOV-004 and GitHub Decision #70 establish the normal delivery authority. A
-Product Change may proceed without a fresh Ivan approval when its scope
-authority is recorded, it is `Ready` and `ready-for-agent`, and it does not
-ask for a narrower checkpoint. An implementation Ticket may be created and
-advanced during autonomous shaping; it must be linked to that Product Change,
-bounded, unblocked, and claimed under the parent's inherited authority. This
-authorises the complete routine loop below: build, test, pull request, merge,
-automatic deployment, live verification, GitHub closure, and one standard
-Slack product-update-card message after live proof.
+Read the owning Product Change, Ticket and Decisions before execution. [Decision #70](https://github.com/re-new-team/renew-governance/issues/70) owns the full autonomous Ready contract. Exact direct Codex authority can instead authorize bounded scope; record its action boundaries on the existing card. A build-only instruction stops at a reviewed candidate. Merge, production, live-data treatment and outbound actions require their corresponding authority. A narrower issue or current Codex instruction wins.
 
-The issue wording wins if it is narrower. Stop only for a new material product,
-operating, data, security, or commercial decision; a scope contradiction or
-expansion; unsafe verification or rollback; secret, credential, billing, or
-unapproved real-account access; an authoritative-source conflict; or failed
-verification or a production incident. A known risk that the approved issue
-already specifies and makes testable is not a new approval gate.
+Pause only the affected lane for a material unresolved choice or source conflict, scope expansion, unspecified confidentiality/security/legal/payment/external-side-effect or live-data treatment, unapproved destructive action, unsafe verification/rollback, a verification failure requiring a product/risk choice, unavailable authority or an invalid candidate. Routine mechanics within recorded authority proceed without another approval.
 
-## Controlled parallelism
+One supervisor owns tracker state, integration and release. Default to one writer in an isolated clean branch/worktree from a recorded current main. At most two lanes may run when each has its own branch/worktree, Ticket, non-overlapping surfaces and independent verification, with no shared route, component, action, data model, migration, package/configuration, fixture, auth/visibility, integration or production-data surface. Read-only research/review may run alongside them. Shared risky work, integration, merges, production writes and closure remain serial. Reconcile unexplained changes or a moving main before integration and rerun affected checks.
 
-There may be at most two active application-code lanes. The supervisor records
-the shared `origin/main` baseline, ownership and Ticket for each lane before
-work starts. Each lane uses a separate clean worktree and branch. The lanes
-must be proven independent: no shared route, component, server action, data
-model, migration, package/configuration file, shared test fixture,
-authorization or visibility rule, external integration, or production-data
-surface. If independence is not obvious, use one lane.
+## Implement and review
 
-Read-only research and review may run alongside coding but may not edit a
-worktree, create a branch, or advance GitHub delivery state. One supervisor
-owns GitHub state, integration, merges, releases and production proof. Merges
-and releases are always serial. If `origin/main` advances, a worktree is dirty
-without explanation, or an overlap is discovered, stop the affected lane;
-reconcile it against current `main` and rerun the affected verification before
-integration.
+1. Claim one unblocked authorized Ticket and use its existing specification. Apply the installed Matt `implement` method.
+2. Use Matt `tdd` where a behavioral seam is practical: reproduce the invariant through the highest existing public seam, then one red-green slice at a time. Run focused tests/typecheck during work; full verification once at the end. Replace brittle implementation-string assertions when touching their behavior, rather than rewriting the entire suite.
+3. Freeze the candidate SHA and read its originating specification. Apply Matt `code-review`: parallel, independent **Standards** and **Spec** axes, grounded in changed ranges and actual contracts/callers. Extra domain review is conditional on a named risk. Resolve findings in a batch; re-review changed evidence and retain valid unchanged evidence.
+4. Run `pnpm verify` (lint, typecheck, tests, build). Documentation-only edits need source/reference review. Changed UI additionally needs desktop/mobile browser proof. M&A contract changes use the conditional checker in AGENTS; design checks remain advisory.
+5. Publish a PR linked to the Ticket. Required `Verify` must pass on that exact candidate. Honor additional proof explicitly required by the governing Ticket; preserve supplemental checks as separate evidence.
 
-## The routine loop
+Behavior tests live in `lib/**/__tests__/` following the existing style. Test observable behavior rather than workflow source text, package-script strings or config JSON. Database/concurrency fixtures stay disposable; production-writing QA requires its exact authorized treatment.
 
-1. Work in an eligible isolated lane from the recorded current `origin/main`.
-2. Implement the assigned Ticket only.
-3. Run `pnpm verify` (lint, typecheck, tests, build). Fix what it reports.
-4. Open a pull request. `Verify` runs in CI and must be green.
-5. The supervisor rechecks `origin/main`, serially merges the verified PR, and
-   lets Vercel deploy that `main` commit automatically.
-6. Check the change works in production, close the completed GitHub records,
-   send the standard Slack product-update-card message, and report the result
-   in plain language.
+## CI and local limits
 
-That is the whole process. There are no risk tiers, no QA lease, no synthetic
-fixture programme, no evidence packets, and no build-number ceremony.
+`Verify` is the only branch-protection required check on main. The existing workflow verifies pull-request candidates, main pushes and explicit manual runs. Superseded candidates are cancelled within their own event/ref group. The [opening fixture #93](https://github.com/re-new-team/renew-governance/issues/93) remains scoped proof, not a universal new gate.
 
-## Tests
+An unavailable local port, external-font access or known Turbopack sandbox failure is environment evidence. Record that limit; reuse completed lint/typecheck/tests for unchanged code. Repeat a same-host build only after a relevant environment change. Full exact-candidate CI build is still required.
 
-Add or update tests in `lib/**/__tests__/` when you change behaviour. Match the
-existing style. Do not write tests that assert the contents of workflow files,
-package scripts, or config JSON — that coupling breaks on every edit and catches
-no real defect.
+Use the existing read-only `pnpm agent:pr-status --pr <number> [--json] [--repo owner/repo]` when a classified snapshot is useful. It reports exact head, independently observed live base, comparison, required and supplemental identities, and drift/unknown states. Exit 0 means complete collection, not a passing candidate; exit 1 is partial/stale/unavailable, exit 2 invalid input. Review the reported evidence rather than treating exit status as permission.
 
-## Exceptions and communication
+For waiting, use one existing required-check watcher (for example `gh pr checks <number> --required --watch`) plus the explicitly Ticket-required checks. Keep the candidate pinned; classify supplemental failures and retain their evidence instead of silently waiving them. Superseded/cancelled/missing proof is not success. Avoid rebuilding temporary all-check watchers or release finalizers; use the existing helper and structured tracker/provider APIs for the release actions.
 
-Do not add a routine approval checkpoint before merging or releasing a
-standing-authority item. Pause only for the exceptions in **Standing
-authority** or when the governing GitHub record explicitly requires a decision
-or human gate.
+## Integrate and prove
 
-The standard Slack product-update-card message is part of routine completion:
-one concise update per delivered Product Change in `#product-updates-stream`,
-containing the user-visible result and the GitHub card link. It must not
-introduce a new commitment, disclose secrets or private data, or claim success
-before live proof. The final sprint recap reproduces the exact sent message and
-link. A Slack delivery failure is recorded and reported, but never changes
-delivery truth or causes a rollback.
+The supervisor rechecks current main and the reviewed candidate, then serially merges the exact verified PR. Refresh/reverify a changed baseline before merge. Let Vercel deploy the merged main commit; establish exact merged SHA → deployment → production alias before claiming a release. Exercise changed behavior with approved personas/disposable fixtures, including permissions, persistence, side effects and cleanup where relevant. Screenshots show appearance, not release proof. For tooling-only changes, prove the published tooling/workflow behavior; there is no useful product screenshot.
 
-## Credentials
+Perform migrations, backfills, customer messages and other external effects only under their separately recorded treatment. If live proof fails, leave affected delivery in Review and record the failure; resolve routine defects within scope, escalating only a product/risk choice. A scoped code revert is the normal rollback; record additional data treatment when relevant.
 
-Secrets load only from the approved local source, the GitHub environment, or
-provider project settings. Never put a secret value or bearer URL in a tracked
-file, commit, pull request, log, screenshot, or chat. Do not stop at a login
-wall before checking the approved secret source, and do not ask Ivan to paste
-credentials into a conversation.
+Close a Ticket after its accepted scope is proven. Close its parent only after the parent's distinct outcome is complete; a child's copied summary or passing checks cannot close a factual pilot/calibration gate. The [routing adapter](https://github.com/re-new-team/renew-governance/blob/main/docs/agents/renew-direct-calls.md#keep-one-readable-delivery-record) owns readable card summaries, screenshots and pending closeout. Remove only clean task-owned worktrees and preserve unrelated state.
 
-## Reporting
+## Communication and follow-up
 
-Tell Ivan what users can now do, whether it is shipped or blocked, and the one
-decision you need from him if there is one. Keep PR numbers, SHAs and CI links
-out of it unless he asks.
+The routing adapter owns Slack timing and receipts: after live proof and parent closure, one concise Product Change update only under #70 standing communication authority without a narrower exclusion, or exact explicit send authority. A failed/uncertain post stays a discoverable closeout action; it neither changes product truth nor permits a blind resend. Founder summaries are prepared only when Ivan requests them. Keep private quota readings and account identity in Codex.
+
+During the [#232 comparison](https://github.com/re-new-team/renew-governance/issues/232), use the next three similar eligible cards' existing claim/start, review/PR, successful CI and exact-live timestamps. Record phase elapsed times and evidenced waiting causes on #232. Separate simple UI/bug work from email/database changes, preserve unknowns and overlapping CI runs, and make no causal speed/cost claim from unmatched work. No new instrumentation or reporting system is required.
+
+Local intake fixture mode: `NEXT_PUBLIC_SHOW_TEST_AUTOFILL=true` in `.env.local` plus server restart shows dummy-data Autofill on `/intake-v2`; it defaults false and remains off in production. Credentials follow AGENTS' confidentiality boundary.

@@ -67,25 +67,15 @@ async function verifyStaffReconciliationExport(page: Page) {
   for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
     await page.goto("/opportunities");
+    // Finish the App Router redirect before interacting with the export surface.
+    await expect(page).toHaveURL(/\/opportunities\/groups$/);
     const exportButton = page.getByRole("button", { name: "Export staff CSV", exact: true });
     await expect(exportButton).toBeVisible();
     await expect(exportButton).toHaveAttribute("title", /Internal staff export for Excel/);
-    const downloadPromise = page.waitForEvent("download");
-    await exportButton.click();
-    const download = await downloadPromise;
-    expect(download.suggestedFilename()).toBe("wave-opportunities-internal.csv");
-    const stream = await download.createReadStream();
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-    const csv = Buffer.concat(chunks).toString("utf8");
-    expect(csv.charCodeAt(0)).toBe(0xfeff);
-    expect(csv.split("\n")[0]).toContain("internal_notes,opportunity_id,public_title");
-    expect(csv).toContain(fixture.ids.realOpportunity);
-    expect(csv).toContain("QA OPENING REAL — SYNTHETIC");
 
     // #137 / Decision #138: opening or cancelling never fetches the full
-    // confidential snapshot. Reuse this staff session and synthetic fixture.
-    await expect(exportButton).toBeEnabled();
+    // confidential snapshot. This real open/cancel interaction also proves the
+    // current route is interactive before requesting either confidential CSV.
     let fullExportRequests = 0;
     let fullExportDownloads = 0;
     const countRequest = (request: import("@playwright/test").Request) => {
@@ -107,6 +97,30 @@ async function verifyStaffReconciliationExport(page: Page) {
     expect(fullExportRequests).toBe(0);
     expect(fullExportDownloads).toBe(0);
     await expect(fullButton).toBeFocused();
+
+    page.off("request", countRequest);
+    page.off("download", countDownload);
+    const [exportRequest, download] = await Promise.all([
+      page.waitForRequest((request) => request.method() === "POST"
+        && new URL(request.url()).pathname === "/opportunities/groups"
+        && Boolean(request.headers()["next-action"])),
+      page.waitForEvent("download"),
+      exportButton.click(),
+    ]);
+    expect((await exportRequest.response())?.ok()).toBe(true);
+    expect(download.suggestedFilename()).toBe("wave-opportunities-internal.csv");
+    const stream = await download.createReadStream();
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+    const csv = Buffer.concat(chunks).toString("utf8");
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    expect(csv.split("\n")[0]).toContain("internal_notes,opportunity_id,public_title");
+    expect(csv).toContain(fixture.ids.realOpportunity);
+    expect(csv).toContain("QA OPENING REAL — SYNTHETIC");
+    await expect(exportButton).toBeEnabled();
+    page.on("request", countRequest);
+    page.on("download", countDownload);
+
     await fullButton.click();
     await page.keyboard.press("Escape");
     await expect(fullDialog).toHaveCount(0);

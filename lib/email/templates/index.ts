@@ -15,6 +15,7 @@ export { InterviewReminderEmail } from "./interview-reminder"
 export { BookingReminderEmail } from "./booking-reminder"
 export { MaIntermediaryEmail } from "./ma-intermediary"
 export { MemoFeedbackReminderEmail } from "./memo-feedback-reminder"
+export { DiscoveryDigestEmail } from "./discovery-digest"
 
 import type { EmailTemplateKey } from "@/lib/types/email"
 
@@ -125,6 +126,14 @@ export const TEMPLATE_METADATA: Record<
     copyEditable?: boolean
   }
 > = {
+  opportunity_discovery_digest: {
+    name: "New public opportunities",
+    description: "Future-only three-day discovery summary. Explicit marketing consent, separate opt-out, exact public-copy approval, and staff activation required. Inactive by default.",
+    category: "status",
+    audience: "rep",
+    manualSend: false,
+    copyEditable: false,
+  },
   recommendation_response_reminder: {
     name: "Recommendation response reminder",
     description: "One client reminder after 48 elapsed hours in the exact open 72-hour cycle. Inactive by default.",

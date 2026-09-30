@@ -24,6 +24,7 @@ export type EmailTemplateKey =
   | "interview_reminder"
   | "booking_reminder"
   | "opportunity_recommendation_assignment"
+  | "opportunity_discovery_digest"
   | "interest_outcome_validated"
   | "interest_outcome_rejected"
   | "proposed_opportunity_response_staff"

@@ -4,4 +4,4 @@
 
 There is no routine per-delivery update, PDR projection refresh, version increment or founder-report obligation attached to this page. Ivan decides whether a separate editorial timeline update is useful. When he asks for one, Codex edits `components/guide/development-roadmap.tsx` and, only if a new timeline entry was actually added, `lib/data/roadmap-status.ts` so the existing notification dot reflects that edit. Use public-safe, founder-readable wording and verify the factual claim against GitHub and release evidence. A timeline edit never changes GitHub status or authorizes distribution.
 
-The protected Strategic PDR page is retired by the #212 candidate. [The retirement contract](architecture/strategic-pdr-retirement-v1.md) records the archive and recovery boundary; production activation remains held by #214.
+The protected Strategic PDR page is retired by the #212 candidate. [The retirement contract](architecture/strategic-pdr-retirement-v1.md) records the archive and recovery boundary; #214 owns authorized production activation and live archive proof.

@@ -29,6 +29,7 @@ import { RecommendationAssignmentEmailV1, RECOMMENDATION_ASSIGNMENT_SUBJECT_V1 }
 import { InterestNotificationEmail } from "@/lib/email/templates/interest-notification"
 import { MemoFeedbackReminderEmail } from "@/lib/email/templates/memo-feedback-reminder"
 import { RecommendationCycleNotificationEmail } from "@/lib/email/templates/recommendation-cycle-notification"
+import { DiscoveryDigestEmail } from "@/lib/email/templates/discovery-digest"
 
 const MA_SAMPLE_VARIABLES = {
   firstName: "Camille",
@@ -215,8 +216,15 @@ export async function getTemplateSettings() {
  * Toggle template enabled/disabled
  */
 export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabled: boolean) {
-  await requireStaffAccess()
+  const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
+
+  if (templateKey === "opportunity_discovery_digest") {
+    const { error } = await supabase.rpc("d136_toggle", { p_actor: user.id, p_enabled: enabled })
+    if (error) throw new Error(error.message)
+    revalidatePath("/emails")
+    return
+  }
 
   const { data, error } = await supabase
     .from("email_templates")
@@ -267,6 +275,17 @@ export async function getRenderedTemplate(
       firstName: "Sophie", publicTitle: "Opportunité de reprise — exemple fictif", teaser: "Un aperçu public approuvé de cette opportunité fictive.",
     }))
     return { subject: RECOMMENDATION_ASSIGNMENT_SUBJECT_V1, html, bodyMarkdown: null, bodyEditable: false }
+  }
+  if (templateKey === "opportunity_discovery_digest") {
+    const subject = "De nouvelles opportunités à découvrir"
+    const html = await render(DiscoveryDigestEmail({
+      firstName: "Sophie",
+      items: [
+        { publicTitle: "Atelier industriel — exemple fictif", teaserSummary: "Une activité régionale présentée avec un résumé public fictif." },
+        { publicTitle: "Distribution spécialisée — exemple fictif", teaserSummary: "Un second exemple public, sans détails confidentiels ni données de vendeur." },
+      ],
+    }))
+    return { subject, html, bodyMarkdown: null, bodyEditable: false }
   }
   const supabase = createAdminClient()
   const { data: row } = await supabase

@@ -1,6 +1,6 @@
 # Commit Style
 
-GitHub is the permanent source for approved product scope, decisions, delivery status and implementation history. Decision #210 retires WAVE Strategic PDR intake, screening and reporting; original history is preserved privately outside the application under the #212/#214 archive and cutover boundary. Canonical contracts own durable business rules. A commit message should let a non-developer reading it months later understand what changed and why.
+GitHub is the permanent source for approved product scope, decisions, delivery status and implementation history. Historical PDR references remain provenance under Decision #210. Canonical contracts own durable business rules. A commit message should let a non-developer reading it months later understand what changed and why.
 
 ## When to commit
 
@@ -34,8 +34,7 @@ not restate them.
 - First line under 72 characters.
 - Include enough context that someone reading later understands WHY, not just WHAT.
 - NO "Generated with Claude Code" attribution.
-- Use `/commit` command for the guided process.
-- Push the current development branch promptly after committing.
+- Publish the development branch under the governing Ticket’s authority. A branch or review candidate is not permission to merge or release.
 - Do not merge to `main` before `Verify` is green.
 - The displayed build number lives in `lib/release-build.mjs`. Nothing validates it; bump it by hand if you want the number in the UI to move.
 
