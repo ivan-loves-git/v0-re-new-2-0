@@ -40,7 +40,7 @@ try {
   assert.equal(filtered.opportunities[0].annualRevenueBand, "EUR 3–5m");
   assert.equal(filtered.opportunities[0].fictional, true);
   assert.equal(filtered.buyerAccess.accessUrl, "https://app.re-new.team/auth/login");
-  assert.match(filtered.buyerAccess.instructions, /Request access, then choose Repreneur/);
+  assert.match(filtered.buyerAccess.instructions, /Request it to open Request access, then choose Repreneur/);
   assert.deepEqual(Object.keys(filtered.opportunities[0]).sort(), ["annualRevenueBand", "broadGeography", "demoId", "description", "fictional", "sector", "title"]);
 
   const broad = await call(4, "search_public_opportunities", { sector: "logistics" });

@@ -104,6 +104,6 @@ export function buyerAccessHandoff() {
   return {
     fictional: true,
     accessUrl: ACCESS_URL,
-    instructions: "Open the link, choose Request access, then choose Repreneur (buyer). This is a generic access path: no teaser identity or context is passed, no form is submitted, and access neither reserves a business nor grants protected opportunity access.",
+    instructions: "Open the link, click Request it to open Request access, then choose Repreneur (buyer). This is a generic access path: no teaser identity or context is passed, no form is submitted, and access neither reserves a business nor grants protected opportunity access.",
   };
 }
