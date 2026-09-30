@@ -3,8 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 import type { StaffEmailReview } from "@/lib/actions/staff-email-review"
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
-  usePathname: () => "/emails" }))
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+  usePathname: () => "/emails",
+}))
 vi.mock("@/lib/actions/staff-email-review", () => ({
   approveAndSendStaffEmailReview: vi.fn(),
   cancelStaffEmailReview: vi.fn(),
@@ -53,18 +55,27 @@ const review: StaffEmailReview = {
 
 const initial: Parameters<typeof ReviewDetail>[0]["initial"] = {
   review,
-  events: [{
-    id: "18600000-0000-4000-8000-000000000006",
-    event_kind: "prepared",
-    actor: "staff-id",
-    occurred_at: "2026-09-24T17:48:21.000Z",
-    version: 1,
-    detail: {},
-  }],
+  display: { recipient: null, opportunity: null },
+  events: [
+    {
+      id: "18600000-0000-4000-8000-000000000006",
+      event_kind: "prepared",
+      actor: "staff-id",
+      occurred_at: "2026-09-24T17:48:21.000Z",
+      version: 1,
+      detail: {},
+    },
+  ],
   catalogueEnabled: true,
   archiveEligible: false,
-  catalogue: { template_key: review.template_key, subject: "Synthetic subject", body_markdown: "Synthetic body",
-    body_editable: true, is_active: true, version: "test-version" },
+  catalogue: {
+    template_key: review.template_key,
+    subject: "Synthetic subject",
+    body_markdown: "Synthetic body",
+    body_editable: true,
+    is_active: true,
+    version: "test-version",
+  },
   asOf: "2026-09-24T19:00:00.000Z",
   members: [],
   replies: [],
@@ -92,20 +103,46 @@ describe("staff email review timestamps", () => {
   })
 
   it("shows the same Paris preparation time in the queue on server and browser", () => {
-    const element = createElement(ReviewQueue, { queue: {
-      reviews: [{ id: review.id, source_kind: review.source_kind, template_key: review.template_key,
-        subject: review.subject, body_preview: review.body_text, recipient_email: review.recipient_email,
-        namespace: review.namespace, state: review.state, version: review.version, created_at: review.created_at,
-        recipient_name: "Synthetic Source", recipient_avatar_url: null, company_name: "Example Firm",
-        purpose_key: "ma_process_follow_up", purpose_label: "Process follow-up",
-        archived_at: null, archive_eligible: false }],
-      total: 1, page: 1, pageSize: 25, activeCount: 0, archivedCount: 0, allCount: 1,
-      view: "all", search: "", purpose: "all", sort: "prepared", direction: "desc",
-    } })
+    const element = createElement(ReviewQueue, {
+      queue: {
+        reviews: [
+          {
+            id: review.id,
+            source_kind: review.source_kind,
+            template_key: review.template_key,
+            subject: review.subject,
+            body_preview: review.body_text,
+            recipient_email: review.recipient_email,
+            namespace: review.namespace,
+            state: review.state,
+            version: review.version,
+            created_at: review.created_at,
+            recipient_name: "Synthetic Source",
+            recipient_avatar_url: null,
+            company_name: "Example Firm",
+            purpose_key: "ma_process_follow_up",
+            purpose_label: "Process follow-up",
+            archived_at: null,
+            archive_eligible: false,
+          },
+        ],
+        total: 1,
+        page: 1,
+        pageSize: 25,
+        activeCount: 0,
+        archivedCount: 0,
+        allCount: 1,
+        view: "all",
+        search: "",
+        purpose: "all",
+        sort: "prepared",
+        direction: "desc",
+      },
+    })
     const serverHtml = renderIn("UTC", element)
     const browserHtml = renderIn("Europe/Paris", element)
 
-    expect(serverHtml).toContain("24 Sept 7 PM")
+    expect(serverHtml).toContain("24 Sep 7PM")
     expect(serverHtml).toContain('title="24 September 2026 at 7:48:21 pm"')
     expect(serverHtml).toBe(browserHtml)
   })
@@ -115,31 +152,80 @@ describe("grouped freshness response coverage", () => {
   const member = (opportunityId: string) => ({
     opportunity_id: opportunityId,
     episode_key: "initial",
-    frozen_member: { reference: opportunityId, title: opportunityId, firm_name: "Atlas", office_name: "Paris",
-      basis: "recorded_source_day", date_added: "2026-01-01", source_office_id: "office",
-      affiliation_id: "affiliation", contact_link_id: "link" },
+    frozen_member: {
+      reference: opportunityId,
+      title: opportunityId,
+      firm_name: "Atlas",
+      office_name: "Paris",
+      basis: "recorded_source_day",
+      date_added: "2026-01-01",
+      source_office_id: "office",
+      affiliation_id: "affiliation",
+      contact_link_id: "link",
+    },
   })
-  const freshnessReview = { ...review, source_kind: "freshness" as const, outcome_at: "2026-09-24T18:03:00.000Z" }
+  const freshnessReview = {
+    ...review,
+    source_kind: "freshness" as const,
+    outcome_at: "2026-09-24T18:03:00.000Z",
+  }
   const members = [member("opportunity-a"), member("opportunity-b")]
-  const reply = (opportunityId: string) => ({ id: `reply-${opportunityId}`, opportunity_id: opportunityId,
-    outcome: "confirmed_open", reply_at: "2026-09-24T18:30:00.000Z", evidence: "Source replied", recorded_by: "staff-id",
-    recorded_at: "2026-09-24T18:31:00.000Z" })
+  const reply = (opportunityId: string) => ({
+    id: `reply-${opportunityId}`,
+    opportunity_id: opportunityId,
+    outcome: "confirmed_open",
+    reply_at: "2026-09-24T18:30:00.000Z",
+    evidence: "Source replied",
+    recorded_by: "staff-id",
+    recorded_at: "2026-09-24T18:31:00.000Z",
+  })
 
   it("shows no responses as awaiting the whole group", () => {
-    const html = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members, replies: [] } }))
+    const html = renderToStaticMarkup(
+      createElement(ReviewDetail, {
+        initial: { ...initial, review: freshnessReview, members, replies: [] },
+      }),
+    )
     expect(html).toContain("Awaiting source response")
     expect(html).toContain("0 of 2 members answered")
   })
 
   it("shows partial exact-member coverage", () => {
-    const html = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members, replies: [reply("opportunity-a")] } }))
+    const html = renderToStaticMarkup(
+      createElement(ReviewDetail, {
+        initial: {
+          ...initial,
+          review: freshnessReview,
+          members,
+          replies: [reply("opportunity-a")],
+        },
+      }),
+    )
     expect(html).toContain("Source response partially recorded")
     expect(html).toContain("1 of 2 members answered")
   })
 
   it("stops claiming a response is awaited when every member replied, including a single-member group", () => {
-    const two = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members, replies: [reply("opportunity-a"), reply("opportunity-b")] } }))
-    const one = renderToStaticMarkup(createElement(ReviewDetail, { initial: { ...initial, review: freshnessReview, members: members.slice(0, 1), replies: [reply("opportunity-a")] } }))
+    const two = renderToStaticMarkup(
+      createElement(ReviewDetail, {
+        initial: {
+          ...initial,
+          review: freshnessReview,
+          members,
+          replies: [reply("opportunity-a"), reply("opportunity-b")],
+        },
+      }),
+    )
+    const one = renderToStaticMarkup(
+      createElement(ReviewDetail, {
+        initial: {
+          ...initial,
+          review: freshnessReview,
+          members: members.slice(0, 1),
+          replies: [reply("opportunity-a")],
+        },
+      }),
+    )
     expect(two).toContain("All source responses recorded")
     expect(two).toContain("2 of 2 members answered")
     expect(one).toContain("1 of 1 member answered")
@@ -150,10 +236,19 @@ describe("grouped freshness response coverage", () => {
 
 describe("retained and current template provenance", () => {
   it("keeps reviewed words distinct from a changed current catalogue source", () => {
-    const html = renderToStaticMarkup(createElement(ReviewDetail, {
-      initial: { ...initial, catalogue: { ...initial.catalogue!, version: "current-version",
-        subject: "New catalogue subject", body_markdown: "New catalogue body" } },
-    }))
+    const html = renderToStaticMarkup(
+      createElement(ReviewDetail, {
+        initial: {
+          ...initial,
+          catalogue: {
+            ...initial.catalogue!,
+            version: "current-version",
+            subject: "New catalogue subject",
+            body_markdown: "New catalogue body",
+          },
+        },
+      }),
+    )
     expect(html).toContain("Template changed since preparation")
     expect(html).toContain("test-version")
     expect(html).toContain("current-version")
@@ -162,11 +257,22 @@ describe("retained and current template provenance", () => {
   })
 
   it("identifies E6 as code-owned without fabricating a catalogue detail", () => {
-    const html = renderToStaticMarkup(createElement(ReviewDetail, {
-      initial: { ...initial, review: { ...review, source_kind: "e6",
-        template_key: "code:e6_nda_ready", template_version: "w112-e6-v1", state: "pending" },
-        catalogue: null, catalogueEnabled: true },
-    }))
+    const html = renderToStaticMarkup(
+      createElement(ReviewDetail, {
+        initial: {
+          ...initial,
+          review: {
+            ...review,
+            source_kind: "e6",
+            template_key: "code:e6_nda_ready",
+            template_version: "w112-e6-v1",
+            state: "pending",
+          },
+          catalogue: null,
+          catalogueEnabled: true,
+        },
+      }),
+    )
     expect(html).toContain("no editable catalogue template")
     expect(html).toContain("w112-e6-v1")
     expect(html).not.toContain("Open code:e6_nda_ready")

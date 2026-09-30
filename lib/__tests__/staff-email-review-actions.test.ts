@@ -20,7 +20,7 @@ vi.mock("@/lib/pursuit-handoff-copy", () => ({
   buildPursuitNdaReadyRequest: m.e6Copy, fixedIntermediaryHandoffCopy: m.fixedCopy,
 }))
 
-import { approveAndSendStaffEmailReview, archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, editStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview, restoreStaffEmailReview } from "@/lib/actions/staff-email-review"
+import { approveAndSendStaffEmailReview, archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, editStaffEmailReview, getStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview, restoreStaffEmailReview } from "@/lib/actions/staff-email-review"
 
 const reviewId = "18600000-0000-4000-8000-000000000010"
 const opportunityId = "18600000-0000-4000-8000-000000000011"
@@ -95,6 +95,31 @@ describe("staff email review public actions", () => {
     m.staff.mockRejectedValue(new Error("Staff access required"))
     await expect(listStaffEmailReviews({ page: 1, view: "active", search: "", purpose: "all", sort: "prepared", direction: "desc" })).rejects.toThrow("Staff access")
     expect(m.from).not.toHaveBeenCalled()
+  })
+
+  it("denies detail metadata before service access for a non-staff caller", async () => {
+    m.staff.mockRejectedValue(new Error("Staff access required"))
+    await expect(getStaffEmailReview(reviewId)).rejects.toThrow("Staff access")
+    expect(m.from).not.toHaveBeenCalled()
+    expect(m.rpc).not.toHaveBeenCalled()
+  })
+
+  it("returns only display metadata owned by the exact review recipient and opportunity", async () => {
+    const recipient = { recipient_email: row.recipient_email, recipient_name: "Fictional Source", company_name: "Fictional Firm", purpose_label: "Validity check" }
+    const opportunity = { id: opportunityId, reference: "QA-222", public_title: "Fictional opportunity" }
+    m.from.mockImplementation((table) => {
+      const data = table === "staff_email_reviews" ? row : table === "staff_email_review_queue" ? recipient : table === "opportunities" ? opportunity : null
+      const q = { select: () => q, eq: () => q, order: () => q,
+        limit: () => Promise.resolve({ data: [], error: null }),
+        maybeSingle: () => Promise.resolve({ data, error: null }) }
+      return q
+    })
+    m.rpc.mockResolvedValue({ data: true, error: null })
+    expect((await getStaffEmailReview(reviewId)).display).toEqual({ recipient, opportunity })
+    recipient.recipient_email = "another@example.invalid"
+    opportunity.id = "another-opportunity"
+    expect((await getStaffEmailReview(reviewId)).display).toEqual({ recipient: null, opportunity: null })
+    expect(m.sourceSend).not.toHaveBeenCalled()
   })
 
   it("keeps records beyond the old latest-50 boundary navigable", async () => {

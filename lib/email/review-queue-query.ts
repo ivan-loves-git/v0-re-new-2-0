@@ -71,7 +71,7 @@ export function parseEmailReviewQueueOptions(input: Record<string, string | unde
     purpose,
     sort,
     direction: input.reviewDirection === "asc" || input.reviewDirection === "desc"
-      ? input.reviewDirection : sort === "prepared" ? "desc" : "asc",
+      ? input.reviewDirection : "asc",
   }
 }
 
