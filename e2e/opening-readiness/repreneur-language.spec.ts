@@ -257,9 +257,10 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     await expect(previewLanguageGroup.locator("xpath=../..")).toHaveAttribute("lang", "en")
     await expect(previewLanguageGroup.getByRole("button", { name: "Français", exact: true })).toHaveAttribute("aria-pressed", "true")
     await expect(staffPage.locator("html")).toHaveAttribute("lang", "en")
-    await expect(staffPage.getByRole("tab", { name: "Deals", exact: true })).toBeVisible()
-    const previewDeals = staffPage.getByRole("tabpanel", { name: "Deals", exact: true }).filter({ visible: true })
+    await expect(staffPage.getByRole("tab", { name: "Opportunités", exact: true })).toHaveAttribute("aria-selected", "true")
+    const previewDeals = staffPage.getByRole("tabpanel", { name: "Opportunités", exact: true }).filter({ visible: true })
     await expect(previewDeals).toHaveCount(1)
+    await expect(previewDeals.getByRole("heading", { name: "Vos opportunités", exact: true })).toBeVisible()
     await expect(previewDeals.getByText("Recommandées → En cours → Opportunités disponibles → Écartées", { exact: true })).toBeVisible()
     const previewCard = previewDeals.locator('[data-slot="card"]')
       .filter({ has: staffPage.getByText(originalTeaser, { exact: true }) })
@@ -275,7 +276,8 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       await staffPage.setViewportSize(viewport)
       await expect(staffPage.getByRole("heading", { name: "Portal preview", exact: true })).toBeVisible()
-      await expect(staffPage.getByRole("tab", { name: "Deals", exact: true })).toBeVisible()
+      await expect(staffPage.getByRole("tab", { name: "Opportunités", exact: true })).toBeVisible()
+      await expect(previewDeals.getByRole("heading", { name: "Vos opportunités", exact: true })).toBeVisible()
     }
 
     // The selected staff route must show the same current workspace without
