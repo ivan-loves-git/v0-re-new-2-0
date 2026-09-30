@@ -64,6 +64,16 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-match-fit-freshness.sh'
 
+      - name: "Rehearse #136 future-only discovery digest and receipt fences"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-discovery-digest.sh'
+
       - name: Rehearse #186 private review queue and independent-session send race
         run: |
           docker run --rm \

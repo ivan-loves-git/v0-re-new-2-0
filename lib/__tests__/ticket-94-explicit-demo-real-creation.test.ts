@@ -12,7 +12,9 @@ describe("Ticket #94 explicit REAL/DEMO creation boundary", () => {
     expect(migration).toContain("opportunity_demo_classification_required")
     expect(migration).toContain("opportunity_demo_classification_create_only")
     expect(migration).toContain("p_opportunity_fields - 'is_demo'")
-    expect(source("lib/actions/opportunity-intake.ts")).toContain('rpc("create_opportunity_with_office_context_v2"')
+    expect(source("lib/actions/opportunity-intake.ts")).toContain('rpc("create_ordinary_discovery_opportunity"')
+    expect(source("supabase/migrations/20260930040401_future_discovery_digest.sql"))
+      .toContain("public.create_opportunity_with_office_context_v2(p_reference")
   })
 
   it("persists the selected namespace and its initial actor/time before commit", () => {

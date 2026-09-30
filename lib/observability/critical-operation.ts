@@ -23,6 +23,7 @@ export type CriticalOperationName =
   | "cron.interest_notifications"
   | "cron.memo_feedback_reminders"
   | "cron.recommendation_cycles"
+  | "cron.discovery_digest"
   | "cron.interview_reminders"
   | "cron.booking_reminders"
   | "cron.stale_leads"

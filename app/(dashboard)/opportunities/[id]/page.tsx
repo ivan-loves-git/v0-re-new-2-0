@@ -9,6 +9,7 @@ import { getMaOpportunityWorkflow } from "@/lib/actions/ma-workflows"
 import { listOpportunityDocuments, listPendingUnusedRetainedDocumentCleanups } from "@/lib/actions/opportunity-documents"
 import { listOpportunityNdaArtifacts } from "@/lib/actions/opportunity-nda-artifacts"
 import { readStaffCurrentPursuit } from "@/lib/data/current-pursuit"
+import { getDiscoveryDigestCopyState } from "@/lib/actions/discovery-digest"
 import {
   listOpportunityMatchCandidates,
   listOpportunityMatches,
@@ -75,6 +76,7 @@ async function OpportunityDetailContent({
     ndaArtifacts,
     pendingCleanups,
     demoClassificationControl,
+    discoveryDigestCopyState,
   ] = await Promise.all([
     listOpportunityDocuments(id),
     listOpportunityMatches(id),
@@ -90,6 +92,7 @@ async function OpportunityDetailContent({
       opportunity.demo_classification_updated_at,
       opportunity.demo_classification_updated_by,
     ),
+    getDiscoveryDigestCopyState(id),
   ])
 
   const geographyMandatesEnabled = isFranceGeographyMandatesEnabled()
@@ -146,6 +149,7 @@ async function OpportunityDetailContent({
 
       <OpportunityDetail
         opportunity={opportunity}
+        discoveryDigestCopyState={discoveryDigestCopyState}
         documents={documents}
         pendingCleanups={pendingCleanups}
         ndaArtifacts={ndaArtifacts}

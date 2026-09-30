@@ -111,6 +111,10 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "lib/actions/booking-request-reminders.ts": boundary("staff", ["recordBookingRequestSent", "getLatestBookingRequestEvent"]),
   "lib/actions/recommendation-assignment-notifications.ts": boundary("staff", ["retryRecommendationAssignmentEmail"]),
   "lib/actions/client-pursuit-portfolio.ts": boundary("staff", ["listClientPursuitPortfolio"]),
+  "lib/actions/discovery-digest.ts": boundary("staff", ["getMyDiscoveryDigestOptOut", "optOutOfMyDiscoveryDigest", "getDiscoveryDigestCopyState", "approveDiscoveryDigestCopy"], {
+    getMyDiscoveryDigestOptOut: "portal_owner",
+    optOutOfMyDiscoveryDigest: "portal_owner",
+  }),
   "lib/actions/emails.ts": boundary("staff", ["getEmailStats", "getEmailLogs", "getTemplateSettings", "toggleTemplateEnabled", "updateTemplateSettings", "getRenderedTemplate", "getRepreneursForManualSend", "sendManualEmail", "getDailyEmailCounts"]),
   "lib/actions/evaluation-criteria.ts": boundary("staff", ["updateCriterion", "updateQuestionLabel", "updateMultipleCriteria"]),
   "lib/actions/external-pursuit-attachments.ts": boundary("portal_owner", ["getExternalPursuitAttachments", "getExternalPursuitAttachmentMap", "uploadExternalPursuitAttachment", "deleteExternalPursuitAttachment", "fulfillExternalPursuitDeletionWithAttachments"], { fulfillExternalPursuitDeletionWithAttachments: "staff" }),
