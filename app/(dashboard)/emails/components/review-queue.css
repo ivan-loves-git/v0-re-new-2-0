@@ -69,3 +69,12 @@
 .email-review-scope [data-slot=button][data-variant=default]:hover {background:color-mix(in srgb,var(--primary) 80%,transparent);}
 .email-review-scope [data-slot=button][data-variant=outline]:hover {border-color:var(--border);background:var(--muted);color:var(--foreground);}
 .email-review-scope [data-slot=avatar]::after {content:"";position:absolute;inset:0;border-style:solid;border-width:1px;border-radius:inherit;pointer-events:none;}
+
+/* Match the approved backdrop only when this queue owns the adjacent portal. */
+body > [data-slot=sheet-overlay]:has(+ [data-slot=sheet-content].email-review-scope),
+body > [data-slot=dialog-overlay]:has(+ [data-slot=dialog-content].email-review-scope) {
+  background:rgb(0 0 0 / .1);
+  -webkit-backdrop-filter:blur(4px);
+  backdrop-filter:blur(4px);
+}
+.email-review-scope [data-slot=sheet-header] {gap:2px;}
