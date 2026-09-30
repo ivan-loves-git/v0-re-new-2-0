@@ -9,6 +9,7 @@ import {
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/emails",
+  useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), prefetch: vi.fn() }),
 }))
 

@@ -35,7 +35,7 @@
 .email-toolbar {border-top:1px solid var(--border);padding:13px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .email-search {display:flex;align-items:center;gap:8px;flex:1;min-width:220px;position:relative;}
 .email-search>svg {position:absolute;left:11px;z-index:1;}
-.email-search input {padding-left:35px;}
+.email-review-scope .email-search [data-slot=input] {padding-left:35px;}
 .email-message-preview {white-space:nowrap;display:block;overflow:hidden;text-overflow:ellipsis;}
 .email-queue-footer {display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted-foreground);padding-top:15px;}
 .email-field-label {display:block;font-size:12px;font-weight:600;color:var(--muted-foreground);margin-bottom:7px;}
@@ -66,3 +66,6 @@
 
 .email-review-scope [data-slot=textarea] {font-size:14px;border-radius:8px;padding:8px 10px;}
 .email-review-scope [data-slot=button][data-size=sm] svg:not([class*=size-]) {width:14px;height:14px;}
+.email-review-scope [data-slot=button][data-variant=default]:hover {background:color-mix(in srgb,var(--primary) 80%,transparent);}
+.email-review-scope [data-slot=button][data-variant=outline]:hover {border-color:var(--border);background:var(--muted);color:var(--foreground);}
+.email-review-scope [data-slot=avatar]::after {content:"";position:absolute;inset:0;border-style:solid;border-width:1px;border-radius:inherit;pointer-events:none;}

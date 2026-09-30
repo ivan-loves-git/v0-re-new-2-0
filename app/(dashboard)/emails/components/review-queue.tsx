@@ -1,14 +1,28 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import {
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  useTransition,
+} from "react"
 import { toast } from "sonner"
 import {
   Archive,
+  BadgeCheck,
   ChevronDown,
   Clock,
   Filter,
+  FileLock,
+  FileSearch,
+  Handshake,
+  Mail,
+  MessageCircle,
+  RefreshCw,
   RotateCcw,
   Search,
   Send,
@@ -80,6 +94,7 @@ import {
   EMAIL_REVIEW_PURPOSES,
   emailReviewDetailHref,
   isEmailReviewSelectable,
+  parseEmailReviewQueueOptions,
   type EmailReviewPurpose,
   type EmailReviewQueueRow,
   type EmailReviewSort,
@@ -87,6 +102,13 @@ import {
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 import { ReviewDetail } from "../review/[id]/review-detail"
 import { BulkEmailConfirmation } from "../bulk/[id]/bulk-confirmation"
+import { SingleEmailConfirmation } from "./single-confirmation"
+import {
+  initialReviewSearch,
+  emailReviewSelectionContext,
+  reviewQueueNavigationParams,
+  reviewSearchReducer,
+} from "@/lib/email/review-ui-transitions"
 import "./review-queue.css"
 
 type Queue = Awaited<ReturnType<typeof listStaffEmailReviews>>
@@ -114,6 +136,36 @@ const avatarTone = [
   "bg-green-50 text-green-600 dark:bg-green-900",
   "bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-900",
 ]
+const avatarBorder = [
+  "after:border-primary/10",
+  "after:border-destructive/10",
+  "after:border-green-200 dark:after:border-green-600",
+  "after:border-fuchsia-200 dark:after:border-fuchsia-600",
+]
+const purposeIcons: Record<EmailReviewPurpose, typeof Mail> = {
+  source_freshness: RefreshCw,
+  ma_validity_check: BadgeCheck,
+  ma_more_information: FileSearch,
+  ma_nda_memo_request: FileLock,
+  ma_process_follow_up: MessageCircle,
+  ma_interest_feedback: Handshake,
+  e4_qualification: FileLock,
+  e6_nda_ready: FileLock,
+  e7_signed_copies: FileLock,
+  ma_other: Mail,
+}
+const purposeIconColors: Record<EmailReviewPurpose, string> = {
+  source_freshness: "text-warning-foreground",
+  ma_validity_check: "text-success-foreground",
+  ma_more_information: "text-focus-foreground",
+  ma_nda_memo_request: "text-info-foreground",
+  ma_process_follow_up: "text-destructive-foreground",
+  ma_interest_feedback: "text-primary",
+  e4_qualification: "text-focus-foreground",
+  e6_nda_ready: "text-info-foreground",
+  e7_signed_copies: "text-info-foreground",
+  ma_other: "text-muted-foreground",
+}
 const stateLabels: Record<EmailReviewQueueRow["state"], string> = {
   pending: "Pending review",
   sent: "Accepted by provider",
@@ -128,7 +180,7 @@ function Recipient({ review }: { review: EmailReviewQueueRow }) {
     parts.length > 1
       ? parts[0][0] + parts[parts.length - 1][0]
       : (parts[0]?.[0] ?? "?")
-  ).toLocaleUpperCase()
+  ).toUpperCase()
   const hash = Array.from(review.recipient_email.toLowerCase()).reduce(
     (value, char) => (value * 31 + char.charCodeAt(0)) >>> 0,
     0,
@@ -136,7 +188,10 @@ function Recipient({ review }: { review: EmailReviewQueueRow }) {
   return (
     <div className="min-w-0 text-xs leading-5">
       <div className="flex min-w-0 items-center gap-1.5">
-        <Avatar className="size-5 shrink-0" aria-hidden="true">
+        <Avatar
+          className={`size-5 shrink-0 ${avatarBorder[hash % avatarBorder.length]}`}
+          aria-hidden="true"
+        >
           {review.source_kind === "e6" && review.recipient_avatar_url ? (
             <AvatarImage src={review.recipient_avatar_url} alt="" />
           ) : null}
@@ -199,8 +254,18 @@ function canPrepareSend(review: EmailReviewQueueRow) {
 export function ReviewQueue({ queue }: { queue: Queue }) {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const urlSearch = parseEmailReviewQueueOptions({
+    reviewSearch: searchParams.get("reviewSearch") ?? undefined,
+  }).search
+  const savedBatchId = searchParams.get("reviewBatch")
   const [pending, startTransition] = useTransition()
-  const [search, setSearch] = useState(queue.search)
+  const [searchState, updateSearch] = useReducer(
+    reviewSearchReducer,
+    queue.search,
+    initialReviewSearch,
+  )
+  const search = searchState.value
   const [dense, setDense] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [selection, setSelection] = useState<{
@@ -214,24 +279,15 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
     useState<EmailReviewQueueRow | null>(null)
   const [record, setRecord] = useState<ReviewRecord | null>(null)
   const [detailError, setDetailError] = useState("")
-  const [batch, setBatch] = useState<BulkRecord | null>(null)
+  const [batchRecord, setBatch] = useState<BulkRecord | null>(null)
+  const batch = batchRecord?.batch.id === savedBatchId ? batchRecord : null
+  const [savedBatchHref, setSavedBatchHref] = useState<string | null>(null)
+  const [batchError, setBatchError] = useState("")
+  const [singleConfirmation, setSingleConfirmation] =
+    useState<ReviewRecord | null>(null)
+  const batchRequest = useRef(0)
   const detailRequest = useRef(0)
-  // All selected identities are bound to this exact server page/query/version.
-  // Sorting can change server-page membership, so it also clears selection.
-  const pageKey = [
-    queue.view,
-    queue.page,
-    queue.search,
-    queue.purpose,
-    queue.sort,
-    queue.direction,
-    queue.reviews
-      .map(
-        (review) =>
-          `${review.id}:${review.version}:${review.archived_at ?? "active"}:${review.state}`,
-      )
-      .join(":"),
-  ].join("|")
+  const pageKey = emailReviewSelectionContext(queue, queue.reviews)
   const rowSelection = selection.pageKey === pageKey ? selection.rows : {}
   const selectedRows = queue.reviews.filter(
     (review) => rowSelection[review.id] && isEmailReviewSelectable(review),
@@ -300,25 +356,48 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
   }
   function navigate(changes: Record<string, string | null>) {
     setOutcomes([])
-    clearSelection()
-    const params = new URLSearchParams({
-      reviewFilter: queue.view,
-      reviewSearch: queue.search,
-      reviewPurpose: queue.purpose,
-      reviewSort: queue.sort,
-      reviewDirection: queue.direction,
-      reviewPage: String(queue.page),
-    })
-    for (const [name, value] of Object.entries(changes)) {
-      if (value === null || value === "") params.delete(name)
-      else params.set(name, value)
-    }
+    const pureSort =
+      ("reviewSort" in changes || "reviewDirection" in changes) &&
+      Object.keys(changes).every((name) =>
+        ["reviewSort", "reviewDirection", "reviewPage"].includes(name),
+      ) &&
+      search.trim() === queue.search
+    if (!pureSort) clearSelection()
+    const params = reviewQueueNavigationParams(
+      searchParams.toString(),
+      queue,
+      search,
+      changes,
+    )
+    const submittedSearch = params.get("reviewSearch") ?? ""
+    if (submittedSearch !== urlSearch)
+      updateSearch({ type: "submitted", value: submittedSearch })
     startTransition(() =>
       router.push(`${pathname}?${params.toString()}`, { scroll: false }),
     )
   }
   useEffect(() => {
-    if (search === queue.search) return
+    updateSearch({ type: "url", value: urlSearch })
+  }, [urlSearch])
+  useEffect(() => {
+    const historySearch = () => {
+      const value = parseEmailReviewQueueOptions({
+        reviewSearch:
+          new URLSearchParams(window.location.search).get("reviewSearch") ??
+          undefined,
+      }).search
+      updateSearch({ type: "history", value })
+      clearSelection()
+    }
+    window.addEventListener("popstate", historySearch)
+    return () => window.removeEventListener("popstate", historySearch)
+  }, [])
+  useEffect(() => {
+    if (
+      search.trim() === urlSearch ||
+      searchState.submitted[search.trim()] === searchState.revision
+    )
+      return
     const timer = setTimeout(
       () => navigate({ reviewSearch: search.trim(), reviewPage: null }),
       300,
@@ -328,13 +407,45 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     search,
-    queue.search,
+    urlSearch,
+    searchState.revision,
+    searchState.submitted,
     queue.view,
     queue.purpose,
     queue.sort,
     queue.direction,
     queue.page,
   ])
+  useEffect(() => {
+    const request = ++batchRequest.current
+    let active = true
+    // Resume only reads the actor-bound saved manifest. It never prepares,
+    // acknowledges, confirms or dispatches anything on reload/history navigation.
+    const read = savedBatchId
+      ? getStaffEmailBulk(savedBatchId)
+      : Promise.resolve(null)
+    read
+      .then((next) => {
+        if (!active || request !== batchRequest.current) return
+        setBatchError("")
+        if (next)
+          setSavedBatchHref(`/emails/bulk/${encodeURIComponent(next.batch.id)}`)
+        setBatch(next)
+      })
+      .catch((cause) => {
+        if (active && request === batchRequest.current) {
+          setBatch(null)
+          setBatchError(
+            cause instanceof Error
+              ? cause.message
+              : "The saved confirmation is unavailable.",
+          )
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [savedBatchId])
 
   function openReview(review: EmailReviewQueueRow) {
     if (!emailReviewDetailHref(review.id)) return
@@ -429,7 +540,11 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
           sort: queue.sort,
           direction: queue.direction,
         })
-        setBatch(await getStaffEmailBulk(prepared.batchId))
+        setSavedBatchHref(prepared.href)
+        setBatch(null)
+        const params = new URLSearchParams(searchParams.toString())
+        params.set("reviewBatch", prepared.batchId)
+        router.push(`${pathname}?${params.toString()}`, { scroll: false })
         clearSelection()
         detailRequest.current++
         setSelectedReview(null)
@@ -778,7 +893,8 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
             value={search}
             onChange={(event) => {
               clearSelection()
-              setSearch(event.target.value)
+              updateSearch({ type: "typed", value: event.target.value })
+              clearSelection()
             }}
           />
         </form>
@@ -796,15 +912,28 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
             className="min-w-48"
           >
             <Filter className="size-4 text-muted-foreground" />
-            <SelectValue>{queue.purpose === "all" ? "All purposes" : EMAIL_REVIEW_PURPOSES.find((purpose) => purpose.key === queue.purpose)?.label}</SelectValue>
+            <SelectValue>
+              {queue.purpose === "all"
+                ? "All purposes"
+                : EMAIL_REVIEW_PURPOSES.find(
+                    (purpose) => purpose.key === queue.purpose,
+                  )?.label}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent align="start" className="email-review-scope min-w-56">
             <SelectItem value="all">All purposes</SelectItem>
-            {EMAIL_REVIEW_PURPOSES.map((purpose) => (
-              <SelectItem key={purpose.key} value={purpose.key}>
-                {purpose.label}
-              </SelectItem>
-            ))}
+            {EMAIL_REVIEW_PURPOSES.map((purpose) => {
+              const Icon = purposeIcons[purpose.key]
+              return (
+                <SelectItem key={purpose.key} value={purpose.key}>
+                  <Icon
+                    aria-hidden="true"
+                    className={`size-4 ${purposeIconColors[purpose.key]}`}
+                  />
+                  {purpose.label}
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
         <Popover>
@@ -970,6 +1099,18 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
           <span>Review before sending</span>
         )}
       </footer>
+      {savedBatchHref && !batch ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          <Link className="underline" href={savedBatchHref}>
+            Reopen saved confirmation
+          </Link>
+        </p>
+      ) : null}
+      {batchError ? (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          {batchError}
+        </p>
+      ) : null}
       {outcomes.length ? (
         <div role="status" className="mt-4 border-t pt-3 text-sm">
           <p className="font-medium">Selected-page results</p>
@@ -1013,11 +1154,16 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
                 recipient={selectedReview ?? undefined}
                 embedded
                 onUpdated={refreshReview}
-                onSend={(review) => {
-                  const row = queue.reviews.find(
-                    (item) => item.id === review.id,
-                  )
-                  if (row) prepareSend([{ ...row, version: review.version }])
+                onSaved={() => {
+                  detailRequest.current++
+                  setSelectedReview(null)
+                  setRecord(null)
+                }}
+                onSend={(canonical) => {
+                  setSingleConfirmation(canonical)
+                  detailRequest.current++
+                  setSelectedReview(null)
+                  setRecord(null)
                 }}
               />
             ) : (
@@ -1035,6 +1181,7 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
         open={Boolean(batch)}
         onOpenChange={(open) => {
           if (!open) {
+            batchRequest.current++
             setBatch(null)
             router.refresh()
           }
@@ -1057,9 +1204,41 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
               initial={batch}
               embedded
               onBack={() => {
+                batchRequest.current++
                 setBatch(null)
                 router.refresh()
               }}
+            />
+          ) : null}
+          {savedBatchHref ? (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer">More details</summary>
+              <Link className="mt-2 block underline" href={savedBatchHref}>
+                Open this saved confirmation
+              </Link>
+            </details>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(singleConfirmation)}
+        onOpenChange={(open) => {
+          if (!open) setSingleConfirmation(null)
+        }}
+      >
+        <DialogContent className="email-review-scope max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Confirm send</DialogTitle>
+            <DialogDescription>
+              Review the complete saved message below before confirming
+              delivery.
+            </DialogDescription>
+          </DialogHeader>
+          {singleConfirmation ? (
+            <SingleEmailConfirmation
+              key={`${singleConfirmation.review.id}:${singleConfirmation.review.version}`}
+              initial={singleConfirmation}
+              onBack={() => setSingleConfirmation(null)}
             />
           ) : null}
         </DialogContent>

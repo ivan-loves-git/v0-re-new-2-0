@@ -70,10 +70,7 @@ export default async function EmailsPage({
         </div>
 
         <TabsContent value="review" className="mt-0">
-          <ReviewQueue
-            key={`${reviews.view}:${reviews.page}:${reviews.search}:${reviews.purpose}`}
-            queue={reviews}
-          />
+          <ReviewQueue queue={reviews} />
         </TabsContent>
 
         <TabsContent value="overview" className="mt-6">

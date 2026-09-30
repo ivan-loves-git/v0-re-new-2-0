@@ -128,6 +128,20 @@ export function BulkEmailConfirmation({
     }
   }
 
+  function acknowledge(item: Record["items"][number]) {
+    run(async () => {
+      await acknowledgeStaffEmailBulkItem(batch.id, item.ordinal, item.snapshot_sha256)
+      await refresh()
+    })
+  }
+  function confirmAndSend() {
+    run(async () => {
+      await confirmStaffEmailBulk(batch.id, batch.manifest_sha256)
+      await refresh()
+      await processRemaining()
+    })
+  }
+
   if (embedded)
     return (
       <div className="flex min-w-0 flex-col gap-4">
@@ -153,6 +167,8 @@ export function BulkEmailConfirmation({
         ) : null}
         {items.map((item) => {
           const message = item.review_snapshot
+          const recipient = record.recipients?.[item.review_id]
+          const name = recipient?.recipient_email === message.recipient_email ? recipient.recipient_name : null
           const acknowledged = item.acknowledged_by === batch.prepared_by
           return (
             <details
@@ -162,8 +178,9 @@ export function BulkEmailConfirmation({
             >
               <summary className="cursor-pointer">
                 <span className="font-medium break-all">
-                  {message.recipient_email}
+                  {name ?? message.recipient_email}
                 </span>
+                {name ? <p className="text-xs text-muted-foreground break-all">{message.recipient_email}</p> : null}
                 <p className="mt-1 text-sm">{message.subject}</p>
                 {batch.confirmed_at ? (
                   <Badge
@@ -231,15 +248,7 @@ export function BulkEmailConfirmation({
                     checked={acknowledged}
                     disabled={busy || acknowledged}
                     onCheckedChange={(checked) => {
-                      if (checked === true)
-                        run(async () => {
-                          await acknowledgeStaffEmailBulkItem(
-                            batch.id,
-                            item.ordinal,
-                            item.snapshot_sha256,
-                          )
-                          await refresh()
-                        })
+                      if (checked === true) acknowledge(item)
                     }}
                   />
                   <span>
@@ -292,13 +301,7 @@ export function BulkEmailConfirmation({
               </Button>
               <Button
                 disabled={busy || !complete}
-                onClick={() =>
-                  run(async () => {
-                    await confirmStaffEmailBulk(batch.id, batch.manifest_sha256)
-                    await refresh()
-                    await processRemaining()
-                  })
-                }
+                onClick={confirmAndSend}
               >
                 <Send className="size-3.5" />
                 {busy
@@ -383,10 +386,7 @@ export function BulkEmailConfirmation({
             {message.source_kind === "freshness" ? <p className="rounded-md border p-3 text-muted-foreground">Frozen grouped membership: {item.members_snapshot.length} exact opportunity member{item.members_snapshot.length === 1 ? "" : "s"}. Current group membership and source eligibility are checked again immediately before delivery.</p> : null}
             {!batch.confirmed_at ? <label className="flex items-start gap-3 rounded-md border p-3">
               <Checkbox aria-label={`Acknowledge complete message ${item.ordinal}`} checked={acknowledged} disabled={busy || acknowledged}
-                onCheckedChange={(checked) => { if (checked === true) run(async () => {
-                  await acknowledgeStaffEmailBulkItem(batch.id, item.ordinal, item.snapshot_sha256)
-                  await refresh()
-                }) }} />
+                onCheckedChange={(checked) => { if (checked === true) acknowledge(item) }} />
               <span>I have reviewed this complete recipient, subject, message, version and any attachments.</span>
             </label> : null}
             {item.outcome_detail ? <Alert><AlertTitle>Recorded result</AlertTitle><AlertDescription>{item.outcome_detail}</AlertDescription></Alert> : null}
@@ -401,11 +401,7 @@ export function BulkEmailConfirmation({
     </div>
     {!batch.confirmed_at ? <Card><CardContent className="space-y-3 pt-6">
       <p className="text-sm text-muted-foreground">{items.filter((item) => item.acknowledged_by === batch.prepared_by).length} of {batch.item_count} complete messages acknowledged. Final confirmation is available only while every exact draft remains current.</p>
-      <Button disabled={busy || !complete} onClick={() => run(async () => {
-        await confirmStaffEmailBulk(batch.id, batch.manifest_sha256)
-        await refresh()
-        await processRemaining()
-      })}>Confirm all and start serial delivery</Button>
+      <Button disabled={busy || !complete} onClick={confirmAndSend}>Confirm all and start serial delivery</Button>
     </CardContent></Card> : <Card><CardContent className="space-y-3 pt-6">
       <p className="font-medium">{finished.length} of {batch.item_count} messages have a recorded individual result.</p>
       {started ? <p className="text-sm text-muted-foreground">A claimed message remains in progress or unknown. Check its receipt before continuing.</p> : null}

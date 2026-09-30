@@ -57,4 +57,16 @@ describe("complete-message confirmation inside the queue dialog", () => {
     expect(sendButton(render(partial))).toContain('disabled=""')
     expect(sendButton(render(record("synthetic-staff")))).not.toContain('disabled=""')
   })
+  it("shows a real matching recipient label and smaller email without inferring a mismatched name", () => {
+    const initial = record(null)
+    const first = initial.items[0]
+    initial.recipients = {
+      [first.review_id]: { recipient_email: first.review_snapshot.recipient_email, recipient_name: "Fictional Person" },
+      [initial.items[1].review_id]: { recipient_email: "different@example.invalid", recipient_name: "Wrong Person" },
+    }
+    const html = render(initial)
+    expect(html).toContain("Fictional Person")
+    expect(html).toMatch(/<p class="[^"]*text-xs[^"]*">person1@example.invalid<\/p>/)
+    expect(html).not.toContain("Wrong Person")
+  })
 })

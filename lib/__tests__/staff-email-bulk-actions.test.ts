@@ -36,9 +36,9 @@ beforeEach(() => {
   m.staff.mockResolvedValue({ user: { id: "staff-one" } })
   m.from.mockImplementation((table: string) => {
     const data = table === "staff_email_bulk_batches" ? batch
-      : table === "staff_email_bulk_items" ? [item] : review
+      : table === "staff_email_bulk_items" ? [item] : table === "staff_email_review_queue" ? [{ id: reviewId, recipient_email: review.recipient_email, recipient_name: "Fictional Person" }] : review
     const q = { select: () => q, eq: () => q, maybeSingle: async () => ({ data, error: null }),
-      order: async () => ({ data, error: null }) }
+      order: async () => ({ data, error: null }), in: async () => ({ data, error: null }) }
     return q
   })
   m.rpc.mockImplementation(async (name: string) => ({ data: name === "staff_email_bulk_claim"
@@ -56,6 +56,16 @@ beforeEach(() => {
 })
 
 describe("bounded staff email batch actions", () => {
+  it("resumes the same saved actor-bound manifest and exact recipient label without any mutation or delivery", async () => {
+    const record = await getStaffEmailBulk(batchId)
+    expect(record.batch.id).toBe(batchId)
+    expect(record.items[0].review_snapshot).toBe(review)
+    expect(record.recipients?.[reviewId]).toEqual({ recipient_email: review.recipient_email, recipient_name: "Fictional Person" })
+    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.queue).not.toHaveBeenCalled()
+    expect(m.reserved).not.toHaveBeenCalled()
+    expect(m.freshness).not.toHaveBeenCalled()
+  })
   it("denies browser callers before service-role access", async () => {
     m.staff.mockRejectedValue(new Error("Staff access required"))
     await expect(getStaffEmailBulk(batchId)).rejects.toThrow("Staff access")

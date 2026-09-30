@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/select"
 import {
   approveAndSendStaffEmailReview,
+  getStaffEmailReview,
   archiveStaffEmailReview,
   cancelStaffEmailReview,
   editStaffEmailReview,
@@ -50,6 +51,8 @@ import {
 } from "@/lib/actions/staff-email-review"
 import { PURSUIT_REVIEW_COPY_VERSION } from "@/lib/email/review-copy-version"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
+import { readReviewedMessageForConfirmation } from "@/lib/email/review-ui-transitions"
+import { SingleEmailConfirmation } from "../../components/single-confirmation"
 
 type ReviewRecord = Awaited<
   ReturnType<
@@ -75,13 +78,15 @@ export function ReviewDetail({
   recipient,
   embedded = false,
   onUpdated,
+  onSaved,
   onSend,
 }: {
   initial: ReviewRecord
   recipient?: EmailReviewQueueRow
   embedded?: boolean
   onUpdated?: () => Promise<void>
-  onSend?: (review: StaffEmailReview) => void
+  onSaved?: () => void
+  onSend?: (record: ReviewRecord) => void
 }) {
   const router = useRouter()
   const [busy, startTransition] = useTransition()
@@ -98,10 +103,17 @@ export function ReviewDetail({
   const [replyEvidence, setReplyEvidence] = useState("")
   const [error, setError] = useState("")
   const [templateOpen, setTemplateOpen] = useState(false)
+  const [confirmation, setConfirmation] = useState<ReviewRecord | null>(null)
   const review: StaffEmailReview = initial.review
-  const recipientDisplay = initial.display?.recipient ?? (recipient?.recipient_email === review.recipient_email ? recipient : null)
+  const recipientDisplay =
+    initial.display?.recipient ??
+    (recipient?.recipient_email === review.recipient_email ? recipient : null)
   const opportunityDisplay = initial.display?.opportunity
-  const templateName = review.source_kind === "e6" ? "E6 NDA-ready · code-governed" : TEMPLATE_METADATA[review.template_key as EmailTemplateKey]?.name ?? review.template_key
+  const templateName =
+    review.source_kind === "e6"
+      ? "E6 NDA-ready · code-governed"
+      : (TEMPLATE_METADATA[review.template_key as EmailTemplateKey]?.name ??
+        review.template_key)
   const changed = subject !== review.subject || body !== review.body_text
   const editable =
     !review.archived_at &&
@@ -159,9 +171,55 @@ export function ReviewDetail({
     })
   }
 
+  function save() {
+    setError("")
+    startTransition(async () => {
+      try {
+        const result = await editStaffEmailReview(
+          review.id,
+          review.version,
+          subject,
+          body,
+        )
+        toast.success(result.message)
+        if (onSaved) onSaved()
+        else if (onUpdated) await onUpdated()
+        router.refresh()
+      } catch (cause) {
+        const message =
+          cause instanceof Error
+            ? cause.message
+            : "The reviewed text was not saved."
+        setError(message)
+        toast.error(message)
+      }
+    })
+  }
+
   function send() {
-    if (onSend && review.state === "pending") onSend(review)
-    else if (
+    if (review.state === "pending") {
+      setError("")
+      startTransition(async () => {
+        try {
+          const canonical = await readReviewedMessageForConfirmation(
+            review,
+            subject,
+            body,
+            { edit: editStaffEmailReview, read: getStaffEmailReview },
+          )
+          if (onSend) onSend(canonical)
+          else setConfirmation(canonical)
+          router.refresh()
+        } catch (cause) {
+          const message =
+            cause instanceof Error
+              ? cause.message
+              : "The exact reviewed message changed. Reopen it before confirming."
+          setError(message)
+          toast.error(message)
+        }
+      })
+    } else if (
       window.confirm(
         `Approve and send this exact version to ${review.recipient_email}?`,
       )
@@ -227,7 +285,9 @@ export function ReviewDetail({
               className="underline"
               href={`/opportunities/${review.opportunity_id}`}
             >
-              {opportunityDisplay ? `${opportunityDisplay.public_title ?? "Title not recorded"} · ${opportunityDisplay.reference}` : "Opportunity details unavailable"}
+              {opportunityDisplay
+                ? `${opportunityDisplay.public_title ?? "Title not recorded"} · ${opportunityDisplay.reference}`
+                : "Opportunity details unavailable"}
             </Link>
           )}
         </div>
@@ -274,16 +334,7 @@ export function ReviewDetail({
             <Button
               variant="outline"
               disabled={busy || !changed || !subject.trim() || !body.trim()}
-              onClick={() =>
-                run(() =>
-                  editStaffEmailReview(
-                    review.id,
-                    review.version,
-                    subject,
-                    body,
-                  ),
-                )
-              }
+              onClick={save}
             >
               Save reviewed text
             </Button>
@@ -291,7 +342,9 @@ export function ReviewDetail({
           <Button
             disabled={
               busy ||
-              changed ||
+              (changed && !editable) ||
+              !subject.trim() ||
+              !body.trim() ||
               !sendable ||
               review.namespace !== "REAL" ||
               !initial.catalogueEnabled ||
@@ -855,7 +908,10 @@ export function ReviewDetail({
                 : "Retained fixed workflow copy; catalogue availability is a separate gate"}
             </DialogDescription>
           </DialogHeader>
-          <div><span className="email-field-label">Template key</span><code className="break-all text-xs">{review.template_key}</code></div>
+          <div>
+            <span className="email-field-label">Template key</span>
+            <code className="break-all text-xs">{review.template_key}</code>
+          </div>
           <div>
             <span className="email-field-label">Retained version</span>
             <code className="break-all text-xs">{review.template_version}</code>
@@ -927,6 +983,29 @@ export function ReviewDetail({
               Back to draft
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(confirmation)}
+        onOpenChange={(open) => {
+          if (!open) setConfirmation(null)
+        }}
+      >
+        <DialogContent className="email-review-scope max-h-[90dvh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Confirm send</DialogTitle>
+            <DialogDescription>
+              Review the complete saved message below before confirming
+              delivery.
+            </DialogDescription>
+          </DialogHeader>
+          {confirmation ? (
+            <SingleEmailConfirmation
+              key={`${confirmation.review.id}:${confirmation.review.version}`}
+              initial={confirmation}
+              onBack={() => setConfirmation(null)}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
     </div>

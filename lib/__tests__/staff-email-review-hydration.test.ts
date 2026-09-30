@@ -6,15 +6,19 @@ import type { StaffEmailReview } from "@/lib/actions/staff-email-review"
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
   usePathname: () => "/emails",
+  useSearchParams: () => new URLSearchParams(),
 }))
 vi.mock("@/lib/actions/staff-email-review", () => ({
   approveAndSendStaffEmailReview: vi.fn(),
   cancelStaffEmailReview: vi.fn(),
   editStaffEmailReview: vi.fn(),
+  getStaffEmailReview: vi.fn(),
 }))
 
 import { ReviewDetail } from "@/app/(dashboard)/emails/review/[id]/review-detail"
 import { ReviewQueue } from "@/app/(dashboard)/emails/components/review-queue"
+import { SingleEmailConfirmation } from "@/app/(dashboard)/emails/components/single-confirmation"
+import { approveAndSendStaffEmailReview, editStaffEmailReview, getStaffEmailReview } from "@/lib/actions/staff-email-review"
 
 const review: StaffEmailReview = {
   id: "18600000-0000-4000-8000-000000000001",
@@ -93,6 +97,24 @@ function renderIn(timeZone: string, element: ReturnType<typeof createElement>) {
 }
 
 describe("staff email review timestamps", () => {
+  it("shows the exact saved individual message with explicit acknowledgment and performs no send on opening", () => {
+    const html = renderToStaticMarkup(createElement(SingleEmailConfirmation, {
+      initial: {
+        ...initial,
+        review: { ...review, state: "pending", version: 3, subject: "Saved fictional subject", body_text: "Saved full body\n\nFinal line of saved message" },
+        display: { ...initial.display, recipient: { recipient_email: review.recipient_email, recipient_name: "Fictional Person", company_name: null, purpose_label: "Process follow-up" } },
+      },
+    }))
+    expect(html).toContain("Fictional Person")
+    expect(html).toContain("Saved fictional subject")
+    expect(html).toContain("Final line of saved message")
+    expect(html).toContain("Reviewed version 3")
+    expect(html).toContain('aria-label="Acknowledge complete message"')
+    expect(html).toMatch(/<button\b[^>]*disabled=""[^>]*>[\s\S]*?Send<\/button>/)
+    expect(approveAndSendStaffEmailReview).not.toHaveBeenCalled()
+    expect(editStaffEmailReview).not.toHaveBeenCalled()
+    expect(getStaffEmailReview).not.toHaveBeenCalled()
+  })
   it("renders the same Paris times in the detail on a UTC server and Paris browser", () => {
     const element = createElement(ReviewDetail, { initial })
     const serverHtml = renderIn("UTC", element)

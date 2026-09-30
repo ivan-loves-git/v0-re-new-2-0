@@ -189,6 +189,26 @@ describe("staff email review public actions", () => {
     expect(m.sourceSend).not.toHaveBeenCalled()
   })
 
+  it("saves an editable message with CAS and sends only its read-back canonical version and words", async () => {
+    const subject = "New saved subject"
+    const body = "Complete new saved body"
+    await editStaffEmailReview(reviewId, 1, subject, body)
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_edit", {
+      p_review_id: reviewId, p_version: 1, p_subject: subject, p_body_text: body, p_actor: "staff-1",
+    })
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    const saved = { ...row, version: 2, subject, body_text: body }
+    m.from.mockImplementation(table => query(table === "staff_email_reviews" ? saved : table === "ma_interactions" ? { id: "evidence", delivery_status: "sent", provider_message_id: "accepted" } : null))
+    m.rpc.mockClear()
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("changed")
+    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    await approveAndSendStaffEmailReview(reviewId, 2)
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_reserve", expect.objectContaining({ p_review_id: reviewId, p_version: 2 }))
+    expect(m.build).toHaveBeenCalledWith(subject, body, row.recipient_email)
+    expect(m.sourceSend).toHaveBeenCalledTimes(1)
+  })
+
   it("fails closed when a catalogue key is inactive at approval", async () => {
     m.version.mockRejectedValue(new Error("This catalogue email is disabled in Templates."))
     await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("disabled")
