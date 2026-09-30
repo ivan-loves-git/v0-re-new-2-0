@@ -16,7 +16,7 @@ vi.mock("@/lib/actions/staff-email-review", () => ({
 }))
 
 import { ReviewDetail } from "@/app/(dashboard)/emails/review/[id]/review-detail"
-import { ReviewQueue } from "@/app/(dashboard)/emails/components/review-queue"
+import { ReviewQueue, ReviewQueueDetailDescription } from "@/app/(dashboard)/emails/components/review-queue"
 import { SingleEmailConfirmation } from "@/app/(dashboard)/emails/components/single-confirmation"
 import { approveAndSendStaffEmailReview, editStaffEmailReview, getStaffEmailReview } from "@/lib/actions/staff-email-review"
 
@@ -95,6 +95,30 @@ function renderIn(timeZone: string, element: ReturnType<typeof createElement>) {
     else process.env.TZ = previousTimeZone
   }
 }
+
+describe("staff email queue preparation description", () => {
+  const creatorId = "18600000-0000-4000-8000-000000000099"
+
+  it.each(["ma", "e4", "e6", "e7"] as const)(
+    "describes a %s draft without presenting its creator UUID as a name",
+    (sourceKind) => {
+      const html = renderToStaticMarkup(createElement(ReviewQueueDetailDescription, {
+        purposeLabel: "Process follow-up",
+        review: { ...review, source_kind: sourceKind, created_by: creatorId },
+      }))
+      expect(html).toBe("Process follow-up · Prepared for review")
+      expect(html).not.toContain(creatorId)
+    },
+  )
+
+  it("retains the factual automated 45-day rule attribution for freshness drafts", () => {
+    const html = renderToStaticMarkup(createElement(ReviewQueueDetailDescription, {
+      purposeLabel: "Source freshness",
+      review: { ...review, source_kind: "freshness", created_by: creatorId },
+    }))
+    expect(html).toBe("Source freshness · Prepared by the automated 45-day rule")
+  })
+})
 
 describe("staff email review timestamps", () => {
   it("shows the exact saved individual message with explicit acknowledgment and performs no send on opening", () => {

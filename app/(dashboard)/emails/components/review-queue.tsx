@@ -119,6 +119,25 @@ type GridRow =
   | { id: string; kind: "group"; label: string; count: number; state: string }
   | { id: string; kind: "draft"; review: EmailReviewQueueRow }
 
+export function ReviewQueueDetailDescription({
+  purposeLabel,
+  review,
+}: {
+  purposeLabel?: string
+  review: ReviewRecord["review"] | null
+}) {
+  return (
+    <>
+      {purposeLabel}
+      {review
+        ? review.source_kind === "freshness"
+          ? " · Prepared by the automated 45-day rule"
+          : " · Prepared for review"
+        : ""}
+    </>
+  )
+}
+
 const purposeVariant: Record<EmailReviewPurpose, BadgeProps["variant"]> = {
   source_freshness: "warning-light",
   ma_validity_check: "success-light",
@@ -1143,10 +1162,10 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
           <SheetHeader className="border-b p-6">
             <SheetTitle>Review message</SheetTitle>
             <SheetDescription>
-              {selectedReview?.purpose_label}
-              {record
-                ? ` · Prepared by ${record.review.source_kind === "freshness" ? "the automated 45-day rule" : record.review.created_by}`
-                : ""}
+              <ReviewQueueDetailDescription
+                purposeLabel={selectedReview?.purpose_label}
+                review={record?.review ?? null}
+              />
             </SheetDescription>
           </SheetHeader>
           <div className="p-6 pt-0">
