@@ -1,19 +1,20 @@
 ---
 name: Re-New WAVE Product UI
 description: Quiet operational confidence for Re-New's acquisition operating system.
+tokens: "app/globals.css (canonical light and dark values)"
 colors:
-  canvas: "oklch(1 0 0)"
-  ink: "oklch(0.145 0 0)"
-  surface: "oklch(1 0 0)"
-  primary: "oklch(0.205 0 0)"
-  muted-surface: "oklch(0.97 0 0)"
-  muted-ink: "oklch(0.556 0 0)"
-  border: "oklch(0.922 0 0)"
-  chart-blue: "oklch(0.623 0.214 259.815)"
-  success: "oklch(0.49 0.14 150)"
-  warning: "oklch(0.49 0.12 75)"
-  destructive: "oklch(0.577 0.245 27.325)"
-  sidebar: "oklch(0.985 0 0)"
+  canvas: "var(--background)"
+  ink: "var(--foreground)"
+  surface: "var(--card)"
+  primary: "var(--primary)"
+  muted-surface: "var(--muted)"
+  muted-ink: "var(--muted-foreground)"
+  border: "var(--border)"
+  chart-blue: "var(--chart-1)"
+  success: "var(--success)"
+  warning: "var(--warning)"
+  destructive: "var(--destructive)"
+  sidebar: "var(--sidebar)"
 typography:
   chart-nano:
     fontFamily: "Geist, system-ui, sans-serif"
@@ -206,4 +207,3 @@ This theme changes shared colors, type, radius, sidebar styling, and status feed
 - **Don't** split one compact summary into individually colored statistic cards.
 - **Don't** stagger ordinary product content on page load.
 - **Don't** use repeating diagonal stripes or isolated purple styling.
-- **Don't** let design tooling alter product semantics, KPIs, workflows, hierarchy, information architecture, filters, or strategy.
