@@ -163,6 +163,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
     redactRepreneurFeedback: "staff",
     deleteRepreneurFeedback: "staff",
   }),
+  "lib/actions/staff-email-bulk.ts": boundary("staff", ["getStaffEmailBulk", "prepareStaffEmailBulk", "acknowledgeStaffEmailBulkItem", "confirmStaffEmailBulk", "dispatchStaffEmailBulkItem", "reconcileStaffEmailBulkItem"]),
   "lib/actions/repreneur-opportunities.ts": boundary("portal_owner", ["listMyRepreneurOpportunities", "listMyRepreneurDealFlow", "getMyRepreneurOpportunity", "listStaffPreviewRepreneurDealFlow"], { listStaffPreviewRepreneurDealFlow: "staff" }),
   "lib/actions/repreneur-opportunity-responses.ts": boundary("portal_owner", ["markMyOpportunityInterested", "declineMyOpportunity"]),
   "lib/actions/repreneur-opportunity-review.ts": boundary("portal_owner", ["recordMyOpportunityViewed", "setMyOpportunityReviewed"]),

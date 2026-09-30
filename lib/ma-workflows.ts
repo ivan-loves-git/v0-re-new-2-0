@@ -806,6 +806,7 @@ export async function sendMaSourceWorkflowEmailPayload(
   },
   handoff?: PreparedPursuitHandoff,
   review?: { recipientEmail: string; templateVersion: string; actorId: string },
+  reserved?: { maReservationToken: string; handoffAttempt?: HandoffAttempt },
 ): Promise<MaEmailSendResult> {
   const { user } = await requireStaffAccess()
   const { templateKey, subject, body, contactId, clientOperationKey } = payload
@@ -844,11 +845,12 @@ export async function sendMaSourceWorkflowEmailPayload(
     }
   }
 
-  const { data: emailReservationToken, error: emailReservationError } =
-    await supabase.rpc("reserve_ma_source_email_send", {
-      p_opportunity_id: opportunityId,
-      p_actor: review.actorId,
-    })
+  const { data: emailReservationToken, error: emailReservationError } = reserved
+    ? { data: reserved.maReservationToken, error: null }
+    : await supabase.rpc("reserve_ma_source_email_send", {
+        p_opportunity_id: opportunityId,
+        p_actor: review.actorId,
+      })
 
   if (emailReservationError || typeof emailReservationToken !== "string") {
     return {
@@ -990,7 +992,10 @@ export async function sendMaSourceWorkflowEmailPayload(
   if (handoff) {
     try {
       assertPursuitEmailSize(providerRequest)
-      handoffAttempt = await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.id)
+      handoffAttempt = reserved?.handoffAttempt ?? await beginPursuitHandoff(supabase, handoff, providerRequestFingerprint, user.id)
+      if (reserved?.handoffAttempt && handoffAttempt.delivery_status !== "sending") {
+        throw new Error("The reserved handoff cannot be dispatched again.")
+      }
       if (handoffAttempt.delivery_status === "sent") {
         await releaseReservation()
         return { success: true, message: "This pursuit handoff was already sent.", operationState: "sent", eventId: handoffAttempt.evidence_id ?? undefined }

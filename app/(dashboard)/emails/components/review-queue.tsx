@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, restoreStaffEmailReview, type listStaffEmailReviews } from "@/lib/actions/staff-email-review"
+import { prepareStaffEmailBulk } from "@/lib/actions/staff-email-bulk"
 import { EMAIL_REVIEW_PURPOSES, emailReviewDetailHref, isEmailReviewSelectable, type EmailReviewDirection, type EmailReviewPurpose, type EmailReviewQueueRow, type EmailReviewSort } from "@/lib/email/review-queue-query"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
@@ -87,11 +88,16 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
   const [pending, startTransition] = useTransition()
   const [search, setSearch] = useState(queue.search)
   const [selection, setSelection] = useState<{ pageKey: string; ids: string[] }>({ pageKey: "", ids: [] })
+  const [sendSelection, setSendSelection] = useState<{ pageKey: string; ids: string[] }>({ pageKey: "", ids: [] })
   const [outcomes, setOutcomes] = useState<Array<{ label: string; outcome: string }>>([])
   const eligible = queue.reviews.filter(isEmailReviewSelectable)
-  const pageKey = [queue.view,queue.page,queue.search,queue.purpose,
+  const sendEligible = queue.reviews.filter((review) => review.namespace === "REAL" && review.state === "pending" &&
+    review.archived_at === null && review.archive_eligible)
+  const pageKey = [queue.view,queue.page,queue.search,queue.purpose,queue.sort,queue.direction,
     eligible.map((review) => `${review.id}:${review.version}:${review.archived_at ?? "active"}`).sort().join(":")].join("|")
   const selected = new Set(selection.pageKey === pageKey ? selection.ids : [])
+  const sendSelected = new Set(sendSelection.pageKey === pageKey ? sendSelection.ids : [])
+  const sendSelectedRows = sendEligible.filter((review) => sendSelected.has(review.id))
   const selectedRows = eligible.filter((review) => selected.has(review.id))
   const selectedActive = selectedRows.filter((review) => review.archived_at === null)
   const selectedArchived = selectedRows.filter((review) => review.archived_at !== null)
@@ -135,6 +141,8 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
 
   function navigate(changes: Record<string, string | null>) {
     setOutcomes([])
+    setSelection({ pageKey: "", ids: [] })
+    setSendSelection({ pageKey: "", ids: [] })
     const params = new URLSearchParams({
       reviewFilter: queue.view, reviewSearch: queue.search, reviewPurpose: queue.purpose,
       reviewSort: queue.sort, reviewDirection: queue.direction, reviewPage: String(queue.page),
@@ -151,6 +159,24 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
       ? queue.direction === "asc" ? "desc" : "asc"
       : column === "prepared" ? "desc" : "asc"
     navigate({ reviewSort: column, reviewDirection: direction })
+  }
+
+  function prepareSelectedSend() {
+    if (sendSelectedRows.length < 1 || sendSelectedRows.length > 5) return
+    startTransition(async () => {
+      try {
+        const prepared = await prepareStaffEmailBulk({
+          ids: sendSelectedRows.map((review) => ({ id: review.id, version: review.version })),
+          page: queue.page, view: queue.view, search: queue.search, purpose: queue.purpose,
+          sort: queue.sort, direction: queue.direction,
+        })
+        setSendSelection({ pageKey: "", ids: [] })
+        router.push(prepared.href)
+      } catch (cause) {
+        toast.error(cause instanceof Error ? cause.message : "The selection changed. Refresh this page.")
+        router.refresh()
+      }
+    })
   }
 
   return <section className="rounded-lg border bg-card px-3 py-5 sm:px-5" aria-label="Staff email review queue" aria-busy={pending}>
@@ -171,6 +197,18 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
         onClick={() => runSelected(selectedActive, "archive")}>Archive selected ({selectedActive.length})</Button>
       <Button type="button" size="sm" variant="outline" disabled={pending || selectedArchived.length === 0}
         onClick={() => runSelected(selectedArchived, "restore")}>Restore selected ({selectedArchived.length})</Button>
+    </div>
+    <div className="flex flex-wrap items-center gap-2 border-b pb-3 text-sm" aria-label="Bounded bulk send selection">
+      <span className="text-muted-foreground">{sendSelected.size} of 5 selected to review for sending</span>
+      <Button type="button" size="sm" variant="outline" disabled={pending || sendEligible.length === 0}
+        onClick={() => setSendSelection({ pageKey, ids: sendEligible.slice(0, 5).map((review) => review.id) })}>
+        Select first {Math.min(5, sendEligible.length)} eligible on this page
+      </Button>
+      <Button type="button" size="sm" variant="ghost" disabled={pending || sendSelected.size === 0}
+        onClick={() => setSendSelection({ pageKey, ids: [] })}>Clear send selection</Button>
+      <Button type="button" size="sm" disabled={pending || sendSelectedRows.length === 0}
+        onClick={prepareSelectedSend}>Review {sendSelectedRows.length} complete message{sendSelectedRows.length === 1 ? "" : "s"}</Button>
+      <p className="w-full text-xs text-muted-foreground">Preparing a batch sends nothing. Each complete message needs its own acknowledgment before one final confirmation.</p>
     </div>
     {outcomes.length ? <div role="status" className="rounded-md border p-3 text-sm">
       <p className="font-medium">Selected-page results</p>
@@ -193,18 +231,22 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
     {queue.reviews.length === 0
       ? <p className="rounded-md border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">{queue.total === 0 && !queue.search && queue.purpose === "all" ? "No prepared emails in this view." : "No emails match this view, search and purpose. Try another filter."}</p>
       : <div className="-mx-3 sm:-mx-5">
-        <p className="px-3 pb-2 text-xs text-muted-foreground sm:px-5">Table scrolls horizontally on narrow screens. Selection covers eligible drafts on this page only; sending remains an individual review action.</p>
-        <Table className="min-w-[1060px] table-fixed">
-          <colgroup><col className="w-11" /><col className="w-[270px]" /><col className="w-[140px]" /><col className="w-[205px]" /><col className="w-[150px]" /><col className="w-[110px]" /><col className="w-[140px]" /></colgroup>
+        <p className="px-3 pb-2 text-xs text-muted-foreground sm:px-5">Table scrolls horizontally on narrow screens. Archive and send selections are separate and stay on this exact page.</p>
+        <Table className="min-w-[1104px] table-fixed">
+          <colgroup><col className="w-11" /><col className="w-11" /><col className="w-[270px]" /><col className="w-[140px]" /><col className="w-[205px]" /><col className="w-[150px]" /><col className="w-[110px]" /><col className="w-[140px]" /></colgroup>
           <TableHeader><TableRow>
-            <TableHead className="w-11"><Checkbox aria-label="Select all eligible drafts on this page" checked={allSelected ? true : selected.size > 0 ? "indeterminate" : false} disabled={eligible.length === 0} onCheckedChange={(checked) => setSelection({ pageKey, ids: checked === true ? eligible.map((review) => review.id) : [] })} /></TableHead>
+            <TableHead className="w-11"><Checkbox aria-label="Select all archive-eligible drafts on this page" checked={allSelected ? true : selected.size > 0 ? "indeterminate" : false} disabled={eligible.length === 0} onCheckedChange={(checked) => setSelection({ pageKey, ids: checked === true ? eligible.map((review) => review.id) : [] })} /></TableHead>
+            <TableHead className="w-11"><span className="sr-only">Select for sending</span></TableHead>
             <SortHead column="message" label="Message" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="purpose" label="Purpose" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="recipient" label="Recipient" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="company" label="Company" sort={queue.sort} direction={queue.direction} onSort={sortBy} /><SortHead column="prepared" label="Prepared" sort={queue.sort} direction={queue.direction} onSort={sortBy} />
             <TableHead>Actions</TableHead>
           </TableRow></TableHeader>
           <TableBody>{queue.reviews.map((review) => {
             const detailHref = emailReviewDetailHref(review.id)
+            const sendable = sendEligible.some((row) => row.id === review.id)
             return <TableRow key={review.id} className="[&_td]:py-1.5" data-state={selected.has(review.id) ? "selected" : undefined}>
             <TableCell><Checkbox aria-label={`Select draft ${review.subject}`} checked={selected.has(review.id)} disabled={!isEmailReviewSelectable(review)} onCheckedChange={(checked) => setSelection({ pageKey, ids: checked === true ? [...selected, review.id] : [...selected].filter((id) => id !== review.id) })} /></TableCell>
+            <TableCell><Checkbox aria-label={`Select ${review.subject} for bounded send`} checked={sendSelected.has(review.id)} disabled={!sendable || (sendSelected.size >= 5 && !sendSelected.has(review.id))}
+              onCheckedChange={(checked) => setSendSelection({ pageKey, ids: checked === true ? [...sendSelected, review.id].slice(0, 5) : [...sendSelected].filter((id) => id !== review.id) })} /></TableCell>
             <TableCell><div className="min-w-0"><div title={review.subject}>{detailHref
               ? <Link href={detailHref} className="block truncate font-medium text-foreground hover:underline">{review.subject}</Link>
               : <span className="block truncate font-medium text-foreground">{review.subject}</span>}</div>
@@ -225,7 +267,7 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
       </div>}
 
     <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-xs text-muted-foreground" role="status">
-      <span>{queue.total === 0 ? "0" : `${(queue.page - 1) * queue.pageSize + 1}–${Math.min(queue.page * queue.pageSize, queue.total)}`} of {queue.total} matching · {selected.size} selected on this page</span>
+      <span>{queue.total === 0 ? "0" : `${(queue.page - 1) * queue.pageSize + 1}–${Math.min(queue.page * queue.pageSize, queue.total)}`} of {queue.total} matching · {selected.size} archive / {sendSelected.size} send selected on this page</span>
       <div className="flex items-center gap-2"><span>Page {queue.page} of {Math.max(1, Math.ceil(queue.total / queue.pageSize))}</span><Button type="button" size="sm" variant="outline" disabled={queue.page <= 1} onClick={() => navigate({ reviewPage: String(queue.page - 1) })}>Previous</Button><Button type="button" size="sm" variant="outline" disabled={queue.page * queue.pageSize >= queue.total} onClick={() => navigate({ reviewPage: String(queue.page + 1) })}>Next</Button></div>
     </div>
   </section>

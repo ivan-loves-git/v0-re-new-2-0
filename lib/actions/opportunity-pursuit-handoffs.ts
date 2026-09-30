@@ -1,11 +1,11 @@
-"use server"
+import "server-only"
 
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendMaSourceWorkflowEmailPayload, renderMaWorkflowContent } from "@/lib/ma-workflows"
 import { requireReservedHandoffReview, sameAttachmentSnapshot } from "@/lib/staff-email-review-guard"
 import { fixedIntermediaryHandoffCopy, buildPursuitNdaReadyRequest } from "@/lib/pursuit-handoff-copy"
-import { preparePursuitHandoff, beginPursuitHandoff, finalizePursuitHandoff, assertPursuitHandoffCurrent } from "@/lib/pursuit-handoff-delivery"
+import { preparePursuitHandoff, beginPursuitHandoff, finalizePursuitHandoff, assertPursuitHandoffCurrent, type HandoffAttempt } from "@/lib/pursuit-handoff-delivery"
 import { fingerprintResendDeliveryRequest, classifyResendDeliveryOutcome } from "@/lib/email/resend-delivery-outcome"
 import { resend } from "@/lib/email/resend-client"
 import { isMaContactEmailAddressSuppressed } from "@/lib/email/ma-contact-email-authorization"
@@ -14,7 +14,8 @@ function failure(error: unknown) {
   return { success: false as const, message: error instanceof Error ? error.message : "The current pursuit handoff could not be verified." }
 }
 
-export async function sendPursuitIntermediaryHandoff(matchId: string, type: "e4" | "e7", reviewId?: string) {
+export async function sendPursuitIntermediaryHandoff(matchId: string, type: "e4" | "e7", reviewId?: string,
+  reserved?: { maReservationToken: string; handoffAttempt: HandoffAttempt }) {
   await requireStaffAccess()
   if (type !== "e4" && type !== "e7") return { success: false as const, message: "Unsupported intermediary handoff." }
   const db = createAdminClient()
@@ -33,13 +34,14 @@ export async function sendPursuitIntermediaryHandoff(matchId: string, type: "e4"
     const result = await sendMaSourceWorkflowEmailPayload(handoff.opportunityId, {
       templateKey: "ma_nda_info_memo_request", subject: review.subject, body: review.body_text,
       contactId: review.contact_link_id, clientOperationKey: handoff.upstreamId,
-    }, handoff, { recipientEmail: review.recipient_email, templateVersion: review.template_version, actorId: review.approved_by })
+    }, handoff, { recipientEmail: review.recipient_email, templateVersion: review.template_version, actorId: review.approved_by }, reserved)
     if (!result.success || !result.eventId) return { success: false as const, message: result.message, operationState: result.operationState }
     return { success: true as const, message: type === "e4" ? "Qualification request sent." : "Signed copies and memo request sent.", eventId: result.eventId, operationState: "sent" as const }
   } catch (error) { return failure(error) }
 }
 
-export async function sendPursuitNdaReadyNotice(matchId: string, reviewId?: string) {
+export async function sendPursuitNdaReadyNotice(matchId: string, reviewId?: string,
+  reserved?: { handoffAttempt: HandoffAttempt }) {
   const staff = await requireStaffAccess()
   const db = createAdminClient()
   let attemptReserved = false
@@ -53,7 +55,10 @@ export async function sendPursuitNdaReadyNotice(matchId: string, reviewId?: stri
       throw new Error("The NDA-ready recipient or governed copy changed after review. No email was sent.")
     }
     if (await isMaContactEmailAddressSuppressed(email)) throw new Error("The existing email suppression policy blocks this recipient.")
-    const attempt = await beginPursuitHandoff(db, handoff, fingerprintResendDeliveryRequest(request, `e6:${handoff.upstreamId}`), staff.user.id)
+    const attempt = reserved?.handoffAttempt ?? await beginPursuitHandoff(db, handoff, fingerprintResendDeliveryRequest(request, `e6:${handoff.upstreamId}`), staff.user.id)
+    if (reserved?.handoffAttempt && attempt.delivery_status !== "sending") {
+      throw new Error("The reserved NDA-ready notice cannot be dispatched again.")
+    }
     attemptReserved = attempt.delivery_status === "sending"
     if (attempt.delivery_status === "sent" && attempt.evidence_id) return { success: true as const, message: "NDA-ready notice was already sent.", eventId: attempt.evidence_id, operationState: "sent" as const }
     if (attempt.delivery_status === "in_flight") return { success: false as const, message: "The NDA-ready notice is still in flight. Retry the unchanged notice in two minutes.", operationState: "pending" as const }
