@@ -1,5 +1,7 @@
 # Governance projection v1
 
+> **Historical contract.** The #212 candidate retires the WAVE projection reader and manual refresh under [Decision #210](https://github.com/re-new-team/renew-governance/issues/210). Existing snapshots remain historical data for the [private archive contract](strategic-pdr-retirement-v1.md). The refresh steps below are not current delivery duties; #214 owns authorized production activation and live proof.
+
 `re-new-team/renew-governance` is the authority. WAVE stores only the immutable, allowlisted snapshot created by `pnpm governance:refresh`; neither the browser nor ordinary WAVE/AI reads require a GitHub token.
 
 Run the command without flags first. It pins `main` to an exact commit, validates the full accepted registry plus bounded issue facts, and prints a revision/digest confirmation. To write, run the exact printed confirmation with `--apply`. Invalid GitHub data, GitHub outage, failed validation, or an optimistic-current conflict writes nothing and leaves the previously selected snapshot intact. A repeated identical apply is a no-op.

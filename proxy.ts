@@ -10,14 +10,24 @@ export async function proxy(request: NextRequest) {
   const isLoggedIn = !!sessionCookie?.value
   const { pathname } = request.nextUrl
   const isStrategicPdr = pathname === "/strategic-pdr" || pathname.startsWith("/strategic-pdr/")
+  const isStrategicPdrApi = pathname === "/api/strategic-pdr" || pathname.startsWith("/api/strategic-pdr/")
   const applyStrategicPdrPrivacyHeaders = (response: NextResponse) => {
-    if (isStrategicPdr) {
+    if (isStrategicPdr || isStrategicPdrApi) {
       response.headers.set("Cache-Control", "private, no-store, max-age=0")
       response.headers.set("Pragma", "no-cache")
       response.headers.set("Referrer-Policy", "no-referrer")
       response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
     }
     return response
+  }
+
+  // Historical PDR is recovered from the private archive, never through WAVE.
+  // This runs before authentication so retired URLs disclose no record existence.
+  if (isStrategicPdr || isStrategicPdrApi) {
+    return applyStrategicPdrPrivacyHeaders(new NextResponse("Not found", {
+      status: 404,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    }))
   }
 
   if (pathname === "/my-opportunities" || pathname.startsWith("/my-opportunities/")) {
@@ -49,7 +59,6 @@ export async function proxy(request: NextRequest) {
     "/settings",
     "/scrapbook",
     "/tasks",
-    "/strategic-pdr",
   ]
   const isProtectedPath = protectedPaths.some((path) =>
     pathname.startsWith(path)

@@ -9,7 +9,7 @@ export default function RoadmapPage() {
 
       {/* Footer */}
       <div className="text-center text-sm text-muted-foreground py-8 border-t">
-        <p>Roadmap is the active project reference for current delivery scope and completed platform work.</p>
+        <p>This is a historical editorial timeline. Current scope, decisions and delivery evidence live in Re-New Product Delivery on GitHub.</p>
       </div>
     </div>
   )
