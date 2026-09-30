@@ -198,7 +198,7 @@ async function updateTargetThesisForRepreneur(repreneurId: string, input: Target
   await recalculateRepreneurScoresAndMatches(repreneurId)
   try {
     const fitAfter = await captureRepreneurFitSource(supabase, repreneurId)
-    if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(repreneurId)
+    if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(repreneurId, { previousRepreneur: fitBefore?.value })
   } catch { /* Thesis save remains successful; Fit stays Unknown or Stale. */ }
 }
 
@@ -257,7 +257,7 @@ export async function updateRepreneurTargetThesis(
       || field.startsWith("target_revenue_") || field.startsWith("target_ebitda_") || field.startsWith("target_staff_size_"))) {
       try {
         const fitAfter = await captureRepreneurFitSource(supabase, repreneurId)
-        if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(repreneurId)
+        if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(repreneurId, { previousRepreneur: fitBefore?.value })
       } catch { /* Attributed staff save remains successful; Fit stays Unknown or Stale. */ }
     }
   }

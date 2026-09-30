@@ -1,7 +1,7 @@
 import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { OpportunityFitSource } from "@/lib/match-source-change"
+import type { OpportunityFitSource, RepreneurFitSource } from "@/lib/match-source-change"
 import { buildGeographyPaths } from "@/lib/repreneur-opportunity-geography"
 import {
   freshnessFromSnapshot,
@@ -27,8 +27,8 @@ export type StoredRepreneurMatchRefreshResult = {
   incomplete: boolean
 }
 
-type Scope = { repreneurId: string; opportunityId?: never; previousOpportunity?: never }
-  | { opportunityId: string; repreneurId?: never; previousOpportunity?: OpportunityFitSource }
+type Scope = { repreneurId: string; opportunityId?: never; previousRepreneur?: RepreneurFitSource; previousOpportunity?: never }
+  | { opportunityId: string; repreneurId?: never; previousRepreneur?: never; previousOpportunity?: OpportunityFitSource }
 
 async function refreshOneMatch(supabase: SupabaseClient, matchId: string, scope?: Scope) {
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -38,6 +38,13 @@ async function refreshOneMatch(supabase: SupabaseClient, matchId: string, scope?
       || (scope?.opportunityId && snapshot.match.opportunity_id !== scope.opportunityId)) return "drift" as const
     if (freshnessFromSnapshot(snapshot) === "Fresh") return "current" as const
     const { repreneur, opportunity } = getSnapshotScoringInputs(snapshot)
+    if (scope?.previousRepreneur) {
+      // Compare the former canonical target paths against this match's current
+      // opportunity. An old Unknown row is not a reason to score unchanged inputs.
+      const former = { ...repreneur, ...scope.previousRepreneur }
+      if (JSON.stringify(matchingEffectiveInputs(former, opportunity))
+        === JSON.stringify(matchingEffectiveInputs(repreneur, opportunity))) return "not-relevant" as const
+    }
     if (scope?.previousOpportunity) {
       const paths = buildGeographyPaths(snapshot.geography_nodes)
       const former = {
@@ -126,8 +133,9 @@ async function refreshScope(supabase: SupabaseClient, scope: Scope) {
 export async function refreshStoredRepreneurMatchesWithClient(
   supabase: SupabaseClient,
   repreneurId: string,
+  options: { previousRepreneur?: RepreneurFitSource } = {},
 ): Promise<StoredRepreneurMatchRefreshResult> {
-  return refreshScope(supabase, { repreneurId })
+  return refreshScope(supabase, { repreneurId, previousRepreneur: options.previousRepreneur })
 }
 
 export async function refreshStoredOpportunityMatchesWithClient(

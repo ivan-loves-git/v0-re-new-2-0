@@ -23,9 +23,9 @@ import {
   parseExplicitDemoClassification,
 } from "@/lib/demo-classification"
 
-async function settleRepreneurFitAfterSave(repreneurId: string) {
+async function settleRepreneurFitAfterSave(repreneurId: string, previousRepreneur: Awaited<ReturnType<typeof captureRepreneurFitBefore>>) {
   const { settleRepreneurFitAfterSave: settle } = await import("@/lib/repreneur-profile-refresh")
-  return settle(repreneurId)
+  return settle(repreneurId, { previousRepreneur: previousRepreneur?.value })
 }
 
 async function captureRepreneurFitBefore(supabase: ReturnType<typeof createAdminClient>, repreneurId: string) {
@@ -43,7 +43,7 @@ async function settleRepreneurFitIfChanged(
   try {
     const { captureRepreneurFitSource, fitSourceChanged } = await import("@/lib/match-source-change")
     const after = await captureRepreneurFitSource(supabase, repreneurId)
-    if (fitSourceChanged(before, after)) await settleRepreneurFitAfterSave(repreneurId)
+    if (fitSourceChanged(before, after)) await settleRepreneurFitAfterSave(repreneurId, before)
   } catch { /* The source save remains successful; old Fit remains Unknown or Stale. */ }
 }
 

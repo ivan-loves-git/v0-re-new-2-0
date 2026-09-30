@@ -1,12 +1,12 @@
 import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
+import { getSnapshotScoringInputs, loadMatchScoreSnapshot } from "@/lib/match-score-provenance"
 import { matchingEffectiveInputs } from "@/lib/utils/opportunity-match-scoring"
 
-const REPRENEUR_SOURCE_FIELDS = `is_demo,q12_geo_zones,q13_target_sectors_v2,sector_preferences,target_location,
-  target_revenue_min_meur,target_revenue_max_meur,target_ebitda_min_keur,target_ebitda_max_keur,
-  target_ebitda_margin_min_pct,target_staff_size_min,target_staff_size_max`
 const OPPORTUNITY_SOURCE_FIELDS = `is_demo,sector,activity,location,revenue_meur,ebitda_keur,headcount,geography_node_id`
+
+export type RepreneurFitSource = ReturnType<typeof getSnapshotScoringInputs>["repreneur"]
 
 export type OpportunityFitSource = {
   is_demo: boolean
@@ -53,10 +53,18 @@ function opportunitySignature(value: OpportunityFitSource) {
   })
 }
 
-export async function captureRepreneurFitSource(supabase: SupabaseClient, id: string): Promise<FitSourceCapture<Record<string, unknown>> | null> {
-  const { data, error } = await supabase.from("repreneurs").select(REPRENEUR_SOURCE_FIELDS).eq("id", id).maybeSingle()
+/** Before and after saves use the same existing one-statement match snapshot.
+ * Its repreneur half includes the canonical target paths that can shadow q12.
+ * With no saved match there is nothing to refresh.
+ */
+export async function captureRepreneurFitSource(supabase: SupabaseClient, id: string): Promise<FitSourceCapture<RepreneurFitSource> | null> {
+  const { data, error } = await supabase.from("opportunity_matches").select("id")
+    .eq("repreneur_id", id).order("id", { ascending: true }).limit(1).maybeSingle()
   if (error || !data) return null
-  return { value: data, signature: repreneurSignature(data) }
+  const snapshot = await loadMatchScoreSnapshot(supabase, data.id)
+  if (!snapshot || snapshot.match.repreneur_id !== id) return null
+  const value = getSnapshotScoringInputs(snapshot).repreneur
+  return { value, signature: repreneurSignature(value) }
 }
 
 export async function captureOpportunityFitSource(supabase: SupabaseClient, id: string): Promise<FitSourceCapture<OpportunityFitSource> | null> {

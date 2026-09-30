@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { calculateDualScore } from "@/lib/utils/scoring-v2"
 import { refreshStoredRepreneurMatchesWithClient } from "@/lib/repreneur-match-refresh-core"
 import type { StoredRepreneurMatchRefreshResult } from "@/lib/repreneur-match-refresh-core"
+import type { RepreneurFitSource } from "@/lib/match-source-change"
 export type { StoredRepreneurMatchRefreshResult } from "@/lib/repreneur-match-refresh-core"
 import type { WhenAnswers, WhoAnswers } from "@/lib/types/scoring-v2"
 
@@ -49,10 +50,10 @@ function revalidateRepreneurProfilePaths(repreneurId: string) {
  */
 export async function refreshStoredRepreneurMatches(
   repreneurId: string,
-  options: { revalidate?: boolean } = {},
+  options: { revalidate?: boolean; previousRepreneur?: RepreneurFitSource } = {},
 ): Promise<StoredRepreneurMatchRefreshResult> {
   const supabase = createAdminClient()
-  const result = await refreshStoredRepreneurMatchesWithClient(supabase, repreneurId)
+  const result = await refreshStoredRepreneurMatchesWithClient(supabase, repreneurId, options)
   if (options.revalidate !== false) {
     revalidateRepreneurProfilePaths(repreneurId)
   }
@@ -60,9 +61,9 @@ export async function refreshStoredRepreneurMatches(
 }
 
 /** A completed profile save is never rolled back by a later Fit refresh miss. */
-export async function settleRepreneurFitAfterSave(repreneurId: string) {
+export async function settleRepreneurFitAfterSave(repreneurId: string, options: { previousRepreneur?: RepreneurFitSource } = {}) {
   try {
-    const result = await refreshStoredRepreneurMatches(repreneurId)
+    const result = await refreshStoredRepreneurMatches(repreneurId, options)
     return {
       current: result.currentRows,
       notRelevant: result.notRelevantRows,

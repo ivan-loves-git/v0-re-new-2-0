@@ -14,9 +14,9 @@ import { getTemplateBody, getTemplateSubject } from "@/lib/email/template-conten
 // High score threshold for alert email
 const HIGH_SCORE_THRESHOLD = 70
 
-async function settleRepreneurFitAfterSave(repreneurId: string) {
+async function settleRepreneurFitAfterSave(repreneurId: string, previousRepreneur: Awaited<ReturnType<typeof captureRepreneurFitSourceForSave>>) {
   const { settleRepreneurFitAfterSave: settle } = await import("@/lib/repreneur-profile-refresh")
-  return settle(repreneurId)
+  return settle(repreneurId, { previousRepreneur: previousRepreneur?.value })
 }
 
 async function captureRepreneurFitSourceForSave(supabase: ReturnType<typeof createAdminClient>, repreneurId: string) {
@@ -267,7 +267,7 @@ export async function updateIntakeGoals(
     try {
       const { fitSourceChanged } = await import("@/lib/match-source-change")
       const fitAfter = await captureRepreneurFitSourceForSave(supabase, id)
-      if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(id)
+      if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(id, fitBefore)
     } catch { /* Goals save remains successful; unresolved Fit stays Unknown or Stale. */ }
 
     // Update abandonment tracking

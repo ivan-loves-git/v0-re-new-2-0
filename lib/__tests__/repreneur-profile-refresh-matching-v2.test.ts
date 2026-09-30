@@ -54,6 +54,7 @@ function clientFor(snapshots: Array<Record<string, unknown>>, outcomes: string[]
       order: () => builder,
       limit: (value: number) => { limit = value; return builder },
       gt: (_key: string, value: string) => { after = value; return builder },
+      maybeSingle: async () => ({ data: ids.length ? { id: ids[0] } : null, error: null }),
       then: (resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) =>
         Promise.resolve({
           data: ids.filter((id) => !after || id > after).slice(0, limit).map((id) => ({ id })),
@@ -121,17 +122,43 @@ describe("guarded stored Matching 2.2", () => {
   })
 
   it("gates unrelated profile edits and shadowed aliases before historical Unknown rows", async () => {
-    const first = sourceSnapshot().repreneur
-    const client = sourceClientFor("repreneurs", [
+    const first = sourceSnapshot()
+    const client = clientFor([
       first,
-      { ...first, sector_preferences: ["different legacy"], target_location: ["all-france"] },
-      { ...first, q13_target_sectors_v2: ["Tech & Digital"] },
-    ])
-    const before = await captureRepreneurFitSource(client, "owner-1")
-    const shadowed = await captureRepreneurFitSource(client, "owner-1")
-    const relevant = await captureRepreneurFitSource(client, "owner-1")
+      { ...first, repreneur: { ...first.repreneur, q12_geo_zones: ["ile-de-france"],
+        sector_preferences: ["different legacy"], target_location: ["different legacy"] } },
+      { ...first, repreneur: { ...first.repreneur, q13_target_sectors_v2: ["Tech & Digital"] } },
+    ], [])
+    const before = await captureRepreneurFitSource(client.client, "owner-1")
+    const shadowed = await captureRepreneurFitSource(client.client, "owner-1")
+    const relevant = await captureRepreneurFitSource(client.client, "owner-1")
     expect(fitSourceChanged(before, shadowed)).toBe(false)
     expect(fitSourceChanged(before, relevant)).toBe(true)
+    expect(before?.value.target_geography_paths_stable_keys).toEqual([["fr-region-brittany", "france"]])
+    expect(client.calls.map((call) => call.functionName)).toEqual(Array(3).fill("match_score_source_snapshot"))
+  })
+
+  it("leaves an old Unknown match untouched when only shadowed legacy geography changed", async () => {
+    const before = sourceSnapshot()
+    const current = { ...before, repreneur: { ...before.repreneur, revision: 1, q12_geo_zones: ["ile-de-france"] } }
+    const fake = clientFor([current], ["committed"])
+    const previousRepreneur = getSnapshotScoringInputs(before).repreneur
+    const result = await refreshStoredRepreneurMatchesWithClient(fake.client, "owner-1", { previousRepreneur })
+    expect(result).toMatchObject({ matchedRows: 1, currentRows: 0, notRelevantRows: 1, refreshedRows: 0 })
+    expect(fake.calls.map((call) => call.functionName)).toEqual(["match_score_source_snapshot"])
+  })
+
+  it("refreshes an old Unknown match when the profile's consumed sector changes", async () => {
+    const current = sourceSnapshot()
+    const previousRepreneur = {
+      ...getSnapshotScoringInputs(current).repreneur,
+      q13_target_sectors_v2: ["Tech & Digital"],
+    }
+    const fake = clientFor([current], ["committed"])
+    const result = await refreshStoredRepreneurMatchesWithClient(fake.client, "owner-1", { previousRepreneur })
+    expect(result).toMatchObject({ matchedRows: 1, notRelevantRows: 0, refreshedRows: 1 })
+    expect(fake.calls.map((call) => call.functionName))
+      .toEqual(["match_score_source_snapshot", "match_score_commit_guarded"])
   })
 
   it("skips an old Unknown match when changed opportunity evidence is untargeted for that buyer", async () => {
