@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# The runner may retain diagnostic material while it executes, but published
-# artifacts have a smaller contract: one aggregate JSON file with a fixed
-# allowlist of outcome counts and booleans. This script is intentionally the
-# only boundary between working evidence and the retained GitHub artifact.
+# The runner may retain diagnostic material while it executes, but the published
+# structured aggregate artifact has a smaller contract: one JSON file with a
+# fixed allowlist of outcome counts and booleans. This script is the publication
+# boundary for structured aggregate evidence. The workflow separately allows
+# exactly two synthetic email UI PNG captures; raw diagnostics and other working
+# evidence are never published.
 working_dir="${OPENING_READINESS_EVIDENCE_DIR:-${RUNNER_TEMP:?RUNNER_TEMP is required}/opening-readiness-evidence}"
 published_dir="${OPENING_READINESS_PUBLISHED_DIR:-${RUNNER_TEMP:?RUNNER_TEMP is required}/opening-readiness-published}"
 : "${OPENING_FIXTURE_RELEASE_SHA:?OPENING_FIXTURE_RELEASE_SHA is required}"
