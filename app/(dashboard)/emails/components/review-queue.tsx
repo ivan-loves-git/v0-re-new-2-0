@@ -1013,6 +1013,7 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
           width: "fixed",
         }}
         tableClassNames={{
+          base: "email-review-table",
           bodyRow:
             "[&:has([data-run-row=group])>td]:bg-muted/45 [&:has([data-run-row=group])>td]:h-11",
           edgeCell: "first:ps-3 last:pe-3",

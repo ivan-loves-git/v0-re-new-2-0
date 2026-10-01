@@ -886,6 +886,41 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await directReview.locator("summary").filter({ hasText: /^More details$/ }).click();
     await expect(directReview.getByText("Catalogue template disabled or unavailable", { exact: true })).toBeVisible();
     await expect(directReview.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto("/emails");
+    await readyReviewQueue(page);
+    const sidebar = page.locator('[data-slot="sidebar"][data-state]');
+    if (await sidebar.getAttribute("data-state") === "collapsed") {
+      await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
+    }
+    await expect(sidebar).toHaveAttribute("data-state", "expanded");
+    const cancelledReviewRow = page.getByRole("row").filter({
+      has: page.locator(`a[href="/emails/review/${cancelledReviewId}"]`),
+    });
+    const emailQueue = page.getByRole("region", { name: "Staff email review queue", exact: true });
+    const gridViewport = emailQueue.locator('[data-slot="scroll-area-viewport"]');
+    await expect.poll(() => gridViewport.evaluate((viewport) => viewport.scrollWidth - viewport.clientWidth))
+      .toBeLessThanOrEqual(1);
+    const gridBox = await gridViewport.boundingBox();
+    expect(gridBox).not.toBeNull();
+    for (const control of [
+      cancelledReviewRow.getByRole("link", { name: "Review", exact: true }),
+      cancelledReviewRow.getByRole("button", { name: "Send", exact: true }),
+      cancelledReviewRow.getByRole("button", { name: /^Archive draft for / }),
+    ]) {
+      const controlBox = await control.boundingBox();
+      expect(controlBox).not.toBeNull();
+      expect(controlBox!.x).toBeGreaterThanOrEqual(gridBox!.x);
+      expect(controlBox!.x + controlBox!.width).toBeLessThanOrEqual(gridBox!.x + gridBox!.width);
+    }
+    await emailQueue.getByRole("combobox", { name: "Filter by email purpose" }).click();
+    await expect(page.getByRole("option", { name: "More information", exact: true }).locator("svg"))
+      .toHaveCSS("color", "rgb(30, 64, 175)");
+    await page.keyboard.press("Escape");
+    // Only the protected synthetic fixture is captured; no arbitrary failure
+    // screenshot, trace, database payload or reset-link token is published.
+    await page.screenshot({ path: join(evidenceDirectory, "email-review-desktop.png"), fullPage: true });
+
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/emails");
     await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
@@ -894,9 +929,8 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
     await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
     await readyReviewQueue(page);
-    const cancelledReviewRow = page.getByRole("row").filter({
-      has: page.locator(`a[href="/emails/review/${cancelledReviewId}"]`),
-    });
+    await emailTabStrip.evaluate((strip) => { strip.scrollLeft = 0; });
+    await page.screenshot({ path: join(evidenceDirectory, "email-review-mobile.png"), fullPage: true });
     await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();
     expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("Europe/Paris");
     const reviewSurface = page.getByRole("dialog", { name: "Review message", exact: true });
@@ -1068,6 +1102,11 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
        FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id
        WHERE d.match_id=$1 AND d.handoff_type='e4'`, [savedMatch.id, desktopOpportunityId]);
     expect(e4).toEqual({ delivery_status: "sent", request_included: true, current_blank_exists: true, exact_validation: true });
+    await page.goto("/emails?reviewFilter=all");
+    await readyReviewQueue(page);
+    await expect(page.getByRole("region", { name: "Staff email review queue", exact: true })
+      .locator('[data-slot="badge"]').filter({ hasText: /^E4 qualification$/ }).first())
+      .toHaveCSS("color", "rgb(30, 64, 175)");
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await expect(
       page.getByRole("button", {

@@ -803,6 +803,7 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
         {[...leftVisibleColumns, ...centerVisibleColumns].map((column) => (
           <col
             key={column.id}
+            data-col-id={column.id}
             style={
               props.tableLayout?.columnsResizable
                 ? { width: `calc(var(--col-${column.id}-size) * 1px)` }
@@ -816,6 +817,7 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
         {rightVisibleColumns.map((column) => (
           <col
             key={column.id}
+            data-col-id={column.id}
             style={
               props.tableLayout?.columnsResizable
                 ? { width: `calc(var(--col-${column.id}-size) * 1px)` }

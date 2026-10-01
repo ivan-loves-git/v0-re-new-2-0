@@ -17,7 +17,11 @@
   --destructive-foreground:#dc2626; --success:#10b981; --success-foreground:#059669;
   --info:#8b5cf6; --info-foreground:#7c3aed; --warning:#eab308; --warning-foreground:#ca8a04;
 }
-@theme inline { --color-focus:var(--focus); --color-focus-foreground:var(--focus-foreground); }
+
+/* The standalone prototype has no sidebar. Keep dashboard navigation while
+   giving only this email page its approved canvas and available content width. */
+#main-content:has(> div > .email-operations-page) {background:#f6f8fa;padding:30px 18px;}
+#main-content > div:has(> .email-operations-page) {max-width:1700px;}
 
 .email-review-scope [data-slot=button] {font-weight:500; border-radius:6px; box-shadow:none; transition-property:color,background-color,border-color;}
 .email-review-scope [data-slot=button][data-size=default] {height:32px; padding:4px 10px;gap:6px;border-radius:8px;}
@@ -27,7 +31,7 @@
 .email-review-scope [data-slot=input],.email-review-scope [data-slot=select-trigger] {height:32px; font-size:14px; border-radius:8px;padding-left:10px;padding-right:10px;box-shadow:none;}
 .email-review-scope [data-slot=select-trigger] {width:auto;gap:8px;}
 .email-review-scope [data-slot=sheet-title],.email-review-scope [data-slot=dialog-title] {font-family:inherit;}
-.email-queue-shell {background:var(--card);border:1px solid var(--border);border-radius:10px;padding:25px 26px 18px;}
+.email-queue-shell {container:email-review / inline-size;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:25px 26px 18px;}
 .email-queue-heading {display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px;}
 .email-queue-heading h2 {font-family:inherit;font-size:20px;font-weight:600;letter-spacing:-.35px;}
 .email-viewbar {display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:15px;}
@@ -44,7 +48,25 @@
 .email-review-message {font-size:14px;}
 .email-review-extra [data-slot=card] {box-shadow:none;}
 .email-review-scope [data-slot=data-grid-selection-bar] {margin-top:12px;}
+
+/* Let the message absorb spare width; fixed metadata widths cannot force the
+   last action beyond the queue. Below a desktop grid, retain horizontal scroll
+   and the reference column sizes rather than dropping any information. */
+.email-review-table col[data-col-id=message],
+.email-review-table th[data-col-id=message] {width:auto !important;}
+@container email-review (860px <= width <= 1100px) {
+  .email-review-table th,.email-review-table td {padding-left:8px;padding-right:8px;}
+  .email-review-table col[data-col-id=purpose],.email-review-table th[data-col-id=purpose] {width:115px !important;}
+  .email-review-table col[data-col-id=recipient],.email-review-table th[data-col-id=recipient] {width:145px !important;}
+  .email-review-table col[data-col-id=company],.email-review-table th[data-col-id=company] {width:70px !important;}
+  .email-review-table col[data-col-id=prepared],.email-review-table th[data-col-id=prepared] {width:105px !important;}
+  .email-review-table col[data-col-id=actions],.email-review-table th[data-col-id=actions] {width:194px !important;}
+}
+@container email-review (width < 860px) {
+  .email-review-table {min-width:1052px;}
+}
 @media(max-width:760px) {
+  #main-content:has(> div > .email-operations-page) {padding:18px 12px;}
   .email-queue-shell {padding:18px 12px;}
   .email-queue-heading,.email-viewbar {align-items:flex-start;flex-direction:column;gap:12px;}
   .email-queue-heading {margin-bottom:16px;}
