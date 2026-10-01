@@ -913,6 +913,14 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       expect(controlBox!.x).toBeGreaterThanOrEqual(gridBox!.x);
       expect(controlBox!.x + controlBox!.width).toBeLessThanOrEqual(gridBox!.x + gridBox!.width);
     }
+    const companyHeader = emailQueue.getByRole("columnheader", { name: "Company", exact: true });
+    const companyBox = await companyHeader.boundingBox();
+    const companySortBox = await companyHeader.getByRole("button", { name: "Company", exact: true }).boundingBox();
+    expect(companyBox).not.toBeNull();
+    expect(companySortBox).not.toBeNull();
+    expect(companySortBox!.x + companySortBox!.width).toBeLessThanOrEqual(companyBox!.x + companyBox!.width);
+    await expect(cancelledReviewRow.locator('[data-slot="badge"]').filter({ hasText: /^NDA and memo request$/ }))
+      .toHaveAttribute("title", "NDA and memo request");
     await emailQueue.getByRole("combobox", { name: "Filter by email purpose" }).click();
     await expect(page.getByRole("option", { name: "More information", exact: true }).locator("svg"))
       .toHaveCSS("color", "rgb(30, 64, 175)");
@@ -939,8 +947,13 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(subjectField).toBeVisible();
     const sendButton = reviewSurface.getByRole("button", { name: "Send", exact: true });
     await expect(sendButton).toBeDisabled();
-    const sendBox = await sendButton.boundingBox();
-    expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390);
+    // Visibility does not mean the Sheet's opening slide has settled. Retain
+    // the strict viewport boundary so persistent overflow still fails.
+    await expect(async () => {
+      const sendBox = await sendButton.boundingBox();
+      expect(sendBox).not.toBeNull();
+      expect(sendBox!.x + sendBox!.width).toBeLessThanOrEqual(390);
+    }).toPass({ timeout: 15_000 });
     await subjectField.fill("QA reviewed subject - no send");
     await reviewSurface.getByRole("button", { name: "Save reviewed text" }).click();
     await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();

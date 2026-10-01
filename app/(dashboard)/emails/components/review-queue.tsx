@@ -678,9 +678,12 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
         row.original.kind === "draft" ? (
           <Badge
             variant={purposeVariant[row.original.review.purpose_key]}
-            className="max-w-full truncate"
+            className="max-w-full"
+            title={row.original.review.purpose_label}
           >
-            {row.original.review.purpose_label}
+            <span className="min-w-0 truncate">
+              {row.original.review.purpose_label}
+            </span>
           </Badge>
         ) : null,
     },
