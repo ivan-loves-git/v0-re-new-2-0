@@ -20,7 +20,7 @@ vi.mock("@/lib/pursuit-handoff-copy", () => ({
   buildPursuitNdaReadyRequest: m.e6Copy, fixedIntermediaryHandoffCopy: m.fixedCopy,
 }))
 
-import { approveAndSendStaffEmailReview, archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, editStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview, restoreStaffEmailReview } from "@/lib/actions/staff-email-review"
+import { approveAndSendStaffEmailReview, archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, editStaffEmailReview, getStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview, restoreStaffEmailReview } from "@/lib/actions/staff-email-review"
 
 const reviewId = "18600000-0000-4000-8000-000000000010"
 const opportunityId = "18600000-0000-4000-8000-000000000011"
@@ -97,6 +97,31 @@ describe("staff email review public actions", () => {
     expect(m.from).not.toHaveBeenCalled()
   })
 
+  it("denies detail metadata before service access for a non-staff caller", async () => {
+    m.staff.mockRejectedValue(new Error("Staff access required"))
+    await expect(getStaffEmailReview(reviewId)).rejects.toThrow("Staff access")
+    expect(m.from).not.toHaveBeenCalled()
+    expect(m.rpc).not.toHaveBeenCalled()
+  })
+
+  it("returns only display metadata owned by the exact review recipient and opportunity", async () => {
+    const recipient = { recipient_email: row.recipient_email, recipient_name: "Fictional Source", company_name: "Fictional Firm", purpose_label: "Validity check" }
+    const opportunity = { id: opportunityId, reference: "QA-222", public_title: "Fictional opportunity" }
+    m.from.mockImplementation((table) => {
+      const data = table === "staff_email_reviews" ? row : table === "staff_email_review_queue" ? recipient : table === "opportunities" ? opportunity : null
+      const q = { select: () => q, eq: () => q, order: () => q,
+        limit: () => Promise.resolve({ data: [], error: null }),
+        maybeSingle: () => Promise.resolve({ data, error: null }) }
+      return q
+    })
+    m.rpc.mockResolvedValue({ data: true, error: null })
+    expect((await getStaffEmailReview(reviewId)).display).toEqual({ recipient, opportunity })
+    recipient.recipient_email = "another@example.invalid"
+    opportunity.id = "another-opportunity"
+    expect((await getStaffEmailReview(reviewId)).display).toEqual({ recipient: null, opportunity: null })
+    expect(m.sourceSend).not.toHaveBeenCalled()
+  })
+
   it("keeps records beyond the old latest-50 boundary navigable", async () => {
     const range = vi.fn().mockResolvedValue({ data: [{ ...row, id: "older-review" }], count: 51, error: null })
     const listQuery = {
@@ -162,6 +187,26 @@ describe("staff email review public actions", () => {
     await expect(approveAndSendStaffEmailReview(reviewId, 0)).rejects.toThrow("changed")
     expect(m.rpc).not.toHaveBeenCalled()
     expect(m.sourceSend).not.toHaveBeenCalled()
+  })
+
+  it("saves an editable message with CAS and sends only its read-back canonical version and words", async () => {
+    const subject = "New saved subject"
+    const body = "Complete new saved body"
+    await editStaffEmailReview(reviewId, 1, subject, body)
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_edit", {
+      p_review_id: reviewId, p_version: 1, p_subject: subject, p_body_text: body, p_actor: "staff-1",
+    })
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    const saved = { ...row, version: 2, subject, body_text: body }
+    m.from.mockImplementation(table => query(table === "staff_email_reviews" ? saved : table === "ma_interactions" ? { id: "evidence", delivery_status: "sent", provider_message_id: "accepted" } : null))
+    m.rpc.mockClear()
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("changed")
+    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    await approveAndSendStaffEmailReview(reviewId, 2)
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_reserve", expect.objectContaining({ p_review_id: reviewId, p_version: 2 }))
+    expect(m.build).toHaveBeenCalledWith(subject, body, row.recipient_email)
+    expect(m.sourceSend).toHaveBeenCalledTimes(1)
   })
 
   it("fails closed when a catalogue key is inactive at approval", async () => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 import { Client } from "pg"
 import { OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
 
@@ -22,6 +22,30 @@ if (!databaseUrl || !password || !cronSecret || process.env.CI !== "true" ||
 }
 
 test.use({ timezoneId: "Europe/Paris" })
+
+async function readyReviewQueue(page: Page) {
+  const display = page.getByRole("region", { name: "Staff email review queue", exact: true })
+    .getByRole("button", { name: "Display", exact: true })
+  const density = page.getByText("Row density", { exact: true })
+  // Visible server markup alone does not prove the queue's client interactions.
+  await expect(async () => {
+    if (!(await density.isVisible())) await display.click()
+    expect(await density.isVisible()).toBe(true)
+  }).toPass({ timeout: 15_000 })
+  await page.keyboard.press("Escape")
+  await expect(density).toBeHidden()
+}
+
+async function dismissNotifications(page: Page) {
+  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true })
+  let remaining = await closeButtons.count()
+  // Dismiss through the normal controls; hovering a covering toast pauses expiry.
+  while (remaining) {
+    await closeButtons.first().click()
+    await expect.poll(() => closeButtons.count()).toBeLessThan(remaining)
+    remaining = await closeButtons.count()
+  }
+}
 
 test("staff can review one generated contact group on desktop/mobile; non-staff cannot open its rule", async ({ page, browser, request }) => {
   test.setTimeout(180_000)
@@ -94,19 +118,27 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
       has: page.locator(`a[href="/emails/review/${reviewId}"]`),
     })
     await expect(reviewRow.getByText("Source freshness", { exact: true })).toBeVisible()
-    await reviewRow.getByRole("link", { name: "Review" }).click()
-    await expect(page.getByText("Catalogue template disabled")).toBeVisible()
-    await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled()
-    await expect(page.getByText("QA-FRESH-A", { exact: false }).first()).toBeVisible()
-    await expect(page.getByText("QA-FRESH-B", { exact: false }).first()).toBeVisible()
-    await page.getByRole("link", { name: "View the internal 45-day rule" }).click()
+    await readyReviewQueue(page)
+    await reviewRow.getByRole("link", { name: "Review", exact: true }).click()
+    const reviewSheet = page.getByRole("dialog", { name: "Review message", exact: true })
+    await expect(reviewSheet).toBeVisible()
+    await expect(reviewSheet.getByRole("button", { name: "Send", exact: true })).toBeDisabled()
+    await reviewSheet.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await expect(reviewSheet.getByText("Catalogue template disabled or unavailable", { exact: true })).toBeVisible()
+    await expect(reviewSheet.getByText("QA-FRESH-A", { exact: false }).first()).toBeVisible()
+    await expect(reviewSheet.getByText("QA-FRESH-B", { exact: false }).first()).toBeVisible()
+    await reviewSheet.getByRole("link", { name: "View the internal 45-day rule" }).click()
     await expect(page.getByRole("heading", { name: "Opportunity freshness" })).toBeVisible()
 
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(`/emails/review/${reviewId}`)
-    await expect(page.getByRole("heading", { name: "Review & send" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "View the internal 45-day rule" })).toBeVisible()
-    const sendBox = await page.getByRole("button", { name: "Approve and send" }).boundingBox()
+    const directReview = page.locator("#main-content:visible")
+    await expect(directReview.getByRole("heading", { name: "Review message", exact: true })).toBeVisible()
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await expect(directReview.getByRole("link", { name: "View the internal 45-day rule" })).toBeVisible()
+    const sendButton = directReview.getByRole("button", { name: "Send", exact: true })
+    await expect(sendButton).toBeDisabled()
+    const sendBox = await sendButton.boundingBox()
     expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390)
 
     await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_opportunity_validity_check'")
@@ -115,13 +147,35 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     const body = page.locator("#review-body:visible")
     await expect(body).toHaveCount(1)
     await expect(body).toBeEditable()
-    await body.fill((await body.inputValue()) + "\nSynthetic QA group check.")
+    const reviewedBody = (await body.inputValue()) + "\nSynthetic QA group check."
+    await body.fill(reviewedBody)
     await page.getByRole("button", { name: "Save reviewed text" }).click()
     await expect(page.getByText("Review text saved.", { exact: false })).toBeVisible()
     await page.reload()
-    page.once("dialog", async (dialog) => dialog.accept())
-    await page.getByRole("button", { name: "Approve and send" }).click()
-    await expect(page.getByText("Provider accepted the grouped email.", { exact: false })).toBeVisible()
+    await expect(body).toHaveValue(reviewedBody)
+    const reviewedSubject = await directReview.getByRole("textbox", { name: "Subject", exact: true }).inputValue()
+    await dismissNotifications(page)
+    await sendButton.click()
+    const confirmation = page.getByRole("dialog", { name: "Confirm send", exact: true })
+    await expect(confirmation).toBeVisible()
+    await expect(confirmation).toContainText(reviewedSubject)
+    await expect(confirmation).toContainText(reviewedBody)
+    const confirmSend = confirmation.getByRole("button", { name: "Send", exact: true })
+    await expect(confirmSend).toBeDisabled()
+    await confirmation.getByRole("checkbox", { name: "Acknowledge complete message", exact: true }).check()
+    await expect(confirmSend).toBeEnabled()
+    await confirmSend.click()
+    // Sending advances the saved version and can remount away the confirmation.
+    await expect(directReview.getByText("Accepted by provider", { exact: true })).toBeVisible()
+    await page.reload()
+    await expect(directReview.getByText("Accepted by provider", { exact: true })).toBeVisible()
+    await expect(directReview.getByRole("textbox", { name: "Subject", exact: true })).toHaveValue(reviewedSubject)
+    await expect(body).toHaveValue(reviewedBody)
+    await expect(sendButton).toBeDisabled()
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    const publicReceipt = directReview.locator('[data-slot="alert-description"]:visible')
+      .filter({ hasText: "Provider receipt qa-allowlist-accepted." })
+    await expect(publicReceipt).toContainText("Sent means accepted by the provider, not delivered or read.")
     const receipt = await client.query<{ provider_message_id: string; members: number }>(`
       SELECT delivery.provider_message_id,count(member.opportunity_id)::int AS members
       FROM public.opportunity_freshness_deliveries delivery

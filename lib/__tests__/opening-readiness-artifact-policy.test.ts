@@ -94,23 +94,47 @@ afterEach(async () => {
 });
 
 describe("opening-readiness artifact policy", () => {
-  it("uploads exactly one aggregate file and never a diagnostic directory", async () => {
+  it("uploads only the aggregate file and two controlled synthetic UI captures for seven days", async () => {
     const workflow = parse(await readFile(workflowPath, "utf8")) as {
       jobs: { fixture: { steps: Array<Record<string, unknown>> } };
     };
     const steps = workflow.jobs.fixture.steps;
     const uploads = steps.filter(
       (step) =>
-        step.uses ===
+        typeof step.uses === "string" &&
+        step.uses.startsWith("actions/upload-artifact@"),
+    );
+    const publishedArtifacts = uploads.map((upload) => {
+      expect(upload.uses).toBe(
         "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
-    );
-    expect(uploads).toHaveLength(1);
-    expect(uploads[0]?.with).toMatchObject({
-      path: "${{ runner.temp }}/opening-readiness-published/aggregate-summary.json",
+      );
+      const options = upload.with as Record<string, unknown>;
+      expect(options.path).toEqual(expect.any(String));
+      return {
+        files: String(options.path)
+          .trim()
+          .split(/\r?\n/)
+          .map((path) => path.trim()),
+        retentionDays: options["retention-days"],
+      };
     });
-    expect(JSON.stringify(uploads)).not.toMatch(
-      /opening-readiness-evidence|opening-readiness-playwright|\.jsonl/i,
-    );
+    // Exact files and separate artifacts reject directories, globs, raw
+    // diagnostics, traces and token payloads without expanding the assembler.
+    expect(publishedArtifacts).toEqual([
+      {
+        files: [
+          "${{ runner.temp }}/opening-readiness-published/aggregate-summary.json",
+        ],
+        retentionDays: 7,
+      },
+      {
+        files: [
+          "${{ runner.temp }}/opening-readiness-evidence/email-review-desktop.png",
+          "${{ runner.temp }}/opening-readiness-evidence/email-review-mobile.png",
+        ],
+        retentionDays: 7,
+      },
+    ]);
     expect(steps).toContainEqual(
       expect.objectContaining({
         name: "Assemble aggregate-safe evidence",

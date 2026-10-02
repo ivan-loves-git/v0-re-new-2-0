@@ -88,7 +88,7 @@ export async function getStaffEmailReview(id: string) {
   await requireStaffAccess()
   const review = await reviewById(id)
   const db = createAdminClient()
-  const [{ data, error }, template, memberResult, replyResult, archiveEligibility] = await Promise.all([
+  const [{ data, error }, template, memberResult, replyResult, archiveEligibility, recipientDisplay, opportunityDisplay] = await Promise.all([
     db.from("staff_email_review_events").select("id,event_kind,actor,occurred_at,version,detail")
       .eq("review_id", id).order("occurred_at", { ascending: false }).limit(100),
     review.source_kind === "e6" ? Promise.resolve({ data: null, error: null }) :
@@ -102,6 +102,11 @@ export async function getStaffEmailReview(id: string) {
           .eq("review_id", id).order("reply_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     db.rpc("staff_email_review_archive_source_clear", { p_review_id: id }),
+    db.from("staff_email_review_queue").select("recipient_email,recipient_name,company_name,purpose_label")
+      .eq("id", id).maybeSingle(),
+    review.source_kind === "freshness" ? Promise.resolve({ data: null, error: null }) :
+      db.from("opportunities").select("id,reference,public_title")
+        .eq("id", review.opportunity_id).maybeSingle(),
   ])
   if (error || memberResult.error || replyResult.error || archiveEligibility.error) throw new Error("The review history is unavailable.")
   const catalogue = template.data ? {
@@ -111,6 +116,14 @@ export async function getStaffEmailReview(id: string) {
     ])).digest("hex"),
   } : null
   return { review, events: (data ?? []).reverse(), archiveEligible: archiveEligibility.data === true,
+    display: {
+      recipient: !recipientDisplay.error && recipientDisplay.data?.recipient_email === review.recipient_email
+        ? recipientDisplay.data as { recipient_email: string; recipient_name: string | null; company_name: string | null; purpose_label: string }
+        : null,
+      opportunity: !opportunityDisplay.error && opportunityDisplay.data?.id === review.opportunity_id
+        ? opportunityDisplay.data as { id: string; reference: string; public_title: string | null }
+        : null,
+    },
     catalogue,
     catalogueEnabled: review.source_kind === "e6" || (!template.error && template.data?.is_active === true),
     asOf: new Date().toISOString(),

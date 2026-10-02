@@ -142,6 +142,9 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
+  /* #222 supplies these values only inside the email queue and its portals. */
+  --color-focus: var(--focus);
+  --color-focus-foreground: var(--focus-foreground);
   --color-invert: var(--invert);
   --color-invert-foreground: var(--invert-foreground);
   --radius-sm: calc(var(--radius) - 4px);

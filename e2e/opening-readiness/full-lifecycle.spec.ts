@@ -90,14 +90,55 @@ async function openOwnerDocuments(page: Page) {
   await expect(workspace.getByRole("tabpanel", { name: "Documents" })).toBeVisible();
 }
 
+async function readyReviewQueue(page: Page) {
+  const display = page.getByRole("region", { name: "Staff email review queue", exact: true })
+    .getByRole("button", { name: "Display", exact: true });
+  const density = page.getByText("Row density", { exact: true });
+  // Visible server markup alone does not prove the queue's client interactions.
+  await expect(async () => {
+    if (!(await density.isVisible())) await display.click();
+    expect(await density.isVisible()).toBe(true);
+  }).toPass({ timeout: 15_000 });
+  await page.keyboard.press("Escape");
+  await expect(density).toBeHidden();
+}
+
+async function dismissNotifications(page: Page) {
+  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true });
+  let remaining = await closeButtons.count();
+  // Dismiss through the normal controls; hovering a covering toast pauses expiry.
+  while (remaining) {
+    await closeButtons.first().click();
+    await expect.poll(() => closeButtons.count()).toBeLessThan(remaining);
+    remaining = await closeButtons.count();
+  }
+}
+
 async function approvePreparedReview(page: Page) {
   await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
-  await expect(page.getByRole("heading", { name: "Review & send" })).toBeVisible();
-  page.once("dialog", async (dialog) => { await dialog.accept(); });
-  await page.getByRole("button", { name: "Approve and send" }).click();
-  await expect(page.getByText("Provider accepted the reviewed email.", { exact: false })).toBeVisible();
-  await page.reload();
+  await expect(page.getByRole("heading", { name: "Review message", exact: true })).toBeVisible();
+  await dismissNotifications(page);
+  const subject = await page.getByRole("textbox", { name: "Subject", exact: true }).inputValue();
+  const body = await page.getByRole("textbox", { name: "Message", exact: true }).inputValue();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: "Confirm send", exact: true });
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText(subject);
+  await expect(confirmation).toContainText(body);
+  const confirmSend = confirmation.getByRole("button", { name: "Send", exact: true });
+  await expect(confirmSend).toBeDisabled();
+  await confirmation.getByRole("checkbox", { name: "Acknowledge complete message", exact: true }).check();
+  await expect(confirmSend).toBeEnabled();
+  await confirmSend.click();
   const visibleReview = page.locator("#main-content:visible");
+  // Sending advances the saved version and can remount away the confirmation.
+  await expect(visibleReview.getByText("Accepted by provider", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(visibleReview.getByText("Accepted by provider", { exact: true })).toBeVisible();
+  await expect(visibleReview.getByRole("textbox", { name: "Subject", exact: true })).toHaveValue(subject);
+  await expect(visibleReview.getByRole("textbox", { name: "Message", exact: true })).toHaveValue(body);
+  await expect(visibleReview.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
+  await visibleReview.locator("summary").filter({ hasText: /^More details$/ }).click();
   const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
     .filter({ hasText: "Provider receipt qa-allowlist-accepted." });
   await expect(receipt).toContainText("Sent means accepted by the provider, not delivered or read.");
@@ -841,8 +882,53 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.getByRole("button", { name: "Prepare for review" }).click();
     await expect(page).toHaveURL(/\/emails\/review\/[0-9a-f-]{36}$/);
     const cancelledReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
-    await expect(page.getByText("Catalogue template disabled")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled();
+    const directReview = page.locator("#main-content:visible");
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click();
+    await expect(directReview.getByText("Catalogue template disabled or unavailable", { exact: true })).toBeVisible();
+    await expect(directReview.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto("/emails");
+    await readyReviewQueue(page);
+    const sidebar = page.locator('[data-slot="sidebar"][data-state]');
+    if (await sidebar.getAttribute("data-state") === "collapsed") {
+      await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
+    }
+    await expect(sidebar).toHaveAttribute("data-state", "expanded");
+    const cancelledReviewRow = page.getByRole("row").filter({
+      has: page.locator(`a[href="/emails/review/${cancelledReviewId}"]`),
+    });
+    const emailQueue = page.getByRole("region", { name: "Staff email review queue", exact: true });
+    const gridViewport = emailQueue.locator('[data-slot="scroll-area-viewport"]');
+    await expect.poll(() => gridViewport.evaluate((viewport) => viewport.scrollWidth - viewport.clientWidth))
+      .toBeLessThanOrEqual(1);
+    const gridBox = await gridViewport.boundingBox();
+    expect(gridBox).not.toBeNull();
+    for (const control of [
+      cancelledReviewRow.getByRole("link", { name: "Review", exact: true }),
+      cancelledReviewRow.getByRole("button", { name: "Send", exact: true }),
+      cancelledReviewRow.getByRole("button", { name: /^Archive draft for / }),
+    ]) {
+      const controlBox = await control.boundingBox();
+      expect(controlBox).not.toBeNull();
+      expect(controlBox!.x).toBeGreaterThanOrEqual(gridBox!.x);
+      expect(controlBox!.x + controlBox!.width).toBeLessThanOrEqual(gridBox!.x + gridBox!.width);
+    }
+    const companyHeader = emailQueue.getByRole("columnheader", { name: "Company", exact: true });
+    const companyBox = await companyHeader.boundingBox();
+    const companySortBox = await companyHeader.getByRole("button", { name: "Company", exact: true }).boundingBox();
+    expect(companyBox).not.toBeNull();
+    expect(companySortBox).not.toBeNull();
+    expect(companySortBox!.x + companySortBox!.width).toBeLessThanOrEqual(companyBox!.x + companyBox!.width);
+    await expect(cancelledReviewRow.locator('[data-slot="badge"]').filter({ hasText: /^NDA and memo request$/ }))
+      .toHaveAttribute("title", "NDA and memo request");
+    await emailQueue.getByRole("combobox", { name: "Filter by email purpose" }).click();
+    await expect(page.getByRole("option", { name: "More information", exact: true }).locator("svg"))
+      .toHaveCSS("color", "rgb(30, 64, 175)");
+    await page.keyboard.press("Escape");
+    // Only the protected synthetic fixture is captured; no arbitrary failure
+    // screenshot, trace, database payload or reset-link token is published.
+    await page.screenshot({ path: join(evidenceDirectory, "email-review-desktop.png"), fullPage: true });
+
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/emails");
     await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
@@ -850,22 +936,28 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await emailTabStrip.evaluate((strip) => { strip.scrollLeft = strip.scrollWidth; });
     expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
     await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
-    const cancelledReviewRow = page.getByRole("row").filter({
-      has: page.locator(`a[href="/emails/review/${cancelledReviewId}"]`),
-    });
+    await readyReviewQueue(page);
+    await emailTabStrip.evaluate((strip) => { strip.scrollLeft = 0; });
+    await page.screenshot({ path: join(evidenceDirectory, "email-review-mobile.png"), fullPage: true });
     await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();
     expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe("Europe/Paris");
-    const reviewSurface = page.locator("#main-content:visible").filter({
-      has: page.locator("#review-subject:visible"),
-    });
+    const reviewSurface = page.getByRole("dialog", { name: "Review message", exact: true });
+    await expect(reviewSurface).toBeVisible();
     const subjectField = reviewSurface.locator("#review-subject:visible");
     await expect(subjectField).toBeVisible();
-    const sendButton = reviewSurface.getByRole("button", { name: "Approve and send" });
-    const sendBox = await sendButton.boundingBox();
-    expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390);
+    const sendButton = reviewSurface.getByRole("button", { name: "Send", exact: true });
+    await expect(sendButton).toBeDisabled();
+    // Visibility does not mean the Sheet's opening slide has settled. Retain
+    // the strict viewport boundary so persistent overflow still fails.
+    await expect(async () => {
+      const sendBox = await sendButton.boundingBox();
+      expect(sendBox).not.toBeNull();
+      expect(sendBox!.x + sendBox!.width).toBeLessThanOrEqual(390);
+    }).toPass({ timeout: 15_000 });
     await subjectField.fill("QA reviewed subject - no send");
     await reviewSurface.getByRole("button", { name: "Save reviewed text" }).click();
     await expect(page.getByText("Review text saved. The template was not changed.")).toBeVisible();
+    await expect(reviewSurface).toBeHidden();
     const hydrationErrors: string[] = [];
     const recordHydrationError = (message: string) => {
       if (/react\.dev\/errors\/418|react error #418|hydration failed|hydration mismatch|server.rendered HTML didn.t match the client|text content does not match server.rendered HTML|tree hydrated but some attributes/i.test(message)) {
@@ -880,7 +972,13 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     page.on("console", collectConsoleError);
     try {
       await page.reload();
+      await readyReviewQueue(page);
+      await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();
+      await expect(reviewSurface).toBeVisible();
       await expect(subjectField).toHaveValue("QA reviewed subject - no send");
+      await expect(sendButton).toBeDisabled();
+      await reviewSurface.locator("summary").filter({ hasText: /^More details$/ }).click();
+      await expect(reviewSurface.getByText("Catalogue template disabled or unavailable", { exact: true })).toBeVisible();
       await reviewSurface.locator("#review-cancel-reason:visible").fill("Disposable draft superseded before any send");
       await expect(reviewSurface.getByRole("button", { name: "Cancel with reason" })).toBeEnabled();
       expect(hydrationErrors).toEqual([]);
@@ -890,7 +988,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     }
     await reviewSurface.getByRole("button", { name: "Cancel with reason" }).click();
     await expect(page.getByText("Draft cancelled with a retained reason.")).toBeVisible();
-    await page.reload();
+    await page.goto(`/emails/review/${cancelledReviewId}`);
     await expect(page.getByText("cancelled", { exact: true }).first()).toBeVisible();
     const cancelled = await one<{ state: string; subject: string; cancel_reason: string; events: number }>(client,
       `SELECT r.state,r.subject,r.cancel_reason,
@@ -1017,6 +1115,11 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
        FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.ma_interactions i ON i.id=d.ma_interaction_id JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id
        WHERE d.match_id=$1 AND d.handoff_type='e4'`, [savedMatch.id, desktopOpportunityId]);
     expect(e4).toEqual({ delivery_status: "sent", request_included: true, current_blank_exists: true, exact_validation: true });
+    await page.goto("/emails?reviewFilter=all");
+    await readyReviewQueue(page);
+    await expect(page.getByRole("region", { name: "Staff email review queue", exact: true })
+      .locator('[data-slot="badge"]').filter({ hasText: /^E4 qualification$/ }).first())
+      .toHaveCSS("color", "rgb(30, 64, 175)");
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
     await expect(
       page.getByRole("button", {

@@ -53,7 +53,15 @@ async function readStaffBatch(id: string, actor: string) {
 
 export async function getStaffEmailBulk(id: string) {
   const { user } = await requireStaffAccess()
-  return readStaffBatch(id, user.id)
+  const record = await readStaffBatch(id, user.id)
+  const { data, error } = await createAdminClient().from("staff_email_review_queue")
+    .select("id,recipient_email,recipient_name").in("id", record.items.map(item => item.review_id))
+  const recipients: Record<string, { recipient_email: string; recipient_name: string | null }> = {}
+  if (!error) for (const row of data ?? []) {
+    const item = record.items.find(item => item.review_id === row.id && item.review_snapshot.id === row.id && item.review_snapshot.recipient_email === row.recipient_email)
+    if (item) recipients[item.review_id] = { recipient_email: row.recipient_email, recipient_name: row.recipient_name }
+  }
+  return { ...record, recipients } as typeof record & { recipients?: typeof recipients }
 }
 
 export async function prepareStaffEmailBulk(input: {
