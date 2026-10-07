@@ -9,11 +9,13 @@ Run `pnpm agent:context` (or `node scripts/agent-context.mjs` before dependencie
 
 For product work or direct Matt calls, read the [Re-New routing adapter](https://github.com/re-new-team/renew-governance/blob/main/docs/agents/renew-direct-calls.md). It owns tracker/context discovery, source handling, current card summaries, progress links and closeout. Governance is `re-new-team/renew-governance`; use the existing Product Change as the specification and native Ticket/Decision children. Analysis may start without a card. [Decision #210](https://github.com/re-new-team/renew-governance/issues/210) governs the GitHub-only flow; historical PDR links are provenance. GitHub unavailable or conflicting: stop affected delivery and report the exact missing authority.
 
+Follow the routing adapter's progress rule: retain useful active-card links during implementation; state analysis without a card once, without creating one for appearance.
+
 ## Implementation and release
 
 Before writing code, read [TESTING_RELEASE_PROTOCOL.md](docs/TESTING_RELEASE_PROTOCOL.md). It is the single application procedure for authority, isolated lanes, tests, pinned review, CI, merge, production proof and communication. Preserve narrower issue-specific boundaries. Shared risky surfaces and releases remain serial.
 
-Ivan selects each Matt skill and when to advance. Follow the installed skill completely, including its built-in TDD and independent Standards/Spec review. The routing adapter and [accepted manual-workflow decision](https://github.com/re-new-team/renew-governance/blob/main/docs/adr/2026-10-07-ivan-led-matt-workflow.md) govern progression; no automatic Sprint, Ticket creation, worker/model/quota duties or new release phase. An authorized bounded Product Change may be implemented directly. Specs, PRs and review findings belong to the same delivery chain.
+Apply Ivan's selected installed Matt method, including behavior-first `tdd` and separate Standards/Spec `code-review` within `implement`. The routing adapter and [accepted manual-workflow decision](https://github.com/re-new-team/renew-governance/blob/main/docs/adr/2026-10-07-ivan-led-matt-workflow.md) own skill selection and authorization reuse; no automatic Sprint, Ticket creation, worker/model/quota duties, new top-level skill or repeated routine release approval is added. An authorized bounded Product Change may be implemented directly. Specs, PRs and review findings belong to the same delivery chain.
 
 For technical configuration, inspect `package.json`, `app/`, `components/` and `lib/`. Authentication uses Better Auth, not Supabase Auth. Supabase service role bypasses RLS; server authorization checks are essential. An authorized main merge triggers Git-connected Vercel deployment; verify its exact commit and changed behavior before release claims.
 

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 import { Client } from "pg"
 import { OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
-import { dismissNotifications } from "../helpers/dismiss-notifications"
+import { dismissNotifications } from "./dismiss-notifications"
 
 const fixture = OPENING_READINESS_FIXTURE
 const databaseUrl = process.env.OPENING_FIXTURE_DATABASE_URL

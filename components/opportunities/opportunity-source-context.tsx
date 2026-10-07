@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Select,
@@ -100,6 +101,7 @@ export function OpportunitySourceContext({
       )?.affiliation_id ?? null,
   )
   const [createOfficeDialogOpen, setCreateOfficeDialogOpen] = useState(false)
+  const [includeFirstContact, setIncludeFirstContact] = useState(false)
   const [officeContextMode, setOfficeContextMode] =
     useState<OfficeContextMode>("new_firm")
   const [existingFirmId, setExistingFirmId] = useState("")
@@ -249,12 +251,12 @@ export function OpportunitySourceContext({
 
     setIsCreatingOffice(true)
     try {
+      const contextForm = new FormData(event.currentTarget)
+      contextForm.set("include_contact", String(includeFirstContact))
       const result =
         officeContextMode === "existing_firm"
-          ? await createMaOfficeForExistingFirm(
-              new FormData(event.currentTarget),
-            )
-          : await createMaFirmOfficeContext(new FormData(event.currentTarget))
+          ? await createMaOfficeForExistingFirm(contextForm)
+          : await createMaFirmOfficeContext(contextForm)
       if (!result.success || !result.office) {
         setOfficeContextFieldErrors(
           result.fieldErrors ?? { form: result.message },
@@ -307,6 +309,7 @@ export function OpportunitySourceContext({
                 office_contact_first_name: resultErrors.contact_first_name,
                 office_contact_last_name: resultErrors.contact_last_name,
                 office_contact_email: resultErrors.contact_email,
+                office_contact_phone: resultErrors.contact_phone,
               }
             : { form: result.message },
         )
@@ -573,9 +576,11 @@ export function OpportunitySourceContext({
                 existing_office_id: "Operating office",
                 firm_name: "M&A advisory firm",
                 office_name: "Operating office",
+                office_city: "Office city",
                 contact_first_name: "Contact first name",
                 contact_last_name: "Contact last name",
                 contact_email: "Contact email",
+                contact_phone: "Contact phone",
               }}
             />
             <input
@@ -615,7 +620,7 @@ export function OpportunitySourceContext({
                     New firm context
                   </span>
                   <span className="block text-xs text-muted-foreground">
-                    Create a firm, its first office and its first contact.
+                    Create a firm and its first real office, with an optional contact.
                   </span>
                 </span>
               </label>
@@ -829,43 +834,36 @@ export function OpportunitySourceContext({
             <div className="space-y-2">
               <FormFieldLabel
                 htmlFor="office_name"
-                requirement={
-                  officeContextMode === "existing_firm"
-                    ? "required"
-                    : "optional"
-                }
+                requirement="required"
               >
                 Operating office
               </FormFieldLabel>
               <Input
                 id="office_name"
                 name="office_name"
-                required={officeContextMode === "existing_firm"}
+                required
                 onChange={() => clearOfficeContextFieldError("office_name")}
                 {...fieldErrorProps(
                   "office_name",
                   officeContextFieldErrors.office_name,
                 )}
-                placeholder={
-                  officeContextMode === "existing_firm"
-                    ? "Example: Paris"
-                    : "Leave empty when the actual office is not known yet"
-                }
+                placeholder="Example: Paris office"
               />
-              {officeContextMode === "new_firm" ? (
-                <p className="text-xs text-muted-foreground">
-                  An empty office creates a temporary default office named after
-                  the firm.
-                </p>
-              ) : null}
+
               <FieldError
                 id="office_name"
                 message={officeContextFieldErrors.office_name}
               />
             </div>
             ) : null}
-            {officeContextMode === "new_firm" ? (
+            {officeContextMode === "new_firm" || existingFirmOfficePath === "new_real_office" ? <LabeledInput id="office_city" name="office_city" label="City" requirement="required" errors={officeContextFieldErrors} onChange={() => clearOfficeContextFieldError("office_city")} /> : null}
+            {officeContextMode === "new_firm" ? <div className="flex items-start gap-2">
+              <Checkbox id="include-first-contact" checked={includeFirstContact} onCheckedChange={(checked) => setIncludeFirstContact(checked === true)} />
+              <Label htmlFor="include-first-contact">Add a first contact (optional)</Label>
+            </div> : null}
+            {officeContextMode === "new_firm" && includeFirstContact ? (
               <>
+                <p className="text-sm text-muted-foreground">Supply at least one name and an email address or phone number.</p>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <LabeledInput
                     id="contact_first_name"

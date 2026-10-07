@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { dismissNotifications } from "../helpers/dismiss-notifications"
+import { dismissNotifications } from "../opening-readiness/dismiss-notifications"
 
 test("an expiring toast does not trap dismissal in a detached-button retry", async ({ page }) => {
   test.setTimeout(6_000)

@@ -33,7 +33,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -49,16 +49,14 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Enforce production dependency audit policy
-        run: |
-          set +e
-          pnpm audit --prod --json > /tmp/production-dependency-audit.json
-          audit_status=$?
-          set -e
-          node scripts/verify-production-dependency-audit.mjs /tmp/production-dependency-audit.json
-          echo "pnpm audit exit status: $audit_status (parsed by production dependency audit policy)"
+      - name: Check authored commit messages
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        env:
+          COMMIT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          COMMIT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: pnpm commit:check --range "$COMMIT_BASE_SHA..$COMMIT_HEAD_SHA"
 
-      - name: Run repository verification
+      - name: Audit production dependencies and verify repository
         run: pnpm verify
 
       - name: "Rehearse #121 guarded Match Fit provenance and independent-session races"
@@ -120,6 +118,16 @@ jobs:
             --env TMPDIR=/tmp \
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-email-operations.sh'
+
+      - name: "Rehearse #257 directory profiles, atomic rollback and duplicate races"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-ma-directory.sh'
 
       - name: Rehearse #187 grouped freshness and independent-session fences
         run: |

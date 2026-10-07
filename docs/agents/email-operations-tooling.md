@@ -59,4 +59,4 @@ For candidate and CI state, reuse `pnpm agent:pr-status --pr <number> --json`. R
 | 3 — bounded toast dismissal | `pnpm test:tooling`: real synthetic DOM expiry/detachment, blocked and multiple/hidden controls; both product journeys use the same helper. |
 | 5 — reusable/private evidence | Public receipt/role/CLI tests: copy/envelope preservation, recipient-classified delivery, explicit execution, logout on failure and canary secrets absent from result/evidence. |
 
-The existing opening-readiness fixture also runs the toast regression before its unchanged product journeys. Standard `pnpm verify` runs the instruction guard, lint, types, all unit tests and build. This tooling follow-up changes neither the mail product contract nor the separately pending tracking release.
+The existing opening-readiness fixture also runs the toast regression before its unchanged product journeys. Standard `pnpm verify` runs the production dependency audit, instruction guard, lint, types, all unit tests and build. This tooling follow-up changes neither the mail product contract nor the separately pending tracking release.

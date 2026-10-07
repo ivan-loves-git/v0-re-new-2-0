@@ -59,6 +59,7 @@ function firmContextForm() {
   const formData = new FormData()
   formData.set("firm_name", "Acme Conseil")
   formData.set("office_name", "Paris")
+  formData.set("office_city", "Paris")
   formData.set("contact_first_name", "Camille")
   formData.set("contact_last_name", "Durand")
   formData.set("contact_email", "camille@example.com")
@@ -69,7 +70,9 @@ function namedFirmContextForm(field: "contact_first_name" | "contact_last_name")
   const formData = new FormData()
   formData.set("firm_name", "Acme Conseil")
   formData.set("office_name", "Paris")
+  formData.set("office_city", "Paris")
   formData.set(field, "Camille")
+  formData.set("contact_phone", "+33 1 00 00 00 00")
   return formData
 }
 
@@ -79,6 +82,7 @@ function namedOfficeContactForm(
   const formData = new FormData()
   formData.set("contact_mode", "new")
   formData.set(field, "Camille")
+  formData.set("contact_phone", "+33 1 00 00 00 00")
   return formData
 }
 
@@ -474,13 +478,13 @@ describe("canonical opportunity contact persistence", () => {
     mocks.createAdminClient.mockReturnValue({ rpc })
 
     await expect(
-      createMaOfficeContact(OFFICE_ID, new FormData()),
+      createMaOfficeContact(OFFICE_ID, (() => { const form = new FormData(); form.set("contact_phone", "+33 1 00 00 00 00"); return form })()),
     ).resolves.toEqual({
       success: false,
-      message: "Add a first name or last name for the contact.",
+      message: "Complete the contact details.",
       fieldErrors: {
-        contact_first_name: "Add a first name or last name for the contact.",
-        contact_last_name: "Add a first name or last name for the contact.",
+        contact_first_name: "Add a first name or last name.",
+        contact_last_name: "Add a first name or last name.",
       },
     })
     expect(rpc).not.toHaveBeenCalled()
@@ -674,12 +678,13 @@ describe("canonical opportunity contact persistence", () => {
       },
     )
 
-    expect(rpc).toHaveBeenCalledWith("create_ma_firm_with_default_office", {
+    expect(rpc).toHaveBeenCalledWith("create_ma_firm_with_first_office", {
       p_firm_name: "Acme Conseil",
       p_contact_first_name: "Camille",
       p_contact_last_name: "Durand",
       p_office_name: "Paris",
-      p_is_synthetic_default: false,
+      p_include_contact: true,
+      p_office_city: "Paris",
       p_contact_email: "camille@example.com",
       p_contact_phone: null,
       p_contact_job_title: null,
@@ -723,7 +728,7 @@ describe("canonical opportunity contact persistence", () => {
       },
     })
 
-    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/opportunities/ma/firms")
     expect(mocks.revalidateOpportunityDashboardTags).not.toHaveBeenCalled()
   })
 
@@ -746,7 +751,7 @@ describe("canonical opportunity contact persistence", () => {
         createMaFirmOfficeContext(namedFirmContextForm(field)),
       ).resolves.toMatchObject({ success: true })
       expect(rpc).toHaveBeenCalledWith(
-        "create_ma_firm_with_default_office",
+        "create_ma_firm_with_first_office",
         expect.objectContaining({ [`p_${field}`]: "Camille" }),
       )
     }
@@ -754,16 +759,17 @@ describe("canonical opportunity contact persistence", () => {
     const rpc = vi.fn()
     mocks.createAdminClient.mockReturnValue({ rpc })
 
-    const formData = new FormData()
-    formData.set("firm_name", "Acme Conseil")
+    const formData = firmContextForm()
+    formData.delete("contact_first_name")
+    formData.delete("contact_last_name")
     await expect(createMaFirmOfficeContext(formData)).resolves.toEqual({
       success: false,
-      message: "Add a first name or last name for the first contact.",
+      message: "Complete the first contact details.",
       fieldErrors: {
         contact_first_name:
-          "Add a first name or last name for the first contact.",
+          "Add a first name or last name.",
         contact_last_name:
-          "Add a first name or last name for the first contact.",
+          "Add a first name or last name.",
       },
     })
     expect(rpc).not.toHaveBeenCalled()
@@ -773,6 +779,7 @@ describe("canonical opportunity contact persistence", () => {
     const formData = new FormData()
     formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
     formData.set("office_name", "Lyon")
+    formData.set("office_city", "Lyon")
     const rpc = vi.fn().mockResolvedValue({
       data: [
         {
@@ -802,9 +809,10 @@ describe("canonical opportunity contact persistence", () => {
     expect(rpc).toHaveBeenCalledWith("create_ma_office_for_existing_firm", {
       p_firm_id: "00000000-0000-4000-8000-000000000010",
       p_office_name: "Lyon",
+      p_office_city: "Lyon",
       p_actor: "staff-001",
     })
-    expect(mocks.revalidatePath).not.toHaveBeenCalled()
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/opportunities/ma/firms")
     expect(mocks.revalidateOpportunityDashboardTags).not.toHaveBeenCalled()
   })
 
@@ -812,6 +820,7 @@ describe("canonical opportunity contact persistence", () => {
     const formData = new FormData()
     formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
     formData.set("office_name", "Lyon")
+    formData.set("office_city", "Lyon")
     const rpc = vi.fn().mockResolvedValue({
       data: null,
       error: { message: "ma_real_office_name_already_exists" },
@@ -831,6 +840,7 @@ describe("canonical opportunity contact persistence", () => {
     const formData = new FormData()
     formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
     formData.set("office_name", "Lyon")
+    formData.set("office_city", "Lyon")
     const rpc = vi.fn().mockResolvedValue({
       data: null,
       error: { message: "ma_existing_firm_not_active" },

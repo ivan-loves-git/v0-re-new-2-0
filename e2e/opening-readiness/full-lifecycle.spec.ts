@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { dismissNotifications } from "../helpers/dismiss-notifications";
 import {
   devices,
   expect,
@@ -11,6 +10,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { verifyPassword } from "better-auth/crypto";
+import { dismissNotifications } from "./dismiss-notifications";
 import { Client } from "pg";
 import {
   OPENING_READINESS_FIXTURE,

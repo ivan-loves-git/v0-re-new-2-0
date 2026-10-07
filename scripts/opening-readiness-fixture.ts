@@ -3,6 +3,7 @@
 /**
  * Disposable GitHub Actions fixture for Tickets #93 and #32.
  *
+ * `preflight` validates setup, including deferred constraints, then rolls back.
  * `setup` creates only unmistakable synthetic rows in a fresh local Supabase
  * stack. `cleanup` is intentionally limited to the pre-journey smoke test. Once
  * immutable NDA/pursuit evidence exists, the caller must destroy the whole
@@ -23,9 +24,9 @@ import {
 import { calculateOpportunityMatchScore } from "../lib/utils/opportunity-match-scoring";
 
 const command = process.argv[2];
-if (!["setup", "readback", "cleanup"].includes(command ?? "")) {
+if (!["preflight", "setup", "readback", "cleanup"].includes(command ?? "")) {
   throw new Error(
-    "Usage: tsx scripts/opening-readiness-fixture.ts <setup|readback|cleanup>",
+    "Usage: tsx scripts/opening-readiness-fixture.ts <preflight|setup|readback|cleanup>",
   );
 }
 
@@ -193,7 +194,7 @@ async function cleanupRows() {
   ]);
 }
 
-async function setup() {
+async function setup(mode: "setup" | "preflight" = "setup") {
   const ids = fixture.ids;
   const passwordHash = await hashPassword(password);
   await assertFixtureHasNoImmutableJourneyHistory();
@@ -388,12 +389,17 @@ async function setup() {
         ids.demoAffiliation,
       ],
     );
-    await client.query("COMMIT");
+    await client.query("SET CONSTRAINTS ALL IMMEDIATE");
+    await client.query(mode === "preflight" ? "ROLLBACK" : "COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
   }
-  await readback("setup");
+  if (mode === "preflight") {
+    output({ command: mode, runLabel, releaseSha, deferredConstraintsValidated: true, persisted: false });
+  } else {
+    await readback("setup");
+  }
 }
 
 async function readback(outputCommand: "setup" | "readback" = "readback") {
@@ -572,6 +578,7 @@ async function main() {
   await client.connect();
   try {
     await requireCurrentSchema();
+    if (command === "preflight") await setup("preflight");
     if (command === "setup") await setup();
     if (command === "readback") await readback();
     if (command === "cleanup") await cleanup();
