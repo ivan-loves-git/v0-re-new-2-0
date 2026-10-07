@@ -1532,12 +1532,22 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(grant.disclosed_contacts).toEqual([
       { name: "QA OPENING REAL CONTACT — SYNTHETIC" },
     ]);
-    const memoNotification = await one<{ status: string; sent: boolean }>(
+    const memoNotification = await one<{ state: string; sent: boolean; exact_attempt: boolean; same_provider: boolean }>(
       client,
-      "SELECT status,sent_at IS NOT NULL AS sent FROM public.opportunity_memo_notifications WHERE match_id=$1",
+      `SELECT notice.state,notice.sent_at IS NOT NULL AS sent,
+         attempt.token IS NOT NULL AND attempt.grant_evidence_id=grant_row.grant_evidence_id
+           AND notice.attempt_token IS NULL AS exact_attempt,
+         notice.provider_id IS NOT NULL AND notice.provider_id=attempt.provider_id
+           AND notice.sent_at=attempt.finished_at AS same_provider
+       FROM public.opportunity_pursuit_confidential_grants grant_row
+       JOIN public.opportunity_memo_grant_snapshots snapshot ON snapshot.grant_evidence_id=grant_row.grant_evidence_id
+       JOIN public.opportunity_memo_grant_notices notice ON notice.grant_evidence_id=snapshot.grant_evidence_id
+       JOIN public.opportunity_memo_grant_attempts attempt ON attempt.grant_evidence_id=snapshot.grant_evidence_id AND attempt.outcome='sent'
+       WHERE grant_row.match_id=$1 AND snapshot.match_id=grant_row.match_id`,
       [savedMatch.id],
     );
-    expect(memoNotification).toEqual({ status: "sent", sent: true });
+    expect(memoNotification).toEqual({ state: "sent", sent: true, exact_attempt: true, same_provider: true });
+    expect((await client.query("SELECT match_id FROM public.opportunity_memo_notifications WHERE match_id=$1", [savedMatch.id])).rows).toHaveLength(0);
     await record({
       step: "staff explicitly approved confidential disclosure",
       surface: "database",

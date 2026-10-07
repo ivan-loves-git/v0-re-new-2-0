@@ -1,11 +1,13 @@
 import { createHash, randomUUID } from "node:crypto"
 import { mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import { expect, test, type BrowserContext, type Locator } from "@playwright/test"
+import { expect, type BrowserContext, type Locator } from "@playwright/test"
 import { createClient } from "@supabase/supabase-js"
 import { Client } from "pg"
 import { syntheticPdfBytes } from "../../lib/__tests__/fixtures/synthetic-pdf"
 import { assertOpeningReadinessFixtureEnvironment, OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
+import { test } from "./external-staff-session"
+import { seedActiveOpeningOpportunity } from "./seed-active-opportunity"
 
 const fixture = OPENING_READINESS_FIXTURE
 const { databaseUrl, apiUrl } = assertOpeningReadinessFixtureEnvironment(process.env)
@@ -24,10 +26,8 @@ async function seedEligibleMemo(db: Client, index: number) {
   const opportunityId = `25500000-0000-4000-8000-${String(100 + index).padStart(12, "0")}`
   const matchId = `25500000-0000-4000-8000-${String(200 + index).padStart(12, "0")}`
   const documentId = `25500000-0000-4000-8000-${String(300 + index).padStart(12, "0")}`
-  await db.query(`INSERT INTO public.opportunities(id,reference,status,is_demo,source_office_id,public_title,description,created_by)
-    VALUES($1,$2,'active',false,$3,'QA EXTERNAL MEMO — SYNTHETIC','Synthetic exact grant notice proof',$4)`, [opportunityId, `QA-255-${index}`, fixture.ids.realOffice, fixture.authIds.staffUser])
-  await db.query(`INSERT INTO public.opportunity_ma_contacts(opportunity_id,affiliation_id,contact_name_snapshot,is_primary,linked_by)
-    VALUES($1,$2,'Synthetic source contact',true,$3)`, [opportunityId, fixture.ids.realAffiliation, fixture.authIds.staffUser])
+  await seedActiveOpeningOpportunity(db, { opportunityId, reference: `QA-255-${index}`,
+    title: "QA EXTERNAL MEMO — SYNTHETIC", description: "Synthetic exact grant notice proof" })
   await db.query(`INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,created_by) VALUES($1,$2,$3,'interested',$4)`, [matchId, opportunityId, fixture.ids.realNonOwnerRepreneur, fixture.authIds.staffUser])
   await db.query("SELECT public.journey_start_pursuit($1,$2,$3)", [matchId, fixture.staff.email, `qa-255-cycle-${index}`])
   const record = async (phase: "e4" | "e6" | "e7") => db.query(`SELECT public.journey_record_external_handoff($1,public.journey_external_handoff_context($1,$2),$3,current_date-1,NULL,'email','Synthetic prerequisite exchange',$4,$5)`, [matchId, phase, randomUUID(), fixture.authIds.staffUser, fixture.staff.email])
@@ -61,7 +61,7 @@ async function seedEligibleMemo(db: Client, index: number) {
   return { opportunityId, matchId, documentId, memoBytes }
 }
 
-test("staff atomically approves exact memo access with an external notice in FR/EN desktop/mobile and no send", async ({ page, browser }) => {
+test("staff atomically approves exact memo access with an external notice in FR/EN desktop/mobile and no send", async ({ page, browser, externalStaffSession }) => {
   test.setTimeout(300_000)
   const db = new Client({ connectionString: databaseUrl.toString() })
   await db.connect()
@@ -71,11 +71,8 @@ test("staff atomically approves exact memo access with an external notice in FR/
   let failed = false
   try {
     await db.query("UPDATE public.wave_journey_settings SET enabled=true WHERE singleton")
-    await page.goto("/auth/login")
-    await page.getByRole("button", { name: "English", exact: true }).click()
-    await page.locator("#email").fill(fixture.staff.email)
-    await page.locator("#password").fill(password)
-    await page.getByRole("button", { name: "Sign In", exact: true }).click()
+    await page.context().addCookies(externalStaffSession.cookies)
+    await page.goto("/dashboard_re")
     await expect(page).toHaveURL(/\/dashboard_re/)
     const session = await page.context().storageState()
     const evidenceDirectory = join(runnerTemp, "opening-readiness-evidence")

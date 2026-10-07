@@ -1,8 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
-import { expect, test } from "@playwright/test"
+import { expect } from "@playwright/test"
 import { Client } from "pg"
 import { assertOpeningReadinessFixtureEnvironment, OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
+import { test } from "./external-staff-session"
+import { seedActiveOpeningOpportunity } from "./seed-active-opportunity"
 
 const fixture = OPENING_READINESS_FIXTURE
 const password = process.env.OPENING_FIXTURE_PASSWORD
@@ -16,7 +18,7 @@ const { databaseUrl } = assertOpeningReadinessFixtureEnvironment(process.env)
 const opportunityId = "25400000-0000-4000-8000-000000000021"
 const matchId = "25400000-0000-4000-8000-000000000031"
 
-test("staff records external E4/E6 through the actual localized desktop/mobile dialog without sending", async ({ page }) => {
+test("staff records external E4/E6 through the actual localized desktop/mobile dialog without sending", async ({ page, externalStaffSession }) => {
   test.setTimeout(180_000)
   const db = new Client({ connectionString: databaseUrl.toString() })
   await db.connect()
@@ -24,21 +26,14 @@ test("staff records external E4/E6 through the actual localized desktop/mobile d
   try {
     // Only this isolated disposable dossier is seeded. Every new handoff and
     // document validation below uses the actual authenticated staff UI.
-    await db.query("BEGIN")
-    await db.query("SET LOCAL session_replication_role=replica")
     await db.query("UPDATE public.wave_journey_settings SET enabled=true WHERE singleton")
-    await db.query(`INSERT INTO public.opportunities(id,reference,status,is_demo,source_office_id,public_title,description,created_by)
-      VALUES($1,'QA-254-EXTERNAL','active',false,$2,'QA EXTERNAL HANDOFF — SYNTHETIC','Synthetic disposable handoff proof',$3)`, [opportunityId, fixture.ids.realOffice, fixture.authIds.staffUser])
+    await seedActiveOpeningOpportunity(db, { opportunityId, reference: "QA-254-EXTERNAL",
+      title: "QA EXTERNAL HANDOFF — SYNTHETIC", description: "Synthetic disposable handoff proof" })
     await db.query(`INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,created_by)
-      VALUES($1,$2,$3,'active_pursuit',$4)`, [matchId, opportunityId, fixture.ids.realNonOwnerRepreneur, fixture.authIds.staffUser])
-    await db.query(`INSERT INTO public.opportunity_pursuit_evidence(match_id,opportunity_id,repreneur_id,event_type,actor,idempotency_key,metadata)
-      VALUES($1,$2,$3,'mutual_interest_validated',$4,'qa-254-cycle','{"blank_nda_present_at_validation":false}')`, [matchId, opportunityId, fixture.ids.realNonOwnerRepreneur, fixture.authIds.staffUser])
-    await db.query("COMMIT")
-    await page.goto("/auth/login")
-    await page.getByRole("button", { name: "English", exact: true }).click()
-    await page.locator("#email").fill(fixture.staff.email)
-    await page.locator("#password").fill(password!)
-    await page.getByRole("button", { name: "Sign In", exact: true }).click()
+      VALUES($1,$2,$3,'interested',$4)`, [matchId, opportunityId, fixture.ids.realNonOwnerRepreneur, fixture.authIds.staffUser])
+    await db.query("SELECT public.journey_start_pursuit($1,$2,$3)", [matchId, fixture.staff.email, "qa-254-cycle"])
+    await page.context().addCookies(externalStaffSession.cookies)
+    await page.goto("/dashboard_re")
     await expect(page).toHaveURL(/\/dashboard_re/)
     await page.goto(`/opportunities/${opportunityId}?tab=pursuit`)
     const evidenceDirectory = join(runnerTemp!, "opening-readiness-evidence")
