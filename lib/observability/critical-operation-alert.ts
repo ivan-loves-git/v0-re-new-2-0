@@ -120,6 +120,9 @@ export function scheduleCriticalOperationAlert(
             from: `${FROM_NAME} <${FROM_EMAIL}>`,
             to: recipient,
             subject: `[WAVE] Critical operation failed: ${alert.operation}`,
+            // Technical alerts have no business receipt; their callbacks must
+            // not retry correlation and create another critical-operation alert.
+            tags: [{ name: "renew_mail_class", value: "system" }],
             text: [
               "WAVE recorded at least one operational failure.",
               "",
