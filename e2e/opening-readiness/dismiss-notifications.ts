@@ -1,12 +1,18 @@
-import { expect, type Page } from "@playwright/test";
+import { errors, type Page } from "@playwright/test"
 
-export async function dismissNotifications(page: Page) {
-  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true });
-  // A toast can expire between observation and click. Retry that race locally;
-  // a still-present unusable control must fail instead of consuming the journey.
-  await expect(async () => {
-    if (!(await closeButtons.count())) return;
-    await closeButtons.first().click({ timeout: 500 });
-    await expect(closeButtons).toHaveCount(0, { timeout: 500 });
-  }).toPass({ timeout: 3_000, intervals: [0, 100, 250] });
+export async function dismissNotifications(page: Page, timeoutMs = 3_000) {
+  const deadline = Date.now() + timeoutMs
+  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true })
+    .filter({ visible: true })
+  while (await closeButtons.count()) {
+    const remainingMs = deadline - Date.now()
+    if (remainingMs <= 0) throw new Error("Visible notification controls could not be dismissed within the deadline.")
+    try {
+      // A locator retries detachment until its own timeout, even when the toast
+      // has expired. Bound each click and rediscover the current controls.
+      await closeButtons.first().click({ timeout: Math.min(300, remainingMs) })
+    } catch (error) {
+      if (!(error instanceof errors.TimeoutError)) throw error
+    }
+  }
 }

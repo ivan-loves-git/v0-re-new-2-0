@@ -79,3 +79,7 @@ docs/BERTRAND_PROPOSAL_2026-06_MONETARY_LOGIC.md
 .impeccable/live/deferred-svelte-component-accepts.json
 .impeccable/live/*.png
 # impeccable-ignore-end
+
+# Local browser proof is ephemeral and may contain authenticated page context.
+test-results/
+playwright-report/

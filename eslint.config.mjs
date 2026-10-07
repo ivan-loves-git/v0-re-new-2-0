@@ -12,6 +12,9 @@ const localIgnores = {
     '!scripts/agent-context.mjs',
     '!scripts/agent-pr-status.mjs',
     '!scripts/check-ma-data-model-sync.mjs',
+    '!scripts/check-agent-instructions.mjs',
+    '!scripts/email-operations.mjs',
+    '!scripts/email-operations/**',
     'scripts/e2e-tests/**',
     'tsconfig.tsbuildinfo',
   ],
@@ -54,7 +57,8 @@ const eslintConfig = [
   prototypeRules,
   waveDesignBoundaries,
   {
-    files: ['scripts/agent-context.mjs', 'scripts/agent-pr-status.mjs', 'scripts/check-ma-data-model-sync.mjs'],
+    files: ['scripts/agent-context.mjs', 'scripts/agent-pr-status.mjs', 'scripts/check-ma-data-model-sync.mjs',
+      'scripts/check-agent-instructions.mjs', 'scripts/email-operations.mjs', 'scripts/email-operations/**/*.mjs'],
     rules: {
       'no-undef': 'error',
       'no-unused-vars': 'error',

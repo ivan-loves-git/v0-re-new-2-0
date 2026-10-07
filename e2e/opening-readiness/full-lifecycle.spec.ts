@@ -7,6 +7,7 @@ import {
   test,
   type BrowserContext,
   type ConsoleMessage,
+  type Locator,
   type Page,
 } from "@playwright/test";
 import { verifyPassword } from "better-auth/crypto";
@@ -136,10 +137,10 @@ async function approvePreparedReview(page: Page) {
 
 async function chooseOption(
   page: Page,
-  trigger: string,
+  trigger: Locator,
   option: string | RegExp,
 ) {
-  await page.locator(trigger).click();
+  await trigger.click();
   await page.getByRole("option", { name: option }).click();
 }
 
@@ -153,7 +154,7 @@ async function createDraftOpportunity(
   },
 ) {
   await page.goto("/opportunities/new");
-  const form = page.locator("form#opportunity-form");
+  const form = page.locator("form#opportunity-form").filter({ visible: true });
   await expect(form).toHaveCount(1);
   // Select the accessible controls, not Next's transient hidden prerender
   // copy. More than one user-facing form/control still fails strict mode.
@@ -164,32 +165,32 @@ async function createDraftOpportunity(
   });
   await expect(classificationChoice).toHaveCount(1);
   await classificationChoice.click();
-  await expect(page.locator("#generated-reference")).toBeDisabled();
-  await chooseOption(page, "#geography_node_id", /^France · FR$/);
-  await chooseOption(page, "#sector_choice", "Tech & Digital");
-  await page.locator("#location").fill("France");
-  await page.locator("#revenue_meur").fill("25");
-  await page.locator("#ebitda_keur").fill("3000");
-  await page.locator("#headcount_range").fill("80");
+  await expect(form.locator("#generated-reference:visible")).toBeDisabled();
+  await chooseOption(page, form.locator("#geography_node_id:visible"), /^France · FR$/);
+  await chooseOption(page, form.locator("#sector_choice:visible"), "Tech & Digital");
+  await form.locator("#location:visible").fill("France");
+  await form.locator("#revenue_meur:visible").fill("25");
+  await form.locator("#ebitda_keur:visible").fill("3000");
+  await form.locator("#headcount_range:visible").fill("80");
   await expect(form.locator('[name="description"]')).toHaveCount(0);
-  await page.locator("#internal_notes").fill("PRIVATE SYNTHETIC STAFF NOTE — NEVER PUBLIC");
-  await chooseOption(page, "#source_office", input.officeName);
-  await page.locator("#office_affiliation_" + input.affiliationId).check();
-  const primary = page.locator(
-    'input[name="primary_affiliation_id"][value="' + input.affiliationId + '"]',
+  await form.locator("#internal_notes:visible").fill("PRIVATE SYNTHETIC STAFF NOTE — NEVER PUBLIC");
+  await chooseOption(page, form.locator("#source_office:visible"), input.officeName);
+  await form.locator("#office_affiliation_" + input.affiliationId + ":visible").check();
+  const primary = form.locator(
+    'input[name="primary_affiliation_id"][value="' + input.affiliationId + '"]:visible',
   );
   if (!(await primary.isChecked())) await primary.check();
-  await page.locator("#public_title").fill(input.title);
-  await page
-    .locator("#teaser_summary")
+  await form.locator("#public_title:visible").fill(input.title);
+  await form
+    .locator("#teaser_summary:visible")
     .fill("A first synthetic public draft.");
-  await page.locator("#public_description_approved").check();
-  await page
-    .locator("#teaser_summary")
+  await form.locator("#public_description_approved:visible").check();
+  await form
+    .locator("#teaser_summary:visible")
     .fill("Synthetic teaser for the disposable opening proof.");
-  await expect(page.locator("#public_description_approved")).not.toBeChecked();
-  await page.locator("#public_description_approved").check();
-  await page.getByRole("button", { name: "Create opportunity" }).click();
+  await expect(form.locator("#public_description_approved:visible")).not.toBeChecked();
+  await form.locator("#public_description_approved:visible").check();
+  await form.getByRole("button", { name: "Create opportunity" }).click();
   await expect(page).toHaveURL(/\/opportunities\/[0-9a-f-]{36}(?:\?.*)?$/, {
     timeout: 30_000,
   });
@@ -202,7 +203,7 @@ async function createDraftOpportunity(
 
 async function activateOpportunity(page: Page, opportunityId: string) {
   await page.goto("/opportunities/" + opportunityId + "?tab=edit");
-  await chooseOption(page, "#status", "Active");
+  await chooseOption(page, page.locator("#status").filter({ visible: true }), "Active");
   await page.getByRole("button", { name: "Save changes" }).click();
 }
 
@@ -757,7 +758,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(
       page.locator("#platform_recommendation_preview"),
     ).toContainText("100");
-    await chooseOption(page, "#human_recommendation", "Strong fit");
+    await chooseOption(page, page.locator("#human_recommendation").filter({ visible: true }), "Strong fit");
     await page
       .locator("#human_notes")
       .fill("Synthetic lifecycle proof: staff reviewed the automatic result.");
@@ -962,7 +963,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
         'Disposable M&A review fixture',false,false,'Bonjour {firstName},\\n\\nQA fixture NDA request.',true)
       ON CONFLICT (template_key) DO UPDATE SET is_active=false`);
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
-    await chooseOption(page, "#ma_template", "Request NDA and info memo");
+    await chooseOption(page, page.locator("#ma_template").filter({ visible: true }), "Request NDA and info memo");
     await expect(page.locator("#ma_subject")).not.toHaveValue("");
     await expect(page.locator("#ma_body")).not.toHaveValue("");
     // The disposable fixture deliberately tests an inactive catalogue key.
@@ -1087,7 +1088,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await page.setViewportSize({ width: 1440, height: 1000 });
     await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_nda_info_memo_request'");
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=ma");
-    await chooseOption(page, "#ma_template", "Request NDA and info memo");
+    await chooseOption(page, page.locator("#ma_template").filter({ visible: true }), "Request NDA and info memo");
     await page.getByRole("button", { name: "Prepare for review" }).click();
     await approvePreparedReview(page);
     const sourceReviewId = new URL(page.url()).pathname.split("/").at(-1)!;
@@ -1129,7 +1130,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(page.locator("#main-content:visible").getByText("Recipient-specific required", { exact: true })).toBeVisible();
     await page.reload();
     await page.locator("#document-title").fill("QA LIFECYCLE RECIPIENT IM — SYNTHETIC");
-    await chooseOption(page, "#document-type", "Information memorandum (IM)");
+    await chooseOption(page, page.locator("#document-type").filter({ visible: true }), "Information memorandum (IM)");
     await expect(page.locator("#main-content:visible")).toContainText("This upload will belong only to");
     await page
       .locator("#document-file")
