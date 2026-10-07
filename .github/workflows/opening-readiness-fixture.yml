@@ -5,6 +5,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      journey:
+        description: Protected journey selection; PR/main always prove the full suite
+        type: choice
+        options: [all, ma-directory]
+        default: all
 
 permissions:
   contents: read
@@ -120,7 +126,11 @@ jobs:
       - name: Prove bounded notification dismissal
         run: pnpm test:tooling
 
-      - name: Prove the fixture through the running product
+      - name: Prove M&A directory first
+        run: pnpm exec playwright test --config playwright.opening-readiness.config.ts ma-directory.spec.ts
+
+      - name: Prove the complete fixture through the running product
+        if: github.event_name != 'workflow_dispatch' || inputs.journey != 'ma-directory'
         run: pnpm exec playwright test --config playwright.opening-readiness.config.ts
 
       - name: Destroy disposable Supabase stack
