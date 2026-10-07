@@ -1,5 +1,7 @@
 "use server"
 
+import { areReasonedLifecycleWritesEnabled, REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE } from "@/lib/reasoned-lifecycle-release"
+
 import { randomUUID } from "crypto"
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -7,7 +9,7 @@ import type { OpportunityPursuitJourneyAction } from "@/lib/opportunity-pursuit-
 import { triggerOpportunityMemoNotification } from "@/lib/trigger-opportunity-memo-notification"
 import { queueM2StaffPursuitEvent } from "@/lib/telemetry/m2-repreneur"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
-import { isOpportunityPursuitDropReason } from "@/lib/types/opportunity"
+import { validateOpportunityPursuitDropInput } from "@/lib/opportunity-outcome-reasons"
 import { preparePursuitEmailReview } from "@/lib/actions/staff-email-review"
 import { deliverValidationNotification } from "@/lib/email/interest-notification-delivery"
 import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
@@ -41,9 +43,10 @@ function readableErrorMessage(error: unknown, fallback: string) {
 }
 
 export async function runOpportunityPursuitJourneyAction(input: {
-  matchId: string; action: OpportunityPursuitJourneyAction; artifactId?: string; documentId?: string; reason?: string; ndaExpiresAt?: string; idempotencyKey?: string
+  matchId: string; action: OpportunityPursuitJourneyAction; artifactId?: string; documentId?: string; reason?: string; secondaryReasons?: string[]; reasonNote?: string; ndaExpiresAt?: string; idempotencyKey?: string
 }): Promise<OpportunityPursuitJourneyResult> {
   const staff = await requireStaffAccess()
+  if (input.action === "drop" && !areReasonedLifecycleWritesEnabled()) return { success: false, message: REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE }
   const trace = startCriticalOperation("pursuit.journey_action")
   const actor = staff.user.email
   const supabase = await trace.failOnThrow(
@@ -60,12 +63,13 @@ export async function runOpportunityPursuitJourneyAction(input: {
     })
   }
   try {
-    if (input.action === "drop" && !isOpportunityPursuitDropReason(input.reason)) {
+    const dropInput = input.action === "drop" ? validateOpportunityPursuitDropInput(input.reason, input.secondaryReasons, input.reasonNote) : null
+    if (dropInput && !dropInput.success) {
       trace.failure("validation_failed")
       capture("validation_error", "validation_failed")
       return {
         success: false,
-        message: "Choose why this pursuit is ending.",
+        message: dropInput.message,
       }
     }
     if (input.action === "grant_confidential_access") {
@@ -127,7 +131,7 @@ export async function runOpportunityPursuitJourneyAction(input: {
       return { success: true, message: "Confidential access revoked.", eventId: data }
     }
     if (["continue", "drop", "reopen", "complete"].includes(input.action)) {
-      const { data, error } = await supabase.rpc("journey_transition_terminal", { p_match_id: input.matchId, p_transition: input.action, p_actor: actor, p_idempotency_key: key, p_closure_reason: input.reason ?? null })
+      const { data, error } = await supabase.rpc("journey_transition_terminal", { p_match_id: input.matchId, p_transition: input.action, p_actor: actor, p_idempotency_key: key, p_closure_reason: input.reason ?? null, ...(dropInput?.success ? { p_secondary_reasons: dropInput.secondaryReasons, p_reason_note: dropInput.note } : {}) })
       if (error) throw error
       let message = `Pursuit ${input.action} recorded.`
       if (input.action === "drop") {
@@ -219,8 +223,8 @@ export async function recordOpportunityPursuitDispatch(matchId: string, referenc
 export async function grantOpportunityPursuitConfidentialAccess(matchId: string, documentId: string, ndaExpiresAt: string, idempotencyKey?: string) {
   return runOpportunityPursuitJourneyAction({ matchId, action: "grant_confidential_access", documentId, ndaExpiresAt, idempotencyKey })
 }
-export async function transitionOpportunityPursuit(matchId: string, action: Extract<OpportunityPursuitJourneyAction, "continue" | "drop" | "reopen" | "complete">, reason?: string, idempotencyKey?: string) {
-  return runOpportunityPursuitJourneyAction({ matchId, action, reason, idempotencyKey })
+export async function transitionOpportunityPursuit(matchId: string, action: Extract<OpportunityPursuitJourneyAction, "continue" | "drop" | "reopen" | "complete">, reason?: string, idempotencyKey?: string, secondaryReasons?: string[], reasonNote?: string) {
+  return runOpportunityPursuitJourneyAction({ matchId, action, reason, idempotencyKey, secondaryReasons, reasonNote })
 }
 
 export async function sendOpportunityPursuitNdaReady(matchId: string) { return runOpportunityPursuitJourneyAction({ matchId, action: "send_nda_ready" }) }

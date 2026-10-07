@@ -130,38 +130,22 @@ describe("operational stale tabs and retried staff actions", () => {
     expect(from).not.toHaveBeenCalledWith("app_user_roles")
   })
 
-  it.each([
-    {
-      label: "drop",
-      current: { id: "match-1", status: "dropped", pursuit_stage: "dropped" },
-      invoke: () => dropOpportunityPursuit(
-        "match-1",
-        "opportunity-1",
-        "no_viable_match",
-      ),
-    },
-    {
-      label: "reopen",
-      current: { id: "match-1", status: "interested", pursuit_stage: null },
-      invoke: () => reopenDroppedOpportunityMatch("match-1", "opportunity-1"),
-    },
-  ])("treats a lost $label response as success when the requested state is already stored", async ({ current, invoke }) => {
-    const rpc = vi.fn().mockResolvedValue({
-      data: null,
-      error: { message: "The original request response was lost." },
-    })
-    const maybeSingle = vi.fn().mockResolvedValue({ data: current, error: null })
+  it("does not accept a lost Drop response from status alone when the reasoned decision cannot be confirmed", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "The original request response was lost." } })
+    const from = vi.fn()
+    mocks.createAdminClient.mockReturnValue({ rpc, from })
+    await expect(dropOpportunityPursuit("match-1", "opportunity-1", "financing_not_secured", [], null, "exact-drop-key")).rejects.toThrow("Could not confirm this Drop")
+    expect(from).not.toHaveBeenCalled()
+    expect(rpc).toHaveBeenCalledWith("journey_transition_terminal", expect.objectContaining({ p_idempotency_key: "exact-drop-key", p_closure_reason: "financing_not_secured" }))
+  })
+
+  it("retains the existing lost Reopen response recovery", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: { message: "The original request response was lost." } })
+    const maybeSingle = vi.fn().mockResolvedValue({ data: { id: "match-1", status: "interested", pursuit_stage: null }, error: null })
     const opportunityFilter = vi.fn(() => ({ maybeSingle }))
     const matchFilter = vi.fn(() => ({ eq: opportunityFilter }))
-    const select = vi.fn(() => ({ eq: matchFilter }))
-    const from = vi.fn(() => ({ select }))
-    mocks.createAdminClient.mockReturnValue({ rpc, from })
-
-    if (current.status === "dropped") {
-      await expect(invoke()).resolves.toEqual({ cleanupPending: true })
-    } else {
-      await expect(invoke()).resolves.toBeUndefined()
-    }
+    mocks.createAdminClient.mockReturnValue({ rpc, from: vi.fn(() => ({ select: vi.fn(() => ({ eq: matchFilter })) })) })
+    await expect(reopenDroppedOpportunityMatch("match-1", "opportunity-1")).resolves.toBeUndefined()
     expect(matchFilter).toHaveBeenCalledWith("id", "match-1")
     expect(opportunityFilter).toHaveBeenCalledWith("opportunity_id", "opportunity-1")
   })

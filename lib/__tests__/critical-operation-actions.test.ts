@@ -100,7 +100,7 @@ describe("critical server action traces", () => {
     })
 
     await expect(runOpportunityPursuitJourneyAction({
-      matchId: "match-private-1", action: "drop", reason: "no_viable_match",
+      matchId: "match-private-1", action: "drop", reason: "financing_not_secured",
     })).resolves.toEqual({ success: true, message: "Pursuit dropped. Recipient IM access is denied; private deletion remains pending for retry.", eventId: "drop-event-1" })
     expect(rpc).toHaveBeenCalledWith("journey_transition_terminal", expect.objectContaining({ p_transition: "drop" }))
   })
