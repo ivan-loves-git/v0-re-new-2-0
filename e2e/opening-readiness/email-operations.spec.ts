@@ -234,6 +234,7 @@ test("complete staff business review, history and analytics retain actual outcom
     await page.screenshot({
       path: join(evidenceDirectory, "email-247-history-desktop.png"),
       fullPage: true,
+      animations: "disabled",
     })
     await page.keyboard.press("Escape")
     await page.getByRole("tab", { name: "Analytics", exact: true }).click()
@@ -259,13 +260,22 @@ test("complete staff business review, history and analytics retain actual outcom
       exact: true,
     })
     await shownAuto.click()
+    await expect.poll(async () => (await db.query(
+      "SELECT is_active,auto_send FROM public.email_templates WHERE template_key='welcome'",
+    )).rows).toEqual([{ is_active: true, auto_send: true }])
+    // Capture persisted server state after the policy action and revalidation,
+    // rather than the switch's transient checked/disabled state during save.
+    await page.reload({ waitUntil: "domcontentloaded" })
     await expect(shownAuto).toBeChecked()
+    await expect(shownAuto).toBeEnabled()
     await expect(
       page.getByRole("switch", { name: "Active: Registration confirmation", exact: true }),
     ).toBeChecked()
+    await expect(page.locator("#template-welcome").getByText("Auto-send · future mail", { exact: true })).toBeVisible()
     await page.screenshot({
       path: join(evidenceDirectory, "email-247-templates-mobile.png"),
       fullPage: true,
+      animations: "disabled",
     })
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),

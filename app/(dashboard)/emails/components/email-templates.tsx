@@ -217,7 +217,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                     </div>
                     <p className="mt-1 break-words text-sm text-muted-foreground">{item.description}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
+                  <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
                     {item.key !== "code:e6_nda_ready" && item.key !== "opportunity_memo_available" && item.key !== "locked_opportunity_interest" ? <Button
                       type="button"
                       variant="outline"
@@ -227,18 +227,22 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                       <Eye className="h-4 w-4 mr-1" />
                       Voir le contenu
                     </Button> : <Badge variant="outline">Code-governed copy</Badge>}
-                    <span className="text-sm text-muted-foreground">
-                      Active
-                    </span>
-                    <Switch
-                      aria-label={`Active: ${item.name}`}
-                      checked={item.isEnabled}
-                      onCheckedChange={(checked) => handleToggle(item.key, checked)}
-                      disabled={loading === item.key}
-                    />
-                    <span className="text-sm text-muted-foreground">Auto-send</span>
-                    <Switch aria-label={`Auto-send: ${item.name}`} checked={item.autoSend}
-                      onCheckedChange={checked => handleAutoToggle(item.key, checked)} disabled={loading === item.key} />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        Active
+                      </span>
+                      <Switch
+                        aria-label={`Active: ${item.name}`}
+                        checked={item.isEnabled}
+                        onCheckedChange={(checked) => handleToggle(item.key, checked)}
+                        disabled={loading === item.key}
+                      />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Auto-send</span>
+                      <Switch aria-label={`Auto-send: ${item.name}`} checked={item.autoSend}
+                        onCheckedChange={checked => handleAutoToggle(item.key, checked)} disabled={loading === item.key} />
+                    </div>
                     {item.autoSend ? <Badge variant="outline" className="border-info/60 text-info">Auto-send · future mail</Badge> : null}
                   </div>
                 </div>
