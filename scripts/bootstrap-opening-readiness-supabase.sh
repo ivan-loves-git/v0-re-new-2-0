@@ -225,9 +225,13 @@ BEGIN
   END IF;
 
   BEGIN
-    UPDATE public.opportunities
-    SET status='closed'
-    WHERE id='93000000-0000-4000-8000-000000000087';
+    -- Exercise the staff close service so the source-review guard remains
+    -- the tested boundary after direct unreasoned closure is prohibited.
+    PERFORM public.close_opportunity_with_reason(
+      '93000000-0000-4000-8000-000000000087',
+      'withdrawn_seller',
+      'test-schema-redacted-002'
+    );
     SET CONSTRAINTS ALL IMMEDIATE;
     RAISE EXCEPTION 'opening_fixture_flagged_close_was_allowed';
   EXCEPTION WHEN OTHERS THEN
