@@ -158,15 +158,30 @@ export async function dispatchBusinessReview(
             matchId: String(context.matchId),
           })
           break
-        case "direct_interest":
-          await (
+        case "direct_interest": {
+          const input = context.input as Parameters<
+            typeof import("./locked-opportunity-interest").sendLockedOpportunityInterestEmail
+          >[0]
+          const result = await (
             await import("./locked-opportunity-interest")
-          ).sendLockedOpportunityInterestEmail(
-            context.input as Parameters<
-              typeof import("./locked-opportunity-interest").sendLockedOpportunityInterestEmail
-            >[0],
-          )
+          ).sendLockedOpportunityInterestEmail(input)
+          if (result.success) {
+            // This exact-notice sender returns success only after acceptance
+            // (or its existing sent receipt); preparation returns queued/false.
+            // The original portal action owns this clock after an immediate
+            // send. Reviewed dispatch must also retain the exact accepted
+            // episode, using the same store fence against a later interest.
+            const { createLockedOpportunityInterestStore } = await import(
+              "@/lib/data/locked-opportunity-interest"
+            )
+            await createLockedOpportunityInterestStore().markNotificationSent({
+              matchId: input.matchId, repreneurId: input.repreneurId,
+              opportunityId: input.opportunityId, expressedAt: input.expressedAt,
+              sentAt: new Date().toISOString(),
+            })
+          }
           break
+        }
         default: {
           await assertGenericSource(review)
           const { sendEmail, sendEmailDirect } = await import("./send-email")

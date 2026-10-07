@@ -35,7 +35,9 @@ async function prepare(page: Page) {
   await page.getByRole("button").filter({ hasText: fixture.repreneurs.real.email }).click()
   await page.getByRole("combobox").click()
   await page.getByRole("option").filter({ hasText: "Registration confirmation" }).click()
-  await page.getByRole("button", { name: "Prepare for review", exact: true }).click()
+  const prepareButton = page.getByRole("button", { name: "Prepare for review", exact: true })
+  await expect(prepareButton).toBeEnabled()
+  await prepareButton.click()
   await expect(
     page.getByText("Draft prepared for Review & send. No email was sent.", { exact: true }),
   ).toBeVisible()
@@ -48,14 +50,33 @@ test("complete staff business review, history and analytics retain actual outcom
   const db = new Client({ connectionString: databaseUrl })
   await db.connect()
   const original = await db.query(
-    "SELECT subject,body_markdown,is_active,auto_send FROM public.email_templates WHERE template_key='welcome'",
+    "SELECT id,subject,body_markdown,body_editable,is_active,auto_send FROM public.email_templates WHERE template_key='welcome'",
+  )
+  const signInBuckets = await db.query<{ key: string }>(
+    `SELECT "key" FROM public."rateLimit"
+     WHERE "key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%'`,
   )
   const evidenceDirectory = join(runnerTemp!, "opening-readiness-evidence")
   await mkdir(evidenceDirectory, { recursive: true })
+  let ownedWelcomeId: string | undefined
   try {
-    await db.query(
-      "UPDATE public.email_templates SET is_active=true,auto_send=false WHERE template_key='welcome'",
+    expect(original.rows.length).toBeLessThanOrEqual(1)
+    // This first journey owns its two loopback sign-ins. Later independent
+    // auth proof still exercises the unchanged five-attempt endpoint budget.
+    expect(signInBuckets.rows).toHaveLength(0)
+    // The sanitized schema omits historical catalogue data. Seed this one
+    // fictional key rather than relaxing the application's missing-policy veto.
+    const seeded = await db.query<{ id: string; is_active: boolean; auto_send: boolean }>(
+      `INSERT INTO public.email_templates
+       (template_key,subject,description,body_markdown,body_editable,is_active,auto_send,requires_consent)
+       VALUES ('welcome','QA 247 REGISTRATION — SYNTHETIC','Disposable email operations fixture',
+         'Bonjour {firstName}, welcome to the fictional QA journey.',true,true,false,false)
+       ON CONFLICT (template_key) DO UPDATE SET is_active=true,auto_send=false,body_editable=true
+       RETURNING id,is_active,auto_send`,
     )
+    expect(seeded.rows).toHaveLength(1)
+    expect(seeded.rows[0]).toMatchObject({ is_active: true, auto_send: false })
+    if (!original.rows[0]) ownedWelcomeId = seeded.rows[0]!.id
     await login(page, fixture.staff.email)
     await page.goto("/emails")
     const tabs = page.locator('.email-operations-tabs [role="tab"]')
@@ -261,12 +282,41 @@ test("complete staff business review, history and analytics retain actual outcom
     await expect(rep.getByRole("heading", { name: "Email operations", exact: true })).toHaveCount(0)
     await repContext.close()
   } finally {
-    const previous = original.rows[0]
-    if (previous)
-      await db.query(
-        "UPDATE public.email_templates SET subject=$1,body_markdown=$2,is_active=$3,auto_send=$4 WHERE template_key='welcome'",
-        [previous.subject, previous.body_markdown, previous.is_active, previous.auto_send],
-      )
-    await db.end()
+    try {
+      const previous = original.rows[0]
+      if (previous) {
+        await db.query(
+          "UPDATE public.email_templates SET subject=$1,body_markdown=$2,is_active=$3,auto_send=$4,body_editable=$5 WHERE id=$6 AND template_key='welcome'",
+          [previous.subject, previous.body_markdown, previous.is_active, previous.auto_send,
+            previous.body_editable, previous.id],
+        )
+        expect((await db.query(
+          "SELECT id,subject,body_markdown,body_editable,is_active,auto_send FROM public.email_templates WHERE id=$1 AND template_key='welcome'",
+          [previous.id],
+        )).rows).toEqual(original.rows)
+      } else if (ownedWelcomeId) {
+        const removed = await db.query("DELETE FROM public.email_templates WHERE id=$1 AND template_key='welcome' RETURNING id", [ownedWelcomeId])
+        expect(removed.rows).toEqual([{ id: ownedWelcomeId }])
+        expect((await db.query("SELECT id FROM public.email_templates WHERE template_key='welcome'")).rows).toHaveLength(0)
+      }
+      // Clear only buckets created by this first journey, with exact loopback
+      // validation; preserve reset/forgot-password and all other route budgets.
+      if (signInBuckets.rows.length === 0) {
+        const owned = await db.query<{ key: string }>(
+          `SELECT "key" FROM public."rateLimit"
+           WHERE "key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%'`,
+        )
+        expect(owned.rows.length).toBeLessThanOrEqual(2)
+        for (const { key } of owned.rows) {
+          if (key.endsWith("|/sign-in/email"))
+            expect(["127.0.0.1", "::1", "::ffff:127.0.0.1"]).toContain(key.slice(0, -"|/sign-in/email".length))
+          else expect(key).toMatch(/^auth:\/api\/auth\/sign-in\/email:[A-Za-z0-9_-]{43}$/)
+        }
+        const cleared = await db.query<{ key: string }>('DELETE FROM public."rateLimit" WHERE "key"=ANY($1::text[]) RETURNING "key"', [owned.rows.map(row => row.key)])
+        expect(cleared.rows.map(row => row.key).sort()).toEqual(owned.rows.map(row => row.key).sort())
+      }
+    } finally {
+      await db.end()
+    }
   }
 })
