@@ -20,9 +20,13 @@ describe("M&A QA command safety", () => {
     expect(result.stderr).toContain(
       "Disposable M&A QA requires loopback /directory",
     );
-    expect(result.stdout + result.stderr).not.toMatch(
-      /never-print-password|private-user|db.example.com/,
-    );
+    for (const privateText of [
+      "never-print-password",
+      "private-user",
+      "db.example.com",
+    ]) {
+      expect(result.stdout + result.stderr).not.toContain(privateText);
+    }
   });
   it("blocks live write commands before connecting when their treatment is absent", () => {
     const result = spawnSync(
@@ -47,8 +51,12 @@ describe("M&A QA command safety", () => {
     );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("requires explicit treatment");
-    expect(result.stdout + result.stderr).not.toMatch(
-      /never-print-password|private-user|db.example.com/,
-    );
+    for (const privateText of [
+      "never-print-password",
+      "private-user",
+      "db.example.com",
+    ]) {
+      expect(result.stdout + result.stderr).not.toContain(privateText);
+    }
   });
 });
