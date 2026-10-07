@@ -1,4 +1,7 @@
 import { readFile } from "node:fs/promises"
+import { realpathSync } from "node:fs"
+import { spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
 
 const severityRank = { low: 1, moderate: 2, medium: 2, high: 3, critical: 4 }
 
@@ -85,11 +88,26 @@ export function assertProductionAudit(audit, policy, now = new Date()) {
   if (violations.length) throw new Error(`production-dependency-audit-failed:${violations.join(",")}`)
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [auditPath, policyPath = "scripts/production-dependency-audit-policy.json"] = process.argv.slice(2)
   if (!auditPath) throw new Error("dependency-audit-input-required")
-  const [audit, policy] = await Promise.all(
-    [auditPath, policyPath].map(async (path) => JSON.parse(await readFile(path, "utf8"))),
-  )
+  const policy = JSON.parse(await readFile(policyPath, "utf8"))
+  let audit
+  if (auditPath === "--run") {
+    const result = spawnSync("pnpm", ["audit", "--prod", "--json"], {
+      encoding: "utf8",
+      timeout: 120_000,
+      maxBuffer: 16 * 1024 * 1024,
+    })
+    if (result.error || result.signal || ![0, 1].includes(result.status)) {
+      throw new Error("production-dependency-audit-unavailable")
+    }
+    // pnpm exits nonzero for Moderate findings too. The existing policy,
+    // rather than that exit code, decides which valid findings block.
+    audit = JSON.parse(result.stdout)
+  } else {
+    audit = JSON.parse(await readFile(auditPath, "utf8"))
+  }
   assertProductionAudit(audit, policy)
+  if (auditPath === "--run") process.stdout.write("Production dependency audit passed.\n")
 }
