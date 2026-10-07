@@ -27,6 +27,37 @@ BEGIN
   END LOOP;
   SET CONSTRAINTS ALL IMMEDIATE;
 END $$;
+-- Actual metadata-only no-finally replay: cleanup completes before a delayed
+-- successful upload creates its object. Empty older tombstones must not starve
+-- the later owned object in the bounded cron claim; finalization stays denied.
+DO $$ DECLARE race public.synthetic_ldc_races%ROWTYPE; stage jsonb; cleanup_operation_key uuid; claimed uuid; counter integer;
+BEGIN
+  SELECT * INTO race FROM public.synthetic_ldc_races WHERE kind='cleanup-first';
+  FOR counter IN 1..24 LOOP
+    cleanup_operation_key:=gen_random_uuid();
+    stage:=public.journey_stage_external_ldc(race.match_id,race.context,cleanup_operation_key,'w173-staff','w173-staff@example.test');
+    PERFORM public.journey_claim_ldc_cleanup((stage->>'stage_id')::uuid,cleanup_operation_key,'w173-staff');
+    PERFORM public.journey_complete_ldc_cleanup((stage->>'stage_id')::uuid);
+  END LOOP;
+  cleanup_operation_key:=gen_random_uuid();
+  stage:=public.journey_stage_external_ldc(race.match_id,race.context,cleanup_operation_key,'w173-staff','w173-staff@example.test');
+  PERFORM public.journey_claim_ldc_cleanup((stage->>'stage_id')::uuid,cleanup_operation_key,'w173-staff');
+  PERFORM public.journey_complete_ldc_cleanup((stage->>'stage_id')::uuid);
+  INSERT INTO storage.objects(bucket_id,name,version,metadata,user_metadata)
+  VALUES('cvs',stage->>'storage_path','late-terminal-upload',jsonb_build_object('size',100,'mimetype','application/pdf'),jsonb_build_object('sha256',repeat('c',64)));
+  SELECT id INTO STRICT claimed FROM public.journey_claim_ldc_cleanup();
+  IF claimed IS DISTINCT FROM (stage->>'stage_id')::uuid THEN RAISE EXCEPTION 'empty_tombstones_starved_late_upload'; END IF;
+  BEGIN
+    PERFORM public.journey_record_external_handoff(race.match_id,race.context,cleanup_operation_key,current_date-1,NULL,'phone','Synthetic late upload','w173-staff','w173-staff@example.test');
+    RAISE EXCEPTION 'terminal_cleanup_reenabled_finalization';
+  EXCEPTION WHEN raise_exception THEN IF SQLERRM<>'external_ldc_stage_invalid' THEN RAISE; END IF; END;
+  DELETE FROM storage.objects WHERE bucket_id='cvs' AND name=stage->>'storage_path';
+  PERFORM public.journey_complete_ldc_cleanup(claimed);
+  IF EXISTS(SELECT 1 FROM public.journey_claim_ldc_cleanup())
+    OR EXISTS(SELECT 1 FROM public.opportunity_pursuit_external_handoffs WHERE opportunity_pursuit_external_handoffs.operation_key=cleanup_operation_key)
+  THEN RAISE EXCEPTION 'late_upload_cleanup_left_effects_or_empty_tombstone_claims'; END IF;
+  SET CONSTRAINTS ALL IMMEDIATE;
+END $$;
 CREATE FUNCTION public.synthetic_ldc_race_record(p_kind text) RETURNS uuid LANGUAGE sql AS $$
   SELECT public.journey_record_external_handoff(match_id,context,operation_key,current_date-1,NULL,'phone','Synthetic independent LDC race','w173-staff','w173-staff@example.test') FROM public.synthetic_ldc_races WHERE kind=p_kind;
 $$;

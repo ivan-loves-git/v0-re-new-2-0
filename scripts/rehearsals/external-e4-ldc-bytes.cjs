@@ -17,11 +17,18 @@ const files = join(cluster, 'physical-ldc-proof')
 const repr = '76000000-0000-4000-8000-000000000004'
 const staff = { id: 'w173-staff', email: 'w173-staff@example.test' }
 let uploads = 0, removals = 0
+let delayedUpload = null
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const physicalPath = (bucket, path) => { if (bucket !== 'cvs' || !path || /(^\/|\\|(^|\/)\.\.?($|\/))/.test(path)) throw Error('Unsafe native file target'); return join(files, bucket, path) }
 const storage = { from: bucket => ({
   download: async path => { try { return { data: new Blob([await readFile(physicalPath(bucket, path))]), error: null } } catch { return { data: null, error: { message: 'missing owned physical bytes' } } } },
   upload: async (path, bytes, options) => {
+    if (delayedUpload && path.startsWith('pursuit-ldc-evidence/')) {
+      if (delayedUpload.calls++ === 0) {
+        delayedUpload.started()
+        await delayedUpload.released
+      } else return { data: null, error: { statusCode: '500' } }
+    }
     const target = physicalPath(bucket, path)
     await mkdir(join(target, '..'), { recursive: true })
     try { await writeFile(target, bytes, { flag: 'wx' }) } catch { return { data: null, error: { statusCode: '409' } } }
@@ -163,6 +170,51 @@ async function qualifyingSnapshot(match) {
     assert.equal(await readFor(siblingReceipt, 'w173-repreneur-interest', 'interested@example.test'), null)
     assert.equal((await readFor(siblingReceipt, staff.id, staff.email)).content_sha256, hash(replacementBytes))
     await uploadCurrent(syntheticPdfBytes(3))
+    // Two real public requests share one operation/stage. The second fails
+    // while the first upload is still pending and cleans the empty stage.
+    const lateMatch = await seedMatch(8), lateContext = await load(global.__ldcNativeDb, lateMatch, 'e4')
+    const lateInput = { ...input, matchId: lateMatch, context: lateContext, operationKey: randomUUID() }
+    let uploadStarted, releaseUpload
+    const started = new Promise(resolve => { uploadStarted = resolve })
+    delayedUpload = { calls: 0, started: uploadStarted, released: new Promise(resolve => { releaseUpload = resolve }) }
+    const beforeLate = await qualifyingSnapshot(lateMatch), firstRequest = record(lateInput)
+    await started
+    let lateStage
+    try {
+      assert.equal((await record(lateInput)).success, false)
+      lateStage = (await db.query('SELECT id,state,storage_path FROM public.pursuit_ldc_staging WHERE operation_key=$1', [lateInput.operationKey])).rows[0]
+      assert.equal(lateStage.state, 'cleaned')
+      releaseUpload()
+      assert.equal((await firstRequest).success, false)
+    } finally { releaseUpload(); await firstRequest; delayedUpload = null }
+    assert.deepEqual(await qualifyingSnapshot(lateMatch), beforeLate)
+    assert.equal((await storage.from('cvs').download(lateStage.storage_path)).data, null, 'late upload on a cleaned stage must be reclaimed by own finally')
+    // Empty terminal stages must not fill the cron's twenty-row batch before a
+    // later successful upload whose caller died without running finally.
+    for (let index = 0; index < 24; index++) {
+      const operationKey = randomUUID()
+      const { stage } = await stageExternalLdcVersion(global.__ldcNativeDb, { matchId: lateMatch, operationKey, context: lateContext }, staff)
+      await cleanupExternalLdcStaging(global.__ldcNativeDb, { stageId: stage.stage_id, operationKey, staffId: staff.id })
+    }
+    const abandonedInput = { ...lateInput, operationKey: randomUUID() }
+    const abandoned = await stageExternalLdcVersion(global.__ldcNativeDb, abandonedInput, staff)
+    const abandonedStarted = new Promise(resolve => { uploadStarted = resolve })
+    delayedUpload = { calls: 0, started: uploadStarted, released: new Promise(resolve => { releaseUpload = resolve }) }
+    const orphanUpload = retainExternalLdcBytes(global.__ldcNativeDb, abandoned.stage, abandoned.bytes, lateContext.ldc.content_sha256)
+    await abandonedStarted
+    try {
+      await cleanupExternalLdcStaging(global.__ldcNativeDb, { stageId: abandoned.stage.stage_id, operationKey: abandonedInput.operationKey, staffId: staff.id })
+      releaseUpload()
+      await orphanUpload
+    } finally { releaseUpload(); await orphanUpload; delayedUpload = null }
+    assert.equal((await db.query('SELECT state FROM public.pursuit_ldc_staging WHERE id=$1', [abandoned.stage.stage_id])).rows[0].state, 'cleaned')
+    assert((await storage.from('cvs').download(abandoned.stage.storage_path)).data, 'the no-finally case must actually leave late physical bytes before cron')
+    const cron = await cleanupExternalLdcStaging(global.__ldcNativeDb)
+    assert.equal(cron.deleted, 1, 'empty older tombstones must not starve the later owned late object')
+    assert.equal((await storage.from('cvs').download(abandoned.stage.storage_path)).data, null)
+    assert.equal((await record(abandonedInput)).success, false, 'cron cleanup must never re-enable finalization')
+    assert.deepEqual(await qualifyingSnapshot(lateMatch), beforeLate)
+    console.log('PASS: actual delayed same-operation public uploads reclaim late bytes in own finally; simulated caller death without finally leaves real bytes then bounded cron reclaims them past24empty tombstones. No qualifying effects or finalization revival.')
     await db.query('CREATE TABLE public.synthetic_ldc_races(kind text PRIMARY KEY,match_id uuid,opportunity_id uuid,context jsonb,operation_key uuid,stage_id uuid)')
     for (const [index,kind] of [[3,'record-first'],[4,'cleanup-first'],[5,'source-first'],[6,'pause-first'],[7,'drop-first']]) {
       const raceMatch = await seedMatch(index), raceContext = await load(global.__ldcNativeDb,raceMatch,'e4'), operationKey=randomUUID()

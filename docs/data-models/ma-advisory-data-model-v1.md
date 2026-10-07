@@ -851,6 +851,8 @@ W165 cleanup, including a worker that already read an old queue entry or a retai
 
 A private per-operation staging ledger owns each candidate snapshot before upload. Finalization and cleanup take the same operation/staging locks: a confirmed committed/reused version is never cleanup eligible; cleanup first makes a failed/expired stage permanently unfinalizable before returning its exact owned path. Uncertain RPC outcomes are resolved against this ledger, never guessed. Immediate cleanup and the existing protected cleanup cron retry only confirmed nonqualifying owned staging, with a bounded expiry/claim batch. Receipt, version/link and E4 commit atomically; a fault, stale source, Pause/Drop or denial creates no qualifying event, gate, grant or provider effect. Identical retry returns the same receipt/version; changed retry rejects.
 
+A successful upload may finish after that operation's cleanup, including after its caller dies. The cleaned staging tombstone remains permanently unfinalizable, but own-finally and the bounded cron can reclaim it when its exact unreferenced `cvs` object metadata reappears. Already-empty tombstones are excluded before the batch limit; a referenced/reused or uncertain version remains ineligible.
+
 | Dictionary field | Required authority / visibility | Retention |
 | --- | --- | --- |
 | `context.ldc` | New E4 only: exact owner source object ID/version/update time/path/upload provenance, filename, MIME, actual size/hash; staff-only context | Immutable receipt source snapshot; historical absence stays absent |

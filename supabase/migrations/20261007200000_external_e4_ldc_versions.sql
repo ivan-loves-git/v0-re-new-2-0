@@ -280,17 +280,25 @@ GRANT EXECUTE ON FUNCTION public.journey_record_external_handoff(uuid,jsonb,uuid
 
 -- Commit uncertainty is resolved here under the same operation lock. Claiming
 -- cleanup makes a stage permanently unfinalizable before Storage DELETE.
+-- A late successful upload can outlive cleanup. Reclaim its terminal tombstone
+-- only when the actual object has reappeared; empty tombstones consume no batch.
 CREATE FUNCTION public.journey_claim_ldc_cleanup(p_stage_id uuid DEFAULT NULL,p_operation_key uuid DEFAULT NULL,p_staff_user_id text DEFAULT NULL) RETURNS SETOF public.pursuit_ldc_staging
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=public,pg_temp AS $$
 DECLARE candidate public.pursuit_ldc_staging%ROWTYPE;
 BEGIN
-  FOR candidate IN SELECT * FROM public.pursuit_ldc_staging WHERE state IN ('pending','cleanup')
-    AND ((p_stage_id IS NOT NULL AND id=p_stage_id AND operation_key=p_operation_key AND staff_user_id=p_staff_user_id)
-      OR (p_stage_id IS NULL AND (state='cleanup' OR expires_at<=clock_timestamp()))) ORDER BY recorded_at LIMIT 20 LOOP
+  FOR candidate IN SELECT stage_row.* FROM public.pursuit_ldc_staging stage_row
+    WHERE (stage_row.state IN ('pending','cleanup') OR (stage_row.state='cleaned'
+      AND EXISTS(SELECT 1 FROM storage.objects object_row WHERE object_row.bucket_id='cvs' AND object_row.name=stage_row.storage_path)))
+    AND NOT EXISTS(SELECT 1 FROM public.pursuit_ldc_versions WHERE storage_path=stage_row.storage_path)
+    AND ((p_stage_id IS NOT NULL AND stage_row.id=p_stage_id AND stage_row.operation_key=p_operation_key AND stage_row.staff_user_id=p_staff_user_id)
+      OR (p_stage_id IS NULL AND (stage_row.state IN ('cleanup','cleaned') OR stage_row.expires_at<=clock_timestamp())))
+    ORDER BY stage_row.recorded_at LIMIT 20 LOOP
     IF NOT pg_try_advisory_xact_lock(hashtextextended('external-handoff:'||candidate.operation_key::text,0)) THEN CONTINUE; END IF;
     SELECT * INTO candidate FROM public.pursuit_ldc_staging WHERE id=candidate.id FOR UPDATE SKIP LOCKED;
-    IF candidate.id IS NULL OR candidate.state NOT IN ('pending','cleanup')
-      OR EXISTS(SELECT 1 FROM public.pursuit_ldc_versions WHERE storage_path=candidate.storage_path) THEN CONTINUE; END IF;
+    IF candidate.id IS NULL OR candidate.state NOT IN ('pending','cleanup','cleaned')
+      OR EXISTS(SELECT 1 FROM public.pursuit_ldc_versions WHERE storage_path=candidate.storage_path)
+      OR (candidate.state='cleaned' AND NOT EXISTS(SELECT 1 FROM storage.objects object_row
+        WHERE object_row.bucket_id='cvs' AND object_row.name=candidate.storage_path)) THEN CONTINUE; END IF;
     UPDATE public.pursuit_ldc_staging SET state='cleanup' WHERE id=candidate.id RETURNING * INTO candidate;
     RETURN NEXT candidate;
   END LOOP;
