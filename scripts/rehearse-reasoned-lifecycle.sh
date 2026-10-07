@@ -29,6 +29,10 @@ psql=("$pg_bin/psql" -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_l
 "${psql[@]}" -c "ALTER TABLE public.opportunities ADD COLUMN source_identity_to_verify BOOLEAN NOT NULL DEFAULT FALSE" >/dev/null
 sed -n '/^CREATE OR REPLACE FUNCTION public.ma_opportunity_source_review_required(/,/^\$\$;/p' "$repo_root/supabase/migrations/20260902202154_colin_data_security_corrections.sql" | "${psql[@]}" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/129_opportunity_freshness_reviews.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/scripts/116_historical_pursuit_ledger.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/supabase/migrations/20260911133000_w172_recommendation_response_window.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/supabase/migrations/20260911180000_w175_recommendation_assignment_notification.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/supabase/migrations/20260914230430_pursuit_workbook_v4.sql" >/dev/null
 
 "${psql[@]}" <<'SQL'
 SET session_replication_role = replica;
@@ -153,4 +157,6 @@ DO $$ BEGIN
    OR (SELECT count(*) FROM public.opportunity_closure_history WHERE opportunity_id='25200000-0000-4000-8000-000000000081' AND reason='stale')<>1 THEN RAISE EXCEPTION 'stale_activation_race_partial_outcome'; END IF;
 END $$;
 SQL
-echo 'Ticket #252 disposable persistence, history, confidentiality, clocks and independent-session races passed.'
+TMPDIR=/tmp REASONED_LIFECYCLE_COMPATIBILITY=1 RENEW_DESCRIPTION_REHEARSAL_PORT="$((port+1))" \
+  bash "$repo_root/scripts/rehearse-single-public-description.sh"
+echo 'Ticket #252 disposable persistence, history, confidentiality, clocks, independent-session races and historical import compatibility passed.'

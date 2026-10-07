@@ -44,6 +44,7 @@ SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_termin
 SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_terminal('25200000-0000-4000-8000-000000000020','drop','staff@re-new.invalid','retired-dd','dd_disqualified_repreneur')$q$,'pursuit_drop_reason_invalid');
 SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_terminal('25200000-0000-4000-8000-000000000020','drop','buyer@re-new.invalid','wrong-actor','other',ARRAY[]::text[],'Context')$q$,'staff_outcome_actor_required');
 SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_terminal('25200000-0000-4000-8000-000000000020','drop','staff@re-new.invalid','invalid-other','other',ARRAY[]::text[],' ')$q$,'pursuit_drop_other_explanation_required');
+SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_terminal('25200000-0000-4000-8000-000000000020','drop','staff@re-new.invalid','invalid-whitespace-other','other',ARRAY[]::text[],chr(9)||chr(10)||chr(160)||chr(65279))$q$,'pursuit_drop_other_explanation_required');
 SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_terminal('25200000-0000-4000-8000-000000000020','drop','staff@re-new.invalid','invalid-secondary-other','financing_not_secured',ARRAY['other'],NULL)$q$,'pursuit_drop_other_explanation_required');
 SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_terminal('25200000-0000-4000-8000-000000000020','drop','staff@re-new.invalid','invalid-exclusive','reason_not_disclosed',ARRAY['financing_not_secured'],NULL)$q$,'pursuit_drop_reason_not_disclosed_exclusive');
 SELECT public.fixture_assert_rejected($q$SELECT public.journey_transition_terminal('25200000-0000-4000-8000-000000000020','drop','staff@re-new.invalid','invalid-exclusive-secondary','financing_not_secured',ARRAY['reason_not_disclosed'],NULL)$q$,'pursuit_drop_reason_not_disclosed_exclusive');
@@ -77,6 +78,7 @@ BEGIN
   END LOOP;
 END $$;
 SELECT public.fixture_assert_rejected($q$SELECT public.pause_opportunity_with_reason('25200000-0000-4000-8000-000000000010','other','staff-252')$q$,'opportunity_pause_other_explanation_required');
+SELECT public.fixture_assert_rejected($q$SELECT public.pause_opportunity_with_reason('25200000-0000-4000-8000-000000000010','other','staff-252',chr(9)||chr(10)||chr(160))$q$,'opportunity_pause_other_explanation_required');
 SELECT public.fixture_assert_rejected($q$SELECT public.close_opportunity_with_reason('25200000-0000-4000-8000-000000000010','paused_cabinet','staff-252')$q$,'opportunity_closure_reason_not_permanent');
 
 -- Seed elapsed time only in this disposable superuser fixture. No public clock
@@ -94,6 +96,15 @@ VALUES('25200000-0000-4000-8000-000000000087','25200000-0000-4000-8000-000000000
 INSERT INTO public.opportunity_pursuit_confidential_grants(id,match_id,opportunity_id,information_memo_document_id,source_firm_id,source_firm_name,source_office_id,source_office_name,granted_by)
 VALUES('25200000-0000-4000-8000-000000000088','25200000-0000-4000-8000-000000000086','25200000-0000-4000-8000-000000000084','25200000-0000-4000-8000-000000000087','25200000-0000-4000-8000-000000000030','Synthetic firm','25200000-0000-4000-8000-000000000031','Synthetic office','fixture');
 SET session_replication_role=origin;
+-- Pause uses the inherited lifecycle trigger. Revocation must persist when
+-- the sale returns to Active; merely hiding access during Pause is insufficient.
+SELECT public.pause_opportunity_with_reason('25200000-0000-4000-8000-000000000084','seller_paused_sale','staff-252');
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_confidential_grants WHERE id='25200000-0000-4000-8000-000000000088' AND revoked_at IS NOT NULL AND revoked_reason='opportunity_paused')
+   OR NOT EXISTS(SELECT 1 FROM public.opportunity_pursuit_evidence WHERE match_id='25200000-0000-4000-8000-000000000086' AND event_type='access_revoked' AND evidence_reference='opportunity status changed to paused') THEN RAISE EXCEPTION 'pause_grant_revocation_not_persisted'; END IF;
+ UPDATE public.opportunities SET status='active' WHERE id='25200000-0000-4000-8000-000000000084';
+ IF EXISTS(SELECT 1 FROM public.opportunity_pursuit_confidential_grants WHERE id='25200000-0000-4000-8000-000000000088' AND revoked_at IS NULL) THEN RAISE EXCEPTION 'active_return_restored_grant'; END IF;
+END $$;
 DO $$ BEGIN
  IF (public.opportunity_stale_closure_eligibility('25200000-0000-4000-8000-000000000010')->>'eligible')::boolean THEN RAISE EXCEPTION 'before_90_completed_days_allowed'; END IF;
  PERFORM public.fixture_assert_rejected($q$SELECT public.close_opportunity_with_reason('25200000-0000-4000-8000-000000000010','stale','staff-252')$q$,'opportunity_stale_not_eligible');

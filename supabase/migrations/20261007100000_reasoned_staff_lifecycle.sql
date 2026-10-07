@@ -12,6 +12,15 @@ BEGIN
   )<>1 THEN RAISE EXCEPTION 'staff_outcome_actor_required'; END IF;
 END $$;
 
+-- Match the browser's ECMAScript trim, including line breaks and Unicode
+-- whitespace; whitespace alone cannot satisfy the required Other context.
+CREATE FUNCTION public.normalize_staff_outcome_note(p_note TEXT)
+RETURNS TEXT LANGUAGE sql IMMUTABLE SET search_path='' AS $$
+ SELECT NULLIF(btrim(p_note,(SELECT string_agg(chr(codepoint),'') FROM unnest(ARRAY[9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279]) codepoint)),'')
+$$;
+REVOKE ALL ON FUNCTION public.normalize_staff_outcome_note(TEXT) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.normalize_staff_outcome_note(TEXT) TO service_role;
+
 CREATE OR REPLACE FUNCTION public.validate_pursuit_drop_explanation(p_primary TEXT, p_secondary TEXT[], p_note TEXT)
 RETURNS JSONB LANGUAGE plpgsql IMMUTABLE SET search_path = '' AS $$
 DECLARE catalogue TEXT[] := ARRAY[
@@ -20,7 +29,7 @@ DECLARE catalogue TEXT[] := ARRAY[
   'outside_investment_thesis','no_value_creation_angle','location_incompatible',
   'carve_out_risk','assets_premises_not_secured','business_plan_not_credible','quality_hr_red_flags','issues_in_due_diligence','deal_terms_disagreement',
   'deprioritized_another_deal','buyer_search_paused','no_response_buyer','path_stopped_seller_advisor','buyer_rejected_seller','reason_not_disclosed','other'
-]; note TEXT := NULLIF(BTRIM(p_note),'');
+]; note TEXT := public.normalize_staff_outcome_note(p_note);
 BEGIN
   IF p_primary IS NULL OR NOT (p_primary=ANY(catalogue)) THEN RAISE EXCEPTION 'pursuit_drop_reason_invalid'; END IF;
   IF p_secondary IS NULL OR EXISTS(SELECT 1 FROM unnest(p_secondary) reason WHERE reason IS NULL OR NOT(reason=ANY(catalogue)) OR reason=p_primary)
@@ -183,11 +192,67 @@ RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
   IF NEW.status='dropped' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status)
     AND COALESCE(current_setting('wave.pursuit_drop_transition',TRUE),'') NOT LIKE NEW.id::text || ':%' THEN
+    -- Approved historical imports create history-only terminal pairs or close
+    -- pristine drafts. They never fabricate a current pursuit Drop event.
+    IF current_setting('wave.pursuit_history_import',TRUE)='bound-source'
+      AND (TG_OP='INSERT' OR OLD.status='draft') AND NEW.pursuit_stage IS NULL THEN
+      RETURN NEW;
+    END IF;
     RAISE EXCEPTION 'pursuit_drop_requires_reasoned_transition';
   END IF;
   RETURN NEW;
 END $$;
 CREATE TRIGGER guard_reasoned_pursuit_drop BEFORE INSERT OR UPDATE OF status ON public.opportunity_matches FOR EACH ROW EXECUTE FUNCTION public.guard_reasoned_pursuit_drop();
+
+-- Preserve the two existing digest-bound staff import APIs. The unchanged
+-- validators/writers become private; only these wrappers establish the local
+-- historical capability, restoring it after success or failure. Existing
+-- source, staff, batch, pristine-draft and immutable-ledger checks still run.
+ALTER FUNCTION public.apply_pursuit_workbook_v4(JSONB,TEXT) RENAME TO apply_pursuit_workbook_v4_bound_rows;
+REVOKE ALL ON FUNCTION public.apply_pursuit_workbook_v4_bound_rows(JSONB,TEXT) FROM PUBLIC,anon,authenticated,service_role;
+CREATE FUNCTION public.apply_pursuit_workbook_v4(p_rows JSONB,p_actor TEXT)
+RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE previous_flag TEXT:=current_setting('wave.pursuit_history_import',TRUE); result JSONB;
+BEGIN
+  PERFORM set_config('wave.pursuit_history_import','bound-source',TRUE);
+  BEGIN
+    result:=public.apply_pursuit_workbook_v4_bound_rows(p_rows,p_actor);
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM set_config('wave.pursuit_history_import',COALESCE(previous_flag,''),TRUE);
+    RAISE;
+  END;
+  PERFORM set_config('wave.pursuit_history_import',COALESCE(previous_flag,''),TRUE);
+  RETURN result;
+END $$;
+REVOKE ALL ON FUNCTION public.apply_pursuit_workbook_v4(JSONB,TEXT) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.apply_pursuit_workbook_v4(JSONB,TEXT) TO service_role;
+
+ALTER FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB,TEXT) RENAME TO apply_historical_pursuit_import_row_bound;
+REVOKE ALL ON FUNCTION public.apply_historical_pursuit_import_row_bound(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB,TEXT) FROM PUBLIC,anon,authenticated,service_role;
+CREATE FUNCTION public.apply_historical_pursuit_import_row(
+  p_source_sha256 TEXT,p_source_sheet TEXT,p_source_row INTEGER,p_repreneur_id UUID,p_opportunity_id UUID,
+  p_completed_source_stages TEXT[],p_not_applicable_source_stages TEXT[],p_raw_drop_reason TEXT,p_event_dates_unknown BOOLEAN,p_actor TEXT,
+  p_source_repreneur_name TEXT,p_source_offer_label TEXT,p_source_opportunity_reference TEXT,p_source_row_fingerprint TEXT,p_manifest_digest TEXT,
+  p_resolution_blockers TEXT[],p_review_flags TEXT[],p_source_cells JSONB,p_approval_digest TEXT
+) RETURNS JSONB LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE previous_flag TEXT:=current_setting('wave.pursuit_history_import',TRUE); result JSONB;
+BEGIN
+  PERFORM public.require_staff_outcome_actor(p_actor);
+  PERFORM set_config('wave.pursuit_history_import','bound-source',TRUE);
+  BEGIN
+    result:=public.apply_historical_pursuit_import_row_bound(
+      p_source_sha256,p_source_sheet,p_source_row,p_repreneur_id,p_opportunity_id,p_completed_source_stages,p_not_applicable_source_stages,
+      p_raw_drop_reason,p_event_dates_unknown,p_actor,p_source_repreneur_name,p_source_offer_label,p_source_opportunity_reference,
+      p_source_row_fingerprint,p_manifest_digest,p_resolution_blockers,p_review_flags,p_source_cells,p_approval_digest);
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM set_config('wave.pursuit_history_import',COALESCE(previous_flag,''),TRUE);
+    RAISE;
+  END;
+  PERFORM set_config('wave.pursuit_history_import',COALESCE(previous_flag,''),TRUE);
+  RETURN result;
+END $$;
+REVOKE ALL ON FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB,TEXT) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.apply_historical_pursuit_import_row(TEXT,TEXT,INTEGER,UUID,UUID,TEXT[],TEXT[],TEXT,BOOLEAN,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT,TEXT[],TEXT[],JSONB,TEXT) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.guard_reasoned_drop_evidence()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
@@ -212,7 +277,7 @@ GRANT EXECUTE ON FUNCTION public.journey_transition_terminal(UUID,TEXT,TEXT,TEXT
 ALTER TABLE public.opportunity_pause_history ADD COLUMN reason_note TEXT;
 ALTER TABLE public.opportunity_pause_history DROP CONSTRAINT opportunity_pause_history_reason_check;
 ALTER TABLE public.opportunity_pause_history ADD CONSTRAINT opportunity_pause_history_reason_check CHECK (reason IN ('paused_cabinet','seller_paused_sale','exclusivity_another_buyer','waiting_updated_information','other'));
-ALTER TABLE public.opportunity_pause_history ADD CONSTRAINT opportunity_pause_history_note_check CHECK ((reason<>'other' OR NULLIF(BTRIM(reason_note),'') IS NOT NULL) AND (reason_note IS NULL OR length(reason_note)<=4000));
+ALTER TABLE public.opportunity_pause_history ADD CONSTRAINT opportunity_pause_history_note_check CHECK ((reason<>'other' OR public.normalize_staff_outcome_note(reason_note) IS NOT NULL) AND (reason_note IS NULL OR length(reason_note)<=4000));
 CREATE OR REPLACE FUNCTION public.pause_opportunity_with_reason(
   p_opportunity_id UUID,
   p_reason TEXT,
@@ -238,8 +303,8 @@ BEGIN
     RAISE EXCEPTION 'opportunity_pause_reason_invalid';
   END IF;
 
-  IF p_reason='other' AND NULLIF(BTRIM(p_reason_note),'') IS NULL THEN RAISE EXCEPTION 'opportunity_pause_other_explanation_required'; END IF;
-  IF length(p_reason_note)>4000 THEN RAISE EXCEPTION 'outcome_note_too_long'; END IF;
+  IF p_reason='other' AND public.normalize_staff_outcome_note(p_reason_note) IS NULL THEN RAISE EXCEPTION 'opportunity_pause_other_explanation_required'; END IF;
+  IF length(public.normalize_staff_outcome_note(p_reason_note))>4000 THEN RAISE EXCEPTION 'outcome_note_too_long'; END IF;
 
   SELECT *
   INTO v_opportunity
@@ -287,7 +352,7 @@ BEGIN
     p_reason,
     v_opportunity.status,
     p_paused_by,
-    NULLIF(BTRIM(p_reason_note),'')
+    public.normalize_staff_outcome_note(p_reason_note)
   )
   RETURNING id INTO v_pause_id;
 
