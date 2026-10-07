@@ -91,10 +91,9 @@ export async function readPortalNextActions(
       return unavailablePortalNextActions(asOf)
     }
 
-    // Both existing readers already enforce Active opportunity, current owner,
-    // REAL/DEMO namespace equality and public-safe title. Discovery-only rows
+    // Current owner and namespace are already resolved. Paused history and discovery-only rows
     // have no match and can never become an action here.
-    const matched = source.opportunities.filter((deal) => Boolean(deal.match_id && deal.match_status))
+    const matched = source.opportunities.filter((deal) => deal.opportunity_status !== "paused" && Boolean(deal.match_id && deal.match_status))
     const proposedIds = matched.filter((deal) => deal.match_status === "proposed")
       .map((deal) => deal.match_id!)
     const activeIds = matched.filter((deal) => deal.match_status === "active_pursuit")

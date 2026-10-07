@@ -71,6 +71,16 @@ describe("Ticket #132 current-owner read boundary", () => {
     mocks.listStaffPortalPreviewOpportunities.mockResolvedValue(safeSource)
   })
 
+  it("excludes canonical Paused history before reading active actions or confidential journeys", async () => {
+    const historical = { ...safeSource, opportunities: [
+      { ...safeSource.opportunities[0], opportunity_status: "paused" },
+      { ...safeSource.opportunities[0], opportunity_status: "paused", match_id: "prior-proposal", match_status: "proposed" },
+    ] }
+    await readPortalNextActions({ kind: "portal" }, historical as never)
+    expect(mocks.readPortalCurrentPursuit).not.toHaveBeenCalled()
+    expect(mocks.readPortalDealActionIndicators).toHaveBeenCalledWith([], expect.anything())
+  })
+
   it("authorizes the owner before constructing a service client", async () => {
     mocks.requirePortalAccess.mockRejectedValue(new Error("owner denied"))
     await expect(readPortalNextActions({ kind: "portal" }, safeSource as never)).rejects.toThrow("owner denied")

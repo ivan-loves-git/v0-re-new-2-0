@@ -3,12 +3,16 @@ import "server-only"
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import {
   projectOpportunityPursuitEvidence,
+  isQualifyingPursuitHandoff,
   type OpportunityPursuitEvidence,
   type OpportunityPursuitJourneyAction,
 } from "@/lib/opportunity-pursuit-evidence"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
+
+import { loadVerifiedExternalHandoffContext } from "@/lib/external-ldc-version"
+import type { ExternalHandoffContext } from "@/lib/external-pursuit-handoff"
 
 export type PortalDealAction = "respond" | "sign_nda" | "unknown" | null
 
@@ -46,7 +50,11 @@ export interface StaffMemoFeedbackProjection {
   receipt: { evidenceId: string; channel: "email" | "phone"; receivedAt: string; recordedAt: string; actor: string } | null
 }
 
+export type StaffExternalMemoNotice = { grant_evidence_id: string; exchange_date: string; exchange_time: string | null; channel: "email" | "phone" | "meeting" | "other"; reference: string; staff_user_id: string; recorded_at: string }
 export interface StaffCurrentPursuit {
+  externalMemoNotices?: Record<string, StaffExternalMemoNotice>
+  externalRecordingEnabled?: boolean
+  externalHandoffContext?: ExternalHandoffContext | null
   matchId: string
   opportunityId: string
   repreneurId: string
@@ -233,7 +241,15 @@ async function loadCurrentPursuit(
 
   const entries = (evidenceResult.data ?? []) as OpportunityPursuitEvidence[]
   let memoFeedback: StaffMemoFeedbackProjection | null = null
+  const externalMemoNotices: Record<string, StaffExternalMemoNotice> = {}
   if (includeStaffFeedback) {
+    const grantIds = entries.filter(entry => entry.event_type === "confidential_access_granted").map(entry => entry.id)
+    if (grantIds.length) {
+      const { data: notices, error: noticeError } = await supabase.from("opportunity_memo_external_notices")
+        .select("grant_evidence_id,exchange_date,exchange_time,channel,reference,staff_user_id,recorded_at").in("grant_evidence_id", grantIds)
+      if (noticeError && noticeError.code !== "PGRST205" && noticeError.code !== "42P01") throw new Error("Could not read retained external memo notice evidence.")
+      for (const notice of (notices ?? []) as StaffExternalMemoNotice[]) externalMemoNotices[notice.grant_evidence_id] = notice
+    }
     const latestGrant = [...entries].reverse().find((entry) => entry.event_type === "confidential_access_granted")
     if (latestGrant) {
       const { data: reminder, error: reminderError } = await supabase
@@ -327,7 +343,7 @@ async function loadCurrentPursuit(
   const hasContinuedCurrentCycle = currentCycleEntries.some(
     (entry) => entry.event_type === "continued",
   )
-  const currentE6 = currentCycleEntries.find((entry) => entry.event_type === "e6_nda_ready_notified"
+  const currentE6 = currentCycleEntries.find((entry) => entry.event_type === "e6_nda_ready_notified" && isQualifyingPursuitHandoff(entry)
     && entry.metadata?.upstream_evidence_id === ((gate1Result.data as string | null) ?? null))
   const currentSignedCopySubmitted = Boolean(
     currentE6 && repreneur && new Date(repreneur.recorded_at).getTime() >= new Date(currentE6.recorded_at).getTime(),
@@ -349,7 +365,20 @@ async function loadCurrentPursuit(
   }
   if (match.status === "dropped") allowedActions.push("reopen")
 
+  let externalHandoffContext: ExternalHandoffContext | null = null
+  let externalRecordingEnabled = false
+  const externalType = nextAction === "request_qualification" ? "e4" : nextAction === "send_nda_ready" ? "e6" : nextAction === "record_dispatch" ? "e7" : null
+  if (includeStaffFeedback && (externalType || nextAction === "grant_confidential_access") && !projectionUnavailable && opportunity?.status === "active") {
+    const { data: recording } = await supabase.from("pursuit_external_handoff_settings").select("enabled").eq("singleton", true).maybeSingle()
+    externalRecordingEnabled = recording?.enabled === true
+    if (externalRecordingEnabled && externalType) {
+      externalHandoffContext = await loadVerifiedExternalHandoffContext(supabase, matchId, externalType)
+    }
+  }
+
   return {
+    externalHandoffContext,
+    ...(includeStaffFeedback ? { externalMemoNotices, externalRecordingEnabled } : {}),
     matchId: match.id,
     opportunityId: match.opportunity_id,
     repreneurId: match.repreneur_id,

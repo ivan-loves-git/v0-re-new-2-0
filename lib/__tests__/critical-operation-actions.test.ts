@@ -84,9 +84,19 @@ describe("critical server action traces", () => {
       matchId: "match-private-1", action: "grant_confidential_access",
       documentId: "reusable-memo-1", ndaExpiresAt: "2026-10-01T12:00:00.000Z",
     })).resolves.toEqual({ success: true, message: "IM approved and confidential access granted.", eventId: "grant-event-1" })
-    expect(rpc).toHaveBeenCalledWith("journey_grant_confidential_access", expect.objectContaining({
-      p_information_memo_document_id: "reusable-memo-1",
-    }))
+    expect(mocks.triggerOpportunityMemoNotification).toHaveBeenCalledExactlyOnceWith({
+      opportunityId: "opportunity-1", matchId: "match-private-1", expectedGrantId: "grant-event-1",
+    })
+    expect(emittedEvents().map(({ operation, stage }) => ({ operation, stage }))).toEqual([
+      { operation: "pursuit.journey_action", stage: "start" },
+      { operation: "email.memo_notification", stage: "start" },
+      { operation: "email.memo_notification", stage: "success" },
+      { operation: "pursuit.journey_action", stage: "success" },
+    ])
+    const traces = JSON.stringify(emittedEvents())
+    for (const value of ["match-private-1", "grant-event-1", "reusable-memo-1", "staff-private-1", "staff@example.test"]) {
+      expect(traces).not.toContain(value)
+    }
   })
 
   it("still commits a canonical Drop and reports denied-access cleanup pending during guarded rollback", async () => {

@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateBody: vi.fn(),
   deliverCronReminder: vi.fn(),
   cleanupExpiredPrivateUploads: vi.fn(),
+  cleanupExternalLdcStaging: vi.fn(),
   purgeExpiredRepreneurFeedback: vi.fn(),
   processRecipientImCleanup: vi.fn(),
   runPendingInterestNotifications: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("@/lib/email/cron-reminder-delivery", async (importOriginal) => {
     deliverCronReminder: mocks.deliverCronReminder,
   }
 })
+vi.mock("@/lib/external-ldc-version", () => ({ cleanupExternalLdcStaging: mocks.cleanupExternalLdcStaging }))
 vi.mock("@/lib/private-upload-server", () => ({
   cleanupExpiredPrivateUploads: mocks.cleanupExpiredPrivateUploads,
 }))
@@ -139,6 +141,7 @@ describe("critical route traces", () => {
       examined: 0,
       cleaned: 0,
     })
+    mocks.cleanupExternalLdcStaging.mockResolvedValue({ deleted: 0 })
     mocks.purgeExpiredRepreneurFeedback.mockResolvedValue(0)
     mocks.processRecipientImCleanup.mockResolvedValue({ examined: 0, deleted: 0, failed: 0, remaining: 0 })
     mocks.runPendingInterestNotifications.mockResolvedValue({ sent: 0, failed: 0, reviewRequired: 0 })

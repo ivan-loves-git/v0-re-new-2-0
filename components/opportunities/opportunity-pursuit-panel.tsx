@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import { useUiLanguage } from "@/components/i18n/ui-text"
 import { CheckCircle2, FileCheck2, FileText, History, LockKeyhole, Send, ShieldCheck } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -9,6 +10,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { getExternalMemoApprovalContext } from "@/lib/actions/external-memo-approval"
+import type { ExternalMemoContext } from "@/lib/external-memo-approval"
+import { ExternalPursuitHandoffDialog } from "@/components/opportunities/external-pursuit-handoff-dialog"
 import { PursuitDropReasonFields, usePursuitDropForm } from "@/components/opportunities/pursuit-drop-reason-fields"
 import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
@@ -31,6 +35,7 @@ import {
   startOpportunityPursuit,
 } from "@/lib/actions/opportunity-pursuit-journey"
 import type { StaffCurrentPursuit } from "@/lib/data/current-pursuit"
+import type { ExternalHandoffChannel } from "@/lib/external-pursuit-handoff"
 import { getOpportunityDocumentPolicy } from "@/lib/opportunity-document-policy"
 import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
 import {
@@ -50,6 +55,25 @@ interface OpportunityPursuitPanelProps {
   projection: StaffCurrentPursuit | null
   legacyEventCount: number
 }
+
+const externalEvidenceCopy = {
+  en: {
+    e4_qualification_requested: "Qualification request completed outside WAVE",
+    e6_nda_ready_notified: "NDA-ready notice completed outside WAVE",
+    e7_signed_copies_and_memo_requested: "Signed copies and memo request completed outside WAVE",
+    memoNotice: "Memo access approved; notice completed outside WAVE",
+    dateOnly: "date only",
+    channels: { email: "Email", phone: "Phone", meeting: "Meeting", other: "Other" },
+  },
+  fr: {
+    e4_qualification_requested: "Demande de qualification réalisée hors WAVE",
+    e6_nda_ready_notified: "Avis de NDA prêt communiqué hors WAVE",
+    e7_signed_copies_and_memo_requested: "Copies signées transmises et mémorandum demandé hors WAVE",
+    memoNotice: "Accès au mémo approuvé ; avis communiqué hors WAVE",
+    dateOnly: "date seule",
+    channels: { email: "E-mail", phone: "Téléphone", meeting: "Réunion", other: "Autre" },
+  },
+} as const
 
 const EVENT_LABELS: Record<string, string> = {
   mutual_interest_validated: "Mutual interest validated",
@@ -79,9 +103,13 @@ function repreneurName(match: OpportunityMatch | null) {
 }
 
 export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, matches, documents, ndaArtifacts, projection, legacyEventCount }: OpportunityPursuitPanelProps) {
+  const initialLanguage = useUiLanguage()
+  const [externalLanguage, setExternalLanguage] = useState(initialLanguage)
+  const externalCopy = externalEvidenceCopy[externalLanguage]
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null)
+  const [externalMemoContext, setExternalMemoContext] = useState<ExternalMemoContext | null>(null)
   const [outcomeReason, setOutcomeReason] = useState("")
   const dropForm = usePursuitDropForm()
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
@@ -154,6 +182,7 @@ export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, ma
             {nextAction === "pass_gate_2" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => passOpportunityPursuitGate2(activeMatch.id))}><ShieldCheck data-icon="inline-start" />{pending ? "Recording..." : "Pass Gate 2"}</Button> : null}
             {nextAction === "record_dispatch" ? <Button disabled={pending} variant="outline" data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => recordOpportunityPursuitDispatch(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Preparing..." : "Prepare signed copies and memo request"}</Button> : null}
           </div> : null}
+          {activeMatch && !needsRevalidation && projection?.externalHandoffContext ? <ExternalPursuitHandoffDialog matchId={activeMatch.id} context={projection.externalHandoffContext} language={externalLanguage} onLanguageChange={setExternalLanguage} /> : null}
           {activeMatch && canDrop ? <div className="space-y-4 border-t pt-4">
             <PursuitDropReasonFields id="pursuit-drop" value={dropForm.value} onChange={dropForm.onChange} disabled={pending} />
             <Button disabled={pending || !dropForm.canSubmit} variant="destructive" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(async () => {
@@ -178,18 +207,26 @@ export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, ma
       </Card>
 
       {activeMatch && projection?.gate2Passed && projection.dispatched ? <Card>
-        <CardHeader><CardTitle>Confidential access and outcome</CardTitle><CardDescription>Approve the selected Information Memorandum for this repreneur and grant access only after Gate 2 and the sent intermediary handoff. {recipientImRequired ? "This opportunity requires a fresh recipient-specific PDF uploaded in Documents for this exact pursuit." : "Ordinary reusable IMs remain available through a separate grant for each pursuit."}</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Confidential access and outcome</CardTitle><CardDescription>Approve the selected Information Memorandum for this repreneur and grant access only after Gate 2 and the completed intermediary handoff. {recipientImRequired ? "This opportunity requires a fresh recipient-specific PDF uploaded in Documents for this exact pursuit." : "Ordinary reusable IMs remain available through a separate grant for each pursuit."}</CardDescription></CardHeader>
         <CardContent className="flex flex-col gap-4">
           {!hasLiveGrant && recipientImRequired && imDocuments.length === 0 ? <Alert><FileText /><AlertTitle>Recipient IM not uploaded yet</AlertTitle><AlertDescription>Approval and NDA steps remain available. Only IM access waits for staff to upload a new personalized copy for {repreneurName(activeMatch)}.</AlertDescription></Alert> : null}
           {!hasLiveGrant && <form action={(formData) => {
             const documentId = String(formData.get("document_id") ?? "")
             const ndaExpiresAt = String(formData.get("nda_expires_at") ?? "")
-            run(() => grantOpportunityPursuitConfidentialAccess(activeMatch.id, documentId, ndaExpiresAt))
+            if (formData.get("approval_mode") === "external") {
+              startTransition(async () => {
+                const context = await getExternalMemoApprovalContext(activeMatch.id, documentId, ndaExpiresAt)
+                if (context) setExternalMemoContext(context)
+                else toast.error(externalLanguage === "fr" ? "Les documents et validations actuels n’ont pas pu être vérifiés." : "Current documents and approvals could not be verified.")
+              })
+            } else run(() => grantOpportunityPursuitConfidentialAccess(activeMatch.id, documentId, ndaExpiresAt))
           }} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(180px,0.45fr)_auto] sm:items-end" data-wave-action="confirm" data-wave-workflow="portal_pursuit">
             <div className="space-y-2"><Label htmlFor="journey-im">Information memorandum</Label><select id="journey-im" name="document_id" className="border-input flex h-9 w-full rounded-md border bg-card px-3 text-sm" defaultValue="" required> <option value="" disabled>Select the exact IM</option>{imDocuments.map((document) => <option key={document.id} value={document.id}>{document.title}</option>)}</select></div>
             <div className="space-y-2"><Label htmlFor="journey-nda-expiry">NDA access expires</Label><Input id="journey-nda-expiry" name="nda_expires_at" type="datetime-local" required /></div>
-            <OpportunityReviewSubmitButton label="Approve IM and grant access" pendingLabel="Granting..." disabled={imDocuments.length === 0} />
+            <div className="flex flex-col gap-2"><OpportunityReviewSubmitButton label="Approve IM and grant access" pendingLabel="Granting..." disabled={imDocuments.length === 0} />
+              {projection.externalRecordingEnabled ? <Button type="submit" variant="outline" name="approval_mode" value="external" disabled={pending || imDocuments.length === 0}>{externalLanguage === "fr" ? "Approuver avec avis externe" : "Approve with external notice"}</Button> : null}</div>
           </form>}
+          {!hasLiveGrant && projection.externalRecordingEnabled && externalMemoContext && externalMemoContext.repreneur_id === activeMatch.repreneur_id ? <ExternalPursuitHandoffDialog key={JSON.stringify(externalMemoContext)} matchId={activeMatch.id} context={externalMemoContext} language={externalLanguage} onLanguageChange={setExternalLanguage} initiallyOpen onClose={() => setExternalMemoContext(null)} /> : null}
           {!hasLiveGrant && projection.confidentialGrant ? <Alert><LockKeyhole /><AlertTitle>Confidential access is no longer live</AlertTitle><AlertDescription>The prior grant is revoked, expired, or no longer bound to the current evidence. Select the IM and set a new expiry to grant access again.</AlertDescription></Alert> : null}
           {hasLiveGrant ? <div className="flex flex-col gap-3"><div className="flex flex-wrap gap-2"><Badge variant="secondary">Access granted</Badge>{canContinue ? <Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "continue"))}>Record Continue</Button> : null}<Button disabled={pending} variant="outline" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => runOpportunityPursuitJourneyAction({ matchId: activeMatch.id, action: "revoke_access", reason: outcomeReason || "staff_revocation" }))}>Revoke access</Button></div>{canComplete ? <div className="flex flex-col gap-2 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-complete-reason">Reason required to complete</Label><Input id="pursuit-complete-reason" value={outcomeReason} onChange={(event) => setOutcomeReason(event.target.value)} placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "complete", outcomeReason.trim()))}>Complete pursuit</Button></div> : null}</div> : null}
           {projection.memoFeedback ? <StaffMemoFeedbackControl matchId={activeMatch.id} feedback={projection.memoFeedback} canRecord={hasLiveGrant} /> : null}
@@ -201,12 +238,16 @@ export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, ma
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><History data-icon="inline-start" />Evidence log</CardTitle><CardDescription>Append-only operational history for this pursuit. {legacyEventCount ? `${legacyEventCount} legacy stage record${legacyEventCount === 1 ? " is" : "s are"} retained as read-only history.` : ""}</CardDescription></CardHeader>
         <CardContent>{projection?.entries.length ? <div className="divide-y rounded-md border">{projection.entries.map((entry) => {
+          const externalMemoNotice = entry.event_type === "e8_memo_enabled_completed" && typeof entry.metadata?.grant_evidence_id === "string" ? projection.externalMemoNotices?.[entry.metadata.grant_evidence_id] : null
           const dropped = entry.event_type === "dropped"
           const evidenceReference = dropped && entry.evidence_reference ? getOpportunityPursuitDropReasonLabel(entry.evidence_reference) : entry.evidence_reference
           const secondaryReasons = dropped && Array.isArray(entry.metadata?.secondary_reasons) ? entry.metadata?.secondary_reasons.filter((reason): reason is string => typeof reason === "string") : []
           const note = dropped && typeof entry.metadata?.reason_note === "string" ? entry.metadata?.reason_note : null
           return <div key={entry.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 space-y-1"><p className="text-sm font-medium">{EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>
+            <div className="min-w-0 space-y-1"><p className="text-sm font-medium">{externalMemoNotice ? externalCopy.memoNotice : entry.metadata?.qualifying_origin === "external_staff_v1" ? externalCopy[entry.event_type as "e4_qualification_requested" | "e6_nda_ready_notified" | "e7_signed_copies_and_memo_requested"] : EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>
+              {entry.metadata?.qualifying_origin === "external_staff_v1" ? <p className="text-xs text-muted-foreground">{String(entry.metadata.exchange_date)}{entry.metadata.exchange_time ? ` · ${String(entry.metadata.exchange_time).slice(0, 5)} Europe/Paris` : ` · ${externalCopy.dateOnly}`} · {externalCopy.channels[String(entry.metadata.channel) as ExternalHandoffChannel] ?? externalCopy.channels.other}</p> : null}
+              {entry.event_type === "e4_qualification_requested" && entry.metadata?.qualifying_origin === "external_staff_v1" && typeof entry.metadata.external_handoff_id === "string" && entry.metadata.context && typeof entry.metadata.context === "object" && "ldc" in entry.metadata.context ? <a className="block text-sm underline" href={`/api/pursuit-handoffs/${entry.metadata.external_handoff_id}/ldc?download`}>{externalLanguage === "fr" ? "Télécharger la Fiche de cadrage attestée (PDF)" : "Download the attested Fiche de cadrage (PDF)"}</a> : null}
+              {externalMemoNotice ? <><p className="text-xs text-muted-foreground">{externalMemoNotice.exchange_date}{externalMemoNotice.exchange_time ? ` · ${externalMemoNotice.exchange_time.slice(0, 5)} Europe/Paris` : ` · ${externalCopy.dateOnly}`} · {externalCopy.channels[externalMemoNotice.channel]}</p><p className="text-xs text-muted-foreground">{externalMemoNotice.reference} · {externalMemoNotice.staff_user_id} · {formatPursuitDateTime(externalMemoNotice.recorded_at)}</p></> : null}
               {evidenceReference ? <p className="text-xs text-muted-foreground">{dropped ? "Main: " : ""}{evidenceReference}</p> : null}
               {secondaryReasons.length ? <p className="text-xs text-muted-foreground">Secondary: {secondaryReasons.map(getOpportunityPursuitDropReasonLabel).join("; ")}</p> : null}
               {note ? <p className="whitespace-pre-wrap break-words text-sm">{note}</p> : null}

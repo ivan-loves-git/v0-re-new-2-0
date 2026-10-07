@@ -7,12 +7,14 @@ import { notifyOpportunityMemoCandidates } from "@/lib/opportunity-memo-notifica
 export async function triggerOpportunityMemoNotification(input: {
   opportunityId: string
   matchId: string
+  expectedGrantId?: string
 }) {
   try {
     const outcomes = await notifyOpportunityMemoCandidates(
       {
         opportunityId: input.opportunityId,
         matchIds: [input.matchId],
+        expectedGrantId: input.expectedGrantId,
         now: new Date().toISOString(),
       },
       {
