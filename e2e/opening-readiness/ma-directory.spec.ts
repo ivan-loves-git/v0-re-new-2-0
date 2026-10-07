@@ -114,6 +114,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     expect(graph).toHaveLength(1);
     const created = graph[0]!;
     ownedFirms.push(created.firm_id);
+    ownedOffices.push(created.office_id);
     expect(created).toMatchObject({
       city: "Lyon",
       is_default: false,
@@ -261,6 +262,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       )
     ).rows[0]!;
     ownedFirms.push(legacy.firm_id);
+    ownedOffices.push(legacy.office_id);
     ownedContacts.push(legacy.contact_id);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/opportunities/ma/offices/${legacy.office_id}`);
@@ -374,13 +376,18 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/opportunities\/ma\/firms\/[0-9a-f-]+$/);
     const mobileGraph = (
-      await db.query<{ firm_id: string; contact_id: string }>(
-        "SELECT f.id AS firm_id,c.id AS contact_id FROM public.ma_firms f JOIN public.ma_offices o ON o.firm_id=f.id JOIN public.ma_contact_office_affiliations a ON a.office_id=o.id AND a.is_active JOIN public.ma_contacts c ON c.id=a.contact_id WHERE f.name=$1",
+      await db.query<{
+        firm_id: string;
+        office_id: string;
+        contact_id: string;
+      }>(
+        "SELECT f.id AS firm_id,o.id AS office_id,c.id AS contact_id FROM public.ma_firms f JOIN public.ma_offices o ON o.firm_id=f.id JOIN public.ma_contact_office_affiliations a ON a.office_id=o.id AND a.is_active JOIN public.ma_contacts c ON c.id=a.contact_id WHERE f.name=$1",
         ["QA 257 Mobile Advisory"],
       )
     ).rows;
     expect(mobileGraph).toHaveLength(1);
     ownedFirms.push(mobileGraph[0]!.firm_id);
+    ownedOffices.push(mobileGraph[0]!.office_id);
     ownedContacts.push(mobileGraph[0]!.contact_id);
     expect(
       (await db.query("SELECT count(*)::int AS count FROM public.email_logs"))
@@ -410,6 +417,10 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await db.query("BEGIN");
     try {
       await db.query(
+        "DELETE FROM public.ma_contact_office_affiliations WHERE contact_id=ANY($1::uuid[])",
+        [ownedContacts],
+      );
+      await db.query(
         "DELETE FROM public.ma_contacts WHERE id=ANY($1::uuid[])",
         [ownedContacts],
       );
@@ -420,6 +431,14 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
         ownedFirms,
       ]);
       await db.query("COMMIT");
+      expect(
+        (
+          await db.query(
+            "SELECT ((SELECT count(*) FROM public.ma_contacts WHERE id=ANY($1::uuid[])) + (SELECT count(*) FROM public.ma_contact_office_affiliations WHERE contact_id=ANY($1::uuid[])) + (SELECT count(*) FROM public.ma_offices WHERE id=ANY($2::uuid[])) + (SELECT count(*) FROM public.ma_firms WHERE id=ANY($3::uuid[])))::int AS remaining",
+            [ownedContacts, ownedOffices, ownedFirms],
+          )
+        ).rows[0].remaining,
+      ).toBe(0);
     } catch (error) {
       await db.query("ROLLBACK");
       throw error;
