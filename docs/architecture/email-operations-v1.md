@@ -57,6 +57,14 @@ Provider acceptance, delivery, bounce, open and click remain separate facts. Sig
 
 Bounce rate = uniquely bounced messages / accepted cohort messages. Open and click rates = unique respective message activity / delivered messages with tracking verified at their send time. The mixed cohort shows covered delivered and uncovered accepted counts. Zero eligible denominator means **Not measured**, a read failure means **Unavailable** with recovery, and a positive covered denominator without activity permits a measured zero. A general tracking setting never creates retroactive coverage.
 
+Technical critical-operation alerts explicitly carry `renew_mail_class=system`,
+including through the shared sender, and remain outside business receipt history
+and Analytics. Their authenticated unowned callbacks are acknowledged without
+retaining orphan events or generating another failure alert. Business receipt
+races keep their retryable 503 and exact-parent retention rules. Previously
+misclassified technical callbacks retain their finite retry treatment; this
+repair does not rewrite historical mail or replay events.
+
 ## Tracking activation and rollback (held)
 
 Read-only baseline on 7 October 2026: Re-New `news.re-new.team` is verified; open/click tracking are disabled; tracking subdomain is absent; the live webhook has the six original sent/delivered/opened/clicked/bounced/complained subscriptions. New failure/delay/suppression handling is prepared support, not current live coverage.
