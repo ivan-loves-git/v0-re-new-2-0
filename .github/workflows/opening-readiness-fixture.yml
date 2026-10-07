@@ -205,5 +205,9 @@ jobs:
             ${{ runner.temp }}/opening-readiness-evidence/ma-directory-correction-mobile.png
             ${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-mobile.png
             ${{ runner.temp }}/opening-readiness-evidence/ma-directory-contact-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-former-prospect-office-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-firm-add-office-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-mobile.png
           if-no-files-found: warn
           retention-days: 7
