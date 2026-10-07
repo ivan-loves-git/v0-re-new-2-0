@@ -1,35 +1,26 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { Client } from "pg";
 import { mkdir } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import {
+  captureMaDirectoryProof,
+  cleanupMaDirectoryProof,
+} from "../../lib/qa/ma-directory-proof";
+import { signInMaFixture } from "./ma-directory-support";
 import { join } from "node:path";
-import { OPENING_READINESS_FIXTURE as fixture } from "../../lib/opening-readiness-fixture";
+import {
+  OPENING_READINESS_FIXTURE as fixture,
+  assertOpeningReadinessFixtureEnvironment,
+} from "../../lib/opening-readiness-fixture";
 
 const databaseUrl = process.env.OPENING_FIXTURE_DATABASE_URL;
 const password = process.env.OPENING_FIXTURE_PASSWORD;
 const runnerTemp = process.env.RUNNER_TEMP;
-if (
-  !databaseUrl ||
-  !password ||
-  !runnerTemp ||
-  process.env.CI !== "true" ||
-  process.env.GITHUB_ACTIONS !== "true" ||
-  process.env.QA_FIXTURE_MODE !== "local" ||
-  process.env.QA_MAIL_MODE !== "allowlist" ||
-  process.env.RESEND_API_KEY
-) {
+assertOpeningReadinessFixtureEnvironment(process.env);
+if (!databaseUrl || !password || !runnerTemp) {
   throw new Error(
     "M&A directory proof requires the protected disposable CI fixture and fictional mail sink.",
   );
-}
-async function login(page: Page, email: string) {
-  await page.goto("/auth/login");
-  await page.getByRole("button", { name: "English", exact: true }).click();
-  await page.locator("#email").fill(email);
-  await page.locator("#password").fill(password!);
-  await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page).toHaveURL(/\/(dashboard_re|portal\/deals)/, {
-    timeout: 30000,
-  });
 }
 test("staff create and complete canonical M&A profiles on desktop and mobile with persistent errors and history", async ({
   page,
@@ -38,6 +29,8 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
   test.setTimeout(240000);
   const db = new Client({ connectionString: databaseUrl });
   await db.connect();
+  const runId = randomUUID();
+  const label = `QA 257 ${runId}`;
   const ownedFirms: string[] = [],
     ownedOffices: string[] = [],
     ownedContacts: string[] = [];
@@ -58,12 +51,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     )
   ).rows;
   try {
-    // Distinct fictional clients retain the real per-client auth limits while
-    // isolating this journey from earlier sign-ins on the same fixture server.
-    await page.context().setExtraHTTPHeaders({
-      "x-forwarded-for": "203.0.113.211",
-    });
-    await login(page, fixture.staff.email);
+    await signInMaFixture(page, fixture.staff.email, password!, "staff");
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/opportunities/ma/firms");
     await expect(
@@ -77,7 +65,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     let dialog = page.getByRole("dialog", { name: "Add M&A firm" });
     await dialog
       .getByLabel("Firm name (required)")
-      .fill("QA 257 Synthetic Advisory");
+      .fill(`${label} Synthetic Advisory`);
     await dialog.getByLabel("Office name (required)").fill("Central office");
     await dialog
       .getByRole("button", { name: "Create firm", exact: true })
@@ -86,12 +74,12 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       dialog.getByText("Enter the operating office city.", { exact: true }),
     ).toBeVisible();
     await expect(dialog.getByLabel("Firm name (required)")).toHaveValue(
-      "QA 257 Synthetic Advisory",
+      `${label} Synthetic Advisory`,
     );
     expect(
       (
         await db.query("SELECT id FROM public.ma_firms WHERE name=$1", [
-          "QA 257 Synthetic Advisory",
+          `${label} Synthetic Advisory`,
         ])
       ).rows,
     ).toHaveLength(0);
@@ -113,7 +101,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
         created_by: string;
       }>(
         "SELECT f.id AS firm_id,o.id AS office_id,o.city,o.is_default,f.created_by FROM public.ma_firms f JOIN public.ma_offices o ON o.firm_id=f.id WHERE f.name=$1",
-        ["QA 257 Synthetic Advisory"],
+        [`${label} Synthetic Advisory`],
       )
     ).rows;
     expect(graph).toHaveLength(1);
@@ -144,7 +132,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await page.reload();
     await expect(
       page.getByRole("heading", {
-        name: "QA 257 Synthetic Advisory",
+        name: `${label} Synthetic Advisory`,
         exact: true,
       }),
     ).toBeVisible();
@@ -155,12 +143,12 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     dialog = page.getByRole("dialog", { name: "Add operating office" });
     await dialog
       .getByLabel("Office name (required)")
-      .fill("QA 257 North office");
+      .fill(`${label} North office`);
     await dialog
       .getByRole("button", { name: "Add office", exact: true })
       .click();
     await expect(dialog.getByLabel("Office name (required)")).toHaveValue(
-      "QA 257 North office",
+      `${label} North office`,
     );
     await expect(
       dialog.getByText("Enter the operating office city.", { exact: true }),
@@ -173,7 +161,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     const addedOffice = (
       await db.query<{ id: string; city: string }>(
         "SELECT id,city FROM public.ma_offices WHERE firm_id=$1 AND name=$2",
-        [fixture.ids.realFirm, "QA 257 North office"],
+        [fixture.ids.realFirm, `${label} North office`],
       )
     ).rows;
     expect(addedOffice).toHaveLength(1);
@@ -188,11 +176,11 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await dialog.getByRole("combobox").click();
     await page
       .getByRole("option")
-      .filter({ hasText: "QA 257 Synthetic Advisory" })
+      .filter({ hasText: `${label} Synthetic Advisory` })
       .click();
     await dialog
       .getByLabel("First name", { exact: true })
-      .fill("QA 257 Phone person");
+      .fill(`${label} Phone person`);
     await dialog
       .getByRole("button", { name: "Add contact", exact: true })
       .click();
@@ -200,7 +188,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       dialog.getByText("Add an email address or phone number.").first(),
     ).toBeVisible();
     await expect(dialog.getByLabel("First name", { exact: true })).toHaveValue(
-      "QA 257 Phone person",
+      `${label} Phone person`,
     );
     await page.screenshot({
       path: join(evidence, "ma-directory-contacts-desktop.png"),
@@ -249,7 +237,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     dialog = page.getByRole("dialog", { name: "Add office contact" });
     await expect(
       dialog.getByText(
-        "Firm and office: QA 257 Synthetic Advisory · Central office",
+        `Firm and office: ${label} Synthetic Advisory · Central office`,
         { exact: true },
       ),
     ).toBeVisible();
@@ -263,7 +251,8 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
         contact_id: string;
         affiliation_id: string;
       }>(
-        `WITH f AS (INSERT INTO public.ma_firms(name,created_by) VALUES ('QA 257 Legacy Advisory','fixture-257') RETURNING id), o AS (INSERT INTO public.ma_offices(firm_id,name,created_by) SELECT id,'Legacy office','fixture-257' FROM f RETURNING id,firm_id), c AS (INSERT INTO public.ma_contacts(first_name,created_by) VALUES ('QA 257 Legacy person','fixture-257') RETURNING id), a AS (INSERT INTO public.ma_contact_office_affiliations(contact_id,office_id,created_by) SELECT c.id,o.id,'fixture-257' FROM c,o RETURNING id,contact_id,office_id) SELECT o.firm_id,o.id AS office_id,a.contact_id,a.id AS affiliation_id FROM o,a`,
+        `WITH f AS (INSERT INTO public.ma_firms(name,created_by) VALUES ($1,'fixture-257') RETURNING id), o AS (INSERT INTO public.ma_offices(firm_id,name,created_by) SELECT id,'Legacy office','fixture-257' FROM f RETURNING id,firm_id), c AS (INSERT INTO public.ma_contacts(first_name,created_by) VALUES ($2,'fixture-257') RETURNING id), a AS (INSERT INTO public.ma_contact_office_affiliations(contact_id,office_id,created_by) SELECT c.id,o.id,'fixture-257' FROM c,o RETURNING id,contact_id,office_id) SELECT o.firm_id,o.id AS office_id,a.contact_id,a.id AS affiliation_id FROM o,a`,
+        [`${label} Legacy Advisory`, `${label} Legacy person`],
       )
     ).rows[0]!;
     ownedFirms.push(legacy.firm_id);
@@ -274,7 +263,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await page.getByRole("button", { name: "Edit notes", exact: true }).click();
     await page
       .getByRole("textbox", { name: "Internal notes", exact: true })
-      .fill("QA 257 notes retained after error");
+      .fill(`${label} notes retained after error`);
     await page.getByRole("button", { name: "Save notes", exact: true }).click();
     await expect(
       page
@@ -285,7 +274,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     ).toBeVisible();
     await expect(
       page.getByRole("textbox", { name: "Internal notes", exact: true }),
-    ).toHaveValue("QA 257 notes retained after error");
+    ).toHaveValue(`${label} notes retained after error`);
     expect(
       (
         await db.query(
@@ -309,21 +298,21 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await page.reload();
     await expect(
       page
-        .getByText("QA 257 notes retained after error", { exact: true })
+        .getByText(`${label} notes retained after error`, { exact: true })
         .filter({ visible: true }),
     ).toBeVisible();
     await page.goto("/opportunities/ma/contacts");
     await page
       .getByPlaceholder("Search contacts, email or office")
       .filter({ visible: true })
-      .fill("QA 257 Legacy person");
+      .fill(`${label} Legacy person`);
     await page
       .getByRole("button", { name: "Edit details", exact: true })
       .click();
     dialog = page.getByRole("dialog", { name: "Edit contact details" });
     await dialog
       .getByLabel("Internal notes", { exact: true })
-      .fill("QA 257 contact notes");
+      .fill(`${label} contact notes`);
     await dialog
       .getByRole("button", { name: "Save correction", exact: true })
       .click();
@@ -332,7 +321,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     ).toBeVisible();
     await expect(
       dialog.getByLabel("Internal notes", { exact: true }),
-    ).toHaveValue("QA 257 contact notes");
+    ).toHaveValue(`${label} contact notes`);
     await dialog.getByLabel("Phone", { exact: true }).fill("+33 2 00 00 00 00");
     await dialog
       .getByRole("button", { name: "Save correction", exact: true })
@@ -347,7 +336,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       ).rows[0],
     ).toMatchObject({
       phone: "+33 2 00 00 00 00",
-      internal_notes: "QA 257 contact notes",
+      internal_notes: `${label} contact notes`,
       updated_by: fixture.staff.id,
       affiliation_id: legacy.affiliation_id,
     });
@@ -355,7 +344,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await page
       .getByPlaceholder("Search firms or offices")
       .filter({ visible: true })
-      .fill("QA 257");
+      .fill(`${label}`);
     await page.screenshot({
       path: join(evidence, "ma-directory-firms-mobile.png"),
       fullPage: true,
@@ -370,7 +359,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     dialog = page.getByRole("dialog", { name: "Add M&A firm" });
     await dialog
       .getByLabel("Firm name (required)")
-      .fill("QA 257 Mobile Advisory");
+      .fill(`${label} Mobile Advisory`);
     await dialog.getByLabel("Office name (required)").fill("Mobile office");
     await dialog.getByLabel("City (required)").fill("Lille");
     await dialog
@@ -378,7 +367,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       .check();
     await dialog
       .getByLabel("Last name", { exact: true })
-      .fill("QA 257 Mobile person");
+      .fill(`${label} Mobile person`);
     await dialog.getByLabel("Phone", { exact: true }).fill("+33 3 00 00 00 00");
     await page.screenshot({
       path: join(evidence, "ma-directory-contact-mobile.png"),
@@ -396,7 +385,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
         contact_id: string;
       }>(
         "SELECT f.id AS firm_id,o.id AS office_id,c.id AS contact_id FROM public.ma_firms f JOIN public.ma_offices o ON o.firm_id=f.id JOIN public.ma_contact_office_affiliations a ON a.office_id=o.id AND a.is_active JOIN public.ma_contacts c ON c.id=a.contact_id WHERE f.name=$1",
-        ["QA 257 Mobile Advisory"],
+        [`${label} Mobile Advisory`],
       )
     ).rows;
     expect(mobileGraph).toHaveLength(1);
@@ -415,12 +404,15 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
         )
       ).rows,
     ).toEqual(suppressionBefore);
-    const portal = await browser.newContext({
-      extraHTTPHeaders: { "x-forwarded-for": "203.0.113.212" },
-    });
+    const portal = await browser.newContext();
     try {
       const portalPage = await portal.newPage();
-      await login(portalPage, fixture.repreneurs.real.email);
+      await signInMaFixture(
+        portalPage,
+        fixture.repreneurs.real.email,
+        password!,
+        "repreneur",
+      );
       await portalPage.goto("/opportunities/ma/firms");
       await expect(
         portalPage.getByRole("button", { name: "Add firm", exact: true }),
@@ -430,40 +422,29 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       await portal.close();
     }
   } finally {
-    await db.query("BEGIN");
     try {
+      if (ownedFirms.length || ownedOffices.length || ownedContacts.length) {
+        const proof = await captureMaDirectoryProof(db, {
+          runId,
+          firms: ownedFirms,
+          offices: ownedOffices,
+          contacts: ownedContacts,
+        });
+        expect((await cleanupMaDirectoryProof(db, proof)).committed).toBe(
+          false,
+        );
+        expect(
+          (await cleanupMaDirectoryProof(db, proof, { commit: true }))
+            .remaining,
+        ).toBe(0);
+      }
+      // Clear only endpoint buckets first created by this disposable journey.
       await db.query(
-        "DELETE FROM public.ma_contact_office_affiliations WHERE contact_id=ANY($1::uuid[])",
-        [ownedContacts],
+        `DELETE FROM public."rateLimit" WHERE ("key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%') AND NOT ("key"=ANY($1::text[]))`,
+        [originalBuckets],
       );
-      await db.query(
-        "DELETE FROM public.ma_contacts WHERE id=ANY($1::uuid[])",
-        [ownedContacts],
-      );
-      await db.query("DELETE FROM public.ma_offices WHERE id=ANY($1::uuid[])", [
-        ownedOffices,
-      ]);
-      await db.query("DELETE FROM public.ma_firms WHERE id=ANY($1::uuid[])", [
-        ownedFirms,
-      ]);
-      await db.query("COMMIT");
-      expect(
-        (
-          await db.query(
-            "SELECT ((SELECT count(*) FROM public.ma_contacts WHERE id=ANY($1::uuid[])) + (SELECT count(*) FROM public.ma_contact_office_affiliations WHERE contact_id=ANY($1::uuid[])) + (SELECT count(*) FROM public.ma_offices WHERE id=ANY($2::uuid[])) + (SELECT count(*) FROM public.ma_firms WHERE id=ANY($3::uuid[])))::int AS remaining",
-            [ownedContacts, ownedOffices, ownedFirms],
-          )
-        ).rows[0].remaining,
-      ).toBe(0);
-    } catch (error) {
-      await db.query("ROLLBACK");
-      throw error;
+    } finally {
+      await db.end();
     }
-    // Clear only endpoint buckets first created by this disposable journey.
-    await db.query(
-      `DELETE FROM public."rateLimit" WHERE ("key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%') AND NOT ("key"=ANY($1::text[]))`,
-      [originalBuckets],
-    );
-    await db.end();
   }
 });

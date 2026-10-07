@@ -24,6 +24,8 @@
     "agent:instructions": "node scripts/check-agent-instructions.mjs",
     "email:ops": "node scripts/email-operations.mjs",
     "test:tooling": "playwright test --config playwright.tooling.config.ts",
+    "agent:snapshot": "node scripts/agent-snapshot.mjs",
+    "qa:ma-directory": "node --import tsx scripts/qa-ma-directory.ts",
     "security:verify-pdf-worker-trace": "node scripts/verify-pdf-worker-server-trace.mjs",
     "matching-v2:refresh": "tsx scripts/refresh-matching-v2-buyer-import.ts",
     "design:check": "node scripts/check-wave-visual-policy.mjs",
