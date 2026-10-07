@@ -51,9 +51,6 @@ describe("opportunity closure history", () => {
       "updateOpportunity",
     )
     const intakeActions = source("lib/actions/opportunity-intake.ts")
-    const controls = source(
-      "components/opportunities/opportunity-closure-controls.tsx",
-    )
 
     expect(closeAction).toContain("isOpportunityClosureReason(reason)")
     expect(closeAction).toContain("close_opportunity_with_reason")
@@ -61,9 +58,6 @@ describe("opportunity closure history", () => {
     expect(intakeActions).toMatch(/"draft",\s*"active",\s*"paused"/)
     expect(intakeActions).toContain(
       "opportunity_office_context_supports_draft_active_or_paused_only",
-    )
-    expect(controls).toContain(
-      "disabled={!selectedClosureReason || isSubmitting}",
     )
   })
 

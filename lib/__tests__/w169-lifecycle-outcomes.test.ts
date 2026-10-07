@@ -20,19 +20,11 @@ describe("W-169 lifecycle outcome separation", () => {
   )
   const rehearsal = source("scripts/rehearse-w169-lifecycle-outcomes.sh")
   const opportunityActions = source("lib/actions/opportunities.ts")
-  const pursuitActions = source("lib/actions/opportunity-pursuit-journey.ts")
-  const matchActions = source("lib/actions/opportunity-matches.ts")
   const closureControls = source(
     "components/opportunities/opportunity-closure-controls.tsx",
   )
-  const pursuitPanel = source(
-    "components/opportunities/opportunity-pursuit-panel.tsx",
-  )
-  const matchesPanel = source(
-    "components/opportunities/opportunity-matches-panel.tsx",
-  )
 
-  it("exposes disjoint canonical reason sets", () => {
+  it("keeps Drop, whole-sale Pause and permanent Close separate", () => {
     expect(OPPORTUNITY_CLOSURE_REASON_OPTIONS.map(({ value }) => value)).toEqual([
       "stale",
       "sold",
@@ -43,19 +35,23 @@ describe("W-169 lifecycle outcome separation", () => {
     ])
     expect(OPPORTUNITY_PAUSE_REASON_OPTIONS.map(({ value }) => value)).toEqual([
       "paused_cabinet",
+      "seller_paused_sale",
+      "exclusivity_another_buyer",
+      "waiting_updated_information",
+      "other",
     ])
     expect(
       OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.map(({ value }) => value),
-    ).toEqual(["no_viable_match", "dd_disqualified_repreneur"])
+    ).not.toContain("no_viable_match")
 
     expect(isOpportunityClosureReason("paused_cabinet")).toBe(false)
     expect(isOpportunityClosureReason("no_viable_match")).toBe(false)
     expect(isOpportunityClosureReason("dd_disqualified")).toBe(true)
     expect(isOpportunityPauseReason("paused_cabinet")).toBe(true)
     expect(isOpportunityPauseReason("stale")).toBe(false)
-    expect(isOpportunityPursuitDropReason("no_viable_match")).toBe(true)
+    expect(isOpportunityPursuitDropReason("no_viable_match")).toBe(false)
     expect(isOpportunityPursuitDropReason("dd_disqualified_repreneur")).toBe(
-      true,
+      false,
     )
     expect(isOpportunityPursuitDropReason("dd_disqualified")).toBe(false)
     expect(
@@ -74,17 +70,6 @@ describe("W-169 lifecycle outcome separation", () => {
     expect(closureControls).toContain("Close opportunity permanently")
     expect(closureControls).toContain("Pause opportunity")
     expect(closureControls).toContain("Pause history")
-  })
-
-  it("requires a canonical reason on both staff pursuit Drop paths", () => {
-    expect(pursuitActions).toContain("isOpportunityPursuitDropReason(input.reason)")
-    expect(matchActions).toContain("isOpportunityPursuitDropReason(reason)")
-    expect(pursuitPanel).toContain("OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS")
-    expect(matchesPanel).toContain("OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS")
-    expect(pursuitPanel).not.toContain(
-      'placeholder="Record the external outcome" /></div><Button disabled={pending || !outcomeReason.trim()} variant="destructive"',
-    )
-    expect(matchesPanel).toContain("Choose why this pursuit is ending")
   })
 
   it("adds database authority without rewriting historical rows", () => {

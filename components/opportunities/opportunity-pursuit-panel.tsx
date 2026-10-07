@@ -9,14 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { PursuitDropReasonFields, usePursuitDropForm } from "@/components/opportunities/pursuit-drop-reason-fields"
 import { OpportunityNdaArtifactManager } from "@/components/opportunities/opportunity-nda-artifact-manager"
 import { DocumentRowActions } from "@/components/opportunities/document-row-actions"
 import { OpportunityReviewSubmitButton } from "@/components/opportunities/opportunity-review-submit-button"
@@ -43,12 +36,9 @@ import { formatPursuitDateTime } from "@/lib/utils/pursuit-date-time"
 import {
   getOpportunityPursuitDropReasonLabel,
   getOpportunityPursuitStageLabel,
-  isOpportunityPursuitDropReason,
-  OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS,
   type OpportunityDocument,
   type OpportunityMatch,
   type OpportunityNdaArtifact,
-  type OpportunityPursuitDropReason,
 } from "@/lib/types/opportunity"
 
 interface OpportunityPursuitPanelProps {
@@ -93,7 +83,7 @@ export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, ma
   const [pending, startTransition] = useTransition()
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null)
   const [outcomeReason, setOutcomeReason] = useState("")
-  const [dropReason, setDropReason] = useState<OpportunityPursuitDropReason | "">("")
+  const dropForm = usePursuitDropForm()
   const activeMatch = matches.find((match) => match.status === "active_pursuit") ?? null
   const historyConfirmedStage = activeMatch?.pursuit_stage_provenance === "staff_confirmed_history"
   const visibleMatch = activeMatch ?? matches.find((match) => match.status === "dropped") ?? null
@@ -164,7 +154,14 @@ export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, ma
             {nextAction === "pass_gate_2" ? <Button disabled={pending} data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => passOpportunityPursuitGate2(activeMatch.id))}><ShieldCheck data-icon="inline-start" />{pending ? "Recording..." : "Pass Gate 2"}</Button> : null}
             {nextAction === "record_dispatch" ? <Button disabled={pending} variant="outline" data-wave-action="confirm" data-wave-workflow="portal_pursuit" onClick={() => run(() => recordOpportunityPursuitDispatch(activeMatch.id))}><Send data-icon="inline-start" />{pending ? "Preparing..." : "Prepare signed copies and memo request"}</Button> : null}
           </div> : null}
-          {activeMatch && canDrop ? <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end"><div className="min-w-0 flex-1 space-y-2"><Label htmlFor="pursuit-drop-reason">Choose why this pursuit is ending</Label><Select value={dropReason} onValueChange={(value) => setDropReason(value as OpportunityPursuitDropReason)}><SelectTrigger id="pursuit-drop-reason"><SelectValue placeholder="Choose a Drop reason" /></SelectTrigger><SelectContent><SelectGroup>{OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent></Select></div><Button disabled={pending || !dropReason} variant="destructive" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(() => transitionOpportunityPursuit(activeMatch.id, "drop", dropReason))}>Drop pursuit</Button></div> : null}
+          {activeMatch && canDrop ? <div className="space-y-4 border-t pt-4">
+            <PursuitDropReasonFields id="pursuit-drop" value={dropForm.value} onChange={dropForm.onChange} disabled={pending} />
+            <Button disabled={pending || !dropForm.canSubmit} variant="destructive" data-wave-action="update" data-wave-workflow="portal_pursuit" onClick={() => run(async () => {
+              const result = await transitionOpportunityPursuit(activeMatch.id, "drop", dropForm.value.primaryReason, dropForm.getIdempotencyKey(), dropForm.value.secondaryReasons, dropForm.value.note)
+              if (result.success) dropForm.reset()
+              return result
+            })}>Confirm Drop pursuit</Button>
+          </div> : null}
         </CardContent>
       </Card>
 
@@ -203,7 +200,19 @@ export function OpportunityPursuitPanel({ opportunityId, recipientImRequired, ma
 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><History data-icon="inline-start" />Evidence log</CardTitle><CardDescription>Append-only operational history for this pursuit. {legacyEventCount ? `${legacyEventCount} legacy stage record${legacyEventCount === 1 ? " is" : "s are"} retained as read-only history.` : ""}</CardDescription></CardHeader>
-        <CardContent>{projection?.entries.length ? <div className="divide-y rounded-md border">{projection.entries.map((entry) => { const evidenceReference = entry.event_type === "dropped" && isOpportunityPursuitDropReason(entry.evidence_reference) ? getOpportunityPursuitDropReasonLabel(entry.evidence_reference) : entry.evidence_reference; return <div key={entry.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-medium">{EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>{evidenceReference ? <p className="text-xs text-muted-foreground">{evidenceReference}</p> : null}</div><p className="text-xs text-muted-foreground">{entry.actor} · {formatPursuitDateTime(entry.recorded_at)}</p></div> })}</div> : <p className="text-sm text-muted-foreground">No canonical evidence has been recorded yet.</p>}</CardContent>
+        <CardContent>{projection?.entries.length ? <div className="divide-y rounded-md border">{projection.entries.map((entry) => {
+          const dropped = entry.event_type === "dropped"
+          const evidenceReference = dropped && entry.evidence_reference ? getOpportunityPursuitDropReasonLabel(entry.evidence_reference) : entry.evidence_reference
+          const secondaryReasons = dropped && Array.isArray(entry.metadata?.secondary_reasons) ? entry.metadata?.secondary_reasons.filter((reason): reason is string => typeof reason === "string") : []
+          const note = dropped && typeof entry.metadata?.reason_note === "string" ? entry.metadata?.reason_note : null
+          return <div key={entry.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 space-y-1"><p className="text-sm font-medium">{EVENT_LABELS[entry.event_type] ?? entry.event_type}</p>
+              {evidenceReference ? <p className="text-xs text-muted-foreground">{dropped ? "Main: " : ""}{evidenceReference}</p> : null}
+              {secondaryReasons.length ? <p className="text-xs text-muted-foreground">Secondary: {secondaryReasons.map(getOpportunityPursuitDropReasonLabel).join("; ")}</p> : null}
+              {note ? <p className="whitespace-pre-wrap break-words text-sm">{note}</p> : null}
+            </div><p className="shrink-0 text-xs text-muted-foreground">{entry.actor} · {formatPursuitDateTime(entry.recorded_at)}</p>
+          </div>
+        })}</div> : <p className="text-sm text-muted-foreground">No canonical evidence has been recorded yet.</p>}</CardContent>
       </Card>
     </div>
   )

@@ -341,6 +341,16 @@ describe("current pursuit reads", () => {
     expect(result?.entries).toHaveLength(evidence.length)
   })
 
+  it("keeps reasoned Drop details and legacy labels only in the staff evidence projection", async () => {
+    const privateDrop = { id: "private-drop", match_id: "match-1", opportunity_id: "opportunity-1", repreneur_id: "repreneur-1", event_type: "dropped", actor: "staff-private", recorded_at: "2026-08-08T09:00:00Z", idempotency_key: "private-key", evidence_reference: "path_stopped_seller_advisor", metadata: { secondary_reasons: ["other"], reason_note: "Private negotiation context" } }
+    setupCurrentPursuit({ evidence: [...evidence, privateDrop] })
+    const staff = await readStaffCurrentPursuit("match-1")
+    expect(staff?.entries).toContainEqual(privateDrop)
+    setupCurrentPursuit({ evidence: [...evidence, privateDrop] })
+    const portal = await readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } })
+    expect(JSON.stringify(portal)).not.toMatch(/path_stopped_seller_advisor|Private negotiation context|secondary_reasons|staff-private|private-key/)
+  })
+
   it("returns the same minimal portal-safe projection for portal and staff preview", async () => {
     const portal = setupCurrentPursuit()
     const portalResult = await readPortalCurrentPursuit({

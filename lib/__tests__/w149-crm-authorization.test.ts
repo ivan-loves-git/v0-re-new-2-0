@@ -144,6 +144,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
     "getOpportunity",
     "getOpportunityClosureHistory",
     "getOpportunityPauseHistory",
+    "getOpportunityStaleClosureEligibility",
     "closeOpportunity",
     "pauseOpportunity",
     "archiveOpportunity",
