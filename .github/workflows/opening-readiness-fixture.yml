@@ -203,6 +203,8 @@ jobs:
             ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-desktop.png
             ${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-mobile.png
             ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-mobile-footer.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-mobile-footer.png
           if-no-files-found: warn
           retention-days: 7
 

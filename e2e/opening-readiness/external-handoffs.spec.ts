@@ -47,12 +47,15 @@ test("staff records external E4/E6 through the actual localized desktop/mobile d
         await page.getByRole("button", { name: /^(Record as done outside WAVE|Enregistrer comme réalisé hors WAVE)$/ }).click()
         const dialog = page.getByRole("dialog")
         await dialog.getByRole("button", { name: language === "en" ? "English" : "Français", exact: true }).click()
-        await expect(dialog.getByRole("heading", { name: language === "en" ? "Record a completed external exchange" : "Enregistrer un échange externe terminé" })).toBeVisible()
+        const heading = dialog.getByRole("heading", { name: language === "en" ? "Record a completed external exchange" : "Enregistrer un échange externe terminé" })
+        await expect(heading).toBeVisible()
         await expect(dialog.locator("[data-external-ldc-version]").getByText(currentLdc.fileName, { exact: true })).toBeVisible()
         await expect(dialog.locator("[data-external-ldc-version]").getByText(language === "fr" ? "Cette attestation conserve exactement cette version de votre Lettre de cadrage." : "This attestation retains exactly this version of the Lettre de cadrage.", { exact: true })).toBeVisible()
         await expect(dialog.getByLabel(language === "en" ? "Actual exchange date" : "Date réelle de l’échange", { exact: true })).toBeVisible()
         await expect(dialog.getByLabel(language === "en" ? "Known time (optional, Paris time)" : "Heure connue (facultative, heure de Paris)", { exact: true })).toBeVisible()
-        await expect(dialog.getByRole("button", { name: language === "en" ? "Record completed exchange" : "Enregistrer l’échange terminé", exact: true })).toBeDisabled()
+        const submit = dialog.getByRole("button", { name: language === "en" ? "Record completed exchange" : "Enregistrer l’échange terminé", exact: true })
+        const cancel = dialog.getByRole("button", { name: language === "en" ? "Cancel" : "Annuler", exact: true })
+        await expect(submit).toBeDisabled()
         await page.evaluate(() => document.fonts.ready)
         await dialog.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
         const version = dialog.locator("[data-external-ldc-version]")
@@ -67,8 +70,27 @@ test("staff records external E4/E6 through the actual localized desktop/mobile d
         })).toBe(true)
         expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+        if (size === "mobile") {
+          await heading.scrollIntoViewIfNeeded({ timeout: 10_000 })
+          await expect(heading).toBeInViewport({ ratio: 1 })
+          await expect(version).toBeInViewport({ ratio: 1 })
+        }
         await dialog.screenshot({ path: join(evidenceDirectory, `external-handoff-${language}-${size}.png`) })
-        await dialog.getByRole("button", { name: language === "en" ? "Cancel" : "Annuler", exact: true }).click()
+        if (size === "mobile") {
+          await submit.scrollIntoViewIfNeeded({ timeout: 10_000 })
+          await expect.poll(() => dialog.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+          await expect(submit).toBeInViewport({ ratio: 1 })
+          await expect(cancel).toBeInViewport({ ratio: 1 })
+          await expect(dialog.getByLabel(language === "en" ? "Meaningful reference" : "Référence explicite", { exact: true })).toBeInViewport({ ratio: 1 })
+          expect(await submit.evaluate((element) => {
+            const box = element.getBoundingClientRect(), range = document.createRange()
+            range.selectNodeContents(element)
+            return element.scrollWidth <= element.clientWidth && [...range.getClientRects()].every((text) =>
+              text.left >= box.left && text.right <= box.right && text.top >= box.top && text.bottom <= box.bottom)
+          })).toBe(true)
+          await dialog.screenshot({ path: join(evidenceDirectory, `external-handoff-${language}-mobile-footer.png`) })
+        }
+        await cancel.click()
         await expect(page.getByRole("dialog")).toHaveCount(0)
       }
     }
