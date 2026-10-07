@@ -89,6 +89,76 @@ Staff corrects a misplaced contact through `update_ma_contact_with_office_correc
 
 `Network` is optional information on a firm. It is not a separate operational entity in version 1.
 
+### Approved staff directory creation and correction — #257 / Decision #258
+
+[Product Change #257](https://github.com/re-new-team/renew-governance/issues/257),
+[closed Decision #258](https://github.com/re-new-team/renew-governance/issues/258)
+and [Ticket #260](https://github.com/re-new-team/renew-governance/issues/260) own this
+approved target and its checked-in candidate. **It is not a production release
+claim.** Decision #259 places this bounded work on Registry
+`2026-08-30-initial-1`, G-001 / M-001, with no KPI or adoption claim.
+
+- Staff create a firm directly in M&A Firms with a deliberately named real first
+  office and city. A first contact is optional; omitting it creates no person,
+  affiliation, opportunity or legacy synchronization row. A supplied first
+  contact must meet the person minimum and is created in the same transaction.
+- Office creation and every targeted office profile correction, including the
+  separate **Edit notes** control, require a name and city. A contact creation or
+  correction requires at least one first/last name, exactly one current office
+  and at least one usable email or supplied nonempty phone. Malformed supplied
+  email is rejected even with a phone. Whitespace is not a value; no placeholder,
+  inferred city, phone verification or international-format exclusivity is added.
+- The stronger minimum applies only to the target being saved. Installing the
+  services retains all incomplete records without rewriting or invalidating
+  them. Editing a parent firm does not require or repair its incomplete children.
+  An invalid save changes no persisted profile, affiliation or history and the
+  actual form preserves inputs for completion.
+- Firm/office/contact creation and correction remain staff-only, using server
+  authorization before privileged writes and retained actor/time. Global contact
+  creation displays a selected canonical firm/office; office-local creation
+  displays the preselected context. Existing opportunity-intake shortcuts use
+  the same minimum. Approved correction field allowlists remain unchanged.
+- Normalized firm and office collisions retain their existing rejection rules,
+  including simultaneous requests. Normalized email collision produces an
+  advisory warning; separate people retain separate IDs. A post-commit warning
+  lookup failure is reported as a saved profile with an unavailable collision
+  check, never as a failed write inviting duplicate submission.
+- W-157's one-current-office and movement restrictions remain. IDs, ended
+  affiliations, opportunity links and immutable snapshots remain. Phone-only
+  people are directory-valid but cannot be primary for an Active or Paused
+  opportunity; a referenced usable primary email cannot be removed.
+- New firm creation always uses `is_default=false`. Historical synthetic offices
+  retain their selection/attribution restrictions; completing city does not
+  reclassify one. No archive, delete, merge, backfill, new retention duration,
+  repreneur disclosure, email send or suppression/lifecycle policy change is added.
+
+Candidate migration `20261007140000_staff_ma_directory_profiles.sql` adds
+`create_ma_firm_with_first_office` and the city-bearing four-argument
+`create_ma_office_for_existing_firm`, extends the current typed office/contact
+services, and adds locked `update_ma_office_notes` / `update_ma_firm_notes`.
+Office notes change only notes and, when missing on the locked row, an explicitly
+supplied city. They do not replay stale profile fields. `ma_profile_text` shares
+whitespace normalization and `ma_contact_email_collision` provides a private
+advisory read. All are service-role-only invoker functions with an empty search
+path. The candidate revokes service execution of the historical city-less office,
+synthetic-default firm and superseded identity-only contact correction shortcuts.
+It adds no blanket NOT NULL constraint or persisted aggregate.
+
+Release remains separately authorized: verify exact migrations and live service
+compatibility, install the candidate services before deploying their callers in
+an approved write-paused window, then verify authorized staff and forbidden
+roles, persistence and unchanged retained rows. Installation sends no mail and
+performs no data completion. A scoped rollback restores reviewed compatible
+application/service definitions and grants under a separate approved window;
+retain every legitimately created record and all affiliations/audit. Dropping
+records, undoing history or re-running an older grant migration is not rollback.
+
+Acceptance AC-01–AC-17 is traced in `docs/QA-MA-DIRECTORY-257.md` to behavioral
+staff actions, a disposable production-shaped PostgreSQL rehearsal and the real
+protected Supabase/Better Auth browser fixture. Synthetic/build evidence never
+establishes production behavior. Build/review/commit/draft PR authority on #260
+excludes merge, production schema/data/configuration, backfill and real outbound.
+
 ## 1. M&A advisory firm
 
 **Purpose:** the stable identity of the M&A advisory business. It is not an office and it does not directly own contacts, opportunities or interactions.
@@ -114,11 +184,11 @@ Staff corrects a misplaced contact through `update_ma_contact_with_office_correc
 ### Firm rules
 
 1. Every non-archived firm has at least one active operating office.
-2. Creating a firm without a known real office creates one synthetic default office with the same name.
+2. The historical W-063 service could create a synthetic default when the real office was unknown. Decision #258 supersedes this for manual creation: supply a real office name and city; #257 is the candidate, not a live activation claim.
 3. A firm may exist as a prospect without contacts or opportunities.
 4. A referenced firm is archived, never hard deleted.
 5. A firm with an `active` or `paused` opportunity through any of its offices cannot be archived. Staff first closes, archives or moves those opportunities in the same transaction.
-6. New firm identity intake creates the firm, its real or synthetic initial office, a named contact and an active affiliation atomically. A real office is used whenever one is known; a synthetic default is used only when it is not.
+6. The approved #258 target creates the firm and its named, located real first office atomically. A supplied first contact and sole current affiliation join that same atomic operation; an omitted contact creates neither. Historical W-063 records remain retained.
 7. Canonical firm intake serializes on the lower-trimmed name and rejects an existing exact canonical match. It does not merge records automatically.
 8. Firm name similarity may raise a duplicate warning but does not merge records automatically.
 
@@ -135,7 +205,7 @@ Staff corrects a misplaced contact through `update_ma_contact_with_office_correc
 | `name` | Text | Always | Staff only | WAVE | Office name; default office may use the firm name |
 | `status` | `active`, `archived` | Always | Staff only | WAVE | Defaults to `active` |
 | `is_default` | Boolean | Always | Staff only | WAVE | `true` only for the synthetic office created when no real office is known |
-| `city` | Text | Optional | Staff only | WAVE | Main office city |
+| `city` | Text | Required on creation/profile save under #258 target | Staff only | WAVE | Main office city; retained missing values stay readable until that office is corrected. #257 implementation is a candidate, not claimed live |
 | `address` | Text | Optional | Staff only | WAVE | Postal address when operationally useful |
 | `region_codes` | List of controlled codes | Optional | Staff only | WAVE | Geographic coverage using the canonical WAVE geography taxonomy |
 | `coverage_note` | Text | Optional | Staff only | WAVE | Free-text exception or national coverage note |
@@ -171,8 +241,8 @@ Staff corrects a misplaced contact through `update_ma_contact_with_office_correc
 | `last_name` | Text | Conditional | Staff only | WAVE | At least one of first name or last name is required |
 | `display_name` | Text | System | Staff only | WAVE | Derived from the available name fields |
 | `status` | `active`, `archived` | Always | Staff only | WAVE | Defaults to `active` |
-| `email` | Email | Optional | Staff only | WAVE | Normalized for comparison; not globally unique |
-| `phone` | Text | Optional | Staff only | WAVE | Normalized for search while preserving the entered display value |
+| `email` | Email | Conditional under #258 target | Staff only | WAVE | At least one usable email or phone on creation/profile save; a supplied email must be valid. Normalized for comparison, not globally unique; #257 candidate |
+| `phone` | Text | Conditional under #258 target | Staff only | WAVE | At least one usable email or supplied nonempty phone on creation/profile save; trimmed display value retained, no new international-format requirement; #257 candidate |
 | `linkedin_url` | URL | Optional | Staff only | WAVE | Person-level profile |
 | `internal_notes` | Text | Optional | Staff only | WAVE | Person-level relationship context |
 | `campaign_email_suppressed` | Boolean | Always | Staff only | WAVE | Defaults to `false`; blocks campaign, bulk and general relationship outreach to this person |
@@ -187,7 +257,7 @@ Staff corrects a misplaced contact through `update_ma_contact_with_office_correc
 2. An active contact has exactly one active office affiliation.
 3. A contact may have several ended affiliations as retained history, but never several current offices.
 4. Email is not globally unique. Repeated email raises a warning for review but does not merge people or create an additional current office relationship.
-5. A contact without a usable email may exist, but cannot be the primary contact of a valid opportunity.
+5. A phone-only contact is valid for the directory under #258 but cannot be primary for an Active or Paused opportunity. Existing people missing both channels remain readable and must gain one on their next profile correction; #257 is a candidate.
 6. A referenced contact is archived, never hard deleted.
 7. Adding a new person to an office uses the audited `create_or_affiliate_ma_contact` service. The service rejects an existing active contact that already has a current office; staff must use the dedicated placement-correction service instead. Neither service creates a legacy contact or recurrent synchronization record.
 8. Campaign suppression belongs to the canonical person and applies across the current and historical office affiliations. A suppressed contact is excluded from campaign, bulk and general relationship-outreach audiences, and the final send boundary must reject those purposes even if a caller supplies the address directly.
@@ -1065,13 +1135,13 @@ opportunity, M&A analytics, matching, export, lifecycle, Gate or disclosure.
 
 ### W-063 staff intake reconciliation
 
-W-063 must route new firm identity creation through `create_ma_firm_with_default_office`, new contact relationships through `create_or_affiliate_ma_contact`, existing-contact placement corrections through `update_ma_contact_with_office_correction`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.
+Historical W-063 routed new firm identity creation through `create_ma_firm_with_default_office`; the #257 candidate replaces that manual shortcut with the real-office, optional-contact service described above. W-063 routes new contact relationships through `create_or_affiliate_ma_contact`, existing-contact placement corrections through `update_ma_contact_with_office_correction`, and new opportunity creation or updates through the atomic opportunity RPCs above. In the same integrated release it must retire or guard legacy direct mutations of `ma_sources`, `ma_source_contacts`, `opportunity_source_contacts` and firm-level opportunity source fields that could diverge from canonical offices and affiliations. The legacy tables are a one-way compatibility bridge and cutover evidence during transition, not a recurrent synchronization mechanism.
 
 The W-063 database primitives are live. The matching application release is complete only after the production build and staff/repreneur browser paths are verified against them.
 
 1. Staff create and edit forms load the `staff_ma_office_intake_projection`, select one canonical operating office and select one or more active office affiliations with exactly one primary affiliation.
 2. Draft creation requires a canonical geography; WAVE allocates the mandate reference. `active` and `paused` saves are delegated to `create_opportunity_with_office_context` or `save_opportunity_office_context`; the database owns the lifecycle validation and atomic link replacement.
-3. Staff can create a new firm, its first office and first contact through `create_ma_firm_with_default_office`, then add another person to an office through `create_or_affiliate_ma_contact`. An existing person moves only through the W-157 correction service. The legacy Firm and Contacts directory routes redirect to intake and their server mutations are guarded.
+3. Historical W-063 created a firm, its first office and required first contact through `create_ma_firm_with_default_office`. W-083–W-087 subsequently restored direct canonical M&A navigation; legacy mutations remain guarded. The #257 candidate supplies independent firm creation and global contact creation with #258 minimum fields, also on intake. An existing person moves only through the W-157 correction service.
 4. Staff detail, Find, dashboard freshness, analytics and M&A email recipient selection prefer `source_office → firm` and `opportunity_ma_contacts → affiliation → contact`. Dashboard freshness renders canonical `Firm · Office` context and uses `source_label` only when the canonical relationship is absent. `ma_sources`, `ma_source_contacts` and `opportunity_source_contacts` are fallback reads for historical, unmigrated records only.
 5. The current staff intake UI neither accepts nor displays repreneur exposure or an origin channel. Preparing a public title or teaser does not publish a deal. Current repreneur projections exclude firm, office, contact and affiliation data pending a separately implemented W-001-governed release; this implementation state is not the permanent disclosure policy.
 6. Closed and archived opportunities remain read-only in intake. The previous generic reopen route is disabled pending a separately approved, audited canonical reopen workflow.
@@ -1410,6 +1480,7 @@ OFF; it never clears unknown provider outcomes or changes business rows.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-10-07 | #257 Ticket #260 staff directory candidate | Reconciles closed Decision #258: independent firm plus named/located real first office, optional contact, required city and person reachability on targeted profile/notes saves; preserves incomplete rows, W-157 history and primary-email/suppression guards. No production/backfill claim. | Product Change #257 / Decisions #258–#259 / Ticket #260; additive migration `20261007140000`, behavioral actions, disposable PostgreSQL races/rollback and protected browser traceability |
 | 2026-10-07 | #251 Ticket #252 implementation candidate | Records a staff-only main Drop reason, optional distinct secondaries and context; five temporary whole-sale Pause reasons; guarded manual Stale closure after 90 completed consecutive Active/no-pursuit days. Preserves immutable historical outcomes, access revocation and the independent 45-day source clock. Missing historical interval evidence starts at actual later policy activation; production activation remains separately authorized. | GitHub Product Change #251 / Ticket #252; additive migration `20261007100000`, disposable persistence and concurrency rehearsal |
 | 2026-10-07 | #247 Ticket #253 accepted Email Operations candidate | Extends every current business source with independent Active/Auto-send and default review, frozen editable personal prose, canonical business CC, source-backed deduplicated Sent/History and same-cohort private analytics. Preserves existing business/document/recipient, uncertainty, archive/bulk and parent retention fences; access mail remains locked automatic. Tracking/provider/DNS activation and production schema/data actions remain held. | GitHub Product Change #247 / Decision #250 / Ticket #253; additive migration `20261007123000`, disposable PostgreSQL and protected Next fixture |
 | 2026-09-30 | #221 Ticket #222 review correction | Saved modal batches retain an actor-bound recovery URL and resume through reads only. Editing a pending draft uses the existing CAS save, reads back its exact canonical words/version, and opens a separate complete-message confirmation using the existing guarded individual send action, including when it has left the filtered page. Pure sorting preserves selected identities only while the same visible members, versions and eligibility remain. Batch recipient names are read-only labels matched to the retained review ID and email; neither schema nor dispatch eligibility changes. | GitHub Product Change #221 / Ticket #222; consolidated Spec/Standards review, synthetic transition/service checks |

@@ -94,7 +94,7 @@ afterEach(async () => {
 });
 
 describe("opening-readiness artifact policy", () => {
-  it("uploads only the aggregate file and seven controlled synthetic UI captures for seven days", async () => {
+  it("uploads only the aggregate file and controlled synthetic email and M&A UI captures for seven days", async () => {
     const workflow = parse(await readFile(workflowPath, "utf8")) as {
       jobs: { fixture: { steps: Array<Record<string, unknown>> } };
     };
@@ -136,6 +136,17 @@ describe("opening-readiness artifact policy", () => {
           "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png",
           "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-mobile.png",
           "${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png",
+        ],
+        retentionDays: 7,
+      },
+      {
+        files: [
+          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-desktop.png",
+          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-validation-desktop.png",
+          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-contacts-desktop.png",
+          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-correction-mobile.png",
+          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-mobile.png",
+          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-contact-mobile.png",
         ],
         retentionDays: 7,
       },
