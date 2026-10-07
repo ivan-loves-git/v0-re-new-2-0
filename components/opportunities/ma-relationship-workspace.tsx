@@ -879,9 +879,9 @@ function RelationshipFirmRow({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-medium">{firm.name}</p>
-              <Badge variant="outline" className="capitalize">
-                {firm.status}
-              </Badge>
+              {firm.status === "archived" ? (
+                <Badge variant="outline">Archived</Badge>
+              ) : null}
             </div>
             <RelationshipFirmIndicators
               indicators={firm.indicators}

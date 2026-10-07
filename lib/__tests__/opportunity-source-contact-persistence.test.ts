@@ -713,7 +713,7 @@ describe("canonical opportunity contact persistence", () => {
         office_id: "00000000-0000-4000-8000-000000000011",
         firm_id: "00000000-0000-4000-8000-000000000010",
         firm_name: "Acme Conseil",
-        firm_status: "prospect",
+        firm_status: "active",
         office_name: "Paris",
         office_label: "Acme Conseil — Paris",
         contacts: [
@@ -836,24 +836,24 @@ describe("canonical opportunity contact persistence", () => {
     })
   })
 
-  it("rejects an archived or inactive firm returned by the atomic office service", async () => {
+  it("explains an archived-firm rejection returned by the atomic office service", async () => {
     const formData = new FormData()
     formData.set("existing_firm_id", "00000000-0000-4000-8000-000000000010")
     formData.set("office_name", "Lyon")
     formData.set("office_city", "Lyon")
     const rpc = vi.fn().mockResolvedValue({
       data: null,
-      error: { message: "ma_existing_firm_not_active" },
+      error: { message: "ma_existing_firm_archived" },
     })
     mocks.createAdminClient.mockReturnValue({ rpc })
 
     await expect(createMaOfficeForExistingFirm(formData)).resolves.toEqual({
       success: false,
       message:
-        "This firm is no longer active. Refresh and choose another firm.",
+        "This firm is archived. Choose a non-archived firm.",
       fieldErrors: {
         existing_firm_id:
-          "This firm is no longer active. Refresh and choose another firm.",
+          "This firm is archived. Choose a non-archived firm.",
       },
     })
   })

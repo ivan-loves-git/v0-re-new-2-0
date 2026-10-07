@@ -558,7 +558,7 @@ export function OpportunitySourceContext({
             <DialogTitle>Add M&A firm context</DialogTitle>
             <DialogDescription>
               Create a new firm context, or add a real operating office to an
-              existing active firm. Neither action publishes an opportunity.
+              existing firm. Neither action publishes an opportunity.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -669,12 +669,12 @@ export function OpportunitySourceContext({
                       officeContextFieldErrors.existing_firm_id,
                     )}
                   >
-                    <SelectValue placeholder="Choose an active firm" />
+                    <SelectValue placeholder="Choose a firm" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       <SelectItem value="__no_existing_firm__" disabled>
-                        Choose an active firm
+                        Choose a firm
                       </SelectItem>
                       {availableFirms.map((firm) => (
                         <SelectItem key={firm.id} value={firm.id}>

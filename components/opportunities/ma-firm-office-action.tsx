@@ -60,7 +60,7 @@ export function MaFirmOfficeAction({
         onClick={() => setOpen(true)}
         disabled={disabled}
         title={
-          disabled ? "Only active firms can receive new offices." : undefined
+          disabled ? "Archived firms cannot receive new offices." : undefined
         }
       >
         <Building2 data-icon="inline-start" />

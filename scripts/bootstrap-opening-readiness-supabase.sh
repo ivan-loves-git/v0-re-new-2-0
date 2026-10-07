@@ -130,6 +130,19 @@ $$;
 SQL
 
 while IFS= read -r migration; do
+  if [[ "$migration" == */20261007193000_ma_firm_operational_status.sql ]]; then
+    # #262's browser proof starts with a genuine pre-migration prospect.
+    # These fixed synthetic records exist only in the protected disposable DB.
+    "${psql_safe[@]}" <<'SQL'
+BEGIN;
+INSERT INTO public.ma_firms(id,name,status,internal_notes,created_by,updated_by) VALUES
+ ('26200000-0000-4000-8000-000000000071','QA OPENING FORMER PROSPECT — SYNTHETIC','prospect','Retained before #262 normalization','qa-opening-262','qa-opening-262');
+INSERT INTO public.ma_offices(id,firm_id,name,city,is_default,created_by,updated_by) VALUES
+ ('26200000-0000-4000-8000-000000000072','26200000-0000-4000-8000-000000000071','Retained first office','Paris',FALSE,'qa-opening-262','qa-opening-262');
+SET CONSTRAINTS ALL IMMEDIATE;
+COMMIT;
+SQL
+  fi
   "${psql_safe[@]}" -f "$migration"
 done < <(
   find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \

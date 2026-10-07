@@ -159,6 +159,54 @@ protected Supabase/Better Auth browser fixture. Synthetic/build evidence never
 establishes production behavior. Build/review/commit/draft PR authority on #260
 excludes merge, production schema/data/configuration, backfill and real outbound.
 
+### Firm operational state — Ticket #262
+
+[Ticket #262](https://github.com/re-new-team/renew-governance/issues/262) records
+Ivan's 7 October 2026 confirmation of Bertrand's decision and approval of one
+complete implementation slice, including status-only treatment of existing
+prospect firms. This addendum supersedes Decision #258's firm prospect rule and
+the active-firm office-creation gate. All other #258 minima and protections stay
+binding. This is the accepted candidate contract; production activation requires
+the reviewed migration and exact release evidence on #262.
+
+- A firm has one normal operational state, stored internally as `active`, or is
+  `archived`. There is no prospect classification or activation step. New firms
+  default to `active`, including those with no contact or opportunity. Staff UI
+  shows archive only; active is not a commercial stage or opportunity outcome.
+  Status remains required, staff-only and WAVE-owned. Existing archive audit,
+  retention, minimum-office and active/paused opportunity guards remain.
+- Migration `20261007193000_ma_firm_operational_status.sql` changes only
+  `ma_firms.status` from `prospect` to `active`. It retains IDs, every non-status
+  profile/audit value, missing city/channel values, offices, people, affiliations,
+  source snapshots, opportunities and interactions. No entity is recreated,
+  completed, reassigned, published or emailed. The approved migration receipt
+  records actor/time, reviewed source and affected count; it does not attribute
+  the normalization to an invented staff correction.
+- The migration holds the table's DDL lock in one transaction and checks the
+  known profile-clock trigger before temporarily suspending that trigger only.
+  Integrity triggers remain enabled; deferred constraints are forced before the
+  clock is restored and before commit. Failure restores rows, default, schema
+  and trigger state. Reinstallation normalizes zero additional rows.
+- The database permits only `active` and `archived`. To preserve the retained
+  guarded cutover service and old creation callers during ordered rollout, a
+  private BEFORE INSERT trigger maps the retired `prospect` creation input to
+  `active` before storage. This grants no import authority and exposes no status
+  choice. UPDATE cannot restore prospect; unknown state values remain invalid.
+- Staff can add an office to any non-archived firm through the locked audited
+  office service. Archived requests fail without writes, including stale forms.
+  Real-office name/city, duplicate fences, authorization, active-office selection,
+  synthetic/provisional restrictions and primary-contact/email rules remain.
+
+For an authorized release, install and inspect the atomic database candidate
+before its application callers in a bounded write-paused window. Prove the
+changed flow, forbidden roles, persistence and retained graph without real
+recipient sends. A scoped application/service rollback retains the normalized
+active firms, two-state constraint, active default and legacy-input adapter;
+it never deletes a legitimate record or guesses a previous status for a new
+firm. Undoing normalization needs a separately approved exact treatment.
+Acceptance AC-01–AC-10 and its approved testing seams are traced in
+[QA-MA-FIRM-262.md](../QA-MA-FIRM-262.md).
+
 ## 1. M&A advisory firm
 
 **Purpose:** the stable identity of the M&A advisory business. It is not an office and it does not directly own contacts, opportunities or interactions.
@@ -169,7 +217,7 @@ excludes merge, production schema/data/configuration, backfill and real outbound
 | --- | --- | --- | --- | --- | --- |
 | `id` | UUID | System | Staff only | WAVE | Stable internal identity |
 | `name` | Text | Always | Staff only | WAVE | Human-readable firm name; trimmed and non-empty |
-| `status` | `prospect`, `active`, `archived` | Always | Staff only | WAVE | Defaults to `prospect`; archiving preserves history |
+| `status` | `active`, `archived` | Always | Staff only | WAVE | Defaults to `active`; sole normal state, archive preserves history; #262 candidate removes prospect |
 | `category` | Controlled text | Optional | Staff only | WAVE | Examples include M&A boutique, advisory bank and transaction advisory; taxonomy may evolve without changing relationships |
 | `network_label` | Text | Optional | Staff only | WAVE | Informational grouping only; it cannot own contacts, opportunities, scoring or workflow |
 | `website_url` | URL | Optional | Staff only | WAVE | Firm-level website |
@@ -185,7 +233,7 @@ excludes merge, production schema/data/configuration, backfill and real outbound
 
 1. Every non-archived firm has at least one active operating office.
 2. The historical W-063 service could create a synthetic default when the real office was unknown. Decision #258 supersedes this for manual creation: supply a real office name and city; #257 is the candidate, not a live activation claim.
-3. A firm may exist as a prospect without contacts or opportunities.
+3. A non-archived firm may exist without contacts or opportunities. No prospect classification or activation step is required under #262.
 4. A referenced firm is archived, never hard deleted.
 5. A firm with an `active` or `paused` opportunity through any of its offices cannot be archived. Staff first closes, archives or moves those opportunities in the same transaction.
 6. The approved #258 target creates the firm and its named, located real first office atomically. A supplied first contact and sole current affiliation join that same atomic operation; an omitted contact creates neither. Historical W-063 records remain retained.
@@ -226,7 +274,7 @@ excludes merge, production schema/data/configuration, backfill and real outbound
 4. When a real active office becomes known, WAVE removes the synthetic default from intake selection and rejects it for new or changed opportunity source contexts. Historical links remain until staff resolves any active records.
 5. An office with referenced contacts, opportunities or interactions is archived, never hard deleted.
 6. Contacts, opportunities and interactions attach to an office, never directly to the firm.
-7. Staff may add a real office only through the audited `create_ma_office_for_existing_firm` service. It requires an active firm, serializes the lower-trimmed office name within that firm, rejects an active real-office duplicate and creates no contact, legacy source or automatic reassignment. A synthetic default remains historical attribution but disappears from new intake selection when the real office exists.
+7. Staff may add a real office only through the audited `create_ma_office_for_existing_firm` service. It requires a non-archived firm under #262, serializes the lower-trimmed office name within that firm, rejects an active real-office duplicate and creates no contact, legacy source or automatic reassignment. A synthetic default remains historical attribution but disappears from new intake selection when the real office exists.
 
 ## 3. Contact
 
@@ -1480,6 +1528,7 @@ OFF; it never clears unknown provider outcomes or changes business rows.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-10-07 | Ticket #262 firm-state candidate | Removes the firm prospect/active business distinction; normal firms default to active and archive remains guarded. The atomic migration normalizes only existing prospect status, preserves all non-status audit/profile values and source/history links, maps legacy creation input before storage and enables immediate additional-office creation. No opportunity activation, publication, missing-data completion or email is introduced. Rollback retains legitimate records and normalized state. | GitHub #262, follow-up to #257 / Decision #258; migration `20261007193000_ma_firm_operational_status.sql` |
 | 2026-10-07 | #257 Ticket #260 staff directory candidate | Reconciles closed Decision #258: independent firm plus named/located real first office, optional contact, required city and person reachability on targeted profile/notes saves; preserves incomplete rows, W-157 history and primary-email/suppression guards. No production/backfill claim. | Product Change #257 / Decisions #258–#259 / Ticket #260; additive migration `20261007140000`, behavioral actions, disposable PostgreSQL races/rollback and protected browser traceability |
 | 2026-10-07 | #251 Ticket #252 implementation candidate | Records a staff-only main Drop reason, optional distinct secondaries and context; five temporary whole-sale Pause reasons; guarded manual Stale closure after 90 completed consecutive Active/no-pursuit days. Preserves immutable historical outcomes, access revocation and the independent 45-day source clock. Missing historical interval evidence starts at actual later policy activation; production activation remains separately authorized. | GitHub Product Change #251 / Ticket #252; additive migration `20261007100000`, disposable persistence and concurrency rehearsal |
 | 2026-10-07 | #247 Ticket #253 accepted Email Operations candidate | Extends every current business source with independent Active/Auto-send and default review, frozen editable personal prose, canonical business CC, source-backed deduplicated Sent/History and same-cohort private analytics. Preserves existing business/document/recipient, uncertainty, archive/bulk and parent retention fences; access mail remains locked automatic. Tracking/provider/DNS activation and production schema/data actions remain held. | GitHub Product Change #247 / Decision #250 / Ticket #253; additive migration `20261007123000`, disposable PostgreSQL and protected Next fixture |

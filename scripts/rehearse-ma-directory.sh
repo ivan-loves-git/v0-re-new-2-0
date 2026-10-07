@@ -23,6 +23,41 @@ psql=("$pg_bin/psql" -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_d
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/ma-directory-legacy.sql" >/dev/null
 migration="$repo_root/supabase/migrations/20261007140000_staff_ma_directory_profiles.sql"
 [ ! -f "$migration" ] || "${psql[@]}" --single-transaction -f "$migration" >/dev/null
+status_migration="$repo_root/supabase/migrations/20261007193000_ma_firm_operational_status.sql"
+# Induce a normalization failure and prove that the atomic migration restores
+# the old rows/default and never leaves the profile clock trigger suspended.
+"${psql[@]}" <<'SQL' >/dev/null
+CREATE FUNCTION public.fixture_reject_normalization() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN RAISE EXCEPTION 'fixture_expected_normalization_failure'; END $$;
+CREATE TRIGGER fixture_reject_normalization BEFORE UPDATE ON public.ma_firms
+  FOR EACH ROW WHEN (OLD.status='prospect') EXECUTE FUNCTION public.fixture_reject_normalization();
+SQL
+if "${psql[@]}" -f "$status_migration" >"$cluster_dir/normalization-failure.log" 2>&1; then
+  echo 'Normalization failure probe unexpectedly committed.' >&2; exit 1
+fi
+grep -q fixture_expected_normalization_failure "$cluster_dir/normalization-failure.log"
+"${psql[@]}" <<'SQL' >/dev/null
+DROP TRIGGER fixture_reject_normalization ON public.ma_firms;
+DROP FUNCTION public.fixture_reject_normalization();
+CREATE FUNCTION public.fixture_assert_status_rollback() RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF (SELECT to_jsonb(f) FROM public.ma_firms f WHERE id='26200000-0000-4000-8000-000000000001')
+      IS DISTINCT FROM (SELECT row FROM public.fixture_directory_retained WHERE entity='firm' AND id='26200000-0000-4000-8000-000000000001')
+    OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid='public.ma_firms'::regclass AND tgname='update_ma_firms_updated_at' AND tgenabled='O')
+    OR (SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='ma_firms' AND column_name='status') IS DISTINCT FROM '''prospect''::text'
+    OR to_regprocedure('public.normalize_ma_firm_legacy_creation_status()') IS NOT NULL
+  THEN RAISE EXCEPTION 'normalization_rollback_changed_original_state'; END IF;
+END $$;
+SELECT public.fixture_assert_status_rollback();
+SQL
+# Same migration, with its final commit changed to rollback for the disposable
+# preflight. Its SET CONSTRAINTS ALL IMMEDIATE still exercises commit invariants.
+awk '$0=="COMMIT;" {$0="ROLLBACK;"; commits++} {print} END {if(commits!=1) exit 1}' "$status_migration" >"$cluster_dir/status-preflight.sql"
+"${psql[@]}" -f "$cluster_dir/status-preflight.sql" >/dev/null
+"${psql[@]}" -c 'SELECT public.fixture_assert_status_rollback();' >/dev/null
+"${psql[@]}" -f "$status_migration" >/dev/null
+# A repeated install performs no second data rewrite and retains every value.
+"${psql[@]}" -f "$status_migration" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/ma-directory.sql"
 wait_for_fence() {
   local application_name="$1"

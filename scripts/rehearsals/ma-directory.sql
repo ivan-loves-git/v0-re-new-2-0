@@ -6,22 +6,55 @@ BEGIN
   RAISE EXCEPTION 'accepted_invalid_directory_request: %',expected;
 END $$;
 DO $$ BEGIN
-  IF EXISTS(SELECT 1 FROM public.fixture_directory_retained r WHERE r.row IS DISTINCT FROM CASE r.entity
+  IF EXISTS(SELECT 1 FROM public.fixture_directory_retained r WHERE
+    (CASE WHEN r.entity='firm' AND r.row->>'status'='prospect' THEN r.row||'{"status":"active"}'::jsonb ELSE r.row END)
+    IS DISTINCT FROM CASE r.entity
     WHEN 'firm' THEN (SELECT to_jsonb(f) FROM public.ma_firms f WHERE f.id=r.id)
     WHEN 'office' THEN (SELECT to_jsonb(o) FROM public.ma_offices o WHERE o.id=r.id)
     WHEN 'contact' THEN (SELECT to_jsonb(c) FROM public.ma_contacts c WHERE c.id=r.id)
-    WHEN 'affiliation' THEN (SELECT to_jsonb(a) FROM public.ma_contact_office_affiliations a WHERE a.id=r.id) END)
+    WHEN 'affiliation' THEN (SELECT to_jsonb(a) FROM public.ma_contact_office_affiliations a WHERE a.id=r.id)
+    WHEN 'opportunity' THEN (SELECT to_jsonb(o) FROM public.opportunities o WHERE o.id=r.id)
+    WHEN 'opportunity_contact' THEN (SELECT to_jsonb(c) FROM public.opportunity_ma_contacts c WHERE c.id=r.id)
+    WHEN 'interaction' THEN (SELECT to_jsonb(i) FROM public.ma_interactions i WHERE i.id=r.id) END)
   THEN RAISE EXCEPTION 'migration_rewrote_retained_history'; END IF;
+END $$;
+-- The released cutover writer still supplies the retired creation value.
+-- Compatibility must persist the new state rather than break that writer.
+DO $$ DECLARE firm UUID; BEGIN
+  SET LOCAL ROLE service_role;
+  INSERT INTO public.ma_firms(name,status,created_by,updated_by)
+    VALUES('Synthetic legacy creation input','prospect','staff-262','staff-262') RETURNING id INTO firm;
+  INSERT INTO public.ma_offices(firm_id,name,city,is_default,created_by,updated_by)
+    VALUES(firm,'Legacy writer real office','Paris',FALSE,'staff-262','staff-262');
+  IF (SELECT status FROM public.ma_firms WHERE id=firm)<>'active'
+    THEN RAISE EXCEPTION 'legacy_creation_reintroduced_prospect'; END IF;
+END $$;
+SELECT public.fixture_directory_reject($q$SELECT public.create_ma_office_for_existing_firm('26200000-0000-4000-8000-000000000002','Blocked archived office','Paris','staff-262')$q$,'ma_existing_firm_archived');
+SELECT public.fixture_directory_reject($q$UPDATE public.ma_firms SET status='prospect' WHERE id='26200000-0000-4000-8000-000000000001'$q$,'ma_firms_status_check');
+SELECT public.fixture_directory_reject($q$UPDATE public.ma_firms SET status='unknown' WHERE id='26200000-0000-4000-8000-000000000001'$q$,'ma_firms_status_check');
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM public.ma_offices WHERE firm_id='26200000-0000-4000-8000-000000000002')
+    OR (SELECT to_jsonb(f) FROM public.ma_firms f WHERE id='26200000-0000-4000-8000-000000000001')
+      IS DISTINCT FROM ((SELECT row FROM public.fixture_directory_retained WHERE entity='firm' AND id='26200000-0000-4000-8000-000000000001')||'{"status":"active"}'::jsonb)
+  THEN RAISE EXCEPTION 'rejected_status_or_archived_write_changed_graph'; END IF;
 END $$;
 DO $$ DECLARE saved RECORD; BEGIN
   SET LOCAL ROLE service_role;
   SELECT * INTO saved FROM public.create_ma_firm_with_first_office('Synthetic Directory Firm','Central office','Lyon',FALSE,NULL,NULL,NULL,NULL,NULL,'staff-257');
-  IF NOT EXISTS(SELECT 1 FROM public.ma_firms WHERE id=saved.firm_id AND name='Synthetic Directory Firm' AND created_by='staff-257' AND updated_by='staff-257' AND created_at IS NOT NULL)
+  IF NOT EXISTS(SELECT 1 FROM public.ma_firms WHERE id=saved.firm_id AND name='Synthetic Directory Firm' AND status='active' AND created_by='staff-257' AND updated_by='staff-257' AND created_at IS NOT NULL)
     OR NOT EXISTS(SELECT 1 FROM public.ma_offices WHERE id=saved.office_id AND firm_id=saved.firm_id AND name='Central office' AND city='Lyon' AND NOT is_default AND created_by='staff-257' AND updated_by='staff-257')
     OR saved.contact_id IS NOT NULL OR saved.affiliation_id IS NOT NULL
     OR EXISTS(SELECT 1 FROM public.ma_contact_office_affiliations WHERE office_id=saved.office_id)
     OR EXISTS(SELECT 1 FROM public.opportunities WHERE source_office_id=saved.office_id)
   THEN RAISE EXCEPTION 'standalone_firm_office_readback_failed'; END IF;
+  PERFORM * FROM public.create_ma_office_for_existing_firm(saved.firm_id,'Second real office','Marseille','staff-257');
+  IF (SELECT count(*) FROM public.ma_offices WHERE firm_id=saved.firm_id)<>2
+    THEN RAISE EXCEPTION 'new_firm_second_office_failed'; END IF;
+  SELECT * INTO saved FROM public.create_ma_office_for_existing_firm('26200000-0000-4000-8000-000000000001','Former prospect second office','Lille','staff-262');
+  IF NOT EXISTS(SELECT 1 FROM public.ma_offices WHERE id=saved.office_id AND city='Lille' AND NOT is_default)
+    OR EXISTS(SELECT 1 FROM public.ma_contact_office_affiliations WHERE office_id=saved.office_id)
+    OR EXISTS(SELECT 1 FROM public.opportunities WHERE source_office_id=saved.office_id)
+    THEN RAISE EXCEPTION 'normalized_firm_second_office_failed'; END IF;
   SELECT * INTO saved FROM public.create_ma_office_for_existing_firm('25700000-0000-4000-8000-000000000001','Synthetic North','Lille','staff-257');
   IF NOT EXISTS(SELECT 1 FROM public.ma_offices WHERE id=saved.office_id AND city='Lille' AND NOT is_default AND created_by='staff-257')
     OR EXISTS(SELECT 1 FROM public.ma_contact_office_affiliations WHERE office_id=saved.office_id)
@@ -112,6 +145,8 @@ DO $$ BEGIN
   IF EXISTS(SELECT 1 FROM public.ma_contacts c LEFT JOIN public.ma_contact_office_affiliations a ON a.contact_id=c.id AND a.is_active GROUP BY c.id,c.status HAVING (c.status='active' AND COUNT(a.id)<>1) OR (c.status<>'active' AND COUNT(a.id)<>0)) THEN RAISE EXCEPTION 'directory_single_current_office_invariant_failed'; END IF;
   IF EXISTS(SELECT 1 FROM public.email_logs) THEN RAISE EXCEPTION 'directory_save_created_email'; END IF;
   IF has_function_privilege('anon','public.create_ma_firm_with_first_office(text,text,text,boolean,text,text,text,text,text,text)','EXECUTE')
+    OR has_function_privilege('anon','public.normalize_ma_firm_legacy_creation_status()','EXECUTE')
+    OR has_function_privilege('authenticated','public.create_ma_office_for_existing_firm(uuid,text,text,text)','EXECUTE')
     OR has_function_privilege('authenticated','public.update_ma_office_notes(uuid,text,text,text)','EXECUTE')
     OR has_function_privilege('service_role','public.create_ma_office_for_existing_firm(uuid,text,text)','EXECUTE')
     OR has_function_privilege('service_role','public.create_ma_firm_with_default_office(text,text,text,text,boolean,text,text,text,text)','EXECUTE')

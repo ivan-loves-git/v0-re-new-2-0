@@ -400,9 +400,9 @@ export function MaFirmWorkspaceDetail({
       </Button>
       <header className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Badge variant={statusVariant(workspace.status)}>
-            {workspace.status}
-          </Badge>
+          {workspace.status === "archived" ? (
+            <Badge variant={statusVariant(workspace.status)}>Archived</Badge>
+          ) : null}
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
             {workspace.name}
           </h1>
@@ -412,7 +412,7 @@ export function MaFirmWorkspaceDetail({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <MaFirmOfficeAction firmId={workspace.id} firmName={workspace.name} disabled={workspace.status !== "active"} />
+          <MaFirmOfficeAction firmId={workspace.id} firmName={workspace.name} disabled={workspace.status === "archived"} />
           <MaRelationshipCorrectionAction
             target="firm"
             id={workspace.id}

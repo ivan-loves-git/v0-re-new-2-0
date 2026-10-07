@@ -61,7 +61,7 @@ export interface MaRelationshipOfficeOption {
   id: string
   firmId: string
   firmName: string
-  firmStatus: "prospect" | "active" | "archived"
+  firmStatus: "active" | "archived"
   status: "active" | "archived"
   officeName: string
   isDefault?: boolean
@@ -81,7 +81,7 @@ export interface MaRelationshipOfficeOption {
 export interface MaRelationshipFirmOption {
   id: string
   name: string
-  status: "prospect" | "active" | "archived"
+  status: "active" | "archived"
   indicators: {
     officeCount: number
     activeContactCount: number
@@ -172,7 +172,7 @@ interface OfficeRow {
   firm?: Relation<{
     id: string
     name: string
-    status: "prospect" | "active" | "archived"
+    status: "active" | "archived"
   }>
 }
 
