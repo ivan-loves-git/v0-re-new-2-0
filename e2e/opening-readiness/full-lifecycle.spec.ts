@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { dismissNotifications } from "../helpers/dismiss-notifications";
 import {
   devices,
   expect,
@@ -101,17 +102,6 @@ async function readyReviewQueue(page: Page) {
   }).toPass({ timeout: 15_000 });
   await page.keyboard.press("Escape");
   await expect(density).toBeHidden();
-}
-
-async function dismissNotifications(page: Page) {
-  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true });
-  let remaining = await closeButtons.count();
-  // Dismiss through the normal controls; hovering a covering toast pauses expiry.
-  while (remaining) {
-    await closeButtons.first().click();
-    await expect.poll(() => closeButtons.count()).toBeLessThan(remaining);
-    remaining = await closeButtons.count();
-  }
 }
 
 async function approvePreparedReview(page: Page) {

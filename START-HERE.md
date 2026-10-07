@@ -1,6 +1,6 @@
 # Re-New platform: start here
 
-Read [AGENTS.md](AGENTS.md), then follow its **Current implementation authority**
+Read [AGENTS.md](AGENTS.md), then follow its **Start and route**
 reading order. GitHub governance owns current scope, Decisions, Tickets and delivery
 state; the relevant canonical contracts own business and technical meaning.
 
