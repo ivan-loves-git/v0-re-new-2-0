@@ -7,10 +7,11 @@ import { sendEmail } from "@/lib/email/send-email"
 import { RecommendationAssignmentEmailV1 } from "@/lib/email/templates/recommendation-assignment-v1"
 import type { OpportunityMatch } from "@/lib/types/opportunity"
 
-export type RecommendationAssignmentDeliveryStatus = "sent" | "already_sent" | "busy" | "failed" | "blocked" | "not_requested"
+export type RecommendationAssignmentDeliveryStatus = "sent" | "already_sent" | "busy" | "failed" | "blocked" | "not_requested" | "review_required"
 export type RecommendationAssignmentDeliveryResult = { status: RecommendationAssignmentDeliveryStatus; message: string }
 
 const messages: Record<RecommendationAssignmentDeliveryStatus, string> = {
+  review_required: "Recommendation saved. Email prepared for Review & send; nothing was sent.",
   sent: "Recommendation saved. Assignment email sent.",
   already_sent: "Recommendation saved. Assignment email was already sent; no duplicate was sent.",
   busy: "Recommendation saved. An email attempt is in progress. Check its status before retrying.",
@@ -76,7 +77,7 @@ export async function deliverRecommendationAssignment(matchId: string, actor: st
           react: createElement(RecommendationAssignmentEmailV1, {
             firstName: payload.recipient_first_name, publicTitle: payload.public_title, teaser: payload.teaser_summary,
           }),
-          idempotencyKey,
+          idempotencyKey, sourceContext: { kind: "recommendation", matchId },
         })
       },
     })

@@ -1,4 +1,6 @@
 "use client"
+import { EmailLog } from "./email-log"
+import type { getEmailHistory } from "@/lib/actions/email-operations"
 
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -148,6 +150,7 @@ const purposeVariant: Record<EmailReviewPurpose, BadgeProps["variant"]> = {
   e4_qualification: "focus-light",
   e6_nda_ready: "info-light",
   e7_signed_copies: "info-light",
+  business: "outline",
   ma_other: "outline",
 }
 const avatarTone = [
@@ -172,6 +175,7 @@ const purposeIcons: Record<EmailReviewPurpose, typeof Mail> = {
   e4_qualification: FileLock,
   e6_nda_ready: FileLock,
   e7_signed_copies: FileLock,
+  business: Mail,
   ma_other: Mail,
 }
 const purposeIconColors: Record<EmailReviewPurpose, string> = {
@@ -184,6 +188,7 @@ const purposeIconColors: Record<EmailReviewPurpose, string> = {
   e4_qualification: "text-focus-foreground",
   e6_nda_ready: "text-info-foreground",
   e7_signed_copies: "text-info-foreground",
+  business: "text-muted-foreground",
   ma_other: "text-muted-foreground",
 }
 const stateLabels: Record<EmailReviewQueueRow["state"], string> = {
@@ -271,7 +276,7 @@ function canPrepareSend(review: EmailReviewQueueRow) {
   )
 }
 
-export function ReviewQueue({ queue }: { queue: Queue }) {
+export function ReviewQueue({ queue, sent }: { queue: Queue; sent?: Awaited<ReturnType<typeof getEmailHistory>> & { error?: string | null } }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -845,6 +850,14 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
     },
   })
 
+  if (queue.view === "sent" && sent) return <section className="email-review-scope email-queue-shell" aria-label="Staff email review queue">
+    <div className="email-viewbar"><div className="flex flex-wrap gap-1" aria-label="Queue views">
+      <Button size="sm" variant="ghost" onClick={()=>navigate({reviewFilter:"active",reviewPage:null})}>Active backlog</Button>
+      <Button size="sm" variant="ghost" onClick={()=>navigate({reviewFilter:"archived",reviewPage:null})}>Archived</Button>
+      <Button size="sm" variant="ghost" onClick={()=>navigate({reviewFilter:"all",reviewPage:null})}>All history</Button>
+      <Button size="sm" variant="secondary" aria-current="page">Sent</Button>
+    </div></div><EmailLog initialRecords={sent.records} initialTotal={sent.total} initialError={sent.error} sent /></section>
+
   return (
     <section
       className="email-review-scope email-queue-shell"
@@ -898,6 +911,7 @@ export function ReviewQueue({ queue }: { queue: Queue }) {
           >
             All history
           </Button>
+          <Button size="sm" variant="ghost" onClick={() => navigate({ reviewFilter: "sent", reviewPage: null })}>Sent</Button>
         </div>
         <span>{queue.allCount} prepared emails</span>
       </div>

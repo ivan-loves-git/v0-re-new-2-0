@@ -235,3 +235,7 @@ The observability stream is acceptable when:
 - build, lint, tests, data-model check and pnpm design:check pass.
 
 The AI-specific provider, model, projection, ledger and human-control requirements remain in [wave-ai-assistance-v1.md](./wave-ai-assistance-v1.md).
+
+## Operational email evidence (#247 / accepted Decision #250)
+
+The [Email operations contract](./email-operations-v1.md) owns the private staff email ledger, retained messages, actual CC and deduplicated delivery/activity facts. Analytics reads its operational send-time cohort directly; it is not a PostHog learning event stream. Do not emit raw bodies, recipient addresses, CRM IDs, source contexts, identifier-bearing or secret-bearing URLs, provider payloads, IP addresses or user agents to product telemetry. The signed event store retains only the minimum private dispatch/recipient correlation and event/reason evidence needed for operational readback. Access/reset bodies and links remain outside these staff content views and tracking redirects. Message-level opens/clicks do not prove intended-recipient reading; no new acquisition/engagement KPI is asserted. Existing privacy-safe technical success/failure diagnostics remain governed by their allowlist.

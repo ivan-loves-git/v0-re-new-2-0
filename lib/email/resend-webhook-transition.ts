@@ -25,7 +25,10 @@ export function resolveResendWebhookUpdate(
   eventType: ResendWebhookEventType,
   occurredAt: string,
 ): Record<string, string> | null {
-  if (TERMINAL_STATUSES.has(currentStatus)) return null
+  const facts: Record<string,string> = eventType === "email.delivered" ? { delivered_at: occurredAt }
+    : eventType === "email.opened" ? { opened_at: occurredAt }
+    : eventType === "email.clicked" ? { clicked_at: occurredAt } : {}
+  if (TERMINAL_STATUSES.has(currentStatus)) return Object.keys(facts).length ? facts : null
 
   const statusByEvent: Record<ResendWebhookEventType, string> = {
     "email.sent": "sent",
@@ -40,7 +43,7 @@ export function resolveResendWebhookUpdate(
   if (eventType === "email.bounced" || eventType === "email.complained") {
     return { status }
   }
-  if ((STATUS_RANK[status] ?? 0) <= (STATUS_RANK[currentStatus] ?? 0)) return null
+  if ((STATUS_RANK[status] ?? 0) <= (STATUS_RANK[currentStatus] ?? 0)) return Object.keys(facts).length ? facts : null
   if (eventType === "email.sent") return { status }
   if (eventType === "email.delivered") return { status, delivered_at: occurredAt }
   if (eventType === "email.opened") return { status, opened_at: occurredAt }

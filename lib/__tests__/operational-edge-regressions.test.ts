@@ -5,14 +5,14 @@ import { offerLifecycleRollback } from "@/lib/offer-lifecycle-rollback"
 
 describe("operational edge regressions", () => {
   it("does not let a late delivered event overwrite a complaint or bounce", () => {
-    expect(resolveResendWebhookUpdate("complained", "email.delivered", "2026-08-21T12:00:00.000Z")).toBeNull()
-    expect(resolveResendWebhookUpdate("bounced", "email.opened", "2026-08-21T12:00:00.000Z")).toBeNull()
+    expect(resolveResendWebhookUpdate("complained", "email.delivered", "2026-08-21T12:00:00.000Z")).toEqual({ delivered_at: "2026-08-21T12:00:00.000Z" })
+    expect(resolveResendWebhookUpdate("bounced", "email.opened", "2026-08-21T12:00:00.000Z")).toEqual({ opened_at: "2026-08-21T12:00:00.000Z" })
   })
 
   it("keeps normal delivery evidence monotonic across duplicate and late provider events", () => {
-    expect(resolveResendWebhookUpdate("clicked", "email.opened", "2026-08-21T12:00:00.000Z")).toBeNull()
-    expect(resolveResendWebhookUpdate("opened", "email.delivered", "2026-08-21T12:00:00.000Z")).toBeNull()
-    expect(resolveResendWebhookUpdate("delivered", "email.delivered", "2026-08-21T12:00:00.000Z")).toBeNull()
+    expect(resolveResendWebhookUpdate("clicked", "email.opened", "2026-08-21T12:00:00.000Z")).toEqual({ opened_at: "2026-08-21T12:00:00.000Z" })
+    expect(resolveResendWebhookUpdate("opened", "email.delivered", "2026-08-21T12:00:00.000Z")).toEqual({ delivered_at: "2026-08-21T12:00:00.000Z" })
+    expect(resolveResendWebhookUpdate("delivered", "email.delivered", "2026-08-21T12:00:00.000Z")).toEqual({ delivered_at: "2026-08-21T12:00:00.000Z" })
     expect(resolveResendWebhookUpdate("sent", "email.clicked", "2026-08-21T12:00:00.000Z")).toEqual({
       status: "clicked",
       clicked_at: "2026-08-21T12:00:00.000Z",

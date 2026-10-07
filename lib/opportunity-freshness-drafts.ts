@@ -62,7 +62,7 @@ export async function runOpportunityFreshnessDrafts(maxContacts = 30) {
         title: member.title, firmName: member.firm_name,
       })),
     })
-    const { error } = await db.rpc("opportunity_freshness_prepare", {
+    const { data: reviewId, error } = await db.rpc("opportunity_freshness_prepare", {
       p_contact_id: contact.contact_id, p_members: members,
       p_subject: rendered.subject, p_body: rendered.body,
       p_template_version: templateVersion,
@@ -73,6 +73,14 @@ export async function runOpportunityFreshnessDrafts(maxContacts = 30) {
         error?.message?.includes("opportunity_freshness_members_opportunity_id_episode_key_key")) continue
     if (error) throw new Error("A grouped freshness draft could not be saved safely.")
     prepared += 1
+    if (typeof reviewId === "string") {
+      const { data: review }=await db.from("staff_email_reviews").select("*").eq("id",reviewId).maybeSingle()
+      const actor=review?.prepared_policy?.enabled_by
+      if (actor && review.prepared_policy?.auto_send) {
+        const {data:automatic}=await db.rpc("email_review_claim_future_auto",{p_review_id:reviewId})
+        if(automatic===true) await (await import("@/lib/opportunity-freshness-send")).sendOpportunityFreshnessReview(review,review.version,actor)
+      }
+    }
   }
   return { prepared, disabled: false }
 }

@@ -83,7 +83,7 @@ export async function deliverDiscoveryDigest(deliveryId: string): Promise<Delive
       repreneurId: claim.repreneurId,
       templateKey: "opportunity_discovery_digest",
       react: DiscoveryDigestEmail({ firstName: payload.firstName, items: payload.items }),
-      idempotencyKey,
+      idempotencyKey, sourceContext: { kind: "digest", deliveryId },
       beforeProviderAttempt: async () => {
         const { data: authorized, error: beginError } = await db.rpc("d136_begin_provider_attempt", {
           p_delivery_id: deliveryId,
@@ -96,6 +96,7 @@ export async function deliverDiscoveryDigest(deliveryId: string): Promise<Delive
         return began
       },
     })
+    if (result.queued) { await complete(deliveryId, leaseToken, "deferred"); return "review_required" }
     if (result.success && result.resendId) {
       return complete(deliveryId, leaseToken, "accepted", result.resendId)
     }

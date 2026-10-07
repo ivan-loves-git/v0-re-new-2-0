@@ -71,6 +71,15 @@ describe("locked opportunity interest", () => {
     })
   })
 
+  it("records an eligible interest while its notification waits for staff review", async () => {
+    const store = createStore({ matchId: "match-1", expressedAt: NOW, notificationSentAt: null })
+    const result = await expressOpportunityInterest({ opportunityId: DETAILS.opportunityId,
+      repreneurId: DETAILS.repreneurId, actorId: "user-1", now: NOW },
+      { store, notifier: { send: vi.fn(async () => ({ success: false, queued: true })) } })
+    expect(result).toEqual({ status: "success", alreadyRecorded: false, expressedAt: NOW })
+    expect(store.markNotificationSent).not.toHaveBeenCalled()
+  })
+
   it("is a no-op when the interest and notification were already recorded", async () => {
     const store = createStore({
       matchId: "match-1",

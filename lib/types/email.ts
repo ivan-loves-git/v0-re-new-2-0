@@ -36,6 +36,9 @@ export type EmailTemplateKey =
   | "ma_repreneur_interest_feedback"
   | "ma_nda_info_memo_request"
   | "ma_process_follow_up"
+  | "opportunity_memo_available"
+  | "locked_opportunity_interest"
+  | "code:e6_nda_ready"
 
 export interface EmailTemplate {
   id: string
@@ -43,6 +46,8 @@ export interface EmailTemplate {
   subject: string
   description?: string
   is_active: boolean
+  auto_send?: boolean
+  policy_version?: number
   is_enabled?: boolean // Alias for is_active, used by UI
   requires_consent: boolean
   subject_override?: string | null
@@ -83,6 +88,10 @@ export interface EmailLog_Insert {
   resend_id?: string
   status?: EmailStatus
   metadata?: Record<string, unknown>
+  retained_html?: string
+  retained_text?: string
+  actual_cc?: string[]
+  tracking_verified?: boolean
 }
 
 export interface IntakeAbandonmentTracking {
@@ -221,7 +230,9 @@ export interface EmailSendResult {
   emailLogId?: string
   resendId?: string
   error?: string
-  providerOutcome?: "accepted" | "rejected" | "blocked" | "deferred" | "fenced" | "uncertain"
+  queued?: boolean
+  reviewId?: string
+  providerOutcome?: "review" | "accepted" | "rejected" | "blocked" | "deferred" | "fenced" | "uncertain"
 }
 
 // Analytics types

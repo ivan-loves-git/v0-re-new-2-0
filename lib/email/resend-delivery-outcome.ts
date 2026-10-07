@@ -23,6 +23,8 @@ export interface ResendDeliveryRequest {
   from: string
   to: string[]
   subject: string
+  cc?: string[]
+  bcc?: string[]
   html: string
   text: string
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>
@@ -63,6 +65,7 @@ export function fingerprintResendDeliveryRequest(
         ...(scope ? { scope } : {}),
         from: request.from,
         to: request.to,
+        cc: request.cc, bcc: request.bcc,
         subject: request.subject,
         html: request.html,
         text: request.text,

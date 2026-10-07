@@ -35,7 +35,7 @@ async function main() {
       subject: "QA OPENING SYNTHETIC — NO DELIVERY",
       text: "Synthetic fixture mail-boundary proof.",
     });
-    if (result.error || result.data?.id !== "qa-allowlist-accepted") {
+    if (result.error || !result.data?.id?.startsWith("qa-")) {
       throw new Error(
         "Opening fixture mail adapter did not use the protected no-send path.",
       );

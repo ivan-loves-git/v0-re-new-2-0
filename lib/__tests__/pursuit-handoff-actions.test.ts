@@ -78,10 +78,11 @@ describe("canonical pursuit handoff actions", () => {
     const [request, options] = m.resend.mock.calls[0]
     expect(request.from).toBe("Configured Re-New <configured@re-new.invalid>")
     expect(request.to).toEqual(["buyer@re-new.invalid"])
+    expect(request.cc).toEqual(["bertrand.galas@edu.escp.eu", "colin.hofman@edu.escp.eu"])
     expect(request.text).toContain("https://app.re-new.team/portal/deals/match")
     expect(request.subject).toBe("Votre NDA est prêt à signer - PME industrielle")
     expect(request.text).toContain("Le NDA de l'opportunité : PME industrielle")
-    expect(Object.keys(request).sort()).toEqual(["from", "html", "subject", "text", "to"])
+    expect(Object.keys(request).sort()).toEqual(["cc", "from", "html", "subject", "text", "to"])
     expect(options).toEqual({ idempotencyKey: "same-operation" })
     expect(m.begin).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(String), "staff-id")
     expect(m.finalize).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ operation_key: "same-operation" }), "staff-id", "sent", "accepted", null)

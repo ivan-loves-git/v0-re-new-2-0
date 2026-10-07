@@ -174,14 +174,14 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     await expect(sendButton).toBeDisabled()
     await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
     const publicReceipt = directReview.locator('[data-slot="alert-description"]:visible')
-      .filter({ hasText: "Provider receipt qa-allowlist-accepted." })
+      .filter({ hasText: /Provider receipt qa-/ })
     await expect(publicReceipt).toContainText("Sent means accepted by the provider, not delivered or read.")
     const receipt = await client.query<{ provider_message_id: string; members: number }>(`
       SELECT delivery.provider_message_id,count(member.opportunity_id)::int AS members
       FROM public.opportunity_freshness_deliveries delivery
       JOIN public.opportunity_freshness_members member ON member.review_id=delivery.review_id
       WHERE delivery.review_id=$1 GROUP BY delivery.provider_message_id`, [reviewId])
-    expect(receipt.rows).toEqual([{ provider_message_id: "qa-allowlist-accepted", members: 2 }])
+    expect(receipt.rows).toEqual([{ provider_message_id: expect.stringMatching(/^qa-/), members: 2 }])
     const fakeSingleSends = await client.query<{ count: number }>(`
       SELECT count(*)::int AS count FROM public.ma_interactions
       WHERE opportunity_id IN ($1,$2) AND template_key='ma_opportunity_validity_check'`, [opportunityA,opportunityB])

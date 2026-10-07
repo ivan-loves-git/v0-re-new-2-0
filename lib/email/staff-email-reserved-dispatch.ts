@@ -48,8 +48,10 @@ export async function dispatchReservedStaffEmailReview(
   sourceReservation?: ReservedBulkSource,
   approvedBy = actorId,
 ) {
+  if (review.source_kind === "business") return (await import("./business-source-dispatch")).dispatchBusinessReview(review, reviewToken, actorId)
   if (review.source_kind === "freshness") throw new Error("Freshness has a grouped provider receipt.")
   const db = createAdminClient()
+  await (await import("./review-envelope")).captureReviewEnvelope(review, reviewToken)
   if (!reviewToken || !approvedBy) throw new Error("The exact review reservation is unavailable.")
   let result: { success: boolean; message: string; operationState?: "pending" | "failed" | "sent"; eventId?: string }
   try {

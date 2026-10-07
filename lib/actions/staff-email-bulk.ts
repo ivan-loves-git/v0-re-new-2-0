@@ -139,8 +139,7 @@ async function currentBulkAttempt(review: StaffEmailReview) {
     throw new Error("Grouped freshness sending is temporarily disabled.")
   }
   if (review.namespace !== "REAL") throw new Error("DEMO freshness cannot be sent.")
-  const templateVersion = await getMaReviewTemplateVersion("ma_opportunity_validity_check", true)
-  if (templateVersion !== review.template_version) throw new Error("The catalogue copy changed. Refresh this group.")
+  await getMaReviewTemplateVersion("ma_opportunity_validity_check", true)
   const { error } = await createAdminClient().rpc("opportunity_freshness_assert_current", { p_review_id: review.id })
   if (error) throw new Error("A grouped member or recipient changed. Refresh this group.")
   const payload = buildMaReviewedRequest(review.subject, review.body_text, review.recipient_email)

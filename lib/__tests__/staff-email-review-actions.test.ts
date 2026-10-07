@@ -230,11 +230,10 @@ describe("staff email review public actions", () => {
     expect(m.sourceSend).not.toHaveBeenCalled()
   })
 
-  it("does not send a draft pinned to an older catalogue copy", async () => {
+  it("sends the retained individually reviewed words after reusable copy changes", async () => {
     m.version.mockResolvedValue("copy-v2")
-    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("template changed")
-    expect(m.rpc).not.toHaveBeenCalled()
-    expect(m.sourceSend).not.toHaveBeenCalled()
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).resolves.toMatchObject({ state: "sent" })
+    expect(m.sourceSend).toHaveBeenCalledWith(opportunityId, expect.objectContaining({ subject: row.subject, body: row.body_text }), undefined, expect.anything())
   })
 
   it("reserves the exact reviewed content and records accepted evidence once", async () => {

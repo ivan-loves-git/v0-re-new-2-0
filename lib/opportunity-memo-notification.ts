@@ -28,13 +28,14 @@ export interface OpportunityMemoNotificationStore {
 export interface OpportunityMemoNotifier {
   send(input: OpportunityMemoNotificationClaim & {
     idempotencyKey: string
-  }): Promise<{ success: boolean; resendId?: string; error?: string }>
+  }): Promise<{ success: boolean; resendId?: string; error?: string; queued?: boolean }>
 }
 
 export type OpportunityMemoNotificationOutcome =
   | { status: "not_claimed" }
   | { status: "sent"; matchId: string }
   | { status: "failed"; matchId: string; error: string }
+  | { status: "review_required"; matchId: string }
 
 export function opportunityMemoNotificationIdempotencyKey(matchId: string) {
   return `opportunity-memo-available-${matchId}`
@@ -67,6 +68,10 @@ export async function notifyOpportunityMemoAvailable(
       idempotencyKey,
     })
 
+    if (delivery.queued) {
+      await dependencies.store.markFailed({ matchId: claim.matchId, failedAt: input.now, error: "Prepared for staff review; no email sent." })
+      return { status: "review_required", matchId: claim.matchId }
+    }
     if (!delivery.success) {
       const error = delivery.error ?? "Email delivery failed"
       await dependencies.store.markFailed({

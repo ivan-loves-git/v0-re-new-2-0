@@ -126,10 +126,13 @@ export const TEMPLATE_METADATA: Record<
     copyEditable?: boolean
   }
 > = {
+  opportunity_memo_available: { name: "Memo available", description: "Once after an exact current confidential memo grant. No access is granted by sending.", category: "ma", audience: "rep", manualSend: false },
+  locked_opportunity_interest: { name: "Direct interest alert", description: "Exact new direct interest to configured staff. Withdrawal, current interest and namespace gates remain required.", category: "ma", audience: "staff", manualSend: false },
+  "code:e6_nda_ready": { name: "E6 NDA ready", description: "Exact current blank NDA validation to its repreneur. Prepared words editable; authorized portal link is protected.", category: "ma", audience: "rep", manualSend: false },
   opportunity_discovery_digest: {
     name: "New public opportunities",
     description: "Future-only three-day discovery summary. Explicit marketing consent, separate opt-out, exact public-copy approval, and staff activation required. Inactive by default.",
-    category: "status",
+    category: "ma",
     audience: "rep",
     manualSend: false,
     copyEditable: false,
@@ -137,7 +140,7 @@ export const TEMPLATE_METADATA: Record<
   recommendation_response_reminder: {
     name: "Recommendation response reminder",
     description: "One client reminder after 48 elapsed hours in the exact open 72-hour cycle. Inactive by default.",
-    category: "status",
+    category: "ma",
     audience: "rep",
     manualSend: false,
     copyEditable: true,
@@ -145,7 +148,7 @@ export const TEMPLATE_METADATA: Record<
   recommendation_unanswered_staff_alert: {
     name: "Unanswered recommendation expiry",
     description: "One configured-staff alert at the exact unanswered cycle expiry. Inactive by default.",
-    category: "status",
+    category: "ma",
     audience: "staff",
     manualSend: false,
     copyEditable: true,
@@ -153,7 +156,7 @@ export const TEMPLATE_METADATA: Record<
   memo_feedback_reminder: {
     name: "Memo feedback reminder",
     description: "One client reminder five Paris weekdays after the exact memo grant, cancelled by recorded feedback or lost access. Inactive by default.",
-    category: "status",
+    category: "ma",
     audience: "rep",
     manualSend: false,
     copyEditable: true,
@@ -161,14 +164,14 @@ export const TEMPLATE_METADATA: Record<
   opportunity_recommendation_assignment: {
     name: "Opportunity assignment",
     description: "Versioned title-and-teaser email for a new staff recommendation. No portal access. Sent only from the recommendation, not the generic sender.",
-    category: "status",
+    category: "ma",
     audience: "rep",
     manualSend: false,
   },
   interest_outcome_validated: {
     name: "Interest validated",
     description: "Neutral notice after staff validates this exact interest. Inactive by default; no internal notes or source details.",
-    category: "status",
+    category: "ma",
     audience: "rep",
     manualSend: false,
     copyEditable: true,
@@ -176,7 +179,7 @@ export const TEMPLATE_METADATA: Record<
   interest_outcome_rejected: {
     name: "Interest not selected",
     description: "Neutral notice after staff rejects this exact interest, without rejecting the account or other deals. Inactive by default.",
-    category: "status",
+    category: "ma",
     audience: "rep",
     manualSend: false,
     copyEditable: true,
@@ -184,7 +187,7 @@ export const TEMPLATE_METADATA: Record<
   proposed_opportunity_response_staff: {
     name: "Proposed opportunity response",
     description: "One configured-staff alert for a new response to a staff proposal, not unassigned interest. Inactive by default.",
-    category: "status",
+    category: "ma",
     audience: "staff",
     manualSend: false,
     copyEditable: true,

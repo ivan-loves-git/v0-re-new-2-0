@@ -1,4 +1,5 @@
 import "server-only"
+import { configuredBusinessCc } from "@/lib/email/business-mail"
 
 import { FROM_EMAIL, FROM_NAME } from "@/lib/email/resend-client"
 import { env } from "@/lib/env"
@@ -23,5 +24,5 @@ export function buildPursuitNdaReadyRequest(matchId: string, context: { repreneu
   const url = `${(env.NEXT_PUBLIC_APP_URL ?? "https://app.re-new.team").replace(/\/$/, "")}/portal/deals/${matchId}`
   const title = context.opportunity.public_title?.trim() || "Opportunité de reprise"
   const text = `Bonjour${context.repreneur.first_name ? ` ${context.repreneur.first_name}` : ""},\n\nLe NDA de l'opportunité : ${title} est désormais disponible sur votre espace Re-New Wave.\n\nNous enverrons la demande du mémo dès que le NDA aura été signé et uploadé dans la plateforme.\n\nSi vous avez la moindre question sur le contenu du document, n'hésitez pas à revenir vers nous avant signature.\n\nAccéder à mon espace : ${url}\n\nMerci,\n\nL'équipe Re-New`
-  return { from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [email], subject: `Votre NDA est prêt à signer - ${title}`, html: `<p>${escapeHtml(text).replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`, text }
+  return { from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [email], cc: configuredBusinessCc([email]), subject: `Votre NDA est prêt à signer - ${title}`, html: `<p>${escapeHtml(text).replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`, text }
 }

@@ -134,7 +134,7 @@ while IFS= read -r migration; do
 done < <(
   find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
     | LC_ALL=C sort \
-    | awk -F/ '$NF >= "20260830113100" && $NF != "20260929230707_reversible_staff_email_archive.sql" && $NF != "20260929235619_bounded_staff_email_bulk_send.sql"'
+    | awk -F/ '$NF >= "20260830113100" && $NF != "20260929230707_reversible_staff_email_archive.sql" && $NF != "20260929235619_bounded_staff_email_bulk_send.sql" && $NF != "20261007123000_email_operations_policy.sql"'
 )
 
 # The additive #186 review queue is a numbered application migration. The
@@ -150,6 +150,7 @@ done < <(
 "${psql_safe[@]}" -f supabase/migrations/20260929230707_reversible_staff_email_archive.sql
 # #224 additionally depends on the archive exclusion and source guards.
 "${psql_safe[@]}" -f supabase/migrations/20260929235619_bounded_staff_email_bulk_send.sql
+"${psql_safe[@]}" -f supabase/migrations/20261007123000_email_operations_policy.sql
 
 # The sanitized structure snapshot deliberately omits the real Acme/Bertrand
 # singleton while retaining its redacted integrity function. Reconstruct the

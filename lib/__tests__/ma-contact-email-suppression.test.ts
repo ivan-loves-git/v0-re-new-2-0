@@ -157,7 +157,7 @@ describe("W-072 purpose-aware M&A contact email suppression", () => {
     )
     expect(genericPolicy).toBeGreaterThan(-1)
     expect(genericPolicy).toBeLessThan(genericProvider)
-    expect(genericEmailBoundary).toContain("[to, ...(bcc ?? [])]")
+    expect(genericEmailBoundary).toContain("[to, ...cc, ...(bcc ?? [])]")
     const manualRecipients = emailActions.slice(
       emailActions.indexOf(
         "export async function getRepreneursForManualSend",
