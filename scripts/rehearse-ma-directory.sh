@@ -56,4 +56,5 @@ wait_for_fence directory-office-race
 "${psql[@]}" -c "SET statement_timeout='5s'; SELECT public.fixture_directory_reject(\$q\$SELECT public.create_ma_office_for_existing_firm('25700000-0000-4000-8000-000000000001',' synthetic RACE office ','Lille','staff-257')\$q\$,'ma_real_office_name_already_exists');" >/dev/null
 wait "$race_pid" || { cat "$cluster_dir/office-race.log" >&2; exit 1; }
 "${psql[@]}" -c "DO \$\$ BEGIN IF (SELECT count(*) FROM public.ma_firms WHERE lower(btrim(name))='synthetic race firm')<>1 OR (SELECT count(*) FROM public.ma_offices WHERE lower(btrim(name))='synthetic race office')<>1 THEN RAISE EXCEPTION 'duplicate_race_left_duplicate_records'; END IF; END \$\$;" >/dev/null
+MA_QA_DATABASE_URL="postgresql://renew_directory_admin@127.0.0.1:$port/directory" node --import tsx "$repo_root/scripts/rehearsals/ma-directory-proof.ts"
 echo 'M&A directory disposable persistence checks passed.'
