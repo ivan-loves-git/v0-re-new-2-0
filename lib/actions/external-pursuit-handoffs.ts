@@ -7,6 +7,7 @@ import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { isUuid } from "@/lib/uuid"
+import { cleanupExternalLdcStaging, loadVerifiedExternalHandoffContext, retainExternalLdcBytes, stageExternalLdcVersion, type ExternalLdcStage } from "@/lib/external-ldc-version"
 import type { ExternalHandoffInput } from "@/lib/external-pursuit-handoff"
 
 /** An attestation of an exchange already completed; this path has no email dependency. */
@@ -28,9 +29,20 @@ export async function recordExternalPursuitHandoff(input: ExternalHandoffInput) 
     : null
   if (input.selectionToken && !selection) return { success: false as const, message: "The selected staff workspace changed. Refresh and try again." }
   const db = createAdminClient()
-  const { data: current, error: currentError } = await db.rpc("journey_external_handoff_context", { p_match_id: input.matchId, p_handoff_type: input.context.handoff_type })
   const unavailable = { success: false as const, message: "The current documents, approvals or delivery state changed. Refresh the pursuit before recording. No email was sent." }
-  if (currentError || !isDeepStrictEqual(current, input.context)) return unavailable
+  if (input.context.handoff_type === "e4") {
+    if (!input.context.ldc) return unavailable
+    const { data: replay, error } = await db.rpc("journey_external_ldc_replay", {
+      p_operation_key: input.operationKey, p_match_id: input.matchId, p_context: input.context,
+      p_exchange_date: input.exchangeDate, p_exchange_time: input.exchangeTime, p_channel: input.channel,
+      p_reference: input.reference.trim(), p_staff_user_id: staff.user.id, p_staff_email: staff.user.email,
+      p_workspace_id: selection?.workspaceId ?? null, p_workspace_generation: selection?.generation ?? null,
+    })
+    if (error) return unavailable
+    if (typeof replay === "string") return { success: true as const, eventId: replay, message: "External exchange recorded. No email was sent." }
+  }
+  const current = await loadVerifiedExternalHandoffContext(db, input.matchId, input.context.handoff_type)
+  if (!isDeepStrictEqual(current, input.context)) return unavailable
   // Validate retained bytes, without constructing any email attachment or MIME
   // envelope. The database rechecks this same context under its write locks.
   try {
@@ -45,16 +57,32 @@ export async function recordExternalPursuitHandoff(input: ExternalHandoffInput) 
       if (bytes.byteLength !== document.size_bytes || createHash("sha256").update(bytes).digest("hex") !== document.content_sha256) return unavailable
     }
   } catch { return unavailable }
-  const { data, error } = await db.rpc("journey_record_external_handoff", {
-    p_match_id: input.matchId, p_expected_context: input.context,
-    p_operation_key: input.operationKey, p_exchange_date: input.exchangeDate,
-    p_exchange_time: input.exchangeTime, p_channel: input.channel, p_reference: input.reference.trim(),
-    p_staff_user_id: staff.user.id, p_staff_email: staff.user.email,
-    p_workspace_id: selection?.workspaceId ?? null, p_workspace_generation: selection?.generation ?? null,
-  })
-  if (error || typeof data !== "string") return unavailable
-  revalidatePath(`/opportunities/${input.context.opportunity_id}`)
-  revalidatePath("/portal-preview")
-  revalidatePath("/portal")
-  return { success: true as const, eventId: data, message: "External exchange recorded. No email was sent." }
+  let stage: ExternalLdcStage | undefined
+  try {
+    if (input.context.handoff_type === "e4") {
+      const prepared = await stageExternalLdcVersion(db, input, staff.user)
+      stage = prepared.stage
+      await retainExternalLdcBytes(db, stage, prepared.bytes, input.context.ldc!.content_sha256!)
+    }
+    const { data, error } = await db.rpc("journey_record_external_handoff", {
+      p_match_id: input.matchId, p_expected_context: input.context,
+      p_operation_key: input.operationKey, p_exchange_date: input.exchangeDate,
+      p_exchange_time: input.exchangeTime, p_channel: input.channel, p_reference: input.reference.trim(),
+      p_staff_user_id: staff.user.id, p_staff_email: staff.user.email,
+      p_workspace_id: selection?.workspaceId ?? null, p_workspace_generation: selection?.generation ?? null,
+    })
+    if (error || typeof data !== "string") throw new Error("External handoff not confirmed")
+    revalidatePath(`/opportunities/${input.context.opportunity_id}`)
+    revalidatePath("/portal-preview")
+    revalidatePath("/portal")
+    return { success: true as const, eventId: data, message: "External exchange recorded. No email was sent." }
+  } catch { return unavailable }
+  finally {
+    if (stage && !stage.retained) {
+      // The durable claim cannot return a committed/reused object. If lookup
+      // fails, leave the owned stage for the bounded cron; never guess/delete.
+      try { await cleanupExternalLdcStaging(db, { stageId: stage.stage_id, operationKey: input.operationKey, staffId: staff.user.id }) }
+      catch { console.error("External LDC staging cleanup remains pending") }
+    }
+  }
 }

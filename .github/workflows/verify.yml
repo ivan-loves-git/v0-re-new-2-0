@@ -150,6 +150,18 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-external-pursuit-handoffs.sh'
 
+      - name: "Rehearse #254 exact private LDC versions and cleanup/source races"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            --env RENEW_EXTERNAL_HANDOFF_REPO_ROOT=/workspace \
+            --env RENEW_EXTERNAL_LDC_REHEARSAL=1 \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-external-pursuit-handoffs.sh'
+
       - name: "Rehearse #255 atomic external memo notices and legacy/future grant races"
         run: |
           docker run --rm \

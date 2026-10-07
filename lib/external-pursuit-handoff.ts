@@ -14,6 +14,19 @@ export type ExternalHandoffDocumentSnapshot = {
   mime_type: string
   size_bytes: number
 }
+/** Server-resolved current private LDC; only staff handoff contexts contain it. */
+export type ExternalLdcSource = {
+  source_object_id: string
+  source_version: string
+  source_updated_at: string
+  profile_source_sha256: string
+  source_path: string
+  source_upload_id: string | null
+  file_name: string
+  mime_type: "application/pdf"
+  size_bytes: number
+  content_sha256: string | null
+}
 export type ExternalHandoffContext = {
   opportunity_id: string
   repreneur_id: string
@@ -23,6 +36,7 @@ export type ExternalHandoffContext = {
   handoff_type: ExternalHandoffType
   source_office_id: string | null
   documents: ExternalHandoffDocumentSnapshot[]
+  ldc?: ExternalLdcSource
 }
 export type ExternalHandoffInput = {
   matchId: string

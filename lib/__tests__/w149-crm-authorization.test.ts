@@ -88,6 +88,7 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "app/(dashboard)/repreneurs/[id]/page.tsx": boundary("staff", ["default"]),
   "app/api/cron/abandoned-forms/route.ts": boundary("cron", ["GET"]),
   "app/api/external-pursuits/[pursuitId]/attachments/[attachmentId]/route.ts": boundary("portal_owner", ["GET"]),
+  "app/api/pursuit-handoffs/[id]/ldc/route.ts": boundary("portal_owner", ["GET"]),
   "app/api/repreneurs/[id]/documents/[documentType]/route.ts": boundary("portal_owner", ["GET"]),
   "app/api/repreneurs/[id]/route.ts": boundary("staff", ["GET"]),
   "app/api/reset-avatar/route.ts": boundary("staff", ["POST"]),

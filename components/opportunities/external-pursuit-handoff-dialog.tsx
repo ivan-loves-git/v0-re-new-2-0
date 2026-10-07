@@ -47,6 +47,12 @@ export function ExternalPursuitHandoffDialog({ matchId, context, selectionToken,
       <DialogHeader><DialogTitle>{t.title}</DialogTitle><DialogDescription>{t.description}</DialogDescription></DialogHeader>
       <div role="group" aria-label={t.language} className="flex gap-2"><Button type="button" variant={language === "fr" ? "secondary" : "ghost"} size="sm" aria-pressed={language === "fr"} onClick={() => onLanguageChange("fr")}>Français</Button><Button type="button" variant={language === "en" ? "secondary" : "ghost"} size="sm" aria-pressed={language === "en"} onClick={() => onLanguageChange("en")}>English</Button></div>
       <p className="text-sm text-muted-foreground">{t.phase} {memoApproval ? "E8" : context.handoff_type.toUpperCase()}</p>
+      {!memoApproval && context.handoff_type === "e4" && context.ldc ? <div className="min-w-0 space-y-1 rounded-md border p-3 text-sm" data-external-ldc-version>
+        <p className="font-medium">{language === "fr" ? "Fiche de cadrage · PDF" : "Fiche de cadrage · PDF"}</p>
+        <p className="break-words">{context.ldc.file_name}</p>
+        <p className="text-muted-foreground">{language === "fr" ? "Version du" : "Version from"} {new Intl.DateTimeFormat(language === "fr" ? "fr-FR" : "en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(context.ldc.source_updated_at))}</p>
+        <p>{language === "fr" ? "Cette attestation conserve exactement cette version de votre Lettre de cadrage." : "This attestation retains exactly this version of the Lettre de cadrage."}</p>
+      </div> : null}
       <form onSubmit={(event) => {
         event.preventDefault()
         setError(false)

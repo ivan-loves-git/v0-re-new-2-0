@@ -14,6 +14,7 @@ import {
   startCriticalOperation,
   type CriticalOperationTrace,
 } from "@/lib/observability/critical-operation"
+import { cleanupExternalLdcStaging } from "@/lib/external-ldc-version"
 import { cleanupExpiredPrivateUploads } from "@/lib/private-upload-server"
 import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
 import { purgeExpiredRepreneurFeedback } from "@/lib/repreneur-feedback/cleanup"
@@ -469,6 +470,7 @@ export async function GET(request: Request) {
     activeSubjobTrace = privateUploadCleanupTrace
     try {
       await cleanupExpiredPrivateUploads({ batchSize: 25 })
+      await cleanupExternalLdcStaging(createAdminClient())
     } catch {
       privateUploadCleanupErrors.push("private_upload_cleanup_failed")
     }

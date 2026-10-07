@@ -68,6 +68,10 @@ psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h "$cluster_dir" -p "$port" -U "$dat
     id text PRIMARY KEY, name text, public boolean NOT NULL DEFAULT false,
     file_size_limit bigint, allowed_mime_types text[]
   );
+  CREATE TABLE storage.objects (id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket_id text NOT NULL,name text NOT NULL,version text,updated_at timestamptz DEFAULT now(),metadata jsonb,user_metadata jsonb,UNIQUE(bucket_id,name));
+  ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+  GRANT USAGE ON SCHEMA storage TO anon,authenticated,service_role;
+  GRANT ALL ON storage.objects TO anon,authenticated,service_role;
   INSERT INTO storage.buckets(id) VALUES
     ('opportunity-documents'), ('cvs'), ('external-pursuit-attachments');
 " >/dev/null
@@ -119,6 +123,20 @@ if [[ "${RENEW_EXTERNAL_HANDOFF_RED:-0}" != "1" ]]; then
 fi
 "${psql[@]}" --file "$repo_root/scripts/rehearsals/external-pursuit-handoffs.sql"
 echo "External handoff protected-service behavior passed."
+if [[ "${RENEW_EXTERNAL_LDC_REHEARSAL:-0}" == "1" ]]; then
+  "${psql[@]}" --file "$repo_root/supabase/migrations/20260824093630_w148_private_cvs_storage_boundary.sql" >/dev/null
+  "${psql[@]}" --file "$repo_root/supabase/migrations/20261007200000_external_e4_ldc_versions.sql" >/dev/null
+  "${psql[@]}" --file "$repo_root/scripts/rehearsals/external-e4-ldc.sql"
+  if [[ "${RENEW_EXTERNAL_LDC_BYTES_REHEARSAL:-0}" == "1" ]]; then
+    RENEW_LDC_NATIVE_SOCKET="$cluster_dir" RENEW_LDC_NATIVE_PORT="$port" node "$repo_root/scripts/rehearsals/external-e4-ldc-bytes.cjs"
+  else
+    "${psql[@]}" --file "$repo_root/scripts/rehearsals/external-e4-ldc-races-before.sql"
+  fi
+  source "$repo_root/scripts/rehearsals/external-e4-ldc-races.sh"
+  echo "External E4 exact private LDC source/version and cleanup service proof passed."
+  exit 0
+fi
+
 if [[ "${RENEW_MEMO_NOTICE_REHEARSAL:-0}" == "1" ]]; then
   # The legacy public RPC's actual released body/shape is used during rollout.
   sed -n '/^CREATE OR REPLACE FUNCTION public.claim_opportunity_memo_notification(/,/^END \$\$;/p' "$repo_root/supabase/migrations/20260826170000_w160_demo_repreneur_reporting.sql" | "${psql[@]}" >/dev/null

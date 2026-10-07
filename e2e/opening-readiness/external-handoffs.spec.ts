@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { expect } from "@playwright/test"
 import { Client } from "pg"
 import { assertOpeningReadinessFixtureEnvironment, OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
 import { test } from "./external-staff-session"
+import { seedCurrentExternalLdc } from "./seed-external-ldc"
 import { seedActiveOpeningOpportunity } from "./seed-active-opportunity"
 
 const fixture = OPENING_READINESS_FIXTURE
@@ -32,6 +34,7 @@ test("staff records external E4/E6 through the actual localized desktop/mobile d
     await db.query(`INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,created_by)
       VALUES($1,$2,$3,'interested',$4)`, [matchId, opportunityId, fixture.ids.realNonOwnerRepreneur, fixture.authIds.staffUser])
     await db.query("SELECT public.journey_start_pursuit($1,$2,$3)", [matchId, fixture.staff.email, "qa-254-cycle"])
+    const currentLdc = await seedCurrentExternalLdc(db, fixture.ids.realNonOwnerRepreneur)
     await page.context().addCookies(externalStaffSession.cookies)
     await page.goto("/dashboard_re")
     await expect(page).toHaveURL(/\/dashboard_re/)
@@ -45,9 +48,23 @@ test("staff records external E4/E6 through the actual localized desktop/mobile d
         const dialog = page.getByRole("dialog")
         await dialog.getByRole("button", { name: language === "en" ? "English" : "Français", exact: true }).click()
         await expect(dialog.getByRole("heading", { name: language === "en" ? "Record a completed external exchange" : "Enregistrer un échange externe terminé" })).toBeVisible()
+        await expect(dialog.locator("[data-external-ldc-version]").getByText(currentLdc.fileName, { exact: true })).toBeVisible()
+        await expect(dialog.locator("[data-external-ldc-version]").getByText(language === "fr" ? "Cette attestation conserve exactement cette version de votre Lettre de cadrage." : "This attestation retains exactly this version of the Lettre de cadrage.", { exact: true })).toBeVisible()
         await expect(dialog.getByLabel(language === "en" ? "Actual exchange date" : "Date réelle de l’échange", { exact: true })).toBeVisible()
         await expect(dialog.getByLabel(language === "en" ? "Known time (optional, Paris time)" : "Heure connue (facultative, heure de Paris)", { exact: true })).toBeVisible()
         await expect(dialog.getByRole("button", { name: language === "en" ? "Record completed exchange" : "Enregistrer l’échange terminé", exact: true })).toBeDisabled()
+        await page.evaluate(() => document.fonts.ready)
+        await dialog.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+        const version = dialog.locator("[data-external-ldc-version]")
+        await expect(version.getByText(new RegExp(language === "fr" ? "^Version du " : "^Version from "))).toBeVisible()
+        expect(await version.evaluate((element) => {
+          const panel = element.getBoundingClientRect()
+          return element.scrollWidth <= element.clientWidth && [...element.querySelectorAll("p")].every((paragraph) => {
+            const range = document.createRange()
+            range.selectNodeContents(paragraph)
+            return [...range.getClientRects()].every((box) => box.left >= panel.left && box.right <= panel.right)
+          })
+        })).toBe(true)
         expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
         await dialog.screenshot({ path: join(evidenceDirectory, `external-handoff-${language}-${size}.png`) })
@@ -69,6 +86,21 @@ test("staff records external E4/E6 through the actual localized desktop/mobile d
     await expect(page.getByRole("heading", { name: "Evidence log", exact: true })).toBeVisible()
     const e4 = await db.query("SELECT exchange_date::text,exchange_time,staff_user_id FROM public.opportunity_pursuit_external_handoffs WHERE match_id=$1 AND handoff_type='e4'", [matchId])
     expect(e4.rows).toEqual([{ exchange_date: yesterday, exchange_time: null, staff_user_id: fixture.authIds.staffUser }])
+    const { rows: [retained] } = await db.query("SELECT x.id,x.context->'ldc' AS source,v.storage_path,v.content_sha256,v.size_bytes FROM public.opportunity_pursuit_external_handoffs x JOIN public.pursuit_external_ldc_receipts link ON link.receipt_id=x.id JOIN public.pursuit_ldc_versions v ON v.id=link.version_id WHERE x.match_id=$1", [matchId])
+    expect(retained!.source).toMatchObject({ file_name: currentLdc.fileName, content_sha256: currentLdc.sha256, size_bytes: currentLdc.bytes.byteLength })
+    const versionResponse = await page.request.get(`/api/pursuit-handoffs/${retained!.id}/ldc?download`)
+    expect(versionResponse.status()).toBe(200)
+    expect(versionResponse.headers()["cache-control"]).toContain("private, no-store")
+    expect(createHash("sha256").update(await versionResponse.body()).digest("hex")).toBe(currentLdc.sha256)
+    // Actual W165 replacement and the exact original-key remove used by an
+    // already-read old worker cannot remove the private receipt version.
+    await seedCurrentExternalLdc(db, fixture.ids.realNonOwnerRepreneur, 2)
+    expect((await currentLdc.storage.from("cvs").remove([currentLdc.path])).error).toBeNull()
+    expect((await currentLdc.storage.from("cvs").download(currentLdc.path)).data).toBeNull()
+    const afterReplacement = await page.request.get(`/api/pursuit-handoffs/${retained!.id}/ldc?download`)
+    expect(afterReplacement.status()).toBe(200)
+    expect(createHash("sha256").update(await afterReplacement.body()).digest("hex")).toBe(currentLdc.sha256)
+
     await page.setViewportSize({ width: 1440, height: 1000 })
     const manifest = JSON.parse(await readFile(join(runnerTemp!, "opening-readiness-inputs", "manifest.json"), "utf8")) as { files: { blankNda: { path: string } } }
     const blank = page.getByRole("heading", { name: "Blank NDA template", exact: true }).locator("xpath=ancestor::section")
@@ -98,7 +130,7 @@ test("staff records external E4/E6 through the actual localized desktop/mobile d
     expect(e6.rows[0].documents).toHaveLength(1)
     const { rows: [effects] } = await db.query("SELECT (SELECT count(*)::int FROM public.opportunity_pursuit_handoff_deliveries WHERE match_id=$1) AS sends,(SELECT count(*)::int FROM public.ma_interactions WHERE opportunity_id=$2) AS interactions,(SELECT count(*)::int FROM public.opportunity_pursuit_confidential_grants WHERE match_id=$1) AS grants", [matchId, opportunityId])
     expect(effects).toEqual({ sends: 0, interactions: 0, grants: 0 })
-    await writeFile(join(evidenceDirectory, "external-handoffs.json"), JSON.stringify({ exactStaff: true, phaseDocuments: true, noDispatch: true, dateOnlyPreserved: true, knownTimePreserved: true, frenchEnglishDesktopMobile: true, noAccessGrant: true }))
+    await writeFile(join(evidenceDirectory, "external-handoffs.json"), JSON.stringify({ exactStaff: true, phaseDocuments: true, noDispatch: true, dateOnlyPreserved: true, knownTimePreserved: true, frenchEnglishDesktopMobile: true, noAccessGrant: true, currentLdcPdfVersion: true, retainedLdcAfterReplacement: true }))
   } finally {
     await db.query("UPDATE public.wave_journey_settings SET enabled=$1 WHERE singleton", [priorJourney!.enabled])
     await db.end()

@@ -83,7 +83,7 @@ external_handoff_summary='null'
 if [[ -f "$working_dir/external-handoffs.json" ]]; then
   external_handoff_summary=$(jq -ce '
     def flag: if type == "boolean" then . else error("expected aggregate boolean") end;
-    {exactStaff:(.exactStaff|flag),phaseDocuments:(.phaseDocuments|flag),noDispatch:(.noDispatch|flag),dateOnlyPreserved:(.dateOnlyPreserved|flag),knownTimePreserved:(.knownTimePreserved|flag),frenchEnglishDesktopMobile:(.frenchEnglishDesktopMobile|flag),noAccessGrant:(.noAccessGrant|flag)}' "$working_dir/external-handoffs.json")
+    {exactStaff:(.exactStaff|flag),phaseDocuments:(.phaseDocuments|flag),noDispatch:(.noDispatch|flag),dateOnlyPreserved:(.dateOnlyPreserved|flag),knownTimePreserved:(.knownTimePreserved|flag),frenchEnglishDesktopMobile:(.frenchEnglishDesktopMobile|flag),noAccessGrant:(.noAccessGrant|flag),currentLdcPdfVersion:(.currentLdcPdfVersion|flag),retainedLdcAfterReplacement:(.retainedLdcAfterReplacement|flag)}' "$working_dir/external-handoffs.json")
 fi
 
 external_memo_summary='null'

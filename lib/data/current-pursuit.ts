@@ -11,6 +11,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
 import { isRecommendationResponseOpen } from "@/lib/opportunity-recommendation-window"
 
+import { loadVerifiedExternalHandoffContext } from "@/lib/external-ldc-version"
 import type { ExternalHandoffContext } from "@/lib/external-pursuit-handoff"
 
 export type PortalDealAction = "respond" | "sign_nda" | "unknown" | null
@@ -371,8 +372,7 @@ async function loadCurrentPursuit(
     const { data: recording } = await supabase.from("pursuit_external_handoff_settings").select("enabled").eq("singleton", true).maybeSingle()
     externalRecordingEnabled = recording?.enabled === true
     if (externalRecordingEnabled && externalType) {
-      const { data: context, error } = await supabase.rpc("journey_external_handoff_context", { p_match_id: matchId, p_handoff_type: externalType })
-      if (!error && context) externalHandoffContext = context as ExternalHandoffContext
+      externalHandoffContext = await loadVerifiedExternalHandoffContext(supabase, matchId, externalType)
     }
   }
 

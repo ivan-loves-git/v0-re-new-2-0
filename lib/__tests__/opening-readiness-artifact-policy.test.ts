@@ -139,6 +139,8 @@ describe("opening-readiness artifact policy", () => {
       knownTimePreserved: false,
       frenchEnglishDesktopMobile: true,
       noAccessGrant: true,
+      currentLdcPdfVersion: true,
+      retainedLdcAfterReplacement: true,
     };
     await writeFile(join(root, "external-handoffs.json"), JSON.stringify({
       ...outcomes,
@@ -166,6 +168,11 @@ describe("opening-readiness artifact policy", () => {
 
     await writeFile(join(root, "external-handoffs.json"), JSON.stringify({
       ...outcomes, noDispatch: { provider: "must-not-retain" },
+    }));
+    expect(() => execFileSync("bash", [assemblerPath], options)).toThrow();
+    await expect(readFile(join(published, "aggregate-summary.json"))).rejects.toThrow();
+    await writeFile(join(root, "external-handoffs.json"), JSON.stringify({
+      ...outcomes, currentLdcPdfVersion: { source_path: "private-cvs-path", digest: "private-source-hash" },
     }));
     expect(() => execFileSync("bash", [assemblerPath], options)).toThrow();
     await expect(readFile(join(published, "aggregate-summary.json"))).rejects.toThrow();

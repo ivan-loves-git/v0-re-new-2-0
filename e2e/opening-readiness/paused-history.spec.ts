@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { createHash } from "node:crypto"
 import { join } from "node:path"
 import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test"
+import { seedCurrentExternalLdc } from "./seed-external-ldc"
 import { verifyPassword } from "better-auth/crypto"
 import { Client } from "pg"
 import { assertOpeningReadinessFixtureEnvironment, OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
@@ -112,6 +113,10 @@ async function snapshot(db: Client) {
     const rows = await db.query(`SELECT to_jsonb(record) AS record FROM public.${table} record WHERE ${parent} ORDER BY to_jsonb(record)::text`, [Object.values(ids).filter(id => ![ids.match, ids.endedMatch, ids.internalMatch, ids.active].includes(id))])
     result[table] = rows.rows.map(row => row.record)
   }
+  const pausedIds = Object.values(ids).filter(id => ![ids.match, ids.endedMatch, ids.internalMatch, ids.active].includes(id))
+  result.pursuit_ldc_staging = (await db.query("SELECT to_jsonb(stage) AS record FROM public.pursuit_ldc_staging stage JOIN public.opportunity_matches m ON m.id=stage.match_id WHERE m.opportunity_id=ANY($1::uuid[]) ORDER BY stage.id", [pausedIds])).rows.map(row => row.record)
+  result.pursuit_external_ldc_receipts = (await db.query("SELECT to_jsonb(link) AS record FROM public.pursuit_external_ldc_receipts link JOIN public.opportunity_pursuit_external_handoffs receipt ON receipt.id=link.receipt_id WHERE receipt.opportunity_id=ANY($1::uuid[]) ORDER BY link.receipt_id", [pausedIds])).rows.map(row => row.record)
+  result.pursuit_ldc_versions = (await db.query("SELECT DISTINCT to_jsonb(version) AS record FROM public.pursuit_ldc_versions version JOIN public.pursuit_external_ldc_receipts link ON link.version_id=version.id JOIN public.opportunity_pursuit_external_handoffs receipt ON receipt.id=link.receipt_id WHERE receipt.opportunity_id=ANY($1::uuid[]) ORDER BY record::text", [pausedIds])).rows.map(row => row.record)
   for (const table of ["opportunity_interest_events", "opportunity_interest_notification_deliveries", "staff_email_review_events", "ma_source_email_send_reservations", "ma_contact_email_policy_events", "ma_interactions", "email_logs"]) {
     result[table] = (await db.query(`SELECT to_jsonb(record) AS record FROM public.${table} record ORDER BY to_jsonb(record)::text`)).rows.map(row => row.record)
   }
@@ -183,6 +188,7 @@ test("ordinary Paused history preserves genuine own openings and relationships w
 
     // Actual E6 authorization gives this owner a real old NDA URL. No grant or
     // provider receipt is fabricated; the native memo positive control is SQL.
+    const currentLdc = await seedCurrentExternalLdc(db, fixture.ids.realRepreneur)
     await staff.goto(`/opportunities/${ids.relation}?tab=pursuit`)
     const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
     const external = async (reference: string) => {
@@ -195,7 +201,10 @@ test("ordinary Paused history preserves genuine own openings and relationships w
       await dialog.getByRole("button", { name: "Record completed exchange", exact: true }).click()
       await expect(dialog).toHaveCount(0)
     }
+    await expect(staff.locator("[data-external-ldc-version]")).toHaveCount(0)
     await external("Synthetic prior qualification request")
+    const e4Receipt = (await db.query("SELECT id,context FROM public.opportunity_pursuit_external_handoffs WHERE match_id=$1 AND handoff_type='e4'", [ids.match])).rows[0]
+    expect(e4Receipt.context.ldc.content_sha256).toBe(currentLdc.sha256)
     const manifest = JSON.parse(await readFile(join(runnerTemp!, "opening-readiness-inputs", "manifest.json"), "utf8")) as { files: { blankNda: { path: string; sha256: string; bytes: number } } }
     const blank = staff.getByRole("heading", { name: "Blank NDA template", exact: true }).locator("xpath=ancestor::section")
     await blank.locator("#blank_template-title").fill("QA PAUSED BLANK NDA — SYNTHETIC")
@@ -221,6 +230,10 @@ test("ordinary Paused history preserves genuine own openings and relationships w
       await db.query("SELECT public.pause_opportunity_with_reason($1,'seller_paused_sale',$2,NULL)", [id, fixture.authIds.staffUser])
     }
     const before = await snapshot(db)
+    const pausedLdc = await owner.request.get(`/api/pursuit-handoffs/${e4Receipt.id}/ldc?download`)
+    expect(pausedLdc.status()).toBe(404)
+    expect(pausedLdc.headers()["cache-control"]).toBe("private, no-store")
+    expect(await snapshot(db)).toEqual(before)
     const replayReview = await owner.request.post(staleReview.url(), { data: staleReview.postDataBuffer()!, headers: {
       "next-action": staleReview.headers()["next-action"]!, "content-type": staleReview.headers()["content-type"]!,
       origin: "http://127.0.0.1:3000",

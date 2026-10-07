@@ -7,6 +7,7 @@ import { Client } from "pg"
 import { syntheticPdfBytes } from "../../lib/__tests__/fixtures/synthetic-pdf"
 import { assertOpeningReadinessFixtureEnvironment, OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
 import { test } from "./external-staff-session"
+import { seedExternalE4 } from "./seed-external-ldc"
 import { seedActiveOpeningOpportunity } from "./seed-active-opportunity"
 
 const fixture = OPENING_READINESS_FIXTURE
@@ -32,7 +33,7 @@ async function seedEligibleMemo(db: Client, index: number) {
   await db.query("SELECT public.journey_start_pursuit($1,$2,$3)", [matchId, fixture.staff.email, `qa-255-cycle-${index}`])
   const record = async (phase: "e4" | "e6" | "e7") => db.query(`SELECT public.journey_record_external_handoff($1,public.journey_external_handoff_context($1,$2),$3,current_date-1,NULL,'email','Synthetic prerequisite exchange',$4,$5)`, [matchId, phase, randomUUID(), fixture.authIds.staffUser, fixture.staff.email])
   const evidence = async (event: string, artifactId: string | null = null) => db.query("SELECT public.journey_record_evidence($1,$2,$3,$4,$5)", [matchId, event, fixture.staff.email, `qa-255-${index}-${event}`, artifactId])
-  await record("e4")
+  await seedExternalE4(db, matchId)
   await evidence("intermediary_qualified")
   let signedCount = 0
   for (const role of ["blank_template", "renew_signed_copy", "repreneur_signed_copy"] as const) {
