@@ -142,7 +142,7 @@ describe("W-083 firm and office relationship statistics", () => {
     )
 
     expect(actions).toContain(
-      'select("id, name, status, firm:ma_firms(id, name, status)")',
+      'select("id, name, status, is_default, firm:ma_firms(id, name, status)")',
     )
     expect(actions).toContain("readMaRelationshipLedger")
     expect(ledger).toContain('eq("status", "active_pursuit")')

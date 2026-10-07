@@ -64,6 +64,7 @@ export interface MaRelationshipOfficeOption {
   firmStatus: "prospect" | "active" | "archived"
   status: "active" | "archived"
   officeName: string
+  isDefault?: boolean
   isProvisionalSource?: boolean
   label: string
   contacts: MaRelationshipOfficeContactOption[]
@@ -166,6 +167,7 @@ type Relation<T> = T | T[] | null | undefined
 interface OfficeRow {
   id: string
   name: string
+  is_default: boolean
   status: "active" | "archived"
   firm?: Relation<{
     id: string
@@ -211,7 +213,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
   const supabase = createAdminClient()
   const officeResult = await supabase
     .from("ma_offices")
-    .select("id, name, status, firm:ma_firms(id, name, status)")
+    .select("id, name, status, is_default, firm:ma_firms(id, name, status)")
     .order("name")
 
   if (officeResult.error) throw new Error(officeResult.error.message)
@@ -358,6 +360,7 @@ export async function getMaRelationshipWorkspace(): Promise<MaRelationshipWorksp
         firmStatus: firm?.status ?? "archived",
         status: office.status,
         officeName: office.name,
+        isDefault: office.is_default,
         isProvisionalSource: office.id === provisionalContext.office_id,
         label: presentMaOffice({ id: office.id, firmName: firm?.name, officeName: office.name }).label,
         contacts: (contactsByOffice.get(office.id) ?? []).sort((left, right) =>

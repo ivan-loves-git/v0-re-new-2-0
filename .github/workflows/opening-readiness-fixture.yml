@@ -179,3 +179,18 @@ jobs:
             ${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Upload synthetic M&A directory screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ma-directory-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-validation-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-contacts-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-correction-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-contact-mobile.png
+          if-no-files-found: warn
+          retention-days: 7

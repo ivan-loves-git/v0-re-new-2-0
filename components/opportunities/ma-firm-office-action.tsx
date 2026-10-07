@@ -66,23 +66,21 @@ export function MaFirmOfficeAction({
         <Building2 data-icon="inline-start" />
         Add office
       </Button>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add operating office</DialogTitle>
           <DialogDescription>
-            Add a real operating office under {firmName} using the existing
-            audited W-082 service. This does not create a contact or move
-            relationships.
+            Add a named operating office and its city under {firmName}.
           </DialogDescription>
         </DialogHeader>
-        <form action={save} className="space-y-4">
+        <form noValidate onSubmit={(event) => { event.preventDefault(); save(new FormData(event.currentTarget)) }} className="space-y-4">
           {errors.form ? (
             <p className="text-sm text-destructive" role="alert">
               {errors.form}
             </p>
           ) : null}
           <div className="space-y-2">
-            <Label htmlFor="ma-firm-office-name">Office name</Label>
+            <Label htmlFor="ma-firm-office-name">Office name (required)</Label>
             <Input
               id="ma-firm-office-name"
               name="office_name"
@@ -102,6 +100,11 @@ export function MaFirmOfficeAction({
                 {errors.office_name}
               </p>
             ) : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="ma-firm-office-city">City (required)</Label>
+            <Input id="ma-firm-office-city" name="office_city" aria-invalid={Boolean(errors.office_city)} aria-describedby={errors.office_city ? "ma-firm-office-city-error" : undefined} />
+            {errors.office_city ? <p id="ma-firm-office-city-error" className="text-sm text-destructive" role="alert">{errors.office_city}</p> : null}
           </div>
           <DialogFooter>
             <Button
