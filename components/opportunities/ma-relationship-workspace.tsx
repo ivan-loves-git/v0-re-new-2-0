@@ -59,6 +59,8 @@ import {
 import { setMaContactCampaignEmailSuppression } from "@/lib/actions/ma-contact-email-policy"
 import { filterMaRelationshipTimeline, maRelationshipResultSummary } from "@/lib/ma-relationship-filters"
 import { presentMaOfficeOptions } from "@/lib/ma-office-presentation"
+import { MaFirmCreateAction } from "@/components/opportunities/ma-firm-create-action"
+import { MaOfficeContactAction } from "@/components/opportunities/ma-office-contact-action"
 import { MaOfficeCombobox } from "@/components/opportunities/ma-office-combobox"
 import { WavePanel } from "@/components/wave/visual-foundations"
 import { hasConfirmedProviderDelivery } from "@/lib/ma-relationship-activity-provenance"
@@ -967,7 +969,7 @@ function RelationshipFirmsDirectory({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Firms</CardTitle>
+        <div className="flex flex-wrap items-center justify-between gap-3"><CardTitle className="text-base">Firms</CardTitle><MaFirmCreateAction /></div>
         <CardDescription>
           Canonical firms and offices available to the relationship ledger.
         </CardDescription>
@@ -1080,7 +1082,7 @@ function RelationshipContactsDirectory({
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Contacts</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3"><CardTitle className="text-base">Contacts</CardTitle><MaOfficeContactAction offices={offices.filter((office) => office.status === "active" && office.firmStatus !== "archived" && !office.isDefault)} /></div>
           <CardDescription>
             Canonical contacts, each with one current firm and office.
           </CardDescription>

@@ -59,6 +59,7 @@ function Notes({
   target,
   id,
   notes,
+  city,
   createdAt,
   updatedAt,
   updatedBy,
@@ -66,6 +67,7 @@ function Notes({
   target: "office" | "firm"
   id: string
   notes: string | null
+  city?: string | null
   createdAt: string | null
   updatedAt: string | null
   updatedBy: string | null
@@ -83,6 +85,7 @@ function Notes({
           target={target}
           id={id}
           initialNotes={notes}
+          initialCity={city}
         />
         <p className="text-xs text-muted-foreground">
           Created {dateLabel(createdAt)} · Last changed {dateLabel(updatedAt)}
@@ -340,6 +343,7 @@ export function MaOfficeWorkspaceDetail({
         </div>
         <MaOfficeContactAction
           officeId={workspace.id}
+          officeLabel={`${workspace.firmName} · ${workspace.name}`}
           disabled={workspace.status !== "active"}
         />
         <MaRelationshipCorrectionAction
@@ -369,6 +373,7 @@ export function MaOfficeWorkspaceDetail({
         <Activity activity={workspace.activity} />
         <Notes
           target="office"
+          city={workspace.city}
           id={workspace.id}
           notes={workspace.internalNotes}
           createdAt={workspace.createdAt}

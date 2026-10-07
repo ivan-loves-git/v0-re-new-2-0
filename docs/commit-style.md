@@ -36,7 +36,7 @@ not restate them.
 - NO "Generated with Claude Code" attribution.
 - `pnpm commit:check <message-file>` checks these mechanical rules. `pnpm commit:check --range <base>..<head>` checks authored commits introduced by a candidate; actual Git merge commits are excluded and earlier history is unchanged. The existing Verify workflow checks that range. It does not judge whether the explanation is useful.
 - `pnpm hooks:install` installs the repository-local commit-message and pre-push checks. It refuses to replace an existing different hooks path or active default hooks. This is an explicit local setup step, not a global Git change.
-- Publish the development branch under the governing Ticket’s authority. A branch or review candidate is not permission to merge or release.
+- Publish the development branch under the owning Product Change or Ticket's authority. A branch or review candidate alone does not supply release authority; reuse Ivan's existing applicable authorization under the routing adapter rather than requiring another routine approval.
 - Do not merge to `main` before `Verify` is green.
 - The displayed build number lives in `lib/release-build.mjs`. Nothing validates it; bump it by hand if you want the number in the UI to move.
 

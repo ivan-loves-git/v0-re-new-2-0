@@ -1,6 +1,8 @@
 "use server"
 
 import { requireStaffAccess } from "@/lib/access-control"
+import { maContactProfileErrors } from "@/lib/ma-relationship-validation"
+import { maContactSaveMessage } from "@/lib/data/ma-contact-save-message"
 import { revalidatePath } from "next/cache"
 import type { MaRelationshipActivityProvenance } from "@/lib/ma-relationship-activity-provenance"
 import {
@@ -414,6 +416,7 @@ type MaCorrectionResult = {
 const MA_CORRECTION_DB_ERRORS: Record<string, [string, string]> = {
   ma_firm_name_required: ["name", "Firm name is required."],
   ma_office_name_required: ["name", "Office name is required."],
+  ma_office_city_required: ["city", "Complete the office city before saving this profile."],
   ma_firm_name_already_exists: ["name", "Another active firm already uses this name."],
   ma_office_name_already_exists: ["name", "Another current office for this firm already uses this name."],
   ma_website_url_invalid: ["website_url", "Enter a full http:// or https:// website address."],
@@ -428,6 +431,10 @@ const MA_CORRECTION_DB_ERRORS: Record<string, [string, string]> = {
 }
 
 function correctionFailure(error: { message?: string } | null): MaCorrectionResult {
+  if (error?.message?.includes("ma_contact_channel_required")) {
+    const message = "Add an email address or phone number before saving this profile."
+    return { success: false, message, fieldErrors: { email: message, phone: message } }
+  }
   if (error?.message?.includes("ma_contact_name_required")) {
     const message = "First name or last name is required."
     return {
@@ -455,6 +462,7 @@ function correctionField(formData: FormData, name: string) {
 }
 
 function revalidateMaRelationshipCorrectionPaths() {
+  revalidatePath("/opportunities/ma/firms")
   revalidatePath("/opportunities/ma/contacts")
   revalidatePath("/opportunities/ma/firms/[firmId]", "page")
   revalidatePath("/opportunities/ma/offices/[officeId]", "page")
@@ -478,6 +486,10 @@ export async function updateMaFirmCorrection(firmId: string, formData: FormData)
 export async function updateMaOfficeCorrection(officeId: string, formData: FormData): Promise<MaCorrectionResult> {
   if (!UUID_PATTERN.test(officeId)) return { success: false, message: "Choose a valid M&A office." }
   const { user } = await requireStaffAccess()
+  const fieldErrors: Record<string, string> = {}
+  if (!correctionField(formData, "name").trim()) fieldErrors.name = "Enter the operating office name."
+  if (!correctionField(formData, "city").trim()) fieldErrors.city = "Complete the office city before saving this profile."
+  if (Object.keys(fieldErrors).length) return { success: false, message: "Complete the office details.", fieldErrors }
   const supabase = createAdminClient()
   const { error } = await supabase.rpc("update_ma_office_correction", {
     p_office_id: officeId, p_name: correctionField(formData, "name"), p_city: correctionField(formData, "city"),
@@ -499,6 +511,8 @@ export async function updateMaContactCorrection(contactId: string, affiliationId
     const message = "Choose the person's current firm and office."
     return { success: false, message, fieldErrors: { office_id: message } }
   }
+  const fieldErrors = maContactProfileErrors({ firstName: correctionField(formData, "first_name"), lastName: correctionField(formData, "last_name"), email: correctionField(formData, "email"), phone: correctionField(formData, "phone") })
+  if (Object.keys(fieldErrors).length) return { success: false, message: "Complete the contact details.", fieldErrors }
   const supabase = createAdminClient()
   const { error } = await supabase.rpc("update_ma_contact_with_office_correction", {
     p_contact_id: contactId, p_current_affiliation_id: affiliationId, p_target_office_id: targetOfficeId, p_first_name: correctionField(formData, "first_name"),
@@ -508,33 +522,27 @@ export async function updateMaContactCorrection(contactId: string, affiliationId
   })
   if (error) return correctionFailure(error)
   revalidateMaRelationshipCorrectionPaths()
-  return { success: true, message: "Contact details and current office saved with staff audit." }
+  return { success: true, message: await maContactSaveMessage(supabase, contactId, "Contact details and current office saved with staff audit.") }
 }
 
 export async function updateMaRelationshipWorkspaceNotes(
   target: "office" | "firm",
   id: string,
   internalNotes: string,
-) {
+  city?: string,
+): Promise<MaCorrectionResult & { audit?: { updatedBy: string; updatedAt: string } }> {
   if ((target !== "office" && target !== "firm") || !UUID_PATTERN.test(id)) {
     return { success: false, message: "Choose a valid M&A record." }
   }
   const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
-  const table = target === "office" ? "ma_offices" : "ma_firms"
-  const { data, error } = await supabase
-    .from(table)
-    .update({
-      internal_notes: internalNotes.trim() || null,
-      updated_by: user.id,
-    })
-    .eq("id", id)
-    .select("id, updated_by, updated_at")
-    .maybeSingle()
-  if (error)
-    return { success: false, message: "Internal notes could not be saved." }
-  if (!data)
-    return { success: false, message: "This M&A record no longer exists." }
+  const { data, error } = target === "office"
+    ? await supabase.rpc("update_ma_office_notes", { p_office_id: id, p_internal_notes: internalNotes, p_city: city ?? null, p_actor: user.id })
+    : await supabase.rpc("update_ma_firm_notes", { p_firm_id: id, p_internal_notes: internalNotes, p_actor: user.id })
+  if (error) return correctionFailure(error)
+  const saved = Array.isArray(data) ? data[0] : data
+  if (!saved) return { success: false, message: "This M&A record no longer exists." }
+  revalidateMaRelationshipCorrectionPaths()
   revalidatePath(
     target === "office"
       ? `/opportunities/ma/offices/${id}`
@@ -543,6 +551,6 @@ export async function updateMaRelationshipWorkspaceNotes(
   return {
     success: true,
     message: "Internal notes saved with staff audit.",
-    audit: { updatedBy: data.updated_by, updatedAt: data.updated_at },
+    audit: { updatedBy: saved.updated_by, updatedAt: saved.updated_at },
   }
 }
