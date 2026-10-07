@@ -15,7 +15,7 @@ Follow the routing adapter's progress rule: retain useful active-card links duri
 
 Before writing code, read [TESTING_RELEASE_PROTOCOL.md](docs/TESTING_RELEASE_PROTOCOL.md). It is the single application procedure for authority, isolated lanes, tests, pinned review, CI, merge, production proof and communication. Preserve narrower issue-specific boundaries. Shared risky surfaces and releases remain serial.
 
-Apply Ivan's selected installed Matt method, including behavior-first `tdd` and separate Standards/Spec `code-review` within `implement`. The routing adapter owns skill selection and authorization reuse; no automatic Sprint, new top-level skill or repeated routine release approval is added. Specs, PRs and review findings belong to the same delivery chain.
+Apply Ivan's selected installed Matt method, including behavior-first `tdd` and separate Standards/Spec `code-review` within `implement`. The routing adapter and [accepted manual-workflow decision](https://github.com/re-new-team/renew-governance/blob/main/docs/adr/2026-10-07-ivan-led-matt-workflow.md) own skill selection and authorization reuse; no automatic Sprint, Ticket creation, worker/model/quota duties, new top-level skill or repeated routine release approval is added. An authorized bounded Product Change may be implemented directly. Specs, PRs and review findings belong to the same delivery chain.
 
 For technical configuration, inspect `package.json`, `app/`, `components/` and `lib/`. Authentication uses Better Auth, not Supabase Auth. Supabase service role bypasses RLS; server authorization checks are essential. An authorized main merge triggers Git-connected Vercel deployment; verify its exact commit and changed behavior before release claims.
 
@@ -28,6 +28,8 @@ Read [ma-advisory-data-model-v1.md](docs/data-models/ma-advisory-data-model-v1.m
 A material product, data, operating or governance decision requires a current canonical specification or qualifying GitHub Decision, links from affected cards, and acceptance traceability. Slack, email and meetings supply evidence rather than changing canonical rules by themselves. `.planning/`, local task/backlog files and old PDR Work Cards are historical unless a current card cites them; Notion and Linear are inactive.
 
 Load credentials only from the approved local source, GitHub environment or provider project settings. Secret values and bearer URLs never enter commits, logs, screenshots, packets or chat. Check the approved source before treating a login wall as a blocker; never ask Ivan to paste credentials.
+
+For Email Operations service checks, use [the reusable tooling guide](docs/agents/email-operations-tooling.md). It covers project/access preflight, the explicitly selected browser, owned QA receipts and memory-only role verification. Use `agent:pr-status` for existing CI evidence.
 
 ## UI and staff AI
 

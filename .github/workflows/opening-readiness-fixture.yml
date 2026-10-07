@@ -117,6 +117,9 @@ jobs:
       - name: Install the fixture browser
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Prove bounded notification dismissal
+        run: pnpm test:tooling
+
       - name: Prove the fixture through the running product
         run: pnpm exec playwright test --config playwright.opening-readiness.config.ts
 
