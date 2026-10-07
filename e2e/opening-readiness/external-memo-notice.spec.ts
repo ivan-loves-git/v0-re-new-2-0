@@ -40,7 +40,10 @@ async function seedEligibleMemo(db: Client, index: number) {
     const path = `${opportunityId}/nda-artifacts/${role}/${randomUUID()}-synthetic.pdf`
     const upload = await storage.from("opportunity-documents").upload(path, bytes, { contentType: "application/pdf", upsert: false })
     expect(upload.error).toBeNull()
-    const registered = await db.query<{ artifact_id: string }>("SELECT * FROM public.register_opportunity_nda_artifact($1,$2,$3,$4,$5,'synthetic.pdf',$6,$7,$8)", [opportunityId, role === "blank_template" ? null : matchId, role, `Synthetic ${role}`, path, bytes.byteLength, createHash("sha256").update(bytes).digest("hex"), fixture.staff.email])
+    const digest = createHash("sha256").update(bytes).digest("hex")
+    const registered = role === "repreneur_signed_copy"
+      ? await db.query<{ artifact_id: string }>("SELECT * FROM public.journey_submit_repreneur_signed_copy_v2($1,$2,$3,$4,$5,'synthetic.pdf',$6,$7)", [matchId, fixture.ids.realNonOwnerRepreneur, fixture.repreneurs.realNonOwner.email, `Synthetic ${role}`, path, bytes.byteLength, digest])
+      : await db.query<{ artifact_id: string }>("SELECT * FROM public.register_opportunity_nda_artifact($1,$2,$3,$4,$5,'synthetic.pdf',$6,$7,$8)", [opportunityId, role === "blank_template" ? null : matchId, role, `Synthetic ${role}`, path, bytes.byteLength, digest, fixture.staff.email])
     if (role === "blank_template") {
       await evidence("template_validated", registered.rows[0]!.artifact_id)
       await evidence("gate_1_passed")

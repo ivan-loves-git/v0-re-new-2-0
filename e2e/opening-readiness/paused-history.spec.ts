@@ -29,6 +29,52 @@ async function activateHistoryControl(control: Locator, size: "mobile" | "deskto
   }
 }
 
+async function waitForHistoryCapture(page: Page, scope: Locator, language: "en" | "fr", kind: "visit" | "relation") {
+  const selectedLanguage = page.getByRole("group", { name: /^(Interface language|Langue de l’interface)$/ })
+    .getByRole("button", { name: language === "en" ? "English" : "Français", exact: true })
+  await expect(selectedLanguage).toHaveAttribute("aria-pressed", "true")
+  await expect(selectedLanguage).toBeEnabled()
+  await expect.poll(() => scope.evaluate(element => element.closest("[lang]")?.getAttribute("lang"))).toBe(language)
+  const required = [
+    scope.getByRole("heading", { name: title(kind), exact: true }),
+    scope.locator('[data-slot="badge"]').filter({ hasText: language === "en" ? /^Paused$/ : /^En pause$/ }),
+    scope.getByText(language === "en"
+      ? "This opportunity is temporarily paused. Its retained history is read-only; responses and confidential documents are unavailable."
+      : "Cette opportunité est temporairement en pause. Son historique reste en lecture seule ; les réponses et les documents confidentiels sont indisponibles.", { exact: true }),
+    ...(kind === "relation" ? [
+      scope.getByText(language === "en" ? "Previous relationship: Active pursuit" : "Relation précédente : Dossier de reprise actif", { exact: true }),
+      scope.getByText(language === "en" ? "Previous stage: Interest" : "Étape précédente : Intérêt confirmé", { exact: true }),
+    ] : []),
+  ]
+  for (const control of required) await expect(control).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  // Wait for the actual dev render/compile transition; never hide its overlay.
+  await expect(page.locator("nextjs-portal").getByText(/^(Rendering|Compiling)\b/)).toHaveCount(0)
+  const geometry = () => Promise.all(required.map(control => control.evaluate(element => {
+    const box = element.getBoundingClientRect()
+    let left = 0, right = window.innerWidth
+    for (let parent = element.parentElement; parent; parent = parent.parentElement) {
+      if (/hidden|clip|auto|scroll/.test(getComputedStyle(parent).overflowX)) {
+        const bounds = parent.getBoundingClientRect()
+        left = Math.max(left, bounds.left)
+        right = Math.min(right, bounds.right)
+      }
+    }
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    const readable = element.scrollWidth <= element.clientWidth + 1
+      && [...range.getClientRects()].every(bounds => bounds.left >= left - 1 && bounds.right <= right + 1)
+    return { x: box.x, y: box.y, width: box.width, height: box.height, readable }
+  })))
+  await expect.poll(async () => {
+    const before = await geometry()
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    const after = await geometry()
+    return after.every(bounds => bounds.readable) && JSON.stringify(before) === JSON.stringify(after)
+  }).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+}
+
 async function login(page: Page, db: Client, userId: string, email: string) {
   // Reset only the two known loopback sign-in buckets consumed by earlier
   // independent auth scenarios. The actual endpoint and policies remain in use.
@@ -215,13 +261,15 @@ test("ordinary Paused history preserves genuine own openings and relationships w
         await expect(historyOwner.locator('input[type="file"]')).toHaveCount(0)
         await expect(historyOwner.getByText(language === "en" ? "This opportunity is temporarily paused. Its retained history is read-only; responses and confidential documents are unavailable." : "Cette opportunité est temporairement en pause. Son historique reste en lecture seule ; les réponses et les documents confidentiels sont indisponibles.", { exact: true })).toBeVisible()
         await historyOwner.reload()
-        expect(await historyOwner.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
-        await historyOwner.screenshot({ path: join(evidenceDirectory, `paused-history-${language}-${size}.png`) })
+        const ownerWorkspace = historyOwner.locator('[data-wave-workspace="pursuit"]').filter({ visible: true })
+        await waitForHistoryCapture(historyOwner, ownerWorkspace, language, "visit")
+        await historyOwner.screenshot({ path: join(evidenceDirectory, `paused-history-${language}-${size}.png`), fullPage: true })
         await historyOwner.goBack()
         await historyOwner.goForward()
         await expect(historyOwner.getByRole("heading", { name: title("visit"), exact: true })).toBeVisible()
         await historyOwner.goto(`/portal/deals/${ids.match}`)
         await expect(historyOwner.getByText(language === "en" ? "Previous relationship: Active pursuit" : "Relation précédente : Dossier de reprise actif", { exact: true })).toBeVisible()
+        await waitForHistoryCapture(historyOwner, ownerWorkspace, language, "relation")
         const documents = historyOwner.getByRole("tab", { name: "Documents", exact: true })
         await activateHistoryControl(documents, size)
         await expect(historyOwner.locator('a[href*="nda-template"],a[href*="/documents/"]')).toHaveCount(0)
@@ -263,7 +311,7 @@ test("ordinary Paused history preserves genuine own openings and relationships w
         await expect(workspace.getByRole("button", { name: /interest|intérêt|review|examin|reconsider|resume|reprendre|sign|advance|upload|record|enregistrer/i })).toHaveCount(0)
         await expect(workspace.getByText(/^(Viewed|Reviewed|Not yet viewed|Vue|Examinée|Pas encore vue)$/)).toHaveCount(0)
         await expect(workspace.locator('input[type="file"],a[href*="nda-template"],a[href*="/documents/"]')).toHaveCount(0)
-        expect(await preview.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+        await waitForHistoryCapture(preview, workspace, language, "relation")
         await preview.screenshot({ path: join(evidenceDirectory, `paused-preview-${language}-${size}.png`), fullPage: true })
         const documents = workspace.getByRole("tab", { name: "Documents", exact: true })
         await activateHistoryControl(documents, size)

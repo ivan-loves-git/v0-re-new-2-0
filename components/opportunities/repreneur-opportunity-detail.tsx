@@ -107,8 +107,8 @@ export function RepreneurOpportunityDetail({
         <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
           {paused ? <Badge variant="outline">{copy("Paused")}</Badge> : null}
-          {paused && opportunity.match_status ? <Badge variant="outline">{copy("Previous relationship: {status}", { status: matchStatusUiLabel(opportunity.match_status, language) })}</Badge> : null}
-          {paused && opportunity.pursuit_stage ? <Badge variant="outline">{copy("Previous stage: {stage}", { stage: pursuitStageUiLabel(opportunity.pursuit_stage, language) })}</Badge> : null}
+          {paused && opportunity.match_status ? <Badge variant="outline" className="max-w-full whitespace-normal text-left">{copy("Previous relationship: {status}", { status: matchStatusUiLabel(opportunity.match_status, language) })}</Badge> : null}
+          {paused && opportunity.pursuit_stage ? <Badge variant="outline" className="max-w-full whitespace-normal text-left">{copy("Previous stage: {stage}", { stage: pursuitStageUiLabel(opportunity.pursuit_stage, language) })}</Badge> : null}
           {!paused && opportunity.match_status ? (
             <Badge variant="outline">{opportunity.match_status === "interested" ? opportunity.interest_rejected ? copy("Interest not selected by Re-New") : copy("Interest sent, awaiting Re-New validation") : matchStatusUiLabel(opportunity.match_status, language)}</Badge>
           ) : null}
