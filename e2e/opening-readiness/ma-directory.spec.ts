@@ -427,7 +427,9 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     expect(mobileOffice).toHaveLength(1);
     ownedOffices.push(mobileOffice[0]!.id);
     await page.reload();
-    await expect(page.getByText(`${label} Mobile second office`, { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: `${label} Mobile second office`, exact: true }),
+    ).toBeVisible();
     await page.screenshot({ path: join(evidence, "ma-firm-second-office-mobile.png"), fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect(
