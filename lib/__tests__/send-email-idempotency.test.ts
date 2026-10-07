@@ -144,6 +144,12 @@ function fakeEmailDatabase(options?: {
       throw new Error(`Unexpected table ${table}`)
     }),
     rpc: vi.fn(async (name: string, input: Record<string, unknown>) => {
+      if (name === "email_business_prepare") return { data: { id: "review-one", state: "pending", version: 1,
+        template_key: input.p_template_key, recipient_email: input.p_recipient, subject: input.p_subject,
+        body_text: input.p_body, retained_html: input.p_html, prepared_policy: { auto_send: true, version: 1 } }, error: null }
+      if (name === "email_business_reserve") return { data: "review-token", error: null }
+      if (name === "email_business_authorize_attempt") return { data: true, error: null }
+      if (name === "email_business_finish" || name === "email_review_capture_envelope") return { data: null, error: null }
       expect(name).toBe("finalize_idempotent_email_delivery")
       finalizations += 1
       if (log) {
@@ -355,6 +361,7 @@ describe("idempotent email logging and accounting", () => {
       .mockImplementationOnce(() => newProvider.promise)
 
     const oldAttempt = sendEmail(emailParams())
+    await vi.waitFor(() => expect(mocks.resendSend).toHaveBeenCalledTimes(1))
     const newAttempt = sendEmail(emailParams())
     await vi.waitFor(() => expect(mocks.resendSend).toHaveBeenCalledTimes(2))
 

@@ -94,7 +94,7 @@ afterEach(async () => {
 });
 
 describe("opening-readiness artifact policy", () => {
-  it("uploads only the aggregate file and two controlled synthetic UI captures for seven days", async () => {
+  it("uploads only the aggregate file and seven controlled synthetic UI captures for seven days", async () => {
     const workflow = parse(await readFile(workflowPath, "utf8")) as {
       jobs: { fixture: { steps: Array<Record<string, unknown>> } };
     };
@@ -131,6 +131,11 @@ describe("opening-readiness artifact policy", () => {
         files: [
           "${{ runner.temp }}/opening-readiness-evidence/email-review-desktop.png",
           "${{ runner.temp }}/opening-readiness-evidence/email-review-mobile.png",
+          "${{ runner.temp }}/opening-readiness-evidence/email-247-sent-desktop.png",
+          "${{ runner.temp }}/opening-readiness-evidence/email-247-history-desktop.png",
+          "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png",
+          "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-mobile.png",
+          "${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png",
         ],
         retentionDays: 7,
       },

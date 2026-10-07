@@ -51,6 +51,9 @@ describe("staff portal setup invitation", () => {
 
     const message = mocks.send.mock.calls[0][0]
     expect(message.to).toBe("synthetic@example.com")
+    expect(message.tags).toContainEqual({ name: "renew_mail_class", value: "access" })
+    expect(message.cc).toBeUndefined()
+    expect(message.bcc).toBeUndefined()
     expect(message.html).toContain("7 jours")
     expect(message.html).toContain("&lt;Synthetic&gt;")
     const link = new URL(message.html.match(/href="([^"]+)"/)[1].replaceAll("&amp;", "&"))

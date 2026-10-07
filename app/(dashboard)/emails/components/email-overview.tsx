@@ -1,92 +1,168 @@
 "use client"
-
+import { useState, useTransition } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, MailOpen, MousePointerClick, AlertCircle } from "lucide-react"
-import { KpiMetricGrid, KpiMetricTile } from "@/components/ui/kpi-metric-tile"
-import type { EmailStats } from "@/lib/actions/emails"
+import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { WaveBarChart } from "@/components/wave/charts"
-import { formatCivilDate } from "@/lib/utils/display-date-time"
-
-interface EmailOverviewProps {
-  stats: EmailStats
-  dailyCounts: { date: string; count: number }[]
+import {
+  getEmailOperationsAnalytics,
+  type EmailOperationsAnalytics,
+} from "@/lib/actions/email-operations"
+import { formatCivilDate, formatDisplayDateTime } from "@/lib/utils/display-date-time"
+const labels: Record<string, string> = {
+  status: "Status",
+  intake: "Inscription",
+  offer: "Offers",
+  ma: "M&A",
 }
-
-const kpiInfo = {
-  sent: {
-    title: "Emails Sent",
-    description: "Total number of emails sent through the system in the last 30 days. Includes all template types (welcome, offers, reminders, etc.).",
-    why: "Track overall email volume to monitor system usage and stay within rate limits (100/day, 3,000/month on free tier).",
-  },
-  openRate: {
-    title: "Open Rate",
-    description: "Percentage of delivered emails that were opened by recipients. Calculated as: (Opened ÷ Delivered) × 100.",
-    why: "Measures email engagement. Industry average is 20-25%. Low rates may indicate subject lines need improvement or emails landing in spam.",
-  },
-  clickRate: {
-    title: "Click Rate",
-    description: "Percentage of opened emails where recipients clicked a link. Calculated as: (Clicked ÷ Opened) × 100.",
-    why: "Shows how compelling your email content is. Higher rates mean recipients are taking action. Industry average is 2-5%.",
-  },
-  bounced: {
-    title: "Bounce Rate",
-    description: "Emails that failed to deliver due to invalid addresses, full inboxes, or server issues. Bounce rate = (Bounced ÷ Sent) × 100.",
-    why: "High bounce rates (>2%) can damage sender reputation. Clean your email list if bounces are high.",
-  },
-}
-
-export function EmailOverview({ stats, dailyCounts }: EmailOverviewProps) {
-  const chartData = dailyCounts.map((day) => ({
-    day: formatCivilDate(day.date, "en-GB", { day: "2-digit", month: "short" }),
-    count: day.count,
-  }))
-
+export function EmailOverview({ initial }: { initial: EmailOperationsAnalytics }) {
+  const [data, setData] = useState(initial),
+    [pending, start] = useTransition()
+  const load = (days: number) =>
+    start(async () => {
+      try {
+        setData(await getEmailOperationsAnalytics(days))
+      } catch {
+        setData((previous) => ({ ...previous, state: "unavailable" }))
+      }
+    })
+  const rate = (value: number | null) =>
+    data.state === "unavailable"
+      ? "Unavailable"
+      : value === null
+        ? "Not measured"
+        : `${value.toFixed(1)}%`
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <KpiMetricGrid className="xl:grid-cols-4">
-        <KpiMetricTile
-          title="Emails Sent"
-          value={stats.totalSent}
-          period="Last 30 days"
-          icon={Mail}
-          tone="email"
-          info={kpiInfo.sent}
-        />
-        <KpiMetricTile
-          title="Open Rate"
-          value={<>{stats.openRate.toFixed(1)}<span className="ml-0.5 text-xs font-medium text-muted-foreground">%</span></>}
-          period={`${stats.totalOpened} opened / ${stats.totalDelivered} delivered`}
-          icon={MailOpen}
-          tone="email"
-          info={kpiInfo.openRate}
-        />
-        <KpiMetricTile
-          title="Click Rate"
-          value={<>{stats.clickRate.toFixed(1)}<span className="ml-0.5 text-xs font-medium text-muted-foreground">%</span></>}
-          period={`${stats.totalClicked} clicked / ${stats.totalOpened} opened`}
-          icon={MousePointerClick}
-          tone="email"
-          info={kpiInfo.clickRate}
-        />
-        <KpiMetricTile
-          title="Bounce Rate"
-          value={<>{stats.bounceRate.toFixed(1)}<span className="ml-0.5 text-xs font-medium text-muted-foreground">%</span></>}
-          period={`${stats.totalBounced} bounced`}
-          icon={AlertCircle}
-          tone={stats.bounceRate > 2 ? "risk" : "attention"}
-          info={kpiInfo.bounced}
-        />
-      </KpiMetricGrid>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily send volume</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <WaveBarChart data={chartData} label="Emails sent per day" xKey="day" series={[{ key: "count", label: "Emails", color: "var(--chart-1)" }]} className="h-[240px]" />
-        </CardContent>
-      </Card>
+      <div className="flex flex-wrap gap-3 items-center">
+        <h2 className="text-lg font-semibold">Analytics</h2>
+        <Select value={String(data.days)} onValueChange={(value) => load(Number(value))}>
+          <SelectTrigger aria-label="Analytics period" className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[7, 30, 90].map((days) => (
+              <SelectItem key={days} value={String(days)}>
+                Last {days} days
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button variant="outline" disabled={pending} onClick={() => load(data.days)}>
+          Refresh
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        One unique accepted business send cohort · {formatDisplayDateTime(data.from, "en-GB")} to{" "}
+        {formatDisplayDateTime(data.to, "en-GB")} · Europe/Paris. Access, DEMO/test messages, CC
+        copies and retries are excluded from volume.
+      </p>
+      {data.state === "unavailable" ? (
+        <p role="alert" className="rounded-md border p-4">
+          Analytics unavailable. The retained records could not be read; refresh to recover. No zero
+          has been inferred.
+        </p>
+      ) : null}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            name: "Accepted business messages",
+            value: data.state === "available" ? data.totalSent : "Unavailable",
+            detail: `${data.totalDelivered} delivered · ${data.days} days`,
+          },
+          {
+            name: "Open activity",
+            value: rate(data.openRate),
+            detail: `${data.totalOpened} messages / ${data.coveredDelivered} covered delivered`,
+          },
+          {
+            name: "Click activity",
+            value: rate(data.clickRate),
+            detail: `${data.totalClicked} messages / ${data.coveredDelivered} covered delivered`,
+          },
+          {
+            name: "Bounce rate",
+            value: rate(data.bounceRate),
+            detail: `${data.totalBounced} uniquely bounced / ${data.totalSent} accepted`,
+          },
+        ].map((item) => (
+          <Card key={item.name}>
+            <CardHeader>
+              <CardTitle className="text-sm">{item.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-semibold tabular-nums">{item.value}</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {data.state === "available" ? item.detail : "Evidence unavailable"}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {data.state === "available" ? (
+        <p className="text-sm text-muted-foreground">
+          Coverage: {data.coveredDelivered} delivered messages had tracking verified at send time;{" "}
+          {data.uncoveredSent} accepted messages were untracked. Opens indicate image loading; staff
+          CC and mail-client proxies may contribute. Message activity does not prove that the
+          intended repreneur read or understood the mail.
+        </p>
+      ) : null}
+      <p className="text-sm text-muted-foreground">{data.tracking}</p>
+      {data.state === "available" ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily accepted volume · same cohort</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WaveBarChart
+                data={data.daily.map((item) => ({
+                  ...item,
+                  dateLabel: formatCivilDate(item.date, "en-GB"),
+                }))}
+                label="Accepted business messages by Paris date"
+                xKey="dateLabel"
+                series={[{ key: "count", label: "Messages", color: "var(--chart-1)" }]}
+                className="h-[240px]"
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Business categories · same cohort</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WaveBarChart
+                data={data.categories.map((item) => ({
+                  ...item,
+                  label: labels[item.category] ?? item.category,
+                }))}
+                label="Accepted messages by business category"
+                xKey="label"
+                series={[{ key: "count", label: "Messages", color: "var(--chart-2)" }]}
+                className="h-[240px]"
+              />
+              <div className="flex flex-wrap gap-3 text-xs">
+                {data.categories.map((item) => (
+                  <span key={item.category}>
+                    {labels[item.category]}: {item.count}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+      <p className="text-sm text-muted-foreground">
+        Professional-plan evaluation is deferred until at least 20 repreneurs. No purchase or longer
+        provider retention is implied.
+      </p>
     </div>
   )
 }

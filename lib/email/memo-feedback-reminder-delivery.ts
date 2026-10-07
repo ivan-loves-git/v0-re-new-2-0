@@ -1,3 +1,4 @@
+import { businessMailApproval, configuredBusinessCc } from "./business-mail"
 import "server-only"
 
 import { createHash } from "node:crypto"
@@ -101,7 +102,7 @@ export async function deliverMemoFeedbackReminder(grantEvidenceId: string): Prom
       return suppressOrReview(grantEvidenceId, leaseToken)
     }
     const digest = createHash("sha256")
-      .update(JSON.stringify([payload.recipientEmail.toLowerCase(), copy.subject, copy.body]))
+      .update(JSON.stringify([payload.recipientEmail.toLowerCase(), businessMailApproval()?.review.subject ?? copy.subject, businessMailApproval()?.review.body_text ?? copy.body, configuredBusinessCc([payload.recipientEmail])]))
       .digest("hex")
     const beforeProviderAttempt = async () => {
       const { data: began, error: beginError } = await db.rpc("w174_begin_memo_feedback_provider_attempt", {
@@ -122,8 +123,9 @@ export async function deliverMemoFeedbackReminder(grantEvidenceId: string): Prom
       repreneurId: payload.repreneurId,
       templateKey: payload.templateKey,
       idempotencyKey,
-      beforeProviderAttempt,
+      beforeProviderAttempt, sourceContext: { kind: "memo_feedback", grantEvidenceId },
     })
+    if (result.queued) { await complete(grantEvidenceId, leaseToken, "deferred"); return "review_required" }
     if (result.success) {
       return await complete(grantEvidenceId, leaseToken, "sent", result.resendId) === "sent" ? "sent" : "failed"
     }

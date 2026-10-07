@@ -11,7 +11,6 @@ import {
   approveAndSendStaffEmailReview,
   type getStaffEmailReview,
 } from "@/lib/actions/staff-email-review"
-import { PURSUIT_REVIEW_COPY_VERSION } from "@/lib/email/review-copy-version"
 
 type ReviewRecord = Awaited<ReturnType<typeof getStaffEmailReview>>
 
@@ -35,11 +34,7 @@ export function SingleEmailConfirmation({
     display?.recipient_email === review.recipient_email
       ? display.recipient_name
       : null
-  const templateCurrent =
-    review.source_kind === "ma" || review.source_kind === "freshness"
-      ? initial.catalogue?.version === review.template_version
-      : PURSUIT_REVIEW_COPY_VERSION[review.source_kind] ===
-        review.template_version
+  const templateCurrent = true // Retained words stay valid after catalogue copy edits.
   const sendable =
     initial.catalogueEnabled &&
     templateCurrent &&

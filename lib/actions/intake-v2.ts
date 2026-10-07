@@ -188,7 +188,7 @@ export async function submitIntakeV2(
       to: record.email,
       subject: welcomeSubject,
       repreneurId: repreneur.id,
-      templateKey: "welcome",
+      templateKey: "welcome", sourceContext: { kind: "intake", variant: "completed_v2" },
       react: WelcomeEmail({
         repreneur: {
           id: repreneur.id,

@@ -148,16 +148,11 @@ describe("critical route traces", () => {
   })
 
   it("traces an accepted Resend webhook without copying provider payload data", async () => {
-    const fetchSingle = vi.fn().mockResolvedValue({
-      data: { id: "email-log-1", status: "sent" },
-      error: null,
-    })
-    const fetchEq = vi.fn(() => ({ single: fetchSingle }))
-    const select = vi.fn(() => ({ eq: fetchEq }))
-    const updateEq = vi.fn().mockResolvedValue({ error: null })
-    const update = vi.fn(() => ({ eq: updateEq }))
     mocks.createAdminClient.mockReturnValue({
-      from: vi.fn(() => ({ select, update })),
+      from: vi.fn(() => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({
+        data: { recipient_email: "recipient@example.test", cc: [] }, error: null,
+      }) }) }) })),
+      rpc: vi.fn(async () => ({ error: null })),
     })
 
     const response = await receiveResendWebhook(webhookRequest(webhookPayload))

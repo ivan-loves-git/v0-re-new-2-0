@@ -1,3 +1,4 @@
+import { businessMailApproval, configuredBusinessCc } from "./business-mail"
 import "server-only"
 
 import { createHash } from "node:crypto"
@@ -125,7 +126,7 @@ export async function deliverInterestNotification(eventId: string): Promise<Inte
     if (!to.trim() || !copy.subject.trim() || !copy.body.trim()) {
       return suppressOrReview(eventId, leaseToken)
     }
-    const digest = createHash("sha256").update(JSON.stringify([to.toLowerCase(), copy.subject, copy.body])).digest("hex")
+    const digest = createHash("sha256").update(JSON.stringify([to.toLowerCase(), businessMailApproval()?.review.subject ?? copy.subject, businessMailApproval()?.review.body_text ?? copy.body, configuredBusinessCc([to])])).digest("hex")
     const beforeProviderAttempt = async () => {
       const { data: began, error: beginError } = await db.rpc("w173_begin_interest_provider_attempt", {
         p_event_id: eventId, p_lease_token: leaseToken, p_payload_sha256: digest,
@@ -144,14 +145,15 @@ export async function deliverInterestNotification(eventId: string): Promise<Inte
       staff,
     })
     const result = staff
-      ? await sendEmailDirect({ to, subject: copy.subject, react, idempotencyKey, beforeProviderAttempt })
+      ? await sendEmailDirect({ to, subject: copy.subject, react, idempotencyKey, beforeProviderAttempt, templateKey: payload.templateKey, sourceContext: { kind: "interest", eventId } })
       : await sendEmail({
           to, subject: copy.subject, react,
           repreneurId: payload.repreneurId,
           templateKey: payload.templateKey,
           idempotencyKey,
-          beforeProviderAttempt,
+          beforeProviderAttempt, sourceContext: { kind: "interest", eventId },
         })
+    if (result.queued) { await complete(eventId, leaseToken, "deferred"); return "review_required" }
     if (result.success && (result.resendId || !staff)) {
       return await complete(eventId, leaseToken, "sent", result.resendId) === "sent" ? "sent" : "failed"
     }

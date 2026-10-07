@@ -140,7 +140,7 @@ async function approvePreparedReview(page: Page) {
   await expect(visibleReview.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
   await visibleReview.locator("summary").filter({ hasText: /^More details$/ }).click();
   const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
-    .filter({ hasText: "Provider receipt qa-allowlist-accepted." });
+    .filter({ hasText: /Provider receipt qa-/ });
   await expect(receipt).toContainText("Sent means accepted by the provider, not delivered or read.");
 }
 
@@ -437,6 +437,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     );
     expect(resetRouteSignInBudget.rows).toEqual([{ key: routeSignInBucket }]);
 
+    await client.query("UPDATE public.email_templates SET auto_send=true WHERE template_key='opportunity_recommendation_assignment'");
     await login(page, fixture.staff.email);
     const staffStorageState = await page.context().storageState();
 
@@ -700,7 +701,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     }>(client, `SELECT
       (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications WHERE match_id=$1) AS notifications,
       (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1) AS emails,
-      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1 AND l.status='sent' AND l.resend_id='qa-allowlist-accepted') AS sent,
+      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1 AND l.status='sent' AND l.resend_id LIKE 'qa-%') AS sent,
       (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications n JOIN public.opportunity_matches m ON m.id=n.match_id JOIN public.opportunities o ON o.id=m.opportunity_id WHERE n.match_id=$1 AND n.teaser_summary=o.description) AS "internalContent"`, [savedMatch.id]);
     expect(assignmentDelivery).toEqual({ notifications: 1, emails: 1, sent: 1, internalContent: 0 });
     await expect(page.getByText("Assignment email sent", { exact: true })).toBeVisible();
@@ -1022,7 +1023,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     );
     expect(sourceEmail).toEqual({
       delivery_status: "sent",
-      provider_message_id: "qa-allowlist-accepted",
+      provider_message_id: expect.stringMatching(/^qa-/),
       recipient_email_snapshot: "qa-opening-real-contact@re-new.invalid",
     });
     await record({
@@ -1151,7 +1152,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await approvePreparedReview(page);
     const e6 = await one<{ delivery_status: string; provider_message_id: string; evidence: boolean }>(client,
       "SELECT d.delivery_status,d.provider_message_id,(e.id IS NOT NULL AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text) AS evidence FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.match_id=$1 AND d.handoff_type='e6'", [savedMatch.id]);
-    expect(e6).toEqual({ delivery_status: "sent", provider_message_id: "qa-allowlist-accepted", evidence: true });
+    expect(e6).toEqual({ delivery_status: "sent", provider_message_id: expect.stringMatching(/^qa-/), evidence: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");

@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { TEMPLATE_AUDIENCE_LABELS, TEMPLATE_METADATA } from "@/lib/email/templates"
 import { getRepreneursForManualSend, sendManualEmail, sendTestEmail } from "@/lib/actions/emails"
-import type { EmailTemplateKey } from "@/lib/types/email"
+import type { EmailTemplate, EmailTemplateKey } from "@/lib/types/email"
 import { Send, CheckCircle, AlertCircle, Search, FlaskConical } from "lucide-react"
 
 interface Repreneur {
@@ -22,7 +22,7 @@ interface Repreneur {
   marketing_consent: boolean
 }
 
-export function ManualSend() {
+export function ManualSend({ templates }: { templates: EmailTemplate[] }) {
   const [testMode, setTestMode] = useState(false)
   const [testEmail, setTestEmail] = useState("")
   const [testFirstName, setTestFirstName] = useState("")
@@ -83,7 +83,7 @@ export function ManualSend() {
         }
         setResult({
           success: true,
-          message: `[TEST] Email "${TEMPLATE_METADATA[selectedTemplate!].name}" sent to ${testEmail}`,
+          message: testResult.message,
         })
       } else {
         const manualResult = await sendManualEmail(selectedRepreneur!.id, selectedTemplate!)
@@ -96,7 +96,7 @@ export function ManualSend() {
         }
         setResult({
           success: true,
-          message: `Email "${TEMPLATE_METADATA[selectedTemplate!].name}" sent to ${selectedRepreneur!.email}`,
+          message: manualResult.message,
         })
         setSelectedRepreneur(null)
       }
@@ -111,9 +111,11 @@ export function ManualSend() {
     }
   }
 
-  const canSend = testMode
+  const selectedPolicy = templates.find(template => template.template_key === selectedTemplate)
+  const automatic = selectedPolicy?.is_active === true && selectedPolicy.auto_send === true
+  const canSend = selectedPolicy?.is_active === true && (testMode
     ? testEmail && selectedTemplate
-    : selectedRepreneur && selectedTemplate
+    : selectedRepreneur && selectedTemplate)
 
   return (
     <Card>
@@ -123,8 +125,8 @@ export function ManualSend() {
             <CardTitle>Manual Email Send</CardTitle>
             <CardDescription>
               {testMode
-                ? "Send test emails to any address (no logging)"
-                : "Select a repreneur and template to send an email"}
+                ? "Prepare fictional test copy under the selected business review policy"
+                : "Select a repreneur and an active business type; review is the default"}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -158,7 +160,7 @@ export function ManualSend() {
           <div className="space-y-4 rounded-lg border border-dashed bg-muted/30 p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-primary">
               <FlaskConical className="size-4" />
-              Test Mode: Emails are sent directly without logging
+              Test copy follows the same review policy and retains delivery evidence
             </div>
             <div className="space-y-2">
               <Label htmlFor="test-email">Email Address</Label>
@@ -275,6 +277,8 @@ export function ManualSend() {
           )}
         </div>
 
+        {selectedTemplate && !selectedPolicy?.is_active ? <p role="alert" className="text-sm text-destructive">This business type is inactive or missing. Activate its catalogue policy before preparing mail.</p> : null}
+        {selectedTemplate && selectedPolicy?.is_active ? <p className="text-sm text-muted-foreground">{automatic ? "Auto-send is enabled for this future operation. Current recipient and business gates still apply." : "The message will appear in Review & send. Preparing it does not send an email."}</p> : null}
         {/* Send Button */}
         <Button
           onClick={handleSend}
@@ -282,7 +286,7 @@ export function ManualSend() {
           className="w-full"
         >
           <Send className="size-4 mr-2" />
-          {loading ? "Sending..." : testMode ? "Send Test Email" : "Send Email"}
+          {loading ? "Preparing…" : automatic ? "Send automatically" : "Prepare for review"}
         </Button>
       </CardContent>
     </Card>

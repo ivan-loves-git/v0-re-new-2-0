@@ -6,12 +6,8 @@ import { ManualSend } from "./components/manual-send"
 import { ReviewQueue } from "./components/review-queue"
 import { listStaffEmailReviews } from "@/lib/actions/staff-email-review"
 import { parseEmailReviewQueueOptions } from "@/lib/email/review-queue-query"
-import {
-  getEmailStats,
-  getEmailLogs,
-  getTemplateSettings,
-  getDailyEmailCounts,
-} from "@/lib/actions/emails"
+import { getTemplateSettings } from "@/lib/actions/emails"
+import { getEmailHistory, getEmailOperationsAnalytics } from "@/lib/actions/email-operations"
 import { connection } from "next/server"
 import { Mail } from "lucide-react"
 
@@ -33,11 +29,11 @@ export default async function EmailsPage({
     reviewDirection: value("reviewDirection"),
   })
 
-  const [stats, logsData, templates, dailyCounts, reviews] = await Promise.all([
-    getEmailStats(30),
-    getEmailLogs({ limit: 50 }),
+  const [analytics, history, templates, sent, reviews] = await Promise.all([
+    getEmailOperationsAnalytics(30),
+    getEmailHistory().then(result=>({...result,error:null})).catch(()=>({records:[],total:0,page:1,pageSize:25,search:"",error:"Email history is unavailable. Retry to read the retained records."})),
     getTemplateSettings(),
-    getDailyEmailCounts(14),
+    getEmailHistory({ sent: true }).then(result=>({...result,error:null})).catch(()=>({records:[],total:0,page:1,pageSize:150,search:"",error:"Sent history is unavailable. Retry to read the retained records."})),
     listStaffEmailReviews(reviewOptions),
   ])
 
@@ -56,29 +52,29 @@ export default async function EmailsPage({
       </header>
 
       <Tabs
-        defaultValue={value("tab") === "templates" ? "templates" : "review"}
+        defaultValue={["templates", "logs", "send", "analytics"].includes(value("tab") ?? "") ? value("tab") : "review"}
         className="w-full gap-0"
       >
         <div className="email-operations-tabs overflow-x-auto border-b border-border/80">
           <TabsList className="w-max border-b-0">
             <TabsTrigger value="review">Review &amp; send</TabsTrigger>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="logs">History</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="send">Manual Send</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="review" className="mt-0">
-          <ReviewQueue queue={reviews} />
+          <ReviewQueue queue={reviews} sent={sent} />
         </TabsContent>
 
-        <TabsContent value="overview" className="mt-6">
-          <EmailOverview stats={stats} dailyCounts={dailyCounts} />
+        <TabsContent value="analytics" className="mt-6">
+          <EmailOverview initial={analytics} />
         </TabsContent>
 
         <TabsContent value="logs" className="mt-6">
-          <EmailLog initialLogs={logsData.logs} initialTotal={logsData.total} />
+          <EmailLog initialRecords={history.records} initialTotal={history.total} initialError={history.error} />
         </TabsContent>
 
         <TabsContent value="templates" className="mt-6">
@@ -86,7 +82,7 @@ export default async function EmailsPage({
         </TabsContent>
 
         <TabsContent value="send" className="mt-6 space-y-6">
-          <ManualSend />
+          <ManualSend templates={templates} />
         </TabsContent>
       </Tabs>
     </div>

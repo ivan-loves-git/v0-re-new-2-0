@@ -10,17 +10,18 @@ export const EMAIL_REVIEW_PURPOSES = [
   { key: "ma_interest_feedback", label: "Interest feedback" },
   { key: "ma_nda_memo_request", label: "NDA and memo request" },
   { key: "ma_process_follow_up", label: "Process follow-up" },
+  { key: "business", label: "Business correspondence" },
   { key: "ma_other", label: "Other M&A email" },
 ] as const
 
 export type EmailReviewPurpose = (typeof EMAIL_REVIEW_PURPOSES)[number]["key"]
-export type EmailReviewView = "active" | "archived" | "all"
+export type EmailReviewView = "active" | "archived" | "all" | "sent"
 export type EmailReviewSort = "message" | "purpose" | "recipient" | "company" | "prepared"
 export type EmailReviewDirection = "asc" | "desc"
 
 export interface EmailReviewQueueRow {
   id: string
-  source_kind: "ma" | "e4" | "e6" | "e7" | "freshness"
+  source_kind: "ma" | "e4" | "e6" | "e7" | "freshness" | "business"
   template_key: string
   subject: string
   body_preview: string
@@ -66,7 +67,7 @@ export function parseEmailReviewQueueOptions(input: Record<string, string | unde
   const purpose = EMAIL_REVIEW_PURPOSES.find((value) => value.key === input.reviewPurpose)?.key ?? "all"
   return {
     page: Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 1_000_000) : 1,
-    view: input.reviewFilter === "all" || input.reviewFilter === "archived" ? input.reviewFilter : "active",
+    view: input.reviewFilter === "all" || input.reviewFilter === "archived" || input.reviewFilter === "sent" ? input.reviewFilter : "active",
     search: (input.reviewSearch ?? "").replace(/\s+/g, " ").trim().slice(0, 120),
     purpose,
     sort,

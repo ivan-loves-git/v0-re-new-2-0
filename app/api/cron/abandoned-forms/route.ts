@@ -140,6 +140,7 @@ export async function GET(request: Request) {
             subject: abandonedSubject,
             repreneurId: repreneur.id,
             templateKey: "abandoned_reminder",
+            sourceContext: { kind: "abandoned", trackingId: form.id, reminderNumber: (form.reminder_count || 0) + 1 },
             requiresConsent: true,
             idempotencyKey,
             react: AbandonedReminderEmail({
@@ -244,7 +245,7 @@ export async function GET(request: Request) {
               to: rep.email,
               subject: interviewSubject,
               repreneurId: rep.id,
-              templateKey: "interview_reminder",
+              templateKey: "interview_reminder", sourceContext: { kind: "interview", activityId: activity.id, eventDate: activity.event_date },
               bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
               idempotencyKey,
               react: InterviewReminderEmail({
@@ -347,7 +348,7 @@ export async function GET(request: Request) {
               to: c.email,
               subject: bookingSubject,
               repreneurId: c.id,
-              templateKey: "booking_reminder",
+              templateKey: "booking_reminder", sourceContext: { kind: "booking", repreneurId: c.id, invitationAt: bookingEvent.sent_at },
               bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
               idempotencyKey,
               react: BookingReminderEmail({
