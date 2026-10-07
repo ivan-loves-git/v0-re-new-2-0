@@ -2,6 +2,28 @@ import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const scopedRoles = new Set([
+  "dialog",
+  "alertdialog",
+  "button",
+  "checkbox",
+  "combobox",
+  "link",
+  "listbox",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+  "option",
+  "radio",
+  "searchbox",
+  "slider",
+  "spinbutton",
+  "switch",
+  "tab",
+  "textbox",
+  "treeitem",
+]);
+
 export function inspectSnapshot(file, ref) {
   const path = resolve(file);
   const stat = statSync(path);
@@ -32,6 +54,9 @@ export function inspectSnapshot(file, ref) {
     throw new Error("Snapshot reference is missing or ambiguous");
   const start = starts[0],
     indentation = lines[start].match(/^\s*/)[0].length;
+  const role = lines[start].match(/^\s*-\s+([a-z]+)\b/)?.[1];
+  if (!scopedRoles.has(role))
+    throw new Error("Snapshot reference must select a dialog or control");
   let end = start + 1;
   while (
     end < lines.length &&
@@ -44,7 +69,7 @@ export function inspectSnapshot(file, ref) {
     if (line.trim() && sensitiveIndent !== null && indent <= sensitiveIndent)
       sensitiveIndent = null;
     if (
-      /\b(password|secret|token|authorization)\b|\bBearer\s|[?&](code|key)=/i.test(
+      /\b(password|passphrase|secret|token|authorization|credentials?)\b|\b(api|private|access|signing|encryption|service([\s_-]+role)?)[\s_-]*key\b|\bBearer\s|[?&](code|key)=/i.test(
         line,
       )
     )

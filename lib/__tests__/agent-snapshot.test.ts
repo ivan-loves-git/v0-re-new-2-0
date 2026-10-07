@@ -51,16 +51,20 @@ describe("bounded snapshot command", () => {
     expect(result.stdout).not.toContain("background-");
     expect(result.stdout).not.toContain("private footer");
   });
-  it("does not emit a password control or its nested value", () => {
-    const result = inspect(
-      '- dialog [ref=e2]:\n  - textbox "Password" [ref=e4]:\n    - value: never-emit-this\n  - button "Save" [ref=e5]\n',
-      "--ref",
-      "e2",
-    );
-    expect(result.status).toBe(0);
-    expect(result.stdout).not.toContain("never-emit-this");
-    expect(JSON.parse(result.stdout).excerpt).toContain('button "Save"');
-  });
+  it.each(["Password", "API key", "Private key", "Access key"])(
+    "does not emit the %s control or its nested value",
+    (label) => {
+      const result = inspect(
+        `- dialog [ref=e2]:\n  - textbox "${label}" [ref=e4]:\n    - value: never-emit-this\n  - button "Save" [ref=e5]\n`,
+        "--ref",
+        "e2",
+      );
+      expect(result.status).toBe(0);
+      expect(result.stdout).not.toContain(label);
+      expect(result.stdout).not.toContain("never-emit-this");
+      expect(JSON.parse(result.stdout).excerpt).toContain('button "Save"');
+    },
+  );
   it.each(["- dialog [ref=e2]\n- dialog [ref=e2]\n", "- main [ref=e1]\n"])(
     "refuses ambiguous or missing references",
     (text) => {
@@ -68,6 +72,29 @@ describe("bounded snapshot command", () => {
       expect(result.status).toBe(1);
       expect(result.stdout).toBe("");
       expect(result.stderr).toContain("missing or ambiguous");
+    },
+  );
+  it("can select a single form control without its siblings", () => {
+    const result = inspect(
+      '- dialog [ref=e1]:\n  - textbox "Firm name" [ref=e2]:\n    - value: fictional firm\n  - textbox "Other field" [ref=e3]:\n    - value: private sibling\n',
+      "--ref",
+      "e2",
+    );
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout).excerpt).toContain("fictional firm");
+    expect(result.stdout).not.toContain("private sibling");
+  });
+  it.each(["main", "heading", 'generic "dialog"'])(
+    "refuses the %s container even with a unique reference",
+    (node) => {
+      const result = inspect(
+        `- ${node} [ref=e2]:\n  - text: never-emit-container-content\n`,
+        "--ref",
+        "e2",
+      );
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("dialog or control");
     },
   );
 });

@@ -68,10 +68,12 @@ pnpm agent:snapshot <snapshot.yml>
 pnpm agent:snapshot <snapshot.yml> --ref e123
 ```
 
-The default returns file metadata only. An exact single reference selects its
-subtree, emits at most 60 lines / 8 KiB including JSON, marks truncation, and
-omits credential-labelled controls and their nested values. Missing/ambiguous
-references fail with no page output. Use deliberately fictional QA content for
+The default returns file metadata only. An exact single reference selects one
+dialog or interactive control and its subtree; page/main, heading and generic
+containers are rejected. The excerpt emits at most 60 lines / 8 KiB including
+JSON, marks truncation, and omits credential-labelled controls (including API,
+private and access keys) and their nested values. Missing/ambiguous references
+fail with no page output. Use deliberately fictional QA content for
 shareable screenshots and keep unneeded browser artifacts local and ephemeral.
 
 ## Original candidate evidence — historical build phase
@@ -93,19 +95,19 @@ It destroys the cluster on exit. The browser fixture runs actual Next,
 Supabase and Better Auth at the exact candidate on GitHub's disposable stack,
 with synthetic profiles and the existing fictional mail sink.
 
-| Acceptance | Evidence seam |
-| --- | --- |
-| AC-01–AC-03 | `ma-directory-creation.test.ts`; PostgreSQL standalone/optional-contact graph and atomic invalid-field rejection; actual Firms creation/readback in `ma-directory.spec.ts` |
-| AC-04–AC-06 | Actions and PostgreSQL named/located office; email/phone-only contact, missing name/channel, malformed supplied email and unavailable office; actual global/local contact controls |
+| Acceptance  | Evidence seam                                                                                                                                                                                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AC-01–AC-03 | `ma-directory-creation.test.ts`; PostgreSQL standalone/optional-contact graph and atomic invalid-field rejection; actual Firms creation/readback in `ma-directory.spec.ts`                                             |
+| AC-04–AC-06 | Actions and PostgreSQL named/located office; email/phone-only contact, missing name/channel, malformed supplied email and unavailable office; actual global/local contact controls                                     |
 | AC-07–AC-09 | Actions and PostgreSQL incomplete office/contact correction and narrow notes save; full before/after retained-row comparison; parent edit leaves children untouched; actual mobile error/input recovery and completion |
-| AC-10 | Actual role guard tests for unauthenticated/unassigned create/correct/notes requests; database function grants; actual repreneur route rejection |
-| AC-11 | Independent PostgreSQL transactions synchronized on an observed held fence for normalized firm/office duplicates; sole-current-office reuse veto |
-| AC-12 | Normalized email advisory action/read and distinct persisted people; retained ended affiliations, primary/source links and immutable snapshots |
-| AC-13 | Released opportunity validity service rejects phone-only primary; typed correction preserves Active/Paused primary email guard |
-| AC-14 | Actor/time readback; actual induced database errors after earlier graph/affiliation writes leave no partial state; fresh browser reload/readback |
-| AC-15 | Actual desktop/mobile Firms/Contacts/detail controls, named selected context, keyboard submission, visible field feedback, input recovery and viewport overflow assertion; synthetic screenshots |
-| AC-16 | Pre-migration retained-row JSON equality, incomplete rows remain readable, synthetic flag/selection rules survive completion; no candidate data update/backfill |
-| AC-17 | PostgreSQL email log remains empty; actual browser email-log count and retained suppression rows remain unchanged; existing opportunity/source/email regression suites |
+| AC-10       | Actual role guard tests for unauthenticated/unassigned create/correct/notes requests; database function grants; actual repreneur route rejection                                                                       |
+| AC-11       | Independent PostgreSQL transactions synchronized on an observed held fence for normalized firm/office duplicates; sole-current-office reuse veto                                                                       |
+| AC-12       | Normalized email advisory action/read and distinct persisted people; retained ended affiliations, primary/source links and immutable snapshots                                                                         |
+| AC-13       | Released opportunity validity service rejects phone-only primary; typed correction preserves Active/Paused primary email guard                                                                                         |
+| AC-14       | Actor/time readback; actual induced database errors after earlier graph/affiliation writes leave no partial state; fresh browser reload/readback                                                                       |
+| AC-15       | Actual desktop/mobile Firms/Contacts/detail controls, named selected context, keyboard submission, visible field feedback, input recovery and viewport overflow assertion; synthetic screenshots                       |
+| AC-16       | Pre-migration retained-row JSON equality, incomplete rows remain readable, synthetic flag/selection rules survive completion; no candidate data update/backfill                                                        |
+| AC-17       | PostgreSQL email log remains empty; actual browser email-log count and retained suppression rows remain unchanged; existing opportunity/source/email regression suites                                                 |
 
 Run `bash scripts/rehearse-ma-directory.sh`, scoped action regressions, then the
 normal `pnpm verify` and conditional `pnpm data-model:check`. The protected
