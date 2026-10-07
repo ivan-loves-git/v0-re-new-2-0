@@ -162,4 +162,18 @@ describe("Email Operations public tooling", () => {
     expect(result).toMatchObject({ state: "unavailable", resend: { state: "unknown" }, vercel: { state: "unknown" } })
     expect(JSON.stringify(result)).not.toMatch(/canary-/)
   })
+
+  it("blocks dependent receipt reads when the separate configured access domain is missing", async () => {
+    const paths: string[] = []
+    const result = await runEmailOperations({ command: "receipt", env, reviewId, qaRecipient: env.QA_PRIMARY_EMAIL,
+      fetchImpl: async url => {
+        const path = new URL(String(url)).pathname
+        paths.push(path)
+        if (path !== "/domains") throw new Error("dependent read must be blocked")
+        return new Response(JSON.stringify({ data: [domainData[0]], has_more: false }))
+      },
+    })
+    expect(result).toMatchObject({ state: "blocked", reason: "resend_project_not_proven" })
+    expect(paths.every(path => path === "/domains")).toBe(true)
+  })
 })

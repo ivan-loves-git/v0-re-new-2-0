@@ -17,15 +17,11 @@ export async function inspectResend(env, fetchImpl) {
       (read.value.has_more !== undefined && typeof read.value.has_more !== "boolean")) return { state: "unknown", access: "invalid_response" }
     domains.push(...read.value.data)
     if (read.value.has_more !== true) {
-      const business = domains.find(item => item.id === PROJECT.businessDomain.id && item.name === PROJECT.businessDomain.name)
       const credentials = Object.entries(env).filter(([key, value]) => /(?:KEY|TOKEN|SECRET|PASSWORD)$/.test(key) && value).map(([, value]) => value)
       const observedDomains = domains.map(item => item.name).filter(name =>
         typeof name === "string" && name.length <= 253 && /^[a-z\d-]+(?:\.[a-z\d-]+)+$/.test(name)
         && !credentials.some(secret => name.includes(secret))).slice(0, 5)
-      return {
-        state: business ? "matched" : "mismatch", access: "readable",
-        expectedDomain: PROJECT.businessDomain.name, observedDomains,
-        domains: [PROJECT.businessDomain, PROJECT.accessDomain].map(expected => {
+      const checkedDomains = [PROJECT.businessDomain, PROJECT.accessDomain].map(expected => {
           const actual = domains.find(item => item.id === expected.id && item.name === expected.name)
           return {
             name: expected.name, identity: actual ? "matched" : "missing",
@@ -33,7 +29,10 @@ export async function inspectResend(env, fetchImpl) {
             openTracking: typeof actual?.open_tracking === "boolean" ? actual.open_tracking : null,
             clickTracking: typeof actual?.click_tracking === "boolean" ? actual.click_tracking : null,
           }
-        }),
+        })
+      return {
+        state: checkedDomains.every(domain => domain.identity === "matched") ? "matched" : "mismatch", access: "readable",
+        expectedDomain: PROJECT.businessDomain.name, observedDomains, domains: checkedDomains,
       }
     }
     const cursor = read.value.data.at(-1)?.id
