@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/select"
 import { WaveBarChart } from "@/components/wave/charts"
 import {
+  WaveSegmentedSummary,
+  WaveSegmentedMetric,
+} from "@/components/wave/visual-foundations"
+import {
   getEmailOperationsAnalytics,
   type EmailOperationsAnalytics,
 } from "@/lib/actions/email-operations"
@@ -69,7 +73,7 @@ export function EmailOverview({ initial }: { initial: EmailOperationsAnalytics }
           has been inferred.
         </p>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <WaveSegmentedSummary aria-label="Business send cohort summary">
         {[
           {
             name: "Accepted business messages",
@@ -92,19 +96,20 @@ export function EmailOverview({ initial }: { initial: EmailOperationsAnalytics }
             detail: `${data.totalBounced} uniquely bounced / ${data.totalSent} accepted`,
           },
         ].map((item) => (
-          <Card key={item.name}>
-            <CardHeader>
-              <CardTitle className="text-sm">{item.name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold tabular-nums">{item.value}</p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {data.state === "available" ? item.detail : "Evidence unavailable"}
-              </p>
-            </CardContent>
-          </Card>
+          <WaveSegmentedMetric
+            key={item.name}
+            value={item.value}
+            label={
+              <>
+                <span className="block font-medium">{item.name}</span>
+                <span className="mt-1 block">
+                  {data.state === "available" ? item.detail : "Evidence unavailable"}
+                </span>
+              </>
+            }
+          />
         ))}
-      </div>
+      </WaveSegmentedSummary>
       {data.state === "available" ? (
         <p className="text-sm text-muted-foreground">
           Coverage: {data.coveredDelivered} delivered messages had tracking verified at send time;{" "}
@@ -115,7 +120,7 @@ export function EmailOverview({ initial }: { initial: EmailOperationsAnalytics }
       ) : null}
       <p className="text-sm text-muted-foreground">{data.tracking}</p>
       {data.state === "available" ? (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="flex flex-col gap-4">
           <Card>
             <CardHeader>
               <CardTitle>Daily accepted volume · same cohort</CardTitle>
