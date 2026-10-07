@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test"
 import { Client } from "pg"
 import { OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
+import { dismissNotifications } from "./dismiss-notifications"
 
 const fixture = OPENING_READINESS_FIXTURE
 const databaseUrl = process.env.OPENING_FIXTURE_DATABASE_URL
@@ -34,17 +35,6 @@ async function readyReviewQueue(page: Page) {
   }).toPass({ timeout: 15_000 })
   await page.keyboard.press("Escape")
   await expect(density).toBeHidden()
-}
-
-async function dismissNotifications(page: Page) {
-  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true })
-  let remaining = await closeButtons.count()
-  // Dismiss through the normal controls; hovering a covering toast pauses expiry.
-  while (remaining) {
-    await closeButtons.first().click()
-    await expect.poll(() => closeButtons.count()).toBeLessThan(remaining)
-    remaining = await closeButtons.count()
-  }
 }
 
 test("staff can review one generated contact group on desktop/mobile; non-staff cannot open its rule", async ({ page, browser, request }) => {

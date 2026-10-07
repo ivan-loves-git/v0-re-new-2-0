@@ -10,6 +10,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { verifyPassword } from "better-auth/crypto";
+import { dismissNotifications } from "./dismiss-notifications";
 import { Client } from "pg";
 import {
   OPENING_READINESS_FIXTURE,
@@ -101,23 +102,6 @@ async function readyReviewQueue(page: Page) {
   }).toPass({ timeout: 15_000 });
   await page.keyboard.press("Escape");
   await expect(density).toBeHidden();
-}
-
-async function dismissNotifications(page: Page) {
-  const closeButtons = page.getByRole("button", { name: "Close toast", exact: true });
-  // A toast may expire during its close animation. Either the normal close
-  // control or natural expiry is valid; never wait the entire journey for a
-  // button that has just disappeared.
-  await expect(async () => {
-    if (await closeButtons.count()) {
-      try {
-        await closeButtons.first().click({ timeout: 1_000 });
-      } catch (error) {
-        if (await closeButtons.count()) throw error;
-      }
-    }
-    expect(await closeButtons.count()).toBe(0);
-  }).toPass({ timeout: 15_000 });
 }
 
 async function approvePreparedReview(page: Page) {
