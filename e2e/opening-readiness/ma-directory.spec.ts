@@ -298,18 +298,24 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       path: join(evidence, "ma-directory-correction-mobile.png"),
       fullPage: true,
     });
-    await page.getByLabel("City (required to save this office)").fill("Paris");
+    await page
+      .getByLabel("City (required to save this office)")
+      .filter({ visible: true })
+      .fill("Paris");
     await page.getByRole("button", { name: "Save notes", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Edit notes", exact: true }),
     ).toBeVisible();
     await page.reload();
     await expect(
-      page.getByText("QA 257 notes retained after error", { exact: true }),
+      page
+        .getByText("QA 257 notes retained after error", { exact: true })
+        .filter({ visible: true }),
     ).toBeVisible();
     await page.goto("/opportunities/ma/contacts");
     await page
       .getByPlaceholder("Search contacts, email or office")
+      .filter({ visible: true })
       .fill("QA 257 Legacy person");
     await page
       .getByRole("button", { name: "Edit details", exact: true })
@@ -346,7 +352,10 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       affiliation_id: legacy.affiliation_id,
     });
     await page.goto("/opportunities/ma/firms");
-    await page.getByPlaceholder("Search firms or offices").fill("QA 257");
+    await page
+      .getByPlaceholder("Search firms or offices")
+      .filter({ visible: true })
+      .fill("QA 257");
     await page.screenshot({
       path: join(evidence, "ma-directory-firms-mobile.png"),
       fullPage: true,
