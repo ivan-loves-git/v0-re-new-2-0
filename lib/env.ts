@@ -20,6 +20,9 @@ const envSchema = z.object({
   // Resend (email)
   RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required").optional(),
   RESEND_FROM_EMAIL: z.string().email("RESEND_FROM_EMAIL must be a valid email").default("noreply@re-new.com"),
+  RESEND_ACCESS_FROM_EMAIL: z.string().email().optional(),
+  EMAIL_BUSINESS_TRACKING_VERIFIED_AT: z.string().datetime().optional(),
+  EMAIL_BUSINESS_TRACKING_DOMAIN: z.string().optional(),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   RENEW_STAFF_NOTIFICATION_EMAIL: z.string().email("RENEW_STAFF_NOTIFICATION_EMAIL must be a valid email").optional(),
   WAVE_CRITICAL_ALERT_EMAIL: z.string().email("WAVE_CRITICAL_ALERT_EMAIL must be a valid email").optional(),

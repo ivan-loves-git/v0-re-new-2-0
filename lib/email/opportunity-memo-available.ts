@@ -11,7 +11,8 @@ export async function sendOpportunityMemoAvailableEmail(
   const appUrl = (env.NEXT_PUBLIC_APP_URL ?? DEFAULT_APP_URL).replace(/\/$/, "")
 
   return sendEmailDirect({
-    to: input.recipientEmail,
+    to: input.recipientEmail, templateKey: "opportunity_memo_available", repreneurId: input.repreneurId,
+    sourceContext: { kind: "memo_available", opportunityId: input.opportunityId, matchId: input.matchId },
     subject: `Le mémo d'information est disponible - ${input.opportunityTitle}`,
     idempotencyKey: input.idempotencyKey,
     react: OpportunityMemoAvailableEmail({

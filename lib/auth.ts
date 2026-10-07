@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
 import { trustedAuthOrigins } from "@/lib/auth-origin-policy"
-import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
+import { ACCESS_FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { renderPortalAccessSetupEmail } from "@/lib/email/portal-setup-email"
 import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
@@ -110,7 +110,8 @@ export const auth = betterAuth({
           isPortalAccessSetup,
         )
         const { error } = await resend.emails.send({
-          from: `${FROM_NAME} <${FROM_EMAIL}>`,
+          tags: [{ name: "renew_mail_class", value: "access" }],
+          from: `${FROM_NAME} <${ACCESS_FROM_EMAIL}>`,
           to: user.email,
           subject: isPortalAccessSetup
             ? "Votre accès à votre espace Re-New"

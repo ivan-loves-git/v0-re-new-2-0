@@ -33,7 +33,7 @@ function notificationResult(delivery: NotificationDeliveryResult) {
   }
   return {
     success: false as const,
-    error: delivery.error ?? "The notification provider did not confirm delivery.",
+    error: ("error" in delivery ? delivery.error : "Email prepared for Review & send; nothing was sent.") ?? "The notification provider did not confirm delivery.",
   }
 }
 
@@ -249,7 +249,7 @@ async function sendOfferReceivedNotification(
           to: repreneurData.email,
           subject: `Nouvelle offre Re-New: ${offerData.name}`,
           repreneurId,
-          templateKey: "offer_received",
+          templateKey: "offer_received", sourceContext: { kind: "offer", assignmentId: assignmentId, status: "offered" },
           idempotencyKey: claimedKey,
           react: OfferReceivedEmail({
             repreneur: {
@@ -363,7 +363,7 @@ export async function updateRepreneurOfferStatus(
           to: repreneurData.email,
           subject: `Félicitations! Vous avez accepté l'offre ${offerName}`,
           repreneurId,
-          templateKey: "offer_accepted",
+          templateKey: "offer_accepted", sourceContext: { kind: "offer", assignmentId: repreneurOfferId, status: "accepted" },
           idempotencyKey: `offer-accepted:${repreneurOfferId}:${deliveryKeyTimestamp}`,
           react: OfferAcceptedEmail({
             repreneur: emailData,
@@ -537,7 +537,7 @@ async function sendMilestoneCompletionNotification(
           to: repreneurData.email,
           subject: `Bravo! Jalon complété: ${milestoneData.title}`,
           repreneurId,
-          templateKey: "milestone_completed",
+          templateKey: "milestone_completed", sourceContext: { kind: "milestone", milestoneId, completedAt },
           idempotencyKey: claimedKey,
           react: MilestoneCompletedEmail({
             repreneur: {

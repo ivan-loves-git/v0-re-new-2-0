@@ -44,6 +44,7 @@ import {
   archiveStaffEmailReview,
   cancelStaffEmailReview,
   editStaffEmailReview,
+  applyNewerStaffEmailTemplate,
   recordOpportunityFreshnessReply,
   refreshOpportunityFreshnessReview,
   restoreStaffEmailReview,
@@ -117,7 +118,6 @@ export function ReviewDetail({
   const changed = subject !== review.subject || body !== review.body_text
   const editable =
     !review.archived_at &&
-    (review.source_kind === "ma" || review.source_kind === "freshness") &&
     review.state === "pending"
   const sendable =
     !review.archived_at &&
@@ -137,7 +137,7 @@ export function ReviewDetail({
   const allMembersAnswered =
     initial.members.length > 0 && answeredCount === initial.members.length
   const catalogueVersionIsReviewVersion =
-    review.source_kind === "ma" || review.source_kind === "freshness"
+    review.source_kind === "ma" || review.source_kind === "freshness" || review.source_kind === "business"
   const catalogueChanged =
     catalogueVersionIsReviewVersion &&
     initial.catalogue?.version !== review.template_version
@@ -278,7 +278,9 @@ export function ReviewDetail({
         </div>
         <div className="rounded-lg border p-3">
           <span className="email-field-label">Related opportunity</span>
-          {review.source_kind === "freshness" ? (
+          {review.source_kind === "business" ? (
+            <span>Original business event · {String(review.source_context?.kind ?? "manual")}</span>
+          ) : review.source_kind === "freshness" ? (
             <span>{initial.members.length} exact grouped opportunities</span>
           ) : (
             <Link
@@ -327,7 +329,7 @@ export function ReviewDetail({
           Prepared {time(review.created_at)}.{" "}
           {editable
             ? "Edits affect this reviewed draft only."
-            : "This workflow copy is read-only."}
+            : "Only unattempted pending drafts can be edited."}
         </p>
         <div className="flex justify-end gap-2">
           {editable ? (
@@ -348,7 +350,6 @@ export function ReviewDetail({
               !sendable ||
               review.namespace !== "REAL" ||
               !initial.catalogueEnabled ||
-              catalogueChanged ||
               Boolean(
                 currentCodeVersion &&
                 currentCodeVersion !== review.template_version,
@@ -410,11 +411,10 @@ export function ReviewDetail({
             ) : null}
             {catalogueChanged && initial.catalogue ? (
               <Alert>
-                <AlertTitle>Template changed since preparation</AlertTitle>
+                <AlertTitle>Template updated</AlertTitle>
                 <AlertDescription>
-                  The retained reviewed message remains below. Its catalogue
-                  hash differs from the current template, so the existing send
-                  gate will block this draft.
+                  The prepared words remain unchanged and can still be sent after the current business and delivery checks. Applying newer template copy is a separate explicit replacement.
+                  {editable ? <Button variant="outline" size="sm" disabled={busy} onClick={()=>run(async()=>applyNewerStaffEmailTemplate(review.id,review.version))}>Apply newer template copy</Button> : null}
                 </AlertDescription>
               </Alert>
             ) : null}

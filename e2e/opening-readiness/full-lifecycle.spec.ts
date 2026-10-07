@@ -140,7 +140,7 @@ async function approvePreparedReview(page: Page) {
   await expect(visibleReview.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
   await visibleReview.locator("summary").filter({ hasText: /^More details$/ }).click();
   const receipt = visibleReview.locator('[data-slot="alert-description"]:visible')
-    .filter({ hasText: "Provider receipt qa-allowlist-accepted." });
+    .filter({ hasText: /Provider receipt qa-/ });
   await expect(receipt).toContainText("Sent means accepted by the provider, not delivered or read.");
 }
 
@@ -386,6 +386,17 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
+  const lifecyclePolicyKeys = [
+    "locked_opportunity_interest",
+    "opportunity_memo_available",
+    "opportunity_recommendation_assignment",
+  ];
+  const originalPolicies = await client.query<{
+    template_key: string; is_active: boolean; auto_send: boolean;
+  }>(
+    "SELECT template_key,is_active,auto_send FROM public.email_templates WHERE template_key=ANY($1::text[]) ORDER BY template_key",
+    [lifecyclePolicyKeys],
+  );
   let mobileContext: BrowserContext | null = null;
   let realContext: BrowserContext | null = null;
   let realNonOwnerContext: BrowserContext | null = null;
@@ -394,6 +405,25 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
   let anonymousContext: BrowserContext | null = null;
 
   try {
+    const staffActor = await client.query(
+      `SELECT account.id,account.email,role.user_id,role.email AS role_email,role.role
+       FROM public."user" account JOIN public.app_user_roles role ON role.user_id=account.id
+       WHERE account.id=$1 AND role.id=$2`,
+      [fixture.staff.id, fixture.ids.staffRole],
+    );
+    expect(staffActor.rows).toEqual([{
+      id: fixture.staff.id, email: fixture.staff.email,
+      user_id: fixture.staff.id, role_email: fixture.staff.email, role: "staff",
+    }]);
+    await client.query("SELECT public.staff_email_review_assert_actor($1)", [fixture.staff.id]);
+    await expect(client.query("SELECT public.email_policy_set_active($1,true,$2)",
+      ["locked_opportunity_interest", fixture.staff.email]))
+      .rejects.toThrow("staff_email_review_requires_staff_actor");
+    expect((await client.query(
+      "SELECT template_key,is_active,auto_send FROM public.email_templates WHERE template_key=ANY($1::text[]) ORDER BY template_key",
+      [lifecyclePolicyKeys],
+    )).rows).toEqual(originalPolicies.rows);
+
     // The prerequisite auth-readiness test intentionally consumes four of the
     // five loopback sign-in attempts in both auth guards. Discover and reset
     // only those two disposable sign-in buckets so this independent lifecycle
@@ -437,6 +467,21 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     );
     expect(resetRouteSignInBudget.rows).toEqual([{ key: routeSignInBucket }]);
 
+    expect(originalPolicies.rows.map(row => row.template_key)).toEqual(lifecyclePolicyKeys);
+    // Explicit future-only policies preserve this older lifecycle's automatic
+    // assignment and grant-notification proof. Direct interest instead proves
+    // the new review-default transition through the actual staff interface.
+    for (const key of lifecyclePolicyKeys) {
+      await client.query("SELECT public.email_policy_set_active($1,true,$2)", [key, fixture.staff.id]);
+      await client.query("SELECT public.email_policy_set($1,$2,$3)",
+        [key, key !== "locked_opportunity_interest", fixture.staff.id]);
+    }
+    expect((await client.query(
+      "SELECT template_key,is_active,auto_send FROM public.email_templates WHERE template_key=ANY($1::text[]) ORDER BY template_key",
+      [lifecyclePolicyKeys],
+    )).rows).toEqual(lifecyclePolicyKeys.map(template_key => ({
+      template_key, is_active: true, auto_send: template_key !== "locked_opportunity_interest",
+    })));
     await login(page, fixture.staff.email);
     const staffStorageState = await page.context().storageState();
 
@@ -621,21 +666,45 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       realPage.getByText("Interest received", { exact: true }),
     ).toBeVisible();
     const notificationMatch = await one<{
+      id: string;
       status: string;
       interest_expressed_at: Date | null;
       interest_notification_sent_at: Date | null;
     }>(
       client,
-      "SELECT status,interest_expressed_at,interest_notification_sent_at FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2",
+      "SELECT id,status,interest_expressed_at,interest_notification_sent_at FROM public.opportunity_matches WHERE opportunity_id=$1 AND repreneur_id=$2",
       [fixture.ids.realOpportunity, fixture.ids.realRepreneur],
     );
     expect(notificationMatch.status).toBe("interested");
     expect(notificationMatch.interest_expressed_at).not.toBeNull();
-    expect(notificationMatch.interest_notification_sent_at).not.toBeNull();
+    expect(notificationMatch.interest_notification_sent_at).toBeNull();
+    const directInterestReview = await one<{
+      id: string; state: string; provider_message_id: string | null; provider_started_at: Date | null;
+    }>(client,
+      `SELECT id,state,provider_message_id,provider_started_at FROM public.staff_email_reviews
+       WHERE source_kind='business' AND template_key='locked_opportunity_interest'
+         AND source_context->>'kind'='direct_interest' AND source_context->'input'->>'matchId'=$1`,
+      [notificationMatch.id]);
+    expect(directInterestReview).toMatchObject({
+      state: "pending", provider_message_id: null, provider_started_at: null,
+    });
+    await page.goto(`/emails/review/${directInterestReview.id}`);
+    await approvePreparedReview(page);
+    expect(await one(client,
+      `SELECT m.interest_notification_sent_at IS NOT NULL AS sent_clock,
+         n.status AS notice_status,n.provider_message_id=r.provider_message_id AS exact_receipt,
+         r.state,r.provider_message_id
+       FROM public.opportunity_matches m JOIN public.opportunity_interest_direct_notices n
+         ON n.match_id=m.id AND n.interest_expressed_at=m.interest_expressed_at
+       JOIN public.staff_email_reviews r ON r.id=$2 WHERE m.id=$1`,
+      [notificationMatch.id, directInterestReview.id])).toEqual({
+        sent_clock: true, notice_status: "sent", exact_receipt: true,
+        state: "sent", provider_message_id: expect.stringMatching(/^qa-/),
+      });
     await record({
-      step: "REAL self-interest persisted and notified synthetic staff sink",
+      step: "REAL self-interest queued without sent clock, then staff reviewed and sent",
       surface: "mail",
-      result: "allowlisted no-send accepted",
+      result: "exact review and source receipt matched after allowlisted no-send acceptance",
     });
 
     await realPage.goto("/portal/deals/" + desktopOpportunityId);
@@ -700,7 +769,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     }>(client, `SELECT
       (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications WHERE match_id=$1) AS notifications,
       (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1) AS emails,
-      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1 AND l.status='sent' AND l.resend_id='qa-allowlist-accepted') AS sent,
+      (SELECT count(*)::int FROM public.email_logs l JOIN public.opportunity_recommendation_assignment_notifications n ON l.idempotency_key='recommendation-assignment:'||n.id::text WHERE n.match_id=$1 AND l.status='sent' AND l.resend_id LIKE 'qa-%') AS sent,
       (SELECT count(*)::int FROM public.opportunity_recommendation_assignment_notifications n JOIN public.opportunity_matches m ON m.id=n.match_id JOIN public.opportunities o ON o.id=m.opportunity_id WHERE n.match_id=$1 AND n.teaser_summary=o.description) AS "internalContent"`, [savedMatch.id]);
     expect(assignmentDelivery).toEqual({ notifications: 1, emails: 1, sent: 1, internalContent: 0 });
     await expect(page.getByText("Assignment email sent", { exact: true })).toBeVisible();
@@ -1022,7 +1091,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     );
     expect(sourceEmail).toEqual({
       delivery_status: "sent",
-      provider_message_id: "qa-allowlist-accepted",
+      provider_message_id: expect.stringMatching(/^qa-/),
       recipient_email_snapshot: "qa-opening-real-contact@re-new.invalid",
     });
     await record({
@@ -1151,7 +1220,7 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await approvePreparedReview(page);
     const e6 = await one<{ delivery_status: string; provider_message_id: string; evidence: boolean }>(client,
       "SELECT d.delivery_status,d.provider_message_id,(e.id IS NOT NULL AND e.metadata->>'upstream_evidence_id'=d.upstream_evidence_id::text) AS evidence FROM public.opportunity_pursuit_handoff_deliveries d JOIN public.opportunity_pursuit_evidence e ON e.id=d.evidence_id WHERE d.match_id=$1 AND d.handoff_type='e6'", [savedMatch.id]);
-    expect(e6).toEqual({ delivery_status: "sent", provider_message_id: "qa-allowlist-accepted", evidence: true });
+    expect(e6).toEqual({ delivery_status: "sent", provider_message_id: expect.stringMatching(/^qa-/), evidence: true });
     await page.setViewportSize({ width: 1440, height: 1000 });
 
     await page.goto("/opportunities/" + desktopOpportunityId + "?tab=pursuit");
@@ -1940,6 +2009,19 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
       demoMobileContext?.close(),
       anonymousContext?.close(),
     ]);
-    await client.end();
+    try {
+      for (const previous of originalPolicies.rows) {
+        await client.query(
+          "UPDATE public.email_templates SET is_active=$1,auto_send=$2 WHERE template_key=$3",
+          [previous.is_active, previous.auto_send, previous.template_key],
+        );
+      }
+      expect((await client.query(
+        "SELECT template_key,is_active,auto_send FROM public.email_templates WHERE template_key=ANY($1::text[]) ORDER BY template_key",
+        [lifecyclePolicyKeys],
+      )).rows).toEqual(originalPolicies.rows);
+    } finally {
+      await client.end();
+    }
   }
 });

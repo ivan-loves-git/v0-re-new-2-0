@@ -296,7 +296,7 @@ describe("retained and current template provenance", () => {
         },
       }),
     )
-    expect(html).toContain("Template changed since preparation")
+    expect(html).toContain("Template updated")
     expect(html).toContain("test-version")
     expect(html).toContain("current-version")
     expect(html).toContain("Synthetic subject")
