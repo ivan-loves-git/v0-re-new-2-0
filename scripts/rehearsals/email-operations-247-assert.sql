@@ -1,6 +1,6 @@
 CREATE FUNCTION public.assert_email_denied(p_sql text) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN BEGIN EXECUTE p_sql; EXCEPTION WHEN OTHERS THEN RETURN; END; RAISE EXCEPTION 'expected_denial: %',p_sql; END $$;
-DO $$ DECLARE old_id uuid; future_id uuid; v_token uuid; v jsonb; BEGIN
+DO $$ DECLARE old_id uuid; future_id uuid; v_token uuid; v jsonb; v_policy jsonb; BEGIN
  v:=public.email_business_prepare('welcome:one','welcome','22300000-0000-4000-8000-000000000003',
  'rep@example.test','Prepared subject','Prepared personal body https://example.test/portal','<p>Prepared personal body</p>',
  '{"idempotencyKey":"welcome:one","kind":"intake"}','["https://example.test/portal"]');
@@ -21,8 +21,45 @@ DO $$ DECLARE old_id uuid; future_id uuid; v_token uuid; v jsonb; BEGIN
  PERFORM public.email_business_finish(future_id,v_token,'failed',NULL,'Policy now requires review','system','[]',false);
  PERFORM public.assert_email_denied(format('SELECT public.staff_email_review_edit(%L,1,''Changed'',''lost protected link'',''staff-one'')',old_id));
  PERFORM public.staff_email_review_edit(old_id,1,'My subject','My words https://example.test/portal','staff-one');
- UPDATE public.email_templates SET subject='New reusable subject',body_markdown='New reusable body' WHERE template_key='welcome';
- IF (SELECT subject FROM public.staff_email_reviews WHERE id=old_id)<>'My subject' THEN RAISE EXCEPTION 'template_overwrote_draft'; END IF;
+ -- Saving reusable copy uses the same staff-only RPC as the actual Next action,
+ -- against the baseline table rather than a synthetic column superset.
+ SELECT jsonb_build_object('active',is_active,'auto',auto_send,'version',policy_version)
+ INTO v_policy FROM public.email_templates WHERE template_key='welcome';
+ PERFORM public.email_template_words_set('welcome','{"subject":"New reusable subject"}','staff-one');
+ IF NOT EXISTS(SELECT 1 FROM public.email_templates WHERE template_key='welcome'
+ AND subject='New reusable subject' AND body_markdown='Original body') THEN RAISE EXCEPTION 'subject_only_copy_not_retained'; END IF;
+ PERFORM public.email_template_words_set('welcome','{"body_markdown":"New reusable body"}','staff-one');
+ IF NOT EXISTS(SELECT 1 FROM public.email_templates WHERE template_key='welcome'
+ AND subject='New reusable subject' AND body_markdown='New reusable body'
+ AND jsonb_build_object('active',is_active,'auto',auto_send,'version',policy_version)=v_policy)
+ THEN RAISE EXCEPTION 'body_copy_changed_policy_or_subject'; END IF;
+ IF (SELECT count(*) FROM public.email_policy_events WHERE template_key='welcome' AND actor='staff-one'
+ AND old_policy ? 'copy_sha' AND new_policy ? 'copy_sha')<>2
+ OR NOT EXISTS(SELECT 1 FROM public.email_policy_events WHERE template_key='welcome' AND actor='staff-one'
+ AND old_policy->>'copy_sha'=md5('Original subject|Original body')
+ AND new_policy->>'copy_sha'=md5('New reusable subject|Original body'))
+ OR NOT EXISTS(SELECT 1 FROM public.email_policy_events WHERE template_key='welcome' AND actor='staff-one'
+ AND old_policy->>'copy_sha'=md5('New reusable subject|Original body')
+ AND new_policy->>'copy_sha'=md5('New reusable subject|New reusable body'))
+ THEN RAISE EXCEPTION 'copy_audit_missing_actual_actor_or_hash'; END IF;
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''welcome'',''{"subject":"Denied"}'',''rep-one'')');
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''welcome'',''{"subject":"Denied"}'','''')');
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''welcome'',''{"subject":"  "}'',''staff-one'')');
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''welcome'',''{"preview_text":"Unsupported"}'',''staff-one'')');
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''welcome'',''{"auto_send":true}'',''staff-one'')');
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''welcome'',''[]'',''staff-one'')');
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''opportunity_memo_available'',''{"subject":"Denied"}'',''staff-one'')');
+ UPDATE public.email_templates SET body_editable=false WHERE template_key='inactive';
+ PERFORM public.assert_email_denied('SELECT public.email_template_words_set(''inactive'',''{"body_markdown":"Denied"}'',''staff-one'')');
+ IF NOT EXISTS(SELECT 1 FROM public.email_templates WHERE template_key='welcome'
+ AND subject='New reusable subject' AND body_markdown='New reusable body'
+ AND jsonb_build_object('active',is_active,'auto',auto_send,'version',policy_version)=v_policy)
+ OR (SELECT count(*) FROM public.email_policy_events WHERE template_key='welcome' AND old_policy ? 'copy_sha')<>2
+ THEN RAISE EXCEPTION 'denied_copy_mutated_template_or_audit'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM public.staff_email_reviews WHERE id=old_id
+ AND subject='My subject' AND body_text='My words https://example.test/portal'
+ AND protected_links='["https://example.test/portal"]'::jsonb)
+ THEN RAISE EXCEPTION 'template_overwrote_draft'; END IF;
  PERFORM public.assert_email_denied(format('SELECT public.email_business_reserve(%L,1,''staff-one'')',old_id));
  v_token:=public.email_business_reserve(old_id,2,'staff-one');
  IF NOT public.email_business_authorize_attempt(old_id,v_token) THEN RAISE EXCEPTION 'template_edit_blocked_retained_words'; END IF;
@@ -30,6 +67,22 @@ DO $$ DECLARE old_id uuid; future_id uuid; v_token uuid; v jsonb; BEGIN
  PERFORM public.assert_email_denied(format('SELECT public.staff_email_review_edit(%L,3,''Changed'',''other words'',''staff-one'')',old_id));
  PERFORM public.assert_email_denied(format('SELECT public.email_business_prepare(''inactive:one'',''inactive'',NULL,''staff@example.test'',''Dormant'',''Dormant'',''<p>Dormant</p>'',''{}'',''[]'')'));
  PERFORM public.assert_email_denied('SELECT public.email_business_prepare(''missing:one'',''missing'',NULL,''staff@example.test'',''Missing'',''Missing'',''<p>Missing</p>'',''{}'',''[]'')');
+END $$;
+-- An email identifies a stored account only after resolution from its exact
+-- authenticated ID. It is never itself accepted as the service RPC actor.
+DO $$ BEGIN
+ BEGIN
+  PERFORM public.email_policy_set_active('welcome',true,'one@example.test');
+  RAISE EXCEPTION 'email_actor_accepted';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM<>'staff_email_review_requires_staff_actor' THEN RAISE; END IF;
+ END;
+ BEGIN
+  PERFORM public.email_template_words_set('welcome','{"subject":"Denied email actor"}','one@example.test');
+  RAISE EXCEPTION 'email_actor_copy_accepted';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM<>'staff_email_review_requires_staff_actor' THEN RAISE; END IF;
+ END;
 END $$;
 INSERT INTO public.email_logs(repreneur_id,template_key,resend_id,to_email,subject,status,sent_at,idempotency_key)
  VALUES('22300000-0000-4000-8000-000000000003','welcome','provider-one','rep@example.test','My subject','sent',now(),'welcome:one');
@@ -44,7 +97,10 @@ DO $$ BEGIN
  IF (SELECT delivered_at FROM public.email_logs WHERE resend_id='provider-one') IS NULL THEN RAISE EXCEPTION 'late_delivery_fact_lost'; END IF;
  IF (SELECT status FROM public.email_logs WHERE resend_id='provider-one')<>'bounced' THEN RAISE EXCEPTION 'bounce_terminal_overwritten'; END IF;
  IF has_table_privilege('anon','public.email_operations_history','SELECT') OR has_table_privilege('authenticated','public.email_provider_events','SELECT')
- OR has_function_privilege('authenticated','public.email_policy_set(text,boolean,text)','EXECUTE') THEN RAISE EXCEPTION 'private_email_permission'; END IF;
+ OR has_function_privilege('authenticated','public.email_policy_set(text,boolean,text)','EXECUTE')
+ OR has_function_privilege('authenticated','public.email_template_words_set(text,jsonb,text)','EXECUTE')
+ OR has_function_privilege('anon','public.email_template_words_set(text,jsonb,text)','EXECUTE')
+ THEN RAISE EXCEPTION 'private_email_permission'; END IF;
 END $$;
 -- More than 150 retained accepted messages: search older evidence before paging;
 -- the Sent cap is presentation only and unknown timestamps remain null.

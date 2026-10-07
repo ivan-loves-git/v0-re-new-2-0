@@ -84,14 +84,13 @@ BEGIN
  PERFORM public.staff_email_review_assert_actor(p_actor);
  SELECT * INTO t FROM public.email_templates WHERE template_key=p_template_key FOR UPDATE;
  IF t.id IS NULL OR p_template_key IN ('portal_access_setup','password_reset','opportunity_discovery_digest','opportunity_recommendation_assignment','opportunity_memo_available','locked_opportunity_interest','code:e6_nda_ready')
- OR jsonb_typeof(p_settings)<>'object' OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_settings) x WHERE x NOT IN ('subject','body_markdown','preview_text'))
+ OR jsonb_typeof(p_settings)<>'object' OR EXISTS(SELECT 1 FROM jsonb_object_keys(p_settings) x WHERE x NOT IN ('subject','body_markdown'))
  OR (p_settings ? 'body_markdown' AND t.body_editable IS DISTINCT FROM true)
  OR (p_settings ? 'subject' AND nullif(btrim(p_settings->>'subject'),'') IS NULL)
  THEN RAISE EXCEPTION 'email_words_not_editable'; END IF;
  UPDATE public.email_templates SET
  subject=CASE WHEN p_settings ? 'subject' THEN p_settings->>'subject' ELSE subject END,
- body_markdown=CASE WHEN p_settings ? 'body_markdown' THEN p_settings->>'body_markdown' ELSE body_markdown END,
- preview_text=CASE WHEN p_settings ? 'preview_text' THEN p_settings->>'preview_text' ELSE preview_text END
+ body_markdown=CASE WHEN p_settings ? 'body_markdown' THEN p_settings->>'body_markdown' ELSE body_markdown END
  WHERE template_key=p_template_key;
  INSERT INTO public.email_policy_events(template_key,actor,old_policy,new_policy)
  SELECT p_template_key,p_actor,jsonb_build_object('copy_sha',md5(concat_ws('|',t.subject,t.body_markdown))),

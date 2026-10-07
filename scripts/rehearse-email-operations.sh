@@ -83,11 +83,23 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO service_role;
 SQL
 "${psql[@]}" -f "$repo_root/scripts/130_staff_email_review_queue_projection.sql" >/dev/null
 "${psql[@]}" -f "$repo_root/supabase/migrations/20260929230707_reversible_staff_email_archive.sql" >/dev/null
+# Use the actual sanitized baseline table and its constraints. A hand-written
+# superset can conceal RPC references to columns the application never had.
+# awk is available in the existing PostgreSQL CI image; no Node dependency is
+# introduced inside that container.
+awk '
+  /^CREATE TABLE "public"\."email_templates" \($/ { capture=1; definitions++ }
+  /^ALTER TABLE ONLY "public"\."email_templates"$/ { constraint_line=$0; next }
+  constraint_line && /ADD CONSTRAINT "email_templates_(pkey|template_key_key)"/ {
+    print constraint_line; print; definitions++; constraint_line=""; next
+  }
+  constraint_line { constraint_line="" }
+  capture { print; if ($0 == ");") capture=0 }
+  END { if (definitions != 3 || capture) exit 1 }
+' "$repo_root/supabase/schema/771_public_schema.sql" | "${psql[@]}" >/dev/null
 "${psql[@]}" >/dev/null <<'SQL'
 ALTER TABLE public.repreneurs ADD COLUMN email text,ADD COLUMN is_demo boolean NOT NULL DEFAULT false;
 UPDATE public.repreneurs SET email='rep@example.test';
-CREATE TABLE public.email_templates(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),template_key text UNIQUE,
- subject text,preview_text text,description text,is_active boolean,requires_consent boolean,body_markdown text,body_editable boolean,updated_at timestamptz DEFAULT now());
 INSERT INTO public.email_templates(template_key,subject,is_active,requires_consent,body_markdown,body_editable)
  VALUES('welcome','Original subject',true,false,'Original body',true),('inactive','Dormant',false,false,'Dormant body',true);
 CREATE TABLE public.opportunity_interest_events(id uuid PRIMARY KEY,match_id uuid);
@@ -106,4 +118,4 @@ SQL
 "${psql[@]}" -f "$repo_root/supabase/migrations/20260929235619_bounded_staff_email_bulk_send.sql" >/dev/null
 "${psql[@]}" -f "$repo_root/supabase/migrations/20261007123000_email_operations_policy.sql" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/email-operations-247-assert.sql" >/dev/null
-echo "#247 disposable PostgreSQL: policy, frozen wording, future-only automatic claims, archive/version fences, private history and event facts passed"
+echo "#247 disposable PostgreSQL: baseline template schema, actor guards, copy/audit and frozen wording, future-only automatic claims, archive/version fences, private history and event facts passed"

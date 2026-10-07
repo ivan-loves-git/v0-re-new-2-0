@@ -238,7 +238,7 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
  */
 export async function updateTemplateSettings(
   templateKey: EmailTemplateKey,
-  settings: { subject?: string; preview_text?: string; body_markdown?: string }
+  settings: { subject?: string; body_markdown?: string }
 ) {
   await requireStaffAccess()
   if (TEMPLATE_METADATA[templateKey]?.manualSend === false && TEMPLATE_METADATA[templateKey]?.copyEditable !== true) {

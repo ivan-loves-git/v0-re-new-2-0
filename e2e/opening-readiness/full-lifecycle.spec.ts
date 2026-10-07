@@ -405,6 +405,25 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
   let anonymousContext: BrowserContext | null = null;
 
   try {
+    const staffActor = await client.query(
+      `SELECT account.id,account.email,role.user_id,role.email AS role_email,role.role
+       FROM public."user" account JOIN public.app_user_roles role ON role.user_id=account.id
+       WHERE account.id=$1 AND role.id=$2`,
+      [fixture.staff.id, fixture.ids.staffRole],
+    );
+    expect(staffActor.rows).toEqual([{
+      id: fixture.staff.id, email: fixture.staff.email,
+      user_id: fixture.staff.id, role_email: fixture.staff.email, role: "staff",
+    }]);
+    await client.query("SELECT public.staff_email_review_assert_actor($1)", [fixture.staff.id]);
+    await expect(client.query("SELECT public.email_policy_set_active($1,true,$2)",
+      ["locked_opportunity_interest", fixture.staff.email]))
+      .rejects.toThrow("staff_email_review_requires_staff_actor");
+    expect((await client.query(
+      "SELECT template_key,is_active,auto_send FROM public.email_templates WHERE template_key=ANY($1::text[]) ORDER BY template_key",
+      [lifecyclePolicyKeys],
+    )).rows).toEqual(originalPolicies.rows);
+
     // The prerequisite auth-readiness test intentionally consumes four of the
     // five loopback sign-in attempts in both auth guards. Discover and reset
     // only those two disposable sign-in buckets so this independent lifecycle
@@ -453,9 +472,9 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     // assignment and grant-notification proof. Direct interest instead proves
     // the new review-default transition through the actual staff interface.
     for (const key of lifecyclePolicyKeys) {
-      await client.query("SELECT public.email_policy_set_active($1,true,$2)", [key, fixture.staff.email]);
+      await client.query("SELECT public.email_policy_set_active($1,true,$2)", [key, fixture.staff.id]);
       await client.query("SELECT public.email_policy_set($1,$2,$3)",
-        [key, key !== "locked_opportunity_interest", fixture.staff.email]);
+        [key, key !== "locked_opportunity_interest", fixture.staff.id]);
     }
     expect((await client.query(
       "SELECT template_key,is_active,auto_send FROM public.email_templates WHERE template_key=ANY($1::text[]) ORDER BY template_key",
