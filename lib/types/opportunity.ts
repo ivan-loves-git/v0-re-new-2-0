@@ -898,6 +898,8 @@ export interface RepreneurGeographyFilterNode {
 }
 
 export interface RepreneurOpportunityExposure {
+  /** Canonical lifecycle; Paused is retained read-only history, never active work. */
+  opportunity_status?: "active" | "paused"
   /** Detail-only fresh comparison. It never controls recommendation or access. */
   criteria_comparison?: OwnerCriterionComparison[]
   /** Own navigation state only; null means unavailable, absent means no personal projection. */
@@ -954,6 +956,7 @@ export interface RepreneurOpportunityExposure {
 }
 
 export interface RepreneurDealFlowOpportunity {
+  opportunity_status?: "active" | "paused"
   criteria_comparison?: OwnerCriterionComparison[]
   personal_review?: RepreneurPersonalReview | null
   match_id: string | null

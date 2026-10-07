@@ -323,6 +323,33 @@ async function one<T>(
   return rows[0] as T;
 }
 
+async function opportunityNamespaceCounts(client: Client) {
+  return one<{
+    real_active: number;
+    demo_active: number;
+    real_active_pursuits: number;
+    demo_active_pursuits: number;
+  }>(
+    client,
+    `SELECT
+       (SELECT count(*)::int FROM public.opportunities
+        WHERE status='active' AND is_demo=false) AS real_active,
+       (SELECT count(*)::int FROM public.opportunities
+        WHERE status='active' AND is_demo=true) AS demo_active,
+       (SELECT count(*)::int FROM public.opportunity_matches match
+        JOIN public.opportunities opportunity ON opportunity.id=match.opportunity_id
+        JOIN public.repreneurs repreneur ON repreneur.id=match.repreneur_id
+        WHERE match.status='active_pursuit'
+          AND opportunity.is_demo=false AND repreneur.is_demo=false) AS real_active_pursuits,
+       (SELECT count(*)::int FROM public.opportunity_matches match
+        JOIN public.opportunities opportunity ON opportunity.id=match.opportunity_id
+        JOIN public.repreneurs repreneur ON repreneur.id=match.repreneur_id
+        WHERE match.status='active_pursuit'
+          AND (opportunity.is_demo=true OR repreneur.is_demo=true)) AS demo_active_pursuits`,
+    [],
+  );
+}
+
 async function currentFixturePassword(client: Client, userId: string) {
   const credential = await one<{ password: string }>(
     client,
@@ -376,6 +403,9 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
 
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
+  // Other serial proofs retain their own synthetic evidence until stack teardown.
+  // Snapshot before this lifecycle creates or changes any opportunity or pursuit.
+  const initialNamespaceCounts = await opportunityNamespaceCounts(client);
   const lifecyclePolicyKeys = [
     "locked_opportunity_interest",
     "opportunity_memo_available",
@@ -1692,6 +1722,13 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     expect(stillGranted.status()).toBe(200);
     await expectMemoDenied(demoPage, savedMatch.id, memo.id);
 
+    const productionCounts = await opportunityNamespaceCounts(client);
+    expect(productionCounts).toEqual({
+      real_active: initialNamespaceCounts.real_active + 1,
+      demo_active: initialNamespaceCounts.demo_active + 1,
+      real_active_pursuits: initialNamespaceCounts.real_active_pursuits + 1,
+      demo_active_pursuits: initialNamespaceCounts.demo_active_pursuits,
+    });
     await page.goto("/analytics_op");
     const activeOpportunitiesCard = page
       .locator("#main-content")
@@ -1700,28 +1737,14 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
         has: page.getByText("Active opportunities", { exact: true }),
       });
     await expect(activeOpportunitiesCard).toHaveCount(1);
-    await expect(activeOpportunitiesCard).toContainText("2");
-    const productionCounts = await one<{
-      real_active: number;
-      demo_active: number;
-      real_active_pursuits: number;
-      demo_active_pursuits: number;
-    }>(
-      client,
-      "SELECT (SELECT count(*)::int FROM public.opportunities WHERE status='active' AND is_demo=false) AS real_active,(SELECT count(*)::int FROM public.opportunities WHERE status='active' AND is_demo=true) AS demo_active,(SELECT count(*)::int FROM public.opportunity_matches match JOIN public.opportunities opportunity ON opportunity.id=match.opportunity_id JOIN public.repreneurs repreneur ON repreneur.id=match.repreneur_id WHERE match.status='active_pursuit' AND opportunity.is_demo=false AND repreneur.is_demo=false) AS real_active_pursuits,(SELECT count(*)::int FROM public.opportunity_matches match JOIN public.opportunities opportunity ON opportunity.id=match.opportunity_id JOIN public.repreneurs repreneur ON repreneur.id=match.repreneur_id WHERE match.status='active_pursuit' AND (opportunity.is_demo=true OR repreneur.is_demo=true)) AS demo_active_pursuits",
-      [],
+    await expect(activeOpportunitiesCard.locator(".font-heading")).toHaveText(
+      new Intl.NumberFormat("en-US").format(productionCounts.real_active),
     );
-    expect(productionCounts).toEqual({
-      real_active: 2,
-      demo_active: 2,
-      real_active_pursuits: 1,
-      demo_active_pursuits: 0,
-    });
     await record({
       step: "staff operating metric excluded DEMO namespace",
       surface: "database",
-      result: "two REAL active shown; two DEMO active excluded",
-      count: 2,
+      result: `${productionCounts.real_active} REAL active shown; ${productionCounts.demo_active} DEMO active excluded; exact lifecycle deltas preserved`,
+      count: productionCounts.real_active,
     });
 
     // #192 runs only on the owned synthetic DEMO pair. The protected fixture

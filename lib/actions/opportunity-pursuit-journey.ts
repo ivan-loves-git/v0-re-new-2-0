@@ -93,7 +93,8 @@ export async function runOpportunityPursuitJourneyAction(input: {
           return { success: false, message: RECIPIENT_IM_PAUSED_MESSAGE }
         }
       }
-      const { data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt })
+      let { data, error } = await supabase.rpc("journey_grant_confidential_access_v2", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt })
+      if (error?.code === "PGRST202") ({ data, error } = await supabase.rpc("journey_grant_confidential_access", { p_match_id: input.matchId, p_information_memo_document_id: input.documentId, p_actor: actor, p_idempotency_key: key, p_nda_expires_at: input.ndaExpiresAt }))
       if (error) throw error
       const notificationTrace = startCriticalOperation("email.memo_notification")
       let notificationSent = false
@@ -112,6 +113,7 @@ export async function runOpportunityPursuitJourneyAction(input: {
           const delivered = await triggerOpportunityMemoNotification({
             opportunityId: match.opportunity_id,
             matchId: input.matchId,
+            expectedGrantId: typeof data === "string" ? data : undefined,
           })
           notificationSent = delivered
           if (delivered) notificationTrace.success()

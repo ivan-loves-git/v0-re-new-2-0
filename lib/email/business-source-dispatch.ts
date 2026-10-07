@@ -156,6 +156,7 @@ export async function dispatchBusinessReview(
           ).triggerOpportunityMemoNotification({
             opportunityId: String(context.opportunityId),
             matchId: String(context.matchId),
+            expectedGrantId: typeof context.grantEvidenceId === "string" ? context.grantEvidenceId : undefined,
           })
           break
         case "direct_interest": {

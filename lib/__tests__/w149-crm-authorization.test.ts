@@ -121,6 +121,8 @@ const serviceRoleBoundaryInventory: Record<string, ServiceRoleExport> = {
   "lib/actions/external-pursuit-board.ts": boundary("staff", ["listExternalPursuitOwners"]),
   "lib/actions/external-pursuit-capacity.ts": boundary("authenticated_capability", ["getExternalPursuitCapacitySnapshot", "confirmExternalPursuitCurrent"], { getExternalPursuitCapacitySnapshot: "staff" }),
   "lib/actions/external-pursuit-conversion.ts": boundary("staff", ["convertExternalPursuitToOpportunity", "preflightExternalPursuitDeletionFulfillment", "listUnconvertedExternalPursuitIds"]),
+  "lib/actions/external-memo-approval.ts": boundary("staff", ["getExternalMemoApprovalContext", "approveMemoWithExternalNotice"]),
+  "lib/actions/external-pursuit-handoffs.ts": boundary("staff", ["recordExternalPursuitHandoff"]),
   "lib/actions/external-pursuits.ts": boundary("portal_owner", ["getExternalPursuit", "createExternalPursuit", "updateExternalPursuit", "moveExternalPursuitStage", "listExternalPursuitBoard", "updateExternalPursuitFollowUp", "saveExternalPursuitContact", "requestExternalPursuitDeletion"]),
   "lib/actions/intake-v2.ts": boundary("public", ["submitIntakeV2"]),
   "lib/actions/intake.ts": boundary("public", ["createIntakeDraft", "updateIntakeBackground", "updateIntakeMAExperience", "updateIntakeGoals", "completeIntake"]),

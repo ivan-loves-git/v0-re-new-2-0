@@ -180,6 +180,49 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Upload synthetic external handoff dialogs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: external-handoffs-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-mobile.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload synthetic Paused history interface
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: paused-history-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-fr-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-fr-mobile.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload synthetic external memo approval dialogs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: external-memo-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-fr-mobile.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Upload synthetic M&A directory screenshots
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
