@@ -159,8 +159,10 @@ test("ordinary Paused history preserves genuine own openings and relationships w
     await owner.goto(`/portal/deals/${ids.match}`)
     await expect(owner.getByRole("button", { name: "I'm interested", exact: true })).toBeVisible()
     await expect.poll(async () => (await db.query("SELECT count(*)::int AS count FROM public.repreneur_opportunity_review_state WHERE repreneur_id=$1 AND opportunity_id=$2", [fixture.ids.realRepreneur, ids.relation])).rows[0].count).toBe(1)
-    const interestRequest = owner.waitForRequest(request => request.method() === "POST" && Boolean(request.headers()["next-action"]) && new URL(request.url()).pathname === `/portal/deals/${ids.match}`)
-    await owner.getByRole("button", { name: "I'm interested", exact: true }).click()
+    // The detail also records a personal opening on this URL. Capture the
+    // clicked response's bound match, rather than a concurrent opening POST.
+    const interestRequest = owner.waitForRequest(request => request.method() === "POST" && Boolean(request.headers()["next-action"]) && new URL(request.url()).pathname === `/portal/deals/${ids.match}` && Boolean(request.postData()?.includes(JSON.stringify(ids.match))))
+    await owner.locator('form[data-wave-action="express_interest"]').getByRole("button", { name: "I'm interested", exact: true }).click()
     const staleInterest = await interestRequest
     await expect(owner).toHaveURL(/\/portal\/deals$/)
     await login(staff, db, fixture.authIds.staffUser, fixture.staff.email)
@@ -227,10 +229,21 @@ test("ordinary Paused history preserves genuine own openings and relationships w
     expect(await replayReview.text()).toContain("Your review status could not be saved. Please try again.")
     const replay = await owner.request.post(staleInterest.url(), { data: staleInterest.postDataBuffer()!, headers: {
       "next-action": staleInterest.headers()["next-action"]!, "content-type": staleInterest.headers()["content-type"]!,
+      accept: staleInterest.headers()["accept"]!,
       origin: "http://127.0.0.1:3000",
     } })
     expect(replay.status()).toBe(500)
-    expect(await replay.text()).toContain("This opportunity is no longer available for your response.")
+    expect(replay.headers()["content-type"]).toMatch(/^text\/x-component(?:;|$)/)
+    expect(replay.headers()["x-action-redirect"]).toBeUndefined()
+    const flight = (await replay.text()).split("\n")
+    const rootRecord = flight.find(line => line.startsWith("0:"))
+    expect(rootRecord).toBeDefined()
+    const actionResult = (JSON.parse(rootRecord!.slice(2)) as { a: string }).a
+    expect(actionResult).toMatch(/^\$@[0-9a-f]+$/)
+    const errorRecord = flight.find(line => line.startsWith(`${actionResult.slice(2)}:E`))
+    expect(errorRecord).toBeDefined()
+    expect(JSON.parse(errorRecord!.slice(errorRecord!.indexOf(":E") + 2))).toMatchObject({ message: "This opportunity is no longer available for your response." })
+    expect(await snapshot(db)).toEqual(before)
     expect((await owner.request.get(oldNdaUrl)).status()).toBe(404)
     expect((await owner.request.get(`/portal/deals/${ids.match}/documents/25600000-0000-4000-8000-000000000099`)).status()).toBe(404)
     const evidenceDirectory = join(runnerTemp!, "opening-readiness-evidence")
