@@ -58,6 +58,11 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     )
   ).rows;
   try {
+    // Distinct fictional clients retain the real per-client auth limits while
+    // isolating this journey from earlier sign-ins on the same fixture server.
+    await page.context().setExtraHTTPHeaders({
+      "x-forwarded-for": "203.0.113.211",
+    });
     await login(page, fixture.staff.email);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/opportunities/ma/firms");
@@ -401,7 +406,9 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
         )
       ).rows,
     ).toEqual(suppressionBefore);
-    const portal = await browser.newContext();
+    const portal = await browser.newContext({
+      extraHTTPHeaders: { "x-forwarded-for": "203.0.113.212" },
+    });
     try {
       const portalPage = await portal.newPage();
       await login(portalPage, fixture.repreneurs.real.email);
