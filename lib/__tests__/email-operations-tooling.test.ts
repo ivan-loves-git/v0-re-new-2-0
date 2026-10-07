@@ -37,7 +37,7 @@ describe("Email Operations public tooling", () => {
     const methods: string[] = []
     const result = await runEmailOperations({ command: "preflight", env, browser: "Aside", fetchImpl: async (url, init) => {
       methods.push(init?.method ?? "GET")
-      return new Response(JSON.stringify(String(url).includes("resend.com")
+      return new Response(JSON.stringify(new URL(String(url)).origin === "https://api.resend.com"
         ? { data: [{ id: "11111111-1111-4111-8111-111111111111", name: "other-project.example", status: "verified" }], has_more: false }
         : { id: "prj_oCfBq06JCw4KKkPeMGrHX9M7Jt4c", accountId: "team_ZBRRlhayqlLIURUcxtq6pky0" }), { status: 200 })
     } })
@@ -47,7 +47,7 @@ describe("Email Operations public tooling", () => {
 
   it("keeps insufficient API rights and pending verification explicit, using the selected browser", async () => {
     const result = await runEmailOperations({ command: "preflight", env, browser: "Aside", fetchImpl: async url => {
-      return String(url).includes("resend.com")
+      return new URL(String(url)).origin === "https://api.resend.com"
         ? new Response(JSON.stringify({ data: domainData, has_more: false }))
         : new Response(JSON.stringify({ error: env.VERCEL_TOKEN }), { status: 403 })
     } })
@@ -123,7 +123,7 @@ describe("Email Operations public tooling", () => {
 
   it("blocks a different Vercel team even when the expected project ID is returned", async () => {
     const result = await runEmailOperations({ command: "preflight", env, fetchImpl: async url => new Response(JSON.stringify(
-      String(url).includes("resend.com") ? { data: domainData, has_more: false }
+      new URL(String(url)).origin === "https://api.resend.com" ? { data: domainData, has_more: false }
         : { id: "prj_oCfBq06JCw4KKkPeMGrHX9M7Jt4c", accountId: "team_someone_else", token: env.VERCEL_TOKEN },
     )) })
     expect(result).toMatchObject({ state: "blocked", vercel: { state: "mismatch", observed: "unrecognized_project_or_team" } })
@@ -157,7 +157,7 @@ describe("Email Operations public tooling", () => {
 
   it("keeps malformed provider identity responses unknown instead of proving a match", async () => {
     const result = await runEmailOperations({ command: "preflight", env, fetchImpl: async url => new Response(JSON.stringify(
-      String(url).includes("resend.com") ? { data: [null], has_more: false } : { error: env.VERCEL_TOKEN },
+      new URL(String(url)).origin === "https://api.resend.com" ? { data: [null], has_more: false } : { error: env.VERCEL_TOKEN },
     )) })
     expect(result).toMatchObject({ state: "unavailable", resend: { state: "unknown" }, vercel: { state: "unknown" } })
     expect(JSON.stringify(result)).not.toMatch(/canary-/)
