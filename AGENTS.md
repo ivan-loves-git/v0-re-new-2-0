@@ -5,17 +5,17 @@ Codex owns implementation and delivery; Ivan owns product decisions. Application
 
 ## Start and route
 
-Run `pnpm agent:context` (or `node scripts/agent-context.mjs` before dependencies). `--offline` inspects local evidence; `--json` returns structured output. Read reported instruction drift rather than overwriting it. Use the current baseline and owning Ticket, not the saved directory name, as checkout authority.
+Run `pnpm agent:context` (or `node scripts/agent-context.mjs` before dependencies). `--offline` inspects local evidence; `--json` returns structured output. Read reported instruction drift rather than overwriting it. Use the current baseline and owning Product Change or Ticket, not the saved directory name, as checkout authority.
 
-For product work or direct Matt calls, read the [Re-New routing adapter](https://github.com/re-new-team/renew-governance/blob/main/docs/agents/renew-direct-calls.md). It owns tracker/context discovery, source handling, current card summaries, progress links and closeout. Governance is `re-new-team/renew-governance`; use the existing Product Change as the specification and native Ticket/Decision children. Analysis may start without a card. [Decision #210](https://github.com/re-new-team/renew-governance/issues/210) governs the GitHub-only flow; historical PDR links are provenance. GitHub unavailable or conflicting: stop affected delivery and report the exact missing authority.
+For product work or direct Matt calls, read the [Re-New routing adapter](https://github.com/re-new-team/renew-governance/blob/main/docs/agents/renew-direct-calls.md). It owns tracker/context discovery, source handling, current card summaries, progress links and closeout. Governance is `re-new-team/renew-governance`; use the existing Product Change as the specification, native Decision children for material decisions, and Ticket children when Ivan selects decomposition. Analysis may start without a card. [Decision #210](https://github.com/re-new-team/renew-governance/issues/210) governs the GitHub-only flow; historical PDR links are provenance. GitHub unavailable or conflicting: stop affected delivery and report the exact missing authority.
 
-Every progress update links the known active Product Change and Ticket. If analysis has no card, say so without creating one for appearance.
+State analysis without a card once at the start or a scope/phase change. Keep useful active-card links during implementation; do not query GitHub just for a status footer or link.
 
 ## Implementation and release
 
-Before writing code, read [TESTING_RELEASE_PROTOCOL.md](docs/TESTING_RELEASE_PROTOCOL.md). It is the single application procedure for authority, isolated lanes, tests, pinned review, CI, merge, production proof and communication. Preserve narrower issue-specific boundaries. Shared risky surfaces and releases remain serial.
+Before writing code, read [TESTING_RELEASE_PROTOCOL.md](docs/TESTING_RELEASE_PROTOCOL.md). It supplies the application-specific authority, checkout, verification and release requirements; the selected Matt skill owns its development method. Preserve narrower issue-specific boundaries. Shared risky surfaces and releases remain serial.
 
-Apply the installed Matt `implement` method, behavior-first `tdd` where practical, then `code-review` with separate Standards and Spec axes. The routing adapter locates those skills; Renew Sprint supplies orchestration and the current model/usage trial. Specs, PRs and review findings belong to the same delivery chain.
+Run the Matt skill Ivan selected from the installed managed plugin, including its built-in steps: `implement` retains TDD and Standards/Spec code-review. Do not invoke Renew Sprint, create Tickets, select the next skill, or add coordinator/model/quota duties automatically. A bounded authorized Product Change can be implemented directly. Reuse valid verification evidence; specs, PRs and review findings belong to the same record.
 
 For technical configuration, inspect `package.json`, `app/`, `components/` and `lib/`. Authentication uses Better Auth, not Supabase Auth. Supabase service role bypasses RLS; server authorization checks are essential. An authorized main merge triggers Git-connected Vercel deployment; verify its exact commit and changed behavior before release claims.
 
