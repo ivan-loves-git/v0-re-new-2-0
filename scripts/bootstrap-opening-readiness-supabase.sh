@@ -147,7 +147,7 @@ SQL
 done < <(
   find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
     | LC_ALL=C sort \
-    | awk -F/ '$NF >= "20260830113100" && $NF != "20260929230707_reversible_staff_email_archive.sql" && $NF != "20260929235619_bounded_staff_email_bulk_send.sql" && $NF != "20261007123000_email_operations_policy.sql" && $NF != "20261007150000_external_pursuit_handoffs.sql" && $NF != "20261007170000_grant_specific_external_memo_notice.sql" && $NF != "20261007200000_external_e4_ldc_versions.sql"'
+    | awk -F/ '$NF >= "20260830113100" && $NF != "20260929230707_reversible_staff_email_archive.sql" && $NF != "20260929235619_bounded_staff_email_bulk_send.sql" && $NF != "20261007123000_email_operations_policy.sql" && $NF != "20261007150000_external_pursuit_handoffs.sql" && $NF != "20261007170000_grant_specific_external_memo_notice.sql" && $NF != "20261007200000_external_e4_ldc_versions.sql" && $NF != "20261008160000_freshness_recognizable_copy.sql"'
 )
 
 # The additive #186 review queue is a numbered application migration. The
@@ -394,3 +394,6 @@ done
 
 echo "Opening fixture refused: PostgREST did not reload the reconstructed schema." >&2
 exit 1
+
+# #263/#264 extends the numbered freshness foundation after Email Operations.
+"${psql_safe[@]}" -f supabase/migrations/20261008160000_freshness_recognizable_copy.sql
