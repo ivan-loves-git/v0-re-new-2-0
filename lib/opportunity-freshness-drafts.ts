@@ -8,6 +8,8 @@ export interface FreshnessCandidate {
   opportunity_id: string
   reference: string
   title: string
+  revenue_meur: number | null
+  copy_contract: string
   source_office_id: string
   office_name: string
   firm_name: string
@@ -59,7 +61,7 @@ export async function runOpportunityFreshnessDrafts(maxContacts = 30) {
       contactName: members[0].contact_name,
       members: members.map((member) => ({
         opportunityId: member.opportunity_id, reference: member.reference,
-        title: member.title, firmName: member.firm_name,
+        title: member.title, firmName: member.firm_name, revenueMeur: member.revenue_meur,
       })),
     })
     const { data: reviewId, error } = await db.rpc("opportunity_freshness_prepare", {

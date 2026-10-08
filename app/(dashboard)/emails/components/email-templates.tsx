@@ -43,6 +43,8 @@ interface PreviewState {
   templateKey: EmailTemplateKey
   templateName: string
   subject: string
+  renderedSubject?: string
+  freshnessExample?: "single" | "multiple"
   initialSubject: string
   body: string
   initialBody: string
@@ -101,13 +103,15 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       saved: false,
     })
     try {
-      const { subject, html, bodyMarkdown, bodyEditable } = await getRenderedTemplate(key as EmailTemplateKey)
+      const { subject, sourceSubject, html, bodyMarkdown, bodyEditable } = await getRenderedTemplate(key as EmailTemplateKey)
       setPreview((prev) =>
         prev && prev.templateKey === key
           ? {
               ...prev,
-              subject,
-              initialSubject: subject,
+              subject: sourceSubject ?? subject,
+              renderedSubject: subject,
+              freshnessExample: "single",
+              initialSubject: sourceSubject ?? subject,
               body: bodyMarkdown ?? "",
               initialBody: bodyMarkdown ?? "",
               bodyEditable,
@@ -125,6 +129,39 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
     }
   }
 
+  const chooseFreshnessExample = async (example: "single" | "multiple") => {
+    if (!preview) return;
+    const key = preview.templateKey;
+    setPreview((previous) =>
+      previous
+        ? { ...previous, loading: true, freshnessExample: example }
+        : previous,
+    );
+    try {
+      const rendered = await getRenderedTemplate(key, example);
+      setPreview((previous) =>
+        previous?.templateKey === key && previous.freshnessExample === example
+          ? {
+              ...previous,
+              html: rendered.html,
+              renderedSubject: rendered.subject,
+              loading: false,
+            }
+          : previous,
+      );
+    } catch (error) {
+      setPreview((previous) =>
+        previous?.templateKey === key
+          ? {
+              ...previous,
+              loading: false,
+              error: error instanceof Error ? error.message : "Render failed",
+            }
+          : previous,
+      );
+    }
+  };
+
   const saveTemplate = async () => {
     if (!preview) return
     setPreview({ ...preview, saving: true, saved: false, error: null })
@@ -136,7 +173,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
         await updateTemplateSettings(preview.templateKey, updates)
       }
       // Re-render the preview with the new body so the iframe matches what was saved
-      const { html } = await getRenderedTemplate(preview.templateKey)
+      const { html, subject: renderedSubject } = await getRenderedTemplate(preview.templateKey, preview.freshnessExample)
       setPreview((prev) =>
         prev
           ? {
@@ -146,6 +183,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
               initialSubject: prev.subject,
               initialBody: prev.body,
               html,
+              renderedSubject,
             }
           : prev,
       )
@@ -314,6 +352,16 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
 
               <div className="space-y-2">
                 <Label>Aperçu</Label>
+                {preview.templateKey === "ma_opportunity_validity_check" ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Exemples fictifs · texte enregistré, sans envoi</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" disabled={preview.loading} onClick={() => chooseFreshnessExample("single")}>Une opportunité</Button>
+                      <Button variant="outline" size="sm" disabled={preview.loading} onClick={() => chooseFreshnessExample("multiple")}>Plusieurs opportunités</Button>
+                    </div>
+                    <p className="break-words text-sm">{preview.renderedSubject}</p>
+                  </div>
+                ) : null}
                 <div className="border rounded-md overflow-auto bg-white">
                   {preview.loading ? (
                     <div className="flex items-center justify-center h-64 text-muted-foreground">

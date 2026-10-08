@@ -17,6 +17,7 @@ export async function sendOpportunityFreshnessReview(
   actorId: string,
   reservedToken?: string,
   manualApproval = false,
+  freshnessCopyConfirmed = false,
 ) {
   if (process.env.OPPORTUNITY_FRESHNESS_DISPATCH_ENABLED === "false") {
     throw new Error("Grouped freshness sending is temporarily disabled. Draft history is retained.")
@@ -27,6 +28,13 @@ export async function sendOpportunityFreshnessReview(
   if (review.namespace !== "REAL") throw new Error("DEMO freshness cannot be sent.")
   await getMaReviewTemplateVersion("ma_opportunity_validity_check", true)
 
+  if (manualApproval && !review.attempted_payload) {
+    if (!freshnessCopyConfirmed) throw new Error("Confirm that every project title is recognizable to the contact and the wording is neutral before sending.")
+    const { error } = await createAdminClient().rpc("opportunity_freshness_acknowledge_copy", {
+      p_review_id: review.id, p_version: version, p_actor: actorId,
+    })
+    if (error) throw new Error("This freshness copy or evidence changed. Refresh and review every title and the neutral wording.")
+  }
   if (manualApproval) {
     const { error } = await createAdminClient().rpc("email_review_mark_manual", {
       p_review_id: review.id,

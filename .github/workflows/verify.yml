@@ -140,6 +140,16 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-opportunity-freshness-reviews.sh'
 
+      - name: "Rehearse #263/#264 freshness copy and explicit staff updates"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-freshness-recognizable-copy.sh'
+
       - name: "Rehearse #254 protected external handoffs and independent-session fences"
         run: |
           docker run --rm \

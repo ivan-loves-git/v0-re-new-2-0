@@ -130,7 +130,7 @@ export function BulkEmailConfirmation({
 
   function acknowledge(item: Record["items"][number]) {
     run(async () => {
-      await acknowledgeStaffEmailBulkItem(batch.id, item.ordinal, item.snapshot_sha256)
+      await acknowledgeStaffEmailBulkItem(batch.id, item.ordinal, item.snapshot_sha256, item.review_snapshot.source_kind === "freshness")
       await refresh()
     })
   }
@@ -387,7 +387,7 @@ export function BulkEmailConfirmation({
             {!batch.confirmed_at ? <label className="flex items-start gap-3 rounded-md border p-3">
               <Checkbox aria-label={`Acknowledge complete message ${item.ordinal}`} checked={acknowledged} disabled={busy || acknowledged}
                 onCheckedChange={(checked) => { if (checked === true) acknowledge(item) }} />
-              <span>I have reviewed this complete recipient, subject, message, version and any attachments.</span>
+              <span>I have reviewed this complete recipient, subject, message, version and any attachments.{message.source_kind === "freshness" ? " I confirm every project title is recognizable to this contact and the wording is neutral, with no Re-New ownership or public-distribution claim." : ""}</span>
             </label> : null}
             {item.outcome_detail ? <Alert><AlertTitle>Recorded result</AlertTitle><AlertDescription>{item.outcome_detail}</AlertDescription></Alert> : null}
             {item.state === "started" || item.state === "uncertain" ? <Button type="button" variant="outline" disabled={busy}

@@ -481,6 +481,7 @@ export async function applyNewerStaffEmailTemplate(id: string, version: number) 
         reference: member.frozen_member.reference ?? "",
         title: member.frozen_member.title ?? "",
         firmName: member.frozen_member.firm_name ?? "",
+        revenueMeur: member.frozen_member.revenue_meur == null ? null : Number(member.frozen_member.revenue_meur),
       })),
     })
     subject = copy.subject
@@ -528,12 +529,12 @@ export async function applyNewerStaffEmailTemplate(id: string, version: number) 
       body = rendered.body
     }
   }
-  const { error } = await createAdminClient().rpc("email_review_replace_words", {
+  const { error } = await createAdminClient().rpc(review.source_kind === "freshness" ? "opportunity_freshness_replace_words" : "email_review_replace_words", {
     p_review_id: id,
     p_version: version,
     p_subject: subject,
     p_body: body,
-    p_html: html,
+    ...(review.source_kind === "freshness" ? {} : { p_html: html }),
     p_template_version:
       review.source_kind === "e4" || review.source_kind === "e6" || review.source_kind === "e7"
         ? PURSUIT_REVIEW_COPY_VERSION[review.source_kind]
@@ -703,11 +704,11 @@ export async function changeStaffEmailReviewArchiveSelection(
   }
 }
 
-export async function approveAndSendStaffEmailReview(id: string, version: number) {
-  return approveReviewedMessage(id, version, false)
+export async function approveAndSendStaffEmailReview(id: string, version: number, freshnessCopyConfirmed = false) {
+  return approveReviewedMessage(id, version, false, freshnessCopyConfirmed)
 }
 
-async function approveReviewedMessage(id: string, version: number, automatic: boolean) {
+async function approveReviewedMessage(id: string, version: number, automatic: boolean, freshnessCopyConfirmed = false) {
   const { user } = await requireStaffAccess()
   const review = await reviewById(id)
   if (review.archived_at)
@@ -715,7 +716,7 @@ async function approveReviewedMessage(id: string, version: number, automatic: bo
   if (review.version !== version)
     throw new Error("This review changed. Refresh before approving its exact version.")
   if (review.source_kind === "freshness") {
-    const result = await sendOpportunityFreshnessReview(review, version, user.id, undefined, !automatic)
+    const result = await sendOpportunityFreshnessReview(review, version, user.id, undefined, !automatic, freshnessCopyConfirmed)
     revalidatePath(`/emails/review/${id}`)
     revalidatePath("/emails")
     return result

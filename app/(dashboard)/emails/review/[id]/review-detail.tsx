@@ -1,5 +1,7 @@
 "use client"
 
+import { freshnessReviewCopyProblem } from "@/lib/opportunity-freshness-copy"
+
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
@@ -115,6 +117,8 @@ export function ReviewDetail({
       ? "E6 NDA-ready · code-governed"
       : (TEMPLATE_METADATA[review.template_key as EmailTemplateKey]?.name ??
         review.template_key)
+  const freshnessCopyProblem = review.source_kind === "freshness" && !review.attempted_payload
+    ? freshnessReviewCopyProblem({ subject, body, members: initial.members }) : null
   const changed = subject !== review.subject || body !== review.body_text
   const editable =
     !review.archived_at &&
@@ -331,6 +335,12 @@ export function ReviewDetail({
             ? "Edits affect this reviewed draft only."
             : "Only unattempted pending drafts can be edited."}
         </p>
+        {freshnessCopyProblem ? (
+          <Alert>
+            <AlertTitle>Freshness draft needs review</AlertTitle>
+            <AlertDescription>{freshnessCopyProblem} Staff words remain unchanged. Refresh the group, then explicitly update the copy and review it.</AlertDescription>
+          </Alert>
+        ) : null}
         <div className="flex justify-end gap-2">
           {editable ? (
             <Button
@@ -348,6 +358,7 @@ export function ReviewDetail({
               !subject.trim() ||
               !body.trim() ||
               !sendable ||
+              Boolean(freshnessCopyProblem) ||
               review.namespace !== "REAL" ||
               !initial.catalogueEnabled ||
               Boolean(
@@ -409,11 +420,11 @@ export function ReviewDetail({
                 </AlertDescription>
               </Alert>
             ) : null}
-            {catalogueChanged && initial.catalogue ? (
+            {(catalogueChanged || freshnessCopyProblem) && initial.catalogue ? (
               <Alert>
                 <AlertTitle>Template updated</AlertTitle>
                 <AlertDescription>
-                  The prepared words remain unchanged and can still be sent after the current business and delivery checks. Applying newer template copy is a separate explicit replacement.
+                  The prepared words remain unchanged. Freshness drafts require current exact group evidence and recognizable copy before sending. Applying newer template copy is a separate explicit replacement of your saved words.
                   {editable ? <Button variant="outline" size="sm" disabled={busy} onClick={()=>run(async()=>applyNewerStaffEmailTemplate(review.id,review.version))}>Apply newer template copy</Button> : null}
                 </AlertDescription>
               </Alert>

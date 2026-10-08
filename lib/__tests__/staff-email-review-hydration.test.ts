@@ -326,3 +326,13 @@ describe("retained and current template provenance", () => {
     expect(html).not.toContain("Catalogue template disabled")
   })
 })
+
+
+describe("freshness meaning in complete-message confirmation", () => {
+  it("asks staff to confirm recognizable titles and neutral wording on the exact reviewed message", () => {
+    const record = { ...initial, review: { ...initial.review, source_kind: "freshness" as const, state: "pending" as const } }
+    const html = renderToStaticMarkup(createElement(SingleEmailConfirmation, { initial: record }))
+    expect(html).toContain("every project title is recognizable to this contact")
+    expect(html).toContain("no Re-New ownership or public-distribution claim")
+  })
+})
