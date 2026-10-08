@@ -69,3 +69,20 @@ DO $$ DECLARE members jsonb; r uuid; blocked boolean; v integer; before_words te
 END $$;
 SET CONSTRAINTS ALL IMMEDIATE;
 ROLLBACK;
+
+-- Exercise the real reservation/version boundary for a single member and a group.
+BEGIN;
+DO $$ DECLARE members jsonb; r uuid; token uuid; v integer; contact uuid; BEGIN
+ FOREACH contact IN ARRAY ARRAY['18700000-0000-4000-8000-000000000004'::uuid,'18700000-0000-4000-8000-000000000003'::uuid] LOOP
+  SELECT jsonb_agg(c) INTO members FROM public.opportunity_freshness_candidates(contact,now(),true,NULL) c;
+  r:=public.opportunity_freshness_prepare(contact,members,'Statut',CASE WHEN contact='18700000-0000-4000-8000-000000000004'::uuid THEN 'Cove' ELSE 'Alpine (CA : 3,2 M€) et Bay' END,'copy-v1');
+  PERFORM public.opportunity_freshness_acknowledge_copy(r,1,'staff-1');
+  token:=public.opportunity_freshness_reserve(r,1,jsonb_build_object('subject','Statut','text',(SELECT body_text FROM public.staff_email_reviews WHERE id=r)),repeat('b',64),'staff-1');
+  SELECT version INTO v FROM public.staff_email_reviews WHERE id=r;
+  IF token IS NULL OR v<>2 OR (SELECT attempted_payload FROM public.staff_email_reviews WHERE id=r) IS NULL THEN RAISE EXCEPTION 'reservation_did_not_freeze_confirmed_payload'; END IF;
+  -- This is the same last assertion used by both single and bulk provider paths.
+  PERFORM public.opportunity_freshness_assert_current(r);
+ END LOOP;
+END $$;
+SET CONSTRAINTS ALL IMMEDIATE;
+ROLLBACK;
