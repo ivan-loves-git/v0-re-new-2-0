@@ -104,7 +104,7 @@ export interface MaFirmWorkspace {
   category: string | null
   networkLabel: string | null
   websiteUrl: string | null
-  status: "prospect" | "active" | "archived"
+  status: "active" | "archived"
   internalNotes: string | null
   createdAt: string | null
   updatedAt: string | null
@@ -417,7 +417,7 @@ const MA_CORRECTION_DB_ERRORS: Record<string, [string, string]> = {
   ma_firm_name_required: ["name", "Firm name is required."],
   ma_office_name_required: ["name", "Office name is required."],
   ma_office_city_required: ["city", "Complete the office city before saving this profile."],
-  ma_firm_name_already_exists: ["name", "Another active firm already uses this name."],
+  ma_firm_name_already_exists: ["name", "Another firm already uses this name."],
   ma_office_name_already_exists: ["name", "Another current office for this firm already uses this name."],
   ma_website_url_invalid: ["website_url", "Enter a full http:// or https:// website address."],
   ma_linkedin_url_invalid: ["linkedin_url", "Enter a full http:// or https:// LinkedIn address."],

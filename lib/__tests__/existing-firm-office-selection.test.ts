@@ -26,7 +26,7 @@ describe("existing-firm office selection", () => {
       office("office-a-real", "firm-a", { is_default: false }),
       office("office-a-default", "firm-a", { is_default: true }),
       office("office-b-real", "firm-b", { is_default: false }),
-      office("office-a-prospect", "firm-a", { firm_status: "prospect" }),
+      office("office-a-archived", "firm-a", { firm_status: "archived" }),
     ])
 
     expect(options.map((item) => item.office_id)).toEqual(["office-a-real"])

@@ -99,8 +99,9 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
         city: string;
         is_default: boolean;
         created_by: string;
+        status: string;
       }>(
-        "SELECT f.id AS firm_id,o.id AS office_id,o.city,o.is_default,f.created_by FROM public.ma_firms f JOIN public.ma_offices o ON o.firm_id=f.id WHERE f.name=$1",
+        "SELECT f.id AS firm_id,o.id AS office_id,o.city,o.is_default,f.created_by,f.status FROM public.ma_firms f JOIN public.ma_offices o ON o.firm_id=f.id WHERE f.name=$1",
         [`${label} Synthetic Advisory`],
       )
     ).rows;
@@ -112,6 +113,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       city: "Lyon",
       is_default: false,
       created_by: fixture.staff.id,
+      status: "active",
     });
     expect(
       (
@@ -137,8 +139,8 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
       }),
     ).toBeVisible();
 
-    // Adding another office retains the released active-firm eligibility rule.
-    await page.goto(`/opportunities/ma/firms/${fixture.ids.realFirm}`);
+    // A freshly created firm can immediately receive a second office (#262).
+    await expect(page.locator("header").getByText("active", { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Add office", exact: true }).click();
     dialog = page.getByRole("dialog", { name: "Add operating office" });
     await dialog
@@ -161,12 +163,33 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     const addedOffice = (
       await db.query<{ id: string; city: string }>(
         "SELECT id,city FROM public.ma_offices WHERE firm_id=$1 AND name=$2",
-        [fixture.ids.realFirm, `${label} North office`],
+        [created.firm_id, `${label} North office`],
       )
     ).rows;
     expect(addedOffice).toHaveLength(1);
     ownedOffices.push(addedOffice[0]!.id);
     expect(addedOffice[0]!.city).toBe("Lille");
+    await page.reload();
+    await expect(page.getByText(`${label} North office`, { exact: true })).toBeVisible();
+    await page.screenshot({ path: join(evidence, "ma-firm-second-office-desktop.png"), fullPage: true });
+
+    const formerProspect = "26200000-0000-4000-8000-000000000071";
+    expect((await db.query("SELECT status,internal_notes FROM public.ma_firms WHERE id=$1", [formerProspect])).rows[0]).toEqual({
+      status: "active", internal_notes: "Retained before #262 normalization",
+    });
+    await page.goto(`/opportunities/ma/firms/${formerProspect}`);
+    await page.getByRole("button", { name: "Add office", exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "Add operating office" });
+    await dialog.getByLabel("Office name (required)").fill(`${label} Former prospect office`);
+    await dialog.getByLabel("City (required)").fill("Bordeaux");
+    await dialog.getByRole("button", { name: "Add office", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    const normalizedOffice = (await db.query<{ id: string }>("SELECT id FROM public.ma_offices WHERE firm_id=$1 AND name=$2", [formerProspect, `${label} Former prospect office`])).rows;
+    expect(normalizedOffice).toHaveLength(1);
+    ownedOffices.push(normalizedOffice[0]!.id);
+    await page.reload();
+    await expect(page.getByText(`${label} Former prospect office`, { exact: true })).toBeVisible();
+    await page.screenshot({ path: join(evidence, "ma-former-prospect-office-desktop.png"), fullPage: true });
 
     await page.goto("/opportunities/ma/contacts");
     await page
@@ -177,6 +200,7 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     await page
       .getByRole("option")
       .filter({ hasText: `${label} Synthetic Advisory` })
+      .filter({ hasText: "Central office" })
       .click();
     await dialog
       .getByLabel("First name", { exact: true })
@@ -392,6 +416,22 @@ test("staff create and complete canonical M&A profiles on desktop and mobile wit
     ownedFirms.push(mobileGraph[0]!.firm_id);
     ownedOffices.push(mobileGraph[0]!.office_id);
     ownedContacts.push(mobileGraph[0]!.contact_id);
+    await page.getByRole("button", { name: "Add office", exact: true }).click();
+    dialog = page.getByRole("dialog", { name: "Add operating office" });
+    await dialog.getByLabel("Office name (required)").fill(`${label} Mobile second office`);
+    await dialog.getByLabel("City (required)").fill("Nantes");
+    await page.screenshot({ path: join(evidence, "ma-firm-add-office-mobile.png"), fullPage: true });
+    await dialog.getByRole("button", { name: "Add office", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    const mobileOffice = (await db.query<{ id: string }>("SELECT id FROM public.ma_offices WHERE firm_id=$1 AND name=$2", [mobileGraph[0]!.firm_id, `${label} Mobile second office`])).rows;
+    expect(mobileOffice).toHaveLength(1);
+    ownedOffices.push(mobileOffice[0]!.id);
+    await page.reload();
+    await expect(
+      page.getByRole("link", { name: `${label} Mobile second office`, exact: true }),
+    ).toBeVisible();
+    await page.screenshot({ path: join(evidence, "ma-firm-second-office-mobile.png"), fullPage: true });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     expect(
       (await db.query("SELECT count(*)::int AS count FROM public.email_logs"))
         .rows[0].count,

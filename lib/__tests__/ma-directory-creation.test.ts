@@ -83,13 +83,14 @@ describe("staff M&A directory creation", () => {
   });
   afterEach(() => vi.restoreAllMocks());
 
-  it("creates a firm and named real first office without inventing a contact", async () => {
+  it("creates an operational firm and real first office without inventing a contact", async () => {
     const result = await createMaFirmOfficeContext(firmForm());
     expect(result.success).toBe(true);
     expect(result.office).toMatchObject({
       firm_id: firmId,
       office_id: officeId,
       firm_name: "Synthetic Advisory",
+      firm_status: "active",
       office_name: "Central office",
       contacts: [],
     });

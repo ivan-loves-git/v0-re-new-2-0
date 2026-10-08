@@ -63,7 +63,7 @@ interface MaOfficeIntakeProjectionRow {
   office_id: string
   firm_id: string
   firm_name: string
-  firm_status: "prospect" | "active"
+  firm_status: "active"
   office_is_default: boolean
   office_name: string
   office_label: string
@@ -846,7 +846,7 @@ export async function createMaFirmOfficeContext(
     office_id: identity.office_id as string,
     firm_id: identity.firm_id as string,
     firm_name: firmName,
-    firm_status: "prospect",
+    firm_status: "active",
     office_name: resolvedOfficeName,
     office_label:
       resolvedOfficeName.trim() === firmName.trim()
@@ -873,7 +873,7 @@ export async function createMaFirmOfficeContext(
 }
 
 /**
- * Adds one real operating office to an existing active firm. This never
+ * Adds one real operating office to an existing non-archived firm. This never
  * creates a fallback office or a contact: those are separate, explicit staff
  * actions so a partial source context cannot silently become valid.
  */
@@ -888,7 +888,7 @@ export async function createMaOfficeForExistingFirm(
 
   if (!firmId.value || firmId.error) {
     fieldErrors.existing_firm_id =
-      firmId.error ?? "Choose an active M&A advisory firm."
+      firmId.error ?? "Choose a non-archived M&A advisory firm."
   }
   if (!officeName) {
     fieldErrors.office_name = "A real operating office name is required."
@@ -914,8 +914,9 @@ export async function createMaOfficeForExistingFirm(
   )
 
   if (error) {
-    const message = error.message?.includes("ma_existing_firm_not_active")
-      ? "This firm is no longer active. Refresh and choose another firm."
+    const message = error.message?.includes("ma_existing_firm_archived") ||
+      error.message?.includes("ma_existing_firm_not_active")
+      ? "This firm is archived. Choose a non-archived firm."
       : error.message?.includes("ma_existing_firm_not_found")
         ? "This firm is no longer available. Refresh and choose another firm."
         : error.message?.includes("ma_real_office_name_already_exists")

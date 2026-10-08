@@ -214,7 +214,7 @@ describe("W-109 External Pursuit conversion", () => {
       office,
       { ...office, office_id: "office-default", is_default: true },
       { ...office, office_id: "office-acme", is_provisional_source: true },
-      { ...office, office_id: "office-prospect", firm_status: "prospect" },
+      { ...office, office_id: "office-archived", firm_status: "archived" },
       { ...office, office_id: "office-legacy", is_default: undefined },
       { ...office, office_id: "office-unknown-provisional", is_provisional_source: undefined },
       { ...office, office_id: "office-unnamed", contacts: [{ ...office.contacts[0], contact_name: " " }] },
