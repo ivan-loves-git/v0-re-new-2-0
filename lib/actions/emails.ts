@@ -259,7 +259,8 @@ export async function updateTemplateSettings(
  */
 export async function getRenderedTemplate(
   templateKey: EmailTemplateKey,
-): Promise<{ subject: string; html: string; bodyMarkdown: string | null; bodyEditable: boolean }> {
+  freshnessExample: "single" | "multiple" = "single",
+): Promise<{ subject: string; sourceSubject?: string; html: string; bodyMarkdown: string | null; bodyEditable: boolean }> {
   await requireStaffAccess()
   if (templateKey === "opportunity_recommendation_assignment") {
     const html = await render(RecommendationAssignmentEmailV1({
@@ -288,6 +289,17 @@ export async function getRenderedTemplate(
   const bodyEditable = !!row?.body_editable
   const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
   const bodyMarkdown: string | null = bodyEditable ? (row?.body_markdown?.trim() || fallbackBody) : null
+  if (templateKey === "ma_opportunity_validity_check") {
+    const copy = (await import("@/lib/opportunity-freshness-copy")).renderGroupedFreshnessCopy({
+      subject, body: bodyMarkdown ?? MA_TEMPLATE_DEFAULT_BODIES.ma_opportunity_validity_check!,
+      contactName: "Camille", members: [{ opportunityId: "preview", reference: "INTERNAL-PREVIEW",
+        title: "Projet Orion", revenueMeur: 3.2, firmName: "Cabinet Atlantique M&A" },
+        ...(freshnessExample === "multiple" ? [{ opportunityId: "preview-2", reference: "INTERNAL-PREVIEW-2",
+          title: "Projet Atlas", revenueMeur: null, firmName: "Cabinet Atlantique M&A" }] : [])],
+    })
+    const request = (await import("@/lib/ma-workflows")).buildMaReviewedRequest(copy.subject, copy.body, "preview@example.test")
+    return { subject: copy.subject, sourceSubject: subject, html: request.html!, bodyMarkdown, bodyEditable }
+  }
   const bodyOverride = bodyMarkdown ?? undefined
 
   const sampleRepreneur = {
@@ -401,7 +413,6 @@ export async function getRenderedTemplate(
       })
       break
     }
-    case "ma_opportunity_validity_check":
     case "ma_request_more_information":
     case "ma_repreneur_interest_feedback":
     case "ma_nda_info_memo_request":

@@ -138,7 +138,7 @@ jobs:
             --workdir /workspace \
             --env TMPDIR=/tmp \
             postgres:17-bookworm \
-            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-opportunity-freshness-reviews.sh'
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-opportunity-freshness-reviews.sh && PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-freshness-recognizable-copy.sh'
 
       - name: "Rehearse #254 protected external handoffs and independent-session fences"
         run: |

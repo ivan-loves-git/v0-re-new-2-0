@@ -37,7 +37,7 @@ async function readyReviewQueue(page: Page) {
   await expect(density).toBeHidden()
 }
 
-test("staff can review one generated contact group on desktop/mobile; non-staff cannot open its rule", async ({ page, browser, request }) => {
+test("staff can review one generated contact group on desktop/mobile; non-staff cannot open its rule", async ({ page, browser, request }, testInfo) => {
   test.setTimeout(180_000)
   const client = new Client({ connectionString: databaseUrl })
   await client.connect()
@@ -82,9 +82,16 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
       GROUP BY review.id`, [recipient])
     expect(grouped.rows).toHaveLength(1)
     expect(grouped.rows[0]).toMatchObject({ count: 2 })
-    expect(grouped.rows[0]!.body_text).toContain("QA-FRESH-A")
-    expect(grouped.rows[0]!.body_text).toContain("QA-FRESH-B")
+    expect(grouped.rows[0]!.body_text).toContain("QA FRESHNESS A — SYNTHETIC (CA : 25 M€)")
+    expect(grouped.rows[0]!.body_text).not.toContain("QA-FRESH-A")
+    expect(grouped.rows[0]!.body_text).toContain("QA FRESHNESS B — SYNTHETIC (CA : 25 M€)")
     const reviewId = grouped.rows[0]!.id
+    // Model a retained, never-attempted legacy draft; no production data.
+    const oldBody = "QA-FRESH-A et QA-FRESH-B — retained staff words"
+    await client.query("UPDATE public.staff_email_reviews SET body_text=$2 WHERE id=$1", [reviewId, oldBody])
+    await client.query(`UPDATE public.opportunity_freshness_members
+      SET frozen_member=frozen_member-'revenue_meur'-'copy_contract' WHERE review_id=$1`, [reviewId])
+
 
     const anonymous = await browser.newContext()
     const anonymousPage = await anonymous.newPage()
@@ -137,6 +144,20 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     const body = page.locator("#review-body:visible")
     await expect(body).toHaveCount(1)
     await expect(body).toBeEditable()
+    await expect(body).toHaveValue(oldBody)
+    await expect(sendButton).toBeDisabled()
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await directReview.getByRole("button", { name: "Refresh group evidence", exact: true }).click()
+    await expect(page.getByText("Exact group evidence refreshed", { exact: false })).toBeVisible()
+    await page.reload()
+    await expect(body).toHaveValue(oldBody)
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await directReview.getByRole("button", { name: "Apply newer template copy", exact: true }).click()
+    await expect(page.getByText("Newer template copy applied", { exact: false })).toBeVisible()
+    await page.reload()
+    await expect(body).not.toHaveValue(oldBody)
+    expect(await body.inputValue()).not.toContain("QA-FRESH-A")
+
     const reviewedBody = (await body.inputValue()) + "\nSynthetic QA group check."
     await body.fill(reviewedBody)
     await page.getByRole("button", { name: "Save reviewed text" }).click()
@@ -176,6 +197,24 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
       SELECT count(*)::int AS count FROM public.ma_interactions
       WHERE opportunity_id IN ($1,$2) AND template_key='ma_opportunity_validity_check'`, [opportunityA,opportunityB])
     expect(fakeSingleSends.rows[0]?.count).toBe(0)
+    await page.goto("/emails")
+    await page.getByRole("tab", { name: "Templates", exact: true }).click()
+    await page.locator("#template-ma_opportunity_validity_check").getByRole("button", { name: "Voir le contenu", exact: true }).click()
+    const preview = page.getByRole("dialog", { name: "M&A Validity Check", exact: true })
+    await expect(preview.getByRole("textbox", { name: "Sujet", exact: true })).toHaveValue("Vérification {opportunityTitle}")
+    await expect(preview.frameLocator('iframe[title="Email preview"]').locator("body")).toContainText("Projet Orion")
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 })
+      await preview.getByRole("button", { name: "Plusieurs opportunités", exact: true }).click()
+      const contents = preview.frameLocator('iframe[title="Email preview"]').locator("body")
+      await expect(contents).toContainText("Projet Atlas")
+      await expect(contents.locator("img")).toHaveCount(0)
+      await expect(preview.getByRole("textbox", { name: "Sujet", exact: true })).toHaveValue("Vérification {opportunityTitle}")
+      await page.screenshot({ path: testInfo.outputPath(`freshness-template-${width}.png`) })
+      await preview.getByRole("button", { name: "Une opportunité", exact: true }).click()
+      await expect(contents).not.toContainText("Projet Atlas")
+    }
+
   } finally {
     await client.end()
   }
