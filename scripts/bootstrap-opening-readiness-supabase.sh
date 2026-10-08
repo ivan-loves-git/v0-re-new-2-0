@@ -170,6 +170,9 @@ done < <(
 "${psql_safe[@]}" -f supabase/migrations/20261007170000_grant_specific_external_memo_notice.sql
 "${psql_safe[@]}" -f supabase/migrations/20261007200000_external_e4_ldc_versions.sql
 
+# #263/#264 extends the numbered freshness foundation after Email Operations.
+"${psql_safe[@]}" -f supabase/migrations/20261008160000_freshness_recognizable_copy.sql
+
 # The sanitized structure snapshot deliberately omits the real Acme/Bertrand
 # singleton while retaining its redacted integrity function. Reconstruct the
 # established synthetic support context used by the W-169 rehearsal so every
@@ -394,6 +397,3 @@ done
 
 echo "Opening fixture refused: PostgREST did not reload the reconstructed schema." >&2
 exit 1
-
-# #263/#264 extends the numbered freshness foundation after Email Operations.
-"${psql_safe[@]}" -f supabase/migrations/20261008160000_freshness_recognizable_copy.sql

@@ -20,6 +20,12 @@ export interface GroupedFreshnessMember {
   revenueMeur?: number | null
 }
 
+function freshnessLabel(title: string, revenue: number | null | undefined) {
+  if (typeof revenue !== "number" || !Number.isFinite(revenue)) return title
+  const formatted = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 20, useGrouping: false }).format(revenue)
+  return `${title} (CA : ${formatted} M€)`
+}
+
 export function renderGroupedFreshnessCopy(input: {
   subject: string
   body: string
@@ -33,16 +39,7 @@ export function renderGroupedFreshnessCopy(input: {
       a.reference.localeCompare(b.reference) ||
       a.opportunityId.localeCompare(b.opportunityId),
   )
-  const labels = members.map((member) => {
-    const title = member.title.trim()
-    const revenue = member.revenueMeur
-    return (
-      title +
-      (typeof revenue === "number" && Number.isFinite(revenue)
-        ? ` (CA : ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 20, useGrouping: false }).format(revenue)} M€)`
-        : "")
-    )
-  })
+  const labels = members.map(member => freshnessLabel(member.title.trim(), member.revenueMeur))
   const plural = members.length > 1
   const list = labels.map((label) => `- ${label}`).join("\n")
   const variables: Record<string, string> = {
@@ -116,7 +113,7 @@ export function freshnessReviewCopyProblem(input: {
     if (member.revenue_meur != null) {
       expectedRevenues += 1
       const revenue = Number(member.revenue_meur)
-      const label = `${title} (ca : ${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 20, useGrouping: false }).format(revenue)} m€)`
+      const label = freshnessLabel(title, revenue).toLocaleLowerCase()
       if (!Number.isFinite(revenue) || !words.includes(label))
         return "Use the recorded revenue beside each project title, then review the message."
     }
