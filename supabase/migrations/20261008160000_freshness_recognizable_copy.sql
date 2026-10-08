@@ -58,6 +58,24 @@ BEGIN
  IF displayed_revenues<>expected_revenues THEN RAISE EXCEPTION 'freshness_invented_or_missing_revenue'; END IF;
 END $$;
 
+-- Human meaning is a staff judgement, explicitly bound to the reviewed version.
+CREATE FUNCTION public.opportunity_freshness_acknowledge_copy(p_review_id uuid,p_version integer,p_actor text)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE r public.staff_email_reviews%ROWTYPE;
+BEGIN
+ PERFORM public.staff_email_review_assert_actor(p_actor);
+ SELECT * INTO r FROM public.staff_email_reviews WHERE id=p_review_id FOR UPDATE;
+ IF r.id IS NULL OR r.source_kind<>'freshness' OR r.state<>'pending' OR r.version<>p_version
+  OR r.attempted_payload IS NOT NULL OR to_jsonb(r)->>'archived_at' IS NOT NULL THEN
+  RAISE EXCEPTION 'freshness_copy_acknowledgement_requires_exact_unattempted_version'; END IF;
+ PERFORM public.opportunity_freshness_assert_evidence(p_review_id);
+ PERFORM public.opportunity_freshness_assert_words(p_review_id,r.subject,r.body_text);
+ INSERT INTO public.staff_email_review_events(review_id,event_kind,actor,version,detail)
+ VALUES(p_review_id,'approved',p_actor,p_version,jsonb_build_object('freshness_copy_review','recognizable-neutral-v1'));
+END $$;
+REVOKE ALL ON FUNCTION public.opportunity_freshness_acknowledge_copy(uuid,integer,text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.opportunity_freshness_acknowledge_copy(uuid,integer,text) TO service_role;
+
 CREATE OR REPLACE FUNCTION public.opportunity_freshness_assert_current(p_review_id uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
 DECLARE r public.staff_email_reviews%ROWTYPE;
@@ -66,6 +84,9 @@ BEGIN
  SELECT * INTO r FROM public.staff_email_reviews WHERE id=p_review_id;
  IF r.attempted_payload IS NULL THEN
   PERFORM public.opportunity_freshness_assert_words(p_review_id,r.subject,r.body_text);
+  IF NOT EXISTS(SELECT 1 FROM public.staff_email_review_events e WHERE e.review_id=p_review_id
+   AND e.version=r.version AND e.event_kind='approved' AND e.detail->>'freshness_copy_review'='recognizable-neutral-v1') THEN
+   RAISE EXCEPTION 'freshness_staff_recognizability_and_neutrality_confirmation_required'; END IF;
  END IF;
 END $$;
 

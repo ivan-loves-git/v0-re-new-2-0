@@ -91,7 +91,7 @@ describe("freshness staff/provider workflow", () => {
   it("previews the exact simple payload generated and sent for one recognizable project", async () => {
     await runOpportunityFreshnessDrafts()
     const preview = await getRenderedTemplate("ma_opportunity_validity_check")
-    await sendOpportunityFreshnessReview(saved, 1, "staff-1")
+    await sendOpportunityFreshnessReview(saved, 1, "staff-1", undefined, true, true)
     const request = db.send.mock.calls[0][0]
     expect(request.subject).toBe(
       "Statut du process pour Projet Orion (CA : 3,2 M€)",
@@ -109,7 +109,7 @@ describe("freshness staff/provider workflow", () => {
     candidates.push({ ...candidates[0], opportunity_id: "b", reference: "B-02", title: "Projet Atlas", revenue_meur: null },
       { ...candidates[0], opportunity_id: "c", reference: "C-03", title: "Projet Zéro", revenue_meur: 0 })
     await runOpportunityFreshnessDrafts()
-    await sendOpportunityFreshnessReview(saved, 1, "staff-1")
+    await sendOpportunityFreshnessReview(saved, 1, "staff-1", undefined, true, true)
     const request = db.send.mock.calls[0][0]
     expect(request.subject).toBe("Statut des process pour les opportunités suivantes")
     expect(request.text).toContain("- Projet Orion (CA : 3,2 M€)\n- Projet Atlas\n- Projet Zéro (CA : 0 M€)")
@@ -121,6 +121,17 @@ describe("freshness staff/provider workflow", () => {
     expect(preview.subject).toBe(request.subject)
     expect(preview.html).toContain("Projet Atlas")
     expect(preview.html).not.toContain("<img")
+  })
+
+  it("requires the staff confirmation of recognizable titles and neutral copy before any first send", async () => {
+    await runOpportunityFreshnessDrafts()
+    await expect(sendOpportunityFreshnessReview(saved, 1, "staff-1", undefined, true)).rejects.toThrow("recognizable")
+    expect(db.send).not.toHaveBeenCalled()
+    await sendOpportunityFreshnessReview(saved, 1, "staff-1", undefined, true, true)
+    expect(db.rpc).toHaveBeenCalledWith("opportunity_freshness_acknowledge_copy", {
+      p_review_id: saved.id, p_version: 1, p_actor: "staff-1",
+    })
+    expect(db.send).toHaveBeenCalledTimes(1)
   })
 
 })

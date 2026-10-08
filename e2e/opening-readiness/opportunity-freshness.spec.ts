@@ -169,6 +169,8 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     await sendButton.click()
     const confirmation = page.getByRole("dialog", { name: "Confirm send", exact: true })
     await expect(confirmation).toBeVisible()
+    await expect(confirmation).toContainText("every project title is recognizable to this contact")
+    await expect(confirmation).toContainText("no Re-New ownership or public-distribution claim")
     await expect(confirmation).toContainText(reviewedSubject)
     await expect(confirmation).toContainText(reviewedBody)
     const confirmSend = confirmation.getByRole("button", { name: "Send", exact: true })

@@ -704,11 +704,11 @@ export async function changeStaffEmailReviewArchiveSelection(
   }
 }
 
-export async function approveAndSendStaffEmailReview(id: string, version: number) {
-  return approveReviewedMessage(id, version, false)
+export async function approveAndSendStaffEmailReview(id: string, version: number, freshnessCopyConfirmed = false) {
+  return approveReviewedMessage(id, version, false, freshnessCopyConfirmed)
 }
 
-async function approveReviewedMessage(id: string, version: number, automatic: boolean) {
+async function approveReviewedMessage(id: string, version: number, automatic: boolean, freshnessCopyConfirmed = false) {
   const { user } = await requireStaffAccess()
   const review = await reviewById(id)
   if (review.archived_at)
@@ -716,7 +716,7 @@ async function approveReviewedMessage(id: string, version: number, automatic: bo
   if (review.version !== version)
     throw new Error("This review changed. Refresh before approving its exact version.")
   if (review.source_kind === "freshness") {
-    const result = await sendOpportunityFreshnessReview(review, version, user.id, undefined, !automatic)
+    const result = await sendOpportunityFreshnessReview(review, version, user.id, undefined, !automatic, freshnessCopyConfirmed)
     revalidatePath(`/emails/review/${id}`)
     revalidatePath("/emails")
     return result

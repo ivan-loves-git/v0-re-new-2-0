@@ -38,6 +38,7 @@ if "${psql[@]}" -Atc "SELECT public.opportunity_freshness_replace_words('$review
  echo "Concurrent replacement overwrote a newer staff version" >&2; exit 1
 fi
 wait "$first_pid"
+"${psql[@]}" -Atc "SELECT public.opportunity_freshness_acknowledge_copy('$review_id',2,'staff-1')" >/dev/null
 # Reservation first: the new revenue field must wait and then be rejected.
 "${psql[@]}" -Atc "BEGIN; SELECT public.opportunity_freshness_reserve('$review_id',2,'{\"subject\":\"Statut\",\"text\":\"Alpine (CA : 3,2 M€) et Bay — first staff edit\"}'::jsonb,repeat('a',64),'staff-1'); SELECT pg_sleep(1); COMMIT" >"$cluster_dir/reserve-first.out" 2>&1 &
 reserve_pid=$!

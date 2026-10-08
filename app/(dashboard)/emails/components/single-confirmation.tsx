@@ -109,6 +109,7 @@ export function SingleEmailConfirmation({
             <span>
               I have reviewed this complete recipient, subject, message, version
               and any attachments.
+              {review.source_kind === "freshness" ? " I confirm every project title is recognizable to this contact and the wording is neutral, with no Re-New ownership or public-distribution claim." : ""}
             </span>
           </label>
         ) : null}
@@ -132,6 +133,7 @@ export function SingleEmailConfirmation({
                   const result = await approveAndSendStaffEmailReview(
                     review.id,
                     review.version,
+                    acknowledged && review.source_kind === "freshness",
                   )
                   if (result.success === false) setError(result.message)
                   else setOutcome(result.message)

@@ -101,11 +101,21 @@ export async function prepareStaffEmailBulk(input: {
   return { batchId: data, href: `/emails/bulk/${encodeURIComponent(data)}` }
 }
 
-export async function acknowledgeStaffEmailBulkItem(batchId: string, ordinal: number, snapshotSha256: string) {
+export async function acknowledgeStaffEmailBulkItem(batchId: string, ordinal: number, snapshotSha256: string, freshnessCopyConfirmed = false) {
   const { user } = await requireStaffAccess()
   requireBatchId(batchId)
   if (!Number.isSafeInteger(ordinal) || ordinal < 1 || ordinal > 5 || !/^[0-9a-f]{64}$/.test(snapshotSha256)) {
     throw new Error("Choose the exact reviewed message to acknowledge.")
+  }
+  if (freshnessCopyConfirmed) {
+    const record = await getStaffEmailBulk(batchId)
+    const item = record.items.find(item => item.ordinal === ordinal)
+    if (record.batch.prepared_by !== user.id || !item || item.snapshot_sha256 !== snapshotSha256 || item.review_snapshot.source_kind !== "freshness")
+      throw new Error("Reload the exact freshness message before confirming its title and neutral wording.")
+    const { error } = await createAdminClient().rpc("opportunity_freshness_acknowledge_copy", {
+      p_review_id: item.review_id, p_version: item.review_snapshot.version, p_actor: user.id,
+    })
+    if (error) throw new Error("The freshness copy or evidence changed. Review every title and the neutral wording again.")
   }
   const { error } = await createAdminClient().rpc("staff_email_bulk_ack", {
     p_batch_id: batchId, p_ordinal: ordinal, p_snapshot_sha256: snapshotSha256, p_actor: user.id,

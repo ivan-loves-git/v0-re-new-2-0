@@ -15,6 +15,10 @@ BEGIN;
 DO $$ DECLARE members jsonb; r uuid; blocked boolean; v integer; before_words text; old_payload jsonb := '{"subject":"A-01","text":"old exact words"}'; BEGIN
  SELECT jsonb_agg(c) INTO members FROM public.opportunity_freshness_candidates('18700000-0000-4000-8000-000000000003',now(),true,NULL) c;
  r := public.opportunity_freshness_prepare('18700000-0000-4000-8000-000000000003',members,'Statut des process','Alpine (CA : 3,2 M€) et Bay','copy-v1');
+ blocked:=false;
+ BEGIN PERFORM public.opportunity_freshness_assert_current(r); EXCEPTION WHEN raise_exception THEN blocked:=true; END;
+ IF NOT blocked THEN RAISE EXCEPTION 'unconfirmed_recognizability_and_neutrality_were_sent'; END IF;
+ PERFORM public.opportunity_freshness_acknowledge_copy(r,1,'staff-1');
  PERFORM public.opportunity_freshness_assert_current(r);
  blocked:=false;
  BEGIN PERFORM public.opportunity_freshness_edit(r,1,'Statut','Alpine (CA : 3,2 M€) et Bay (CA : 99 M€)','staff-1');
@@ -31,6 +35,7 @@ DO $$ DECLARE members jsonb; r uuid; blocked boolean; v integer; before_words te
  IF (SELECT body_text FROM public.staff_email_reviews WHERE id=r) IS DISTINCT FROM before_words OR
   (SELECT count(*) FROM public.opportunity_freshness_members WHERE review_id=r)<>2 THEN RAISE EXCEPTION 'refresh_overwrote_words_or_members'; END IF;
  v:=public.opportunity_freshness_replace_words(r,v,'Statut','Alpine (CA : 3,2 M€) et Bay — mots choisis par le staff','copy-v2','staff-1');
+ PERFORM public.opportunity_freshness_acknowledge_copy(r,v,'staff-1');
  PERFORM public.opportunity_freshness_assert_current(r);
  blocked:=false;
  BEGIN PERFORM public.opportunity_freshness_replace_words(r,v-1,'Statut','Alpine (CA : 3,2 M€) et Bay','copy-v2','staff-1');
@@ -46,6 +51,7 @@ DO $$ DECLARE members jsonb; r uuid; blocked boolean; v integer; before_words te
  BEGIN PERFORM public.opportunity_freshness_assert_current(r); EXCEPTION WHEN raise_exception THEN blocked:=true; END;
  IF NOT blocked THEN RAISE EXCEPTION 'old_revenue_words_survived_refresh'; END IF;
  v:=public.opportunity_freshness_replace_words(r,v,'Statut','Alpine (CA : 4,5 M€) et Bay','copy-v2','staff-1');
+ PERFORM public.opportunity_freshness_acknowledge_copy(r,v,'staff-1');
  PERFORM public.opportunity_freshness_assert_current(r);
  UPDATE public.opportunities SET public_title=NULL WHERE reference='B-02';
  v:=public.opportunity_freshness_refresh(r,v,'copy-v2','staff-1');
