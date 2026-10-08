@@ -94,27 +94,82 @@ afterEach(async () => {
 });
 
 describe("opening-readiness artifact policy", () => {
-  it("keeps the approved M&A directory captures as exact seven-day synthetic artifacts", async () => {
+  it("uploads only the approved aggregate and synthetic UI artifacts for seven days", async () => {
     const workflow = parse(await readFile(workflowPath, "utf8")) as {
       jobs: { fixture: { steps: Array<Record<string, unknown>> } };
     };
-    const upload = workflow.jobs.fixture.steps.find(
-      (step) => step.name === "Upload synthetic M&A directory screenshots",
+    const uploads = workflow.jobs.fixture.steps.filter(
+      (step) =>
+        typeof step.uses === "string" &&
+        step.uses.startsWith("actions/upload-artifact@"),
     );
-    expect(upload).toEqual(
+    const publishedArtifacts = uploads.map((upload) => {
+      expect(upload.uses).toBe(
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+      );
+      const options = upload.with as Record<string, unknown>;
+      return {
+        files: String(options.path)
+          .trim()
+          .split(/\r?\n/)
+          .map((path) => path.trim()),
+        retentionDays: options["retention-days"],
+      };
+    });
+    expect(publishedArtifacts).toEqual([
+      { files: ["${{ runner.temp }}/opening-readiness-published/aggregate-summary.json"], retentionDays: 7 },
+      { files: [
+        "${{ runner.temp }}/opening-readiness-evidence/email-review-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/email-review-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/email-247-sent-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/email-247-history-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png",
+      ], retentionDays: 7 },
+      { files: [
+        "${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-mobile-footer.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-mobile-footer.png",
+      ], retentionDays: 7 },
+      { files: [
+        "${{ runner.temp }}/opening-readiness-evidence/paused-history-en-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/paused-history-fr-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/paused-history-en-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/paused-history-fr-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/paused-preview-en-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/paused-preview-fr-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/paused-preview-en-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/paused-preview-fr-mobile.png",
+      ], retentionDays: 7 },
+      { files: [
+        "${{ runner.temp }}/opening-readiness-evidence/external-memo-en-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-memo-fr-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-memo-en-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/external-memo-fr-mobile.png",
+      ], retentionDays: 7 },
+      { files: [
+        "${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-directory-validation-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-directory-contacts-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-directory-correction-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-directory-contact-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-former-prospect-office-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-firm-add-office-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-mobile.png",
+      ], retentionDays: 7 },
+    ]);
+    expect(workflow.jobs.fixture.steps).toContainEqual(
       expect.objectContaining({
-        uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
-        with: expect.objectContaining({ "retention-days": 7 }),
+        name: "Assemble aggregate-safe evidence",
+        run: "bash scripts/assemble-opening-readiness-artifact.sh",
       }),
     );
-    const paths = String((upload?.with as Record<string, unknown>).path)
-      .trim()
-      .split(/\r?\n/)
-      .map((path) => path.trim());
-    expect(paths).toEqual(expect.arrayContaining([
-      "${{ runner.temp }}/opening-readiness-evidence/ma-former-prospect-office-desktop.png",
-      "${{ runner.temp }}/opening-readiness-evidence/ma-firm-add-office-mobile.png",
-    ]));
   });
 
   it("emits only the Paused history boolean allowlist and rejects invalid outcome evidence", async () => {
