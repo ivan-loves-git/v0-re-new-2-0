@@ -10,7 +10,10 @@ cleanup() {
 }
 trap cleanup EXIT
 "$pg_bin/initdb" -D "$cluster_dir" --no-locale --encoding=UTF8 --auth-local=trust --auth-host=trust --username=renew_freshness_admin >/dev/null
-"$pg_bin/pg_ctl" -D "$cluster_dir" -l "$cluster_dir/postgres.log" -o "-p $port -h 127.0.0.1 -k $cluster_dir" -w start >/dev/null
+if ! "$pg_bin/pg_ctl" -D "$cluster_dir" -l "$cluster_dir/postgres.log" -o "-p $port -h 127.0.0.1 -k $cluster_dir" -w start >/dev/null; then
+  cat "$cluster_dir/postgres.log" >&2
+  exit 1
+fi
 "$pg_bin/createdb" -h 127.0.0.1 -p "$port" -U renew_freshness_admin renew_freshness_rehearsal
 psql=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U renew_freshness_admin -d renew_freshness_rehearsal)
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/opportunity-freshness-fixture.sql" >/dev/null
