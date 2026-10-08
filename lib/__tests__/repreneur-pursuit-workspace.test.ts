@@ -25,6 +25,20 @@ const deals: SidebarDeal[] = [
 ]
 
 describe("repreneur pursuit workspace", () => {
+  it("navigates visit-only Paused history by opportunity identity without business counters or actions", () => {
+    const paused = { ...opportunity, opportunity_status: "paused", match_id: null, match_status: null } as never
+    const historical = [{ opportunity_id: "opportunity-1", opportunity_status: "paused", match_id: null, match_status: null, public_title: "Original approved title" }] as never
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(RepreneurPursuitWorkspace, { opportunity: paused, deals: historical,
+        actions: { "opportunity-1": "respond" }, journey: null, responseAsOf: "2026-10-07T10:00:00Z" })))
+    expect(html).toContain('href="/portal/deals/opportunity-1"')
+    expect(html).toContain("Paused")
+    expect(html).toContain("All opportunities")
+    expect(html).not.toContain("1 pursuits in this view")
+    expect(html).not.toContain('data-wave-action="express_interest"')
+    expect(html).not.toContain('data-action-avatar="true"')
+    expect(html).not.toContain("Pursuit ended")
+  })
   it("starts in the matched list on mobile and shows a non-selecting desktop prompt in both languages", () => {
     for (const language of ["en", "fr"] as const) {
       const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: language },

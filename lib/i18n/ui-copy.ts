@@ -3,6 +3,21 @@ import type { Language } from "./translations"
 // English identifiers keep the existing UI corpus reviewable next to its French wording.
 // Only interface copy belongs here. Never pass user, opportunity, document, or legal text.
 export const uiFrench = {
+  "Paused": "En pause",
+  "Opportunities": "Opportunités",
+  "Previous opportunity": "Opportunité précédente",
+  "Next opportunity": "Opportunité suivante",
+  "All opportunities": "Toutes les opportunités",
+  "{count} opportunities in this view": "{count} opportunités dans cette vue",
+  "Read-only history": "Historique en lecture seule",
+  "Personal review ordering applies only to active opportunities.": "L’ordre selon vos marques de revue s’applique uniquement aux opportunités actives.",
+  "Previous relationship: {status}": "Relation précédente : {status}",
+  "Previous stage: {stage}": "Étape précédente : {stage}",
+  "This opportunity is temporarily paused. Its retained history is read-only; responses and confidential documents are unavailable.": "Cette opportunité est temporairement en pause. Son historique reste en lecture seule ; les réponses et les documents confidentiels sont indisponibles.",
+  "Other opportunities and retained read-only history.": "Autres opportunités et historique conservé en lecture seule.",
+  "Historical availability unknown": "Disponibilité de l’historique inconnue",
+  "Some previously opened paused opportunities could not be checked. Retained relationships are still shown; refresh to retry.": "Certaines opportunités en pause déjà ouvertes n’ont pas pu être vérifiées. Les relations conservées restent affichées ; actualisez pour réessayer.",
+  "Opening an active detail only marks it Viewed and does not move it. Paused history does not change personal review marks.": "Ouvrir le détail d’une opportunité active la marque seulement comme vue, sans la déplacer. L’historique en pause ne modifie pas vos marques de revue.",
   "Close": "Fermer",
   "Interface language": "Langue de l’interface",
   "Interface only. Original content, documents and emails may remain in their original language.": "Ce choix concerne uniquement l’interface. Les contenus, documents et e-mails peuvent conserver leur langue d’origine.",

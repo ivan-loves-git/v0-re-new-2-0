@@ -42,6 +42,11 @@ import type {
 } from "@/lib/types/opportunity"
 
 const VISIBLE_MATCH_STATUSES: OpportunityMatchStatus[] = ["proposed", "interested", "withdrawn", "declined", "active_pursuit", "dropped"]
+const HISTORY_MATCH_STATUSES: OpportunityMatchStatus[] = [...VISIBLE_MATCH_STATUSES, "completed"]
+
+function pausedHistoryEnabled() {
+  return process.env.PAUSED_OPPORTUNITY_HISTORY_DISABLED !== "1"
+}
 const DECLINE_REASON_CATEGORIES = new Set<OpportunityDeclineReasonCategory>([
   "geography",
   "sector",
@@ -75,8 +80,9 @@ type RepreneurDealFlowProfile = RepreneurOpportunityProfile & {
 
 type RepreneurDealFlowOpportunityRow = {
   id: string
+  status?: string
   is_demo: boolean
-  reference: string
+  reference?: string
   public_title: string | null
   teaser_summary: string | null
   description?: string | null
@@ -114,11 +120,15 @@ function normalizeProfile(row: any): RepreneurOpportunityProfile {
 function normalizeExposure(
   row: any,
   repreneur: Pick<RepreneurOpportunityProfile, "is_demo">,
+  includePaused = false,
 ): RepreneurOpportunityExposure | null {
   const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
   if (!opportunity) return null
   if (!isOpportunityInRepreneurNamespace(opportunity, repreneur)) return null
-  if (opportunity.status !== "active") return null
+  const paused = opportunity.status === "paused" && includePaused && pausedHistoryEnabled()
+  if (opportunity.status !== "active" && !paused) return null
+  if (paused && !HISTORY_MATCH_STATUSES.includes(row.status)) return null
+  if (!paused && !VISIBLE_MATCH_STATUSES.includes(row.status)) return null
 
   // This projection is reached only through the current repreneur's exact
   // visible match. `repreneur_exposure` remains a legacy broad-discovery
@@ -126,13 +136,13 @@ function normalizeExposure(
   // from its intended candidate.
 
   return {
+    opportunity_status: paused ? "paused" : "active",
     match_id: row.id,
     match_status: row.status,
     pursuit_stage: row.pursuit_stage,
     pursuit_stage_updated_at: row.pursuit_stage_updated_at,
     pursuit_stage_provenance: row.pursuit_stage_provenance ?? null,
-    nda_status: row.nda_status,
-    nda_updated_at: row.nda_updated_at,
+    ...(!paused ? { nda_status: row.nda_status, nda_updated_at: row.nda_updated_at } : {}),
     visible_documents: [],
     opportunity_id: opportunity.id,
     reference: "Confidential opportunity",
@@ -165,7 +175,7 @@ function normalizeExposure(
       opportunity.date_added_precision,
       { locale: "en-GB" },
     ),
-    decline_reason_categories: Array.isArray(row.decline_reason_categories)
+    ...(!paused ? { decline_reason_categories: Array.isArray(row.decline_reason_categories)
       ? row.decline_reason_categories.filter((reason: unknown): reason is OpportunityDeclineReasonCategory =>
           typeof reason === "string" && DECLINE_REASON_CATEGORIES.has(reason as OpportunityDeclineReasonCategory)
         )
@@ -173,7 +183,7 @@ function normalizeExposure(
     decline_reason_text: row.decline_reason_text,
     interest_expressed_at: row.interest_expressed_at,
     interest_notification_sent_at: row.interest_notification_sent_at,
-    recommendation_expires_at: row.recommendation_expires_at,
+    recommendation_expires_at: row.recommendation_expires_at } : {}),
     updated_at: row.updated_at,
   }
 }
@@ -276,7 +286,7 @@ function withStaffRecommendation(
     // The exact immutable proposed-response event preserves recommendation
     // provenance after acceptance. The null timestamp remains the historical
     // fallback for as-yet-unanswered proposals; self-interest has no event.
-    is_staff_recommended: currentProposedResponse || !opportunity.interest_expressed_at,
+    is_staff_recommended: opportunity.opportunity_status !== "paused" && (currentProposedResponse || !opportunity.interest_expressed_at),
     is_outside_current_criteria: false,
   }
 }
@@ -294,6 +304,7 @@ function withDealBucket(
   isBroadDiscoveryEligible: boolean,
 ): (RepreneurOpportunityExposure | RepreneurDealFlowOpportunity) | null {
   const dealBucket = classifyRepreneurDeal({
+    opportunityStatus: opportunity.opportunity_status,
     opportunityId: opportunity.opportunity_id,
     matchId: opportunity.match_id,
     matchStatus: opportunity.match_status,
@@ -589,6 +600,8 @@ type RepreneurDealFlowResult = {
   deals: RepreneurDealFlowOpportunity[]
   automaticMatching: { complete: boolean; missing: string[] }
   demoProfile: boolean
+  /** Owner only: unavailable private history never proves no prior opening. */
+  pausedHistoryAvailability?: "available" | "unavailable" | "disabled"
 }
 
 const EMPTY_REPRENEUR_DEAL_FLOW: RepreneurDealFlowResult = {
@@ -655,7 +668,7 @@ async function listRepreneurDealFlowForProfile(
       `)
       .eq("repreneur_id", repreneur.id)
       .eq("opportunity.is_demo", repreneur.is_demo === true)
-      .in("status", VISIBLE_MATCH_STATUSES)
+      .in("status", HISTORY_MATCH_STATUSES)
       .order("updated_at", { ascending: false })
       .order("id", { ascending: true }),
     supabase.rpc("w164_repreneur_live_inventory", {
@@ -669,7 +682,7 @@ async function listRepreneurDealFlowForProfile(
   if (opportunitiesResult && opportunitiesResult.error) throw new Error(opportunitiesResult.error.message)
 
   const matchedOpportunities = (matchesResult.data ?? [])
-    .map((row) => normalizeExposure(row, repreneur))
+    .map((row) => normalizeExposure(row, repreneur, true))
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
   const allOpportunities = ((opportunitiesResult.data ?? []) as RepreneurDealFlowOpportunityRow[])
     .filter((opportunity) => opportunity.is_demo === (repreneur.is_demo === true))
@@ -680,10 +693,10 @@ async function listRepreneurDealFlowForProfile(
   )
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
     supabase,
-    matchedOpportunities.map((opportunity) => opportunity.match_id),
+    matchedOpportunities.filter((opportunity) => opportunity.opportunity_status !== "paused").map((opportunity) => opportunity.match_id),
   )
   const decisionState = await readRepreneurInterestStates(repreneur.id,
-    matchedOpportunities.map((opportunity) => ({
+    matchedOpportunities.filter((opportunity) => opportunity.opportunity_status !== "paused").map((opportunity) => ({
       id: opportunity.match_id,
       interest_expressed_at: interestStateByMatch.get(opportunity.match_id)?.interest_expressed_at ?? opportunity.interest_expressed_at,
     })))
@@ -691,13 +704,14 @@ async function listRepreneurDealFlowForProfile(
   const statefulDeals = matchedOpportunities
     .map((exposure) => ({
       ...exposure,
+      ...(exposure.opportunity_status !== "paused" ? {
       ...interestStateByMatch.get(exposure.match_id),
       interest_rejected: decisionState.rejected.has(exposure.match_id),
       is_locked_for_other_repreneur: isLockedForOtherRepreneur(
         exposure.opportunity_id,
         repreneur.id,
         activeOwnerByOpportunity,
-      ),
+      ) } : {}),
       visible_documents: [],
       memo_availability: undefined,
     }))
@@ -746,9 +760,23 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
   if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
 
   const result = await listRepreneurDealFlowForProfile(repreneur, sort)
-  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, result.deals.map((deal) => deal.opportunity_id))
+  const visits = pausedHistoryEnabled() ? await readOwnPausedOpportunities(repreneur) : []
+  result.pausedHistoryAvailability = !pausedHistoryEnabled() ? "disabled" : visits ? "available" : "unavailable"
+  const seen = new Set(result.deals.map((deal) => deal.opportunity_id))
+  if (visits?.length) {
+    const geography = await loadMatchingGeographyContext(createAdminClient(), [repreneur.id])
+    for (const row of visits) {
+      if (seen.has(row.id)) continue
+      seen.add(row.id)
+      const deal = pausedVisitProjection(row)
+      const visible = withRepreneurGeographyLabel(deal, geography)
+      result.deals.push(visible)
+      result.dealFlow.push(visible)
+    }
+  }
+  const reviews = await readPersonalOpportunityReviews(repreneur.id, repreneur.is_demo === true, result.deals.filter((deal) => deal.opportunity_status !== "paused").map((deal) => deal.opportunity_id))
   for (const deal of result.deals) {
-    deal.personal_review = reviews ? reviews.get(deal.opportunity_id) ?? { viewed: false, reviewed: false } : null
+    if (deal.opportunity_status !== "paused") deal.personal_review = reviews ? reviews.get(deal.opportunity_id) ?? { viewed: false, reviewed: false } : null
   }
   const access = await requirePortalAccess()
   queueM2RepreneurEvent({
@@ -759,6 +787,50 @@ export async function listMyRepreneurDealFlow(sort: RepreneurDealSort): Promise<
     outcome: "success",
   })
   return result
+}
+
+/** Called only by authenticated owner readers, never by the shared preview core. */
+async function readOwnPausedOpportunities(
+  repreneur: RepreneurDealFlowProfile,
+  opportunityId?: string,
+): Promise<RepreneurDealFlowOpportunityRow[] | null> {
+  try {
+    const supabase = createAdminClient()
+    const result: RepreneurDealFlowOpportunityRow[] = []
+    let cursor: string | null = null
+    for (;;) {
+      let query = supabase.from("repreneur_opportunity_review_state")
+        .select(`opportunity_id, opportunity:opportunities!inner(
+          id,is_demo,status,public_title,teaser_summary,description,
+          public_description_approved_hash,public_description_approved_at,public_description_approved_by,
+          sector,activity,location,revenue_meur,ebitda_keur,headcount,geography_node_id,
+          headcount_range,date_added,date_added_precision,updated_at)`)
+        .eq("repreneur_id", repreneur.id).eq("is_demo", repreneur.is_demo === true)
+        .eq("opportunity.status", "paused").eq("opportunity.is_demo", repreneur.is_demo === true)
+        .order("opportunity_id", { ascending: true }).limit(100)
+      if (opportunityId) query = query.eq("opportunity_id", opportunityId)
+      if (cursor) query = query.gt("opportunity_id", cursor)
+      const { data, error } = await query
+      if (error) return null
+      for (const row of data ?? []) {
+        const opportunity = Array.isArray(row.opportunity) ? row.opportunity[0] : row.opportunity
+        if (opportunity?.status === "paused" && isOpportunityInRepreneurNamespace(opportunity, repreneur)) result.push(opportunity)
+      }
+      if (!data?.length || data.length < 100 || opportunityId) return result
+      const next = data[data.length - 1].opportunity_id
+      if (typeof next !== "string" || next === cursor) return null
+      cursor = next
+    }
+  } catch {
+    return null
+  }
+}
+
+function pausedVisitProjection(opportunity: RepreneurDealFlowOpportunityRow): RepreneurDealFlowOpportunity {
+  // This is the existing explicit public field allowlist, never the private marker row.
+  const { relevance_score, ...safe } = toNeutralDealFlowOpportunity(opportunity)
+  void relevance_score
+  return { ...safe, opportunity_status: "paused", deal_bucket: "live" }
 }
 
 /** Staff-only preview uses the exact same Deal Flow projection as the portal. */
@@ -837,7 +909,7 @@ export async function getMyRepreneurOpportunity(
       .eq("id", dealId)
       .eq("repreneur_id", repreneur.id)
       .eq("opportunity.is_demo", repreneur.is_demo === true)
-      .in("status", VISIBLE_MATCH_STATUSES)
+      .in("status", HISTORY_MATCH_STATUSES)
       .maybeSingle(),
     supabase.rpc("w164_repreneur_live_inventory", {
       p_repreneur_id: repreneur.id,
@@ -847,12 +919,30 @@ export async function getMyRepreneurOpportunity(
 
   if (matchResult.error) throw new Error(matchResult.error.message)
   if (opportunityResult.error) throw new Error(opportunityResult.error.message)
-  const exposure = matchResult.data ? normalizeExposure(matchResult.data, repreneur) : null
+  const exposure = matchResult.data ? normalizeExposure(matchResult.data, repreneur, true) : null
+  if (exposure?.opportunity_status === "paused") return exposure
   if (!exposure) {
     const thesisCompleteness = automaticMatchingThesisCompleteness(repreneur)
     const candidate = (opportunityResult.data?.[0] ?? null) as RepreneurDealFlowOpportunityRow | null
+    if (candidate && candidate.is_demo !== (repreneur.is_demo === true)) return null
     const opportunity = candidate?.is_demo === (repreneur.is_demo === true) ? candidate : null
-    if (!opportunity) return null
+    if (!opportunity) {
+      if (!pausedHistoryEnabled()) return null
+      const { data, error } = await supabase.from("opportunity_matches")
+        .select(`id,status,pursuit_stage,pursuit_stage_updated_at,pursuit_stage_provenance,updated_at,
+          opportunity:opportunities!inner(id,status,is_demo,public_title,teaser_summary,description,
+            public_description_approved_hash,public_description_approved_at,public_description_approved_by,
+            sector,activity,location,revenue_meur,ebitda_keur,headcount,geography_node_id,
+            headcount_range,date_added,date_added_precision)`)
+        .eq("opportunity_id", dealId).eq("repreneur_id", repreneur.id)
+        .eq("opportunity.status", "paused").eq("opportunity.is_demo", repreneur.is_demo === true)
+        .in("status", HISTORY_MATCH_STATUSES).maybeSingle()
+      if (error) throw new Error(error.message)
+      const historicalRelationship = data ? normalizeExposure(data, repreneur, true) : null
+      if (historicalRelationship) return historicalRelationship
+      const visited = await readOwnPausedOpportunities(repreneur, dealId)
+      return visited?.[0] ? pausedVisitProjection(visited[0]) : null
+    }
 
     const [activeOwnerByOpportunity, geography] = await Promise.all([
       getActivePursuitOwners(supabase, [opportunity.id], repreneur.is_demo === true),

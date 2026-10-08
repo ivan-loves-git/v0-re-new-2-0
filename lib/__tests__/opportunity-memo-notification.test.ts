@@ -225,3 +225,32 @@ describe("opportunity memo availability notification", () => {
     expect(html).not.toContain("contact-interne@example.com")
   })
 })
+
+describe("immutable grant notices", () => {
+  it("uses independent provider keys and completion tokens for future grants on the same pursuit", async () => {
+    const a = { ...CLAIM, grantEvidenceId: "grant-a", attemptToken: "attempt-a" }
+    const b = { ...CLAIM, grantEvidenceId: "grant-b", attemptToken: "attempt-b" }
+    const store = createStore(a)
+    store.claim.mockResolvedValueOnce(a).mockResolvedValueOnce(b)
+    const send = vi.fn(async (_input: OpportunityMemoNotificationClaim & { idempotencyKey: string }) => ({ success: true, resendId: "synthetic-receipt" }))
+    await notifyOpportunityMemoAvailable({ opportunityId: CLAIM.opportunityId, matchId: CLAIM.matchId, now: NOW }, { store, notifier: { send } })
+    await notifyOpportunityMemoAvailable({ opportunityId: CLAIM.opportunityId, matchId: CLAIM.matchId, now: NOW }, { store, notifier: { send } })
+    expect(send.mock.calls.map(([claim]) => claim.idempotencyKey)).toEqual(["opportunity-memo-grant-grant-a", "opportunity-memo-grant-grant-b"])
+    expect(store.markSent).toHaveBeenNthCalledWith(1, expect.objectContaining({ grantEvidenceId: "grant-a", attemptToken: "attempt-a" }))
+    expect(store.markSent).toHaveBeenNthCalledWith(2, expect.objectContaining({ grantEvidenceId: "grant-b", attemptToken: "attempt-b" }))
+  })
+  it("keeps an unknown provider result uncertain instead of authorizing a blind retry", async () => {
+    const store = createStore({ ...CLAIM, grantEvidenceId: "grant-a", attemptToken: "attempt-a" })
+    const send = vi.fn(async () => ({ success: false, providerOutcome: "uncertain" as const, error: "Connection interrupted" }))
+    await notifyOpportunityMemoAvailable({ opportunityId: CLAIM.opportunityId, matchId: CLAIM.matchId, now: NOW }, { store, notifier: { send } })
+    expect(store.markFailed).toHaveBeenCalledWith(expect.objectContaining({ grantEvidenceId: "grant-a", attemptToken: "attempt-a", outcome: "uncertain" }))
+    expect(store.markSent).not.toHaveBeenCalled()
+  })
+  it("does not turn a success flag without an actual provider receipt into Sent", async () => {
+    const store = createStore({ ...CLAIM, grantEvidenceId: "grant-a", attemptToken: "attempt-a" })
+    const result = await notifyOpportunityMemoAvailable({ opportunityId: CLAIM.opportunityId, matchId: CLAIM.matchId, now: NOW }, { store, notifier: { send: vi.fn(async () => ({ success: true })) } })
+    expect(result).toMatchObject({ status: "failed", error: "Provider acceptance is not confirmed" })
+    expect(store.markFailed).toHaveBeenCalledWith(expect.objectContaining({ outcome: "uncertain", grantEvidenceId: "grant-a", attemptToken: "attempt-a" }))
+    expect(store.markSent).not.toHaveBeenCalled()
+  })
+})

@@ -38,7 +38,7 @@ const evidence = [
     opportunity_id: "opportunity-1",
     repreneur_id: "repreneur-1",
     event_type: "e4_qualification_requested",
-    metadata: { upstream_evidence_id: "cycle-1" },
+    metadata: { handoff_delivery_id: "provider-delivery", provider_message_id: "accepted-provider-receipt", upstream_evidence_id: "cycle-1" },
     actor: "staff",
     idempotency_key: "event-qualification-requested",
     recorded_at: "2026-08-01T10:00:00.000Z",
@@ -80,7 +80,7 @@ const evidence = [
     opportunity_id: "opportunity-1",
     repreneur_id: "repreneur-1",
     event_type: "e6_nda_ready_notified",
-    metadata: { upstream_evidence_id: "gate-1" },
+    metadata: { handoff_delivery_id: "provider-delivery", provider_message_id: "accepted-provider-receipt", upstream_evidence_id: "gate-1" },
     actor: "staff",
     idempotency_key: "event-e6",
     recorded_at: "2026-08-02T09:30:00.000Z",
@@ -123,7 +123,7 @@ const evidence = [
     opportunity_id: "opportunity-1",
     repreneur_id: "repreneur-1",
     event_type: "e7_signed_copies_and_memo_requested",
-    metadata: { upstream_evidence_id: "gate-2" },
+    metadata: { handoff_delivery_id: "provider-delivery", provider_message_id: "accepted-provider-receipt", upstream_evidence_id: "gate-2" },
     actor: "staff",
     idempotency_key: "event-6",
     recorded_at: "2026-08-06T09:00:00.000Z",
@@ -201,6 +201,8 @@ function setupCurrentPursuit(options: {
   match?: Result
   settings?: Result
   grant?: unknown
+  externalMemoNotices?: unknown
+  externalRecording?: boolean
 } = {}) {
   let artifactRead = 0
   const from = vi.fn((table: string) => {
@@ -240,6 +242,9 @@ function setupCurrentPursuit(options: {
     if (table === "opportunity_pursuit_confidential_grants") {
       return query({ data: options.grant === undefined ? grant : options.grant, error: null })
     }
+    if (table === "opportunity_memo_external_notices") return query({ data: options.externalMemoNotices ?? [], error: null })
+    if (table === "opportunity_memo_feedback_reminders") return query({ data: null, error: null })
+    if (table === "pursuit_external_handoff_settings") return query({ data: { enabled: options.externalRecording ?? true }, error: null })
     throw new Error(`Unexpected table: ${table}`)
   })
   const rpc = vi.fn((name: string) => {
@@ -399,6 +404,24 @@ describe("current pursuit reads", () => {
     expect(serialized).not.toContain("entries")
     expect(serialized).not.toMatch(/gate1Passed|gate2Passed|dispatched|evidenceRequired|actor|metadata|artifact/)
   })
+  it("reads external memo attribution only in the staff projection and never queries its store for owner/preview", async () => {
+    const grantEntry = { ...evidence[0], id: "exact-grant", event_type: "confidential_access_granted", actor: "private-staff", metadata: { private_reference: "Synthetic private exchange" } }
+    const notice = { grant_evidence_id: "exact-grant", exchange_date: "2026-10-06", exchange_time: null, channel: "phone", reference: "Synthetic private exchange", staff_user_id: "private-staff", recorded_at: "2026-10-07T10:00:00Z" }
+    setupCurrentPursuit({ evidence: [...evidence, grantEntry], externalMemoNotices: [notice] })
+    expect((await readStaffCurrentPursuit("match-1"))?.externalMemoNotices).toEqual({ "exact-grant": notice })
+    for (const viewer of [{ kind: "portal" as const }, { kind: "staff-preview" as const, repreneurId: "repreneur-1" }]) {
+      const { from } = setupCurrentPursuit({ evidence: [...evidence, grantEntry], externalMemoNotices: [notice] })
+      const result = await readPortalCurrentPursuit({ matchId: "match-1", viewer })
+      expect(from).not.toHaveBeenCalledWith("opportunity_memo_external_notices")
+      expect(JSON.stringify(result)).not.toMatch(/Synthetic private exchange|private-staff|exchange_date|externalMemoNotices|exact-grant/)
+    }
+  })
+  it("stops new external memo controls after recording is disabled without denying ordinary approval", async () => {
+    setupCurrentPursuit({ grant: null, externalRecording: false })
+    const staff = await readStaffCurrentPursuit("match-1")
+    expect(staff?.externalRecordingEnabled).toBe(false)
+    expect(staff?.allowedActions).toContain("grant_confidential_access")
+  })
 
   it("allows DEMO-to-DEMO pursuits in both portal and staff preview", async () => {
     const demoMatch = {
@@ -557,7 +580,7 @@ describe("current pursuit reads", () => {
   it("separates a reopened current cycle from old notice, artifact and IM access", async () => {
     const prior = [
       { ...evidence[0], id: "prior-cycle" },
-      { ...evidence[5], id: "prior-e6", metadata: { upstream_evidence_id: "prior-gate" } },
+      { ...evidence[5], id: "prior-e6", metadata: { handoff_delivery_id: "provider-delivery", provider_message_id: "accepted-provider-receipt", upstream_evidence_id: "prior-gate" } },
       { ...evidence[0], id: "prior-drop", event_type: "dropped" as const },
       { ...evidence[0], id: "reopened", event_type: "reopened" as const },
       { ...evidence[0], id: "current-cycle" },
@@ -585,7 +608,7 @@ describe("current pursuit reads", () => {
       { ...evidence[0], id: "reopened", event_type: "reopened" as const, recorded_at: "2026-08-09T09:00:00.000Z" },
       { ...evidence[0], id: "current-cycle", recorded_at: later },
       { ...evidence[4], id: "new-gate", recorded_at: "2026-08-10T10:00:00.000Z" },
-      { ...evidence[5], id: "new-e6", metadata: { upstream_evidence_id: "new-gate" }, recorded_at: "2026-08-10T11:00:00.000Z" },
+      { ...evidence[5], id: "new-e6", metadata: { handoff_delivery_id: "provider-delivery", provider_message_id: "accepted-provider-receipt", upstream_evidence_id: "new-gate" }, recorded_at: "2026-08-10T11:00:00.000Z" },
     ]
     const { rpc } = setupCurrentPursuit({ evidence: reopened, currentGate1Id: "new-gate", currentGate2Id: null,
       currentDispatchId: null, grant: { ...grant, revoked_at: "2026-08-08T09:00:00.000Z" },
@@ -826,4 +849,22 @@ describe("resolvePortalPursuitResource", () => {
     })).resolves.toBeNull()
     expect(rpc).not.toHaveBeenCalled()
   })
+  it("projects qualifying external E6 signing consequences without leaking its private reference or actor", async () => {
+    const externalEvidence = evidence.map((event) => event.event_type === "e6_nda_ready_notified" ? {
+      ...event, actor: "private-staff-id", evidence_reference: "private external exchange reference",
+      metadata: { upstream_evidence_id: "gate-1", qualifying_origin: "external_staff_v1", external_handoff_id: "private-receipt", operation_key: "private-operation", context: { documents: ["current-template"] }, exchange_date: "2026-07-31", exchange_time: null },
+    } : event)
+    // The existing current Gate 1 fixture ID is the authority; use that literal
+    // rather than an inferred human-facing exchange date.
+    const gateId = evidence.find((event) => event.event_type === "gate_1_passed")!.id
+    externalEvidence.find((event) => event.event_type === "e6_nda_ready_notified")!.metadata!.upstream_evidence_id = gateId
+    setupCurrentPursuit({ evidence: externalEvidence, currentGate2Id: null, currentDispatchId: null, artifacts: [], grant: null })
+    const result = await readPortalCurrentPursuit({ matchId: "match-1", viewer: { kind: "portal" } })
+    expect(result?.ndaReadyNotified).toBe(true)
+    expect(result?.action).toBe("sign_nda")
+    expect(JSON.stringify(result)).not.toContain("private external exchange reference")
+    expect(JSON.stringify(result)).not.toContain("private-staff-id")
+    expect(JSON.stringify(result)).not.toContain("private-receipt")
+  })
+
 })

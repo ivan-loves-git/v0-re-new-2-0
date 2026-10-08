@@ -137,13 +137,16 @@ describe("repreneur opportunity interest response", () => {
     expect(mocks.redirect).toHaveBeenCalledWith("/portal/deals");
   });
 
-  it("blocks a REAL repreneur from a DEMO opportunity before the response RPC", async () => {
+  it.each([
+    { boundary: "DEMO namespace", opportunityStatus: "active", opportunityDemo: true, matchStatus: "proposed" },
+    { boundary: "Paused status", opportunityStatus: "paused", opportunityDemo: false, matchStatus: "active_pursuit" },
+  ])("blocks an owned opportunity with $boundary before persistence, notification or redirect", async ({ opportunityStatus, opportunityDemo, matchStatus }) => {
     const maybeSingle = vi.fn().mockResolvedValue({
       data: {
         id: MATCH_ID,
         opportunity_id: OPPORTUNITY_ID,
-        status: "proposed",
-        opportunity: { status: "active", is_demo: true },
+        status: matchStatus,
+        opportunity: { status: opportunityStatus, is_demo: opportunityDemo },
         repreneur: { is_demo: false },
       },
       error: null,
@@ -158,6 +161,9 @@ describe("repreneur opportunity interest response", () => {
       "This opportunity is no longer available for your response.",
     );
     expect(rpc).not.toHaveBeenCalled();
+    expect(mocks.deliverResponseNotification).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 
   it("does not create a database client when the session lacks a linked repreneur", async () => {

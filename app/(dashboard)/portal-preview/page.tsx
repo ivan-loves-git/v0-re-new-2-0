@@ -108,16 +108,16 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     match_status: NonNullable<typeof deal.match_status>
   } => Boolean(deal.match_id && deal.match_status))
   const actions = selectedRepreneurId && currentWorkspace && (selectedOpportunity || section === "renew-pursuits")
-    ? await readPortalDealActionIndicators(workspaceDeals.map((deal) => deal.match_id), {
+    ? await readPortalDealActionIndicators(workspaceDeals.filter((deal) => deal.opportunity_status !== "paused").map((deal) => deal.match_id), {
         kind: "staff-preview", repreneurId: selectedRepreneurId,
       }) : {}
-  const previewJourney = selectedRepreneurId && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
+  const previewJourney = selectedRepreneurId && selectedOpportunity?.opportunity_status !== "paused" && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
     ? await readPortalCurrentPursuit({
         matchId: selectedOpportunity.match_id,
         viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId },
       })
     : null
-  const opportunityUpdatedAt = selectedOpportunity && selectedOwnerToken
+  const opportunityUpdatedAt = selectedOpportunity && selectedOpportunity.opportunity_status !== "paused" && selectedOwnerToken
     ? (await createAdminClient().from("opportunities").select("updated_at")
       .eq("id", selectedOpportunity.opportunity_id).maybeSingle()).data?.updated_at ?? null
     : null
@@ -201,6 +201,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
           key={JSON.stringify([selectedRepreneurId, workspaceId, selectedDealId, query, status, returnView])}
           opportunity={selectedOpportunity}
           deals={workspaceDeals.map((deal) => ({
+            opportunity_id: deal.opportunity_id,
+            opportunity_status: deal.opportunity_status,
             match_id: deal.match_id,
             match_status: deal.match_status,
             pursuit_stage: deal.pursuit_stage,
@@ -224,7 +226,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             repreneurId: selectedRepreneurId,
             workspaceId,
             returnView,
-            documentHrefs: selectedOpportunity.match_id && workspaceId && selectedOwnerSelection ? {
+            documentHrefs: selectedOpportunity.opportunity_status !== "paused" && selectedOpportunity.match_id && workspaceId && selectedOwnerSelection ? {
               ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }, workspaceId, selectedOwnerSelection.generation),
               ...(previewJourney?.confidentialGrant ? {
                 informationMemorandum: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, {
@@ -294,6 +296,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
           <TabsContent value="renew-pursuits">
             <RepreneurPursuitWorkspace key={`${selectedRepreneurId}:${workspaceId}:renew`} opportunity={null}
               deals={workspaceDeals.map((deal) => ({
+                opportunity_id: deal.opportunity_id,
+                opportunity_status: deal.opportunity_status,
                 match_id: deal.match_id,
                 match_status: deal.match_status,
                 pursuit_stage: deal.pursuit_stage,

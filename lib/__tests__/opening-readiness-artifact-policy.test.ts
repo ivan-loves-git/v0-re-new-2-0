@@ -94,73 +94,116 @@ afterEach(async () => {
 });
 
 describe("opening-readiness artifact policy", () => {
-  it("uploads only the aggregate file and controlled synthetic email and M&A UI captures for seven days", async () => {
+  it("keeps the approved M&A directory captures as exact seven-day synthetic artifacts", async () => {
     const workflow = parse(await readFile(workflowPath, "utf8")) as {
       jobs: { fixture: { steps: Array<Record<string, unknown>> } };
     };
-    const steps = workflow.jobs.fixture.steps;
-    const uploads = steps.filter(
-      (step) =>
-        typeof step.uses === "string" &&
-        step.uses.startsWith("actions/upload-artifact@"),
+    const upload = workflow.jobs.fixture.steps.find(
+      (step) => step.name === "Upload synthetic M&A directory screenshots",
     );
-    const publishedArtifacts = uploads.map((upload) => {
-      expect(upload.uses).toBe(
-        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
-      );
-      const options = upload.with as Record<string, unknown>;
-      expect(options.path).toEqual(expect.any(String));
-      return {
-        files: String(options.path)
-          .trim()
-          .split(/\r?\n/)
-          .map((path) => path.trim()),
-        retentionDays: options["retention-days"],
-      };
-    });
-    // Exact files and separate artifacts reject directories, globs, raw
-    // diagnostics, traces and token payloads without expanding the assembler.
-    expect(publishedArtifacts).toEqual([
-      {
-        files: [
-          "${{ runner.temp }}/opening-readiness-published/aggregate-summary.json",
-        ],
-        retentionDays: 7,
-      },
-      {
-        files: [
-          "${{ runner.temp }}/opening-readiness-evidence/email-review-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/email-review-mobile.png",
-          "${{ runner.temp }}/opening-readiness-evidence/email-247-sent-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/email-247-history-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-mobile.png",
-          "${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png",
-        ],
-        retentionDays: 7,
-      },
-      {
-        files: [
-          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-validation-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-contacts-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-correction-mobile.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-mobile.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-directory-contact-mobile.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-former-prospect-office-desktop.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-firm-add-office-mobile.png",
-          "${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-mobile.png",
-        ],
-        retentionDays: 7,
-      },
-    ]);
-    expect(steps).toContainEqual(
+    expect(upload).toEqual(
       expect.objectContaining({
-        name: "Assemble aggregate-safe evidence",
-        run: "bash scripts/assemble-opening-readiness-artifact.sh",
+        uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+        with: expect.objectContaining({ "retention-days": 7 }),
       }),
     );
+    const paths = String((upload?.with as Record<string, unknown>).path)
+      .trim()
+      .split(/\r?\n/)
+      .map((path) => path.trim());
+    expect(paths).toEqual(expect.arrayContaining([
+      "${{ runner.temp }}/opening-readiness-evidence/ma-former-prospect-office-desktop.png",
+      "${{ runner.temp }}/opening-readiness-evidence/ma-firm-add-office-mobile.png",
+    ]));
+  });
+
+  it("emits only the Paused history boolean allowlist and rejects invalid outcome evidence", async () => {
+    const root = await temporaryDirectory();
+    const published = join(root, "published");
+    const outcomes = { genuineOwnOpening: true, authenticRelationships: true, deduplicated: true, exclusions: true,
+      previewPrivateBoundary: true, pausedReadsUnchanged: true, staleCommandDenied: true, oldNdaLinkDenied: true,
+      validatedInterestAlreadyCorrect: true, frenchEnglishDesktopMobile: true, previewFrenchEnglishDesktopMobile: true, navigationCoherent: true };
+    await writeFile(join(root, "paused-history.json"), JSON.stringify({ ...outcomes,
+      first_viewed_at: "private timestamp", actor: "private actor", request: { token: "private request" },
+      membership: ["private visit-only opportunity"], source_office_id: "private source",
+      screenshots: ["private-preview.png", "paused-preview-private.png"], preview: { owner: "private owner", first_viewed_at: "private date" } }));
+    const options = { env: { ...process.env, OPENING_READINESS_EVIDENCE_DIR: root,
+      OPENING_READINESS_PUBLISHED_DIR: published, OPENING_FIXTURE_RELEASE_SHA: "candidate-sha" }, stdio: "pipe" as const };
+    execFileSync("bash", [assemblerPath], options);
+    const artifact = JSON.parse(await readFile(join(published, "aggregate-summary.json"), "utf8"));
+    expect(artifact.pausedHistory).toEqual(outcomes);
+    expect(JSON.stringify(artifact)).not.toContain("private");
+    expect(await readdir(published)).toEqual(["aggregate-summary.json"]);
+    for (const key of ["genuineOwnOpening", "previewFrenchEnglishDesktopMobile"]) {
+      await writeFile(join(root, "paused-history.json"), JSON.stringify({ ...outcomes, [key]: "true" }));
+      expect(() => execFileSync("bash", [assemblerPath], options)).toThrow();
+      await expect(readFile(join(published, "aggregate-summary.json"))).rejects.toThrow();
+    }
+  });
+  it("emits only the exact memo outcome booleans and rejects adversarial selected values", async () => {
+    const root = await temporaryDirectory();
+    const published = join(root, "published");
+    const outcomes = { atomicFourEffects: true, retainedMemoBytes: true, exactStaff: true, noDispatch: true, exactGrantSuppression: true, ownerAccessBoundaries: true, frenchEnglishDesktopMobile: true };
+    const options = { env: { ...process.env, OPENING_READINESS_EVIDENCE_DIR: root, OPENING_READINESS_PUBLISHED_DIR: published, OPENING_FIXTURE_RELEASE_SHA: "candidate-sha" }, stdio: "pipe" as const };
+    await writeFile(join(root, "external-memo-notice.json"), JSON.stringify({ ...outcomes, grantId: "private identity", memo_sha256: "private hash", reference: "private exchange", request: { token: "private token" }, screenshots: ["private-memo.png"] }));
+    execFileSync("bash", [assemblerPath], options);
+    const artifact = JSON.parse(await readFile(join(published, "aggregate-summary.json"), "utf8"));
+    expect(artifact.externalMemo).toEqual(outcomes);
+    expect(JSON.stringify(artifact)).not.toContain("private");
+    expect(await readdir(published)).toEqual(["aggregate-summary.json"]);
+    await writeFile(join(root, "external-memo-notice.json"), JSON.stringify({ ...outcomes, noDispatch: { provider: "private receipt" } }));
+    expect(() => execFileSync("bash", [assemblerPath], options)).toThrow();
+    await expect(readFile(join(published, "aggregate-summary.json"))).rejects.toThrow();
+  });
+
+  it("publishes only the external outcome allowlist and rejects unsafe selected values", async () => {
+    const root = await temporaryDirectory();
+    const published = join(root, "published");
+    const outcomes = {
+      exactStaff: true,
+      phaseDocuments: true,
+      noDispatch: true,
+      dateOnlyPreserved: true,
+      knownTimePreserved: false,
+      frenchEnglishDesktopMobile: true,
+      noAccessGrant: true,
+      currentLdcPdfVersion: true,
+      retainedLdcAfterReplacement: true,
+    };
+    await writeFile(join(root, "external-handoffs.json"), JSON.stringify({
+      ...outcomes,
+      staffUserId: "25400000-0000-4000-8000-000000000001",
+      reference: "private communication reference",
+      email: "synthetic@example.invalid",
+      token: "must-not-retain",
+      context: { documents: [{ storage_path: "private-document-path" }] },
+      request: { body: "must-not-retain" },
+    }));
+    const options = {
+      env: {
+        ...process.env,
+        OPENING_READINESS_EVIDENCE_DIR: root,
+        OPENING_READINESS_PUBLISHED_DIR: published,
+        OPENING_FIXTURE_RELEASE_SHA: "candidate-sha",
+      },
+      stdio: "pipe" as const,
+    };
+    execFileSync("bash", [assemblerPath], options);
+    const artifact = JSON.parse(await readFile(join(published, "aggregate-summary.json"), "utf8"));
+    expect(artifact.externalHandoffs).toEqual(outcomes);
+    expect(hasForbiddenArtifactField(artifact)).toBe(false);
+    expect(await readdir(published)).toEqual(["aggregate-summary.json"]);
+
+    await writeFile(join(root, "external-handoffs.json"), JSON.stringify({
+      ...outcomes, noDispatch: { provider: "must-not-retain" },
+    }));
+    expect(() => execFileSync("bash", [assemblerPath], options)).toThrow();
+    await expect(readFile(join(published, "aggregate-summary.json"))).rejects.toThrow();
+    await writeFile(join(root, "external-handoffs.json"), JSON.stringify({
+      ...outcomes, currentLdcPdfVersion: { source_path: "private-cvs-path", digest: "private-source-hash" },
+    }));
+    expect(() => execFileSync("bash", [assemblerPath], options)).toThrow();
+    await expect(readFile(join(published, "aggregate-summary.json"))).rejects.toThrow();
   });
 
   it("projects only aggregate-safe fields from adversarial working evidence", async () => {
@@ -193,6 +236,12 @@ describe("opening-readiness artifact policy", () => {
       }),
     );
     await writeFile(join(root, "raw.jsonl"), '{"email":"must-not-retain"}\n');
+    await writeFile(join(root, "ma-directory.json"), JSON.stringify({
+      firm: { name: "must-not-retain", id: "private-firm" },
+      contact: { email: "must-not-retain", phone: "private-phone" },
+      screenshots: ["ma-directory-firms-desktop.png", "private-directory.png"],
+    }));
+    await writeFile(join(root, "ma-directory-firms-desktop.png"), "synthetic PNG working capture");
 
     execFileSync("bash", [assemblerPath], {
       env: {

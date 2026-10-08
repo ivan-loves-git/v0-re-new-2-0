@@ -721,7 +721,9 @@ async function approveReviewedMessage(id: string, version: number, automatic: bo
     return result
   }
   const { payload } = await currentStaffEmailAttempt(review)
-  if (!automatic) {
+  const manualHandoff = !automatic && ["e4", "e6", "e7"].includes(review.source_kind)
+  const manualBusiness = !automatic && review.source_kind === "business"
+  if (!automatic && !manualHandoff && !manualBusiness) {
     const { error } = await createAdminClient().rpc("email_review_mark_manual", {
       p_review_id: id,
       p_version: version,
@@ -732,12 +734,12 @@ async function approveReviewedMessage(id: string, version: number, automatic: bo
   const db = createAdminClient()
   const { data: token, error: reserveError } =
     review.source_kind === "business"
-      ? await db.rpc("email_business_reserve", {
+      ? await db.rpc(manualBusiness ? "email_business_reserve_manual" : "email_business_reserve", {
           p_review_id: id,
           p_version: version,
           p_actor: user.id,
         })
-      : await db.rpc("staff_email_review_reserve", {
+      : await db.rpc(manualHandoff ? "staff_email_review_reserve_manual_handoff" : "staff_email_review_reserve", {
           p_review_id: id,
           p_version: version,
           p_payload: payload,

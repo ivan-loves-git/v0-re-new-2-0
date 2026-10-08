@@ -76,6 +76,7 @@ export function RepreneurOpportunityDetail({
 }: RepreneurOpportunityDetailProps) {
   const language = useUiLanguage()
   const copy = useUiCopy()
+  const paused = opportunity.opportunity_status === "paused"
   const [, setResponseClock] = useState(0)
   useEffect(() => {
     const timer = window.setInterval(() => setResponseClock((value) => value + 1), 60_000)
@@ -84,7 +85,7 @@ export function RepreneurOpportunityDetail({
   const interestAction = opportunity.match_id
     ? markMyOpportunityInterested.bind(null, opportunity.match_id)
     : null
-  const memoAvailable = Boolean(journey?.confidentialGrant && !journey.revoked)
+  const memoAvailable = !paused && Boolean(journey?.confidentialGrant && !journey.revoked)
   const selectedDeclineReasons = new Set(opportunity.decline_reason_categories ?? [])
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
   const canExpressUnassignedInterest = !opportunity.match_id
@@ -105,17 +106,20 @@ export function RepreneurOpportunityDetail({
       {(mode === "all" || mode === "heading") && <header className="relative flex flex-col gap-3 border-b pb-5">
         <span aria-hidden="true" className="absolute -bottom-px left-0 h-0.5 w-12 bg-primary" />
         <div className="flex flex-wrap items-center gap-2">
-          {opportunity.match_status ? (
+          {paused ? <Badge variant="outline">{copy("Paused")}</Badge> : null}
+          {paused && opportunity.match_status ? <Badge variant="outline" className="max-w-full whitespace-normal text-left">{copy("Previous relationship: {status}", { status: matchStatusUiLabel(opportunity.match_status, language) })}</Badge> : null}
+          {paused && opportunity.pursuit_stage ? <Badge variant="outline" className="max-w-full whitespace-normal text-left">{copy("Previous stage: {stage}", { stage: pursuitStageUiLabel(opportunity.pursuit_stage, language) })}</Badge> : null}
+          {!paused && opportunity.match_status ? (
             <Badge variant="outline">{opportunity.match_status === "interested" ? opportunity.interest_rejected ? copy("Interest not selected by Re-New") : copy("Interest sent, awaiting Re-New validation") : matchStatusUiLabel(opportunity.match_status, language)}</Badge>
           ) : null}
-          {lockedForAnotherRepreneur ? <Badge variant="outline">{copy("Someone is already positioned")}</Badge> : null}
-          {opportunity.match_status === "active_pursuit" && <Badge variant="outline">{copy("Confidential journey")}</Badge>}
-          {opportunity.match_status === "active_pursuit" && opportunity.pursuit_stage && <Badge variant="outline">{pursuitStageUiLabel(opportunity.pursuit_stage, language)}</Badge>}
+          {!paused && lockedForAnotherRepreneur ? <Badge variant="outline">{copy("Someone is already positioned")}</Badge> : null}
+          {!paused && opportunity.match_status === "active_pursuit" && <Badge variant="outline">{copy("Confidential journey")}</Badge>}
+          {!paused && opportunity.match_status === "active_pursuit" && opportunity.pursuit_stage && <Badge variant="outline">{pursuitStageUiLabel(opportunity.pursuit_stage, language)}</Badge>}
           {opportunity.pursuit_stage_provenance === "staff_confirmed_history" && <Badge variant="outline">{copy("Stage confirmed by Re-New")}</Badge>}
-          {isStaffRecommended(opportunity) && !opportunity.interest_rejected
+          {!paused && isStaffRecommended(opportunity) && !opportunity.interest_rejected
             && opportunity.match_status !== "declined" && opportunity.match_status !== "dropped" && opportunity.match_status !== "withdrawn"
             ? <Badge variant="secondary">{copy("Selected by Re-New")}</Badge> : null}
-          {responseExpired ? <Badge variant="outline">{copy("Response window expired")}</Badge> : null}
+          {!paused && responseExpired ? <Badge variant="outline">{copy("Response window expired")}</Badge> : null}
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-[-0.025em]">{opportunityTitle(opportunity, language)}</h1>
@@ -135,13 +139,18 @@ export function RepreneurOpportunityDetail({
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <span>{opportunity.sector ?? opportunity.activity ?? copy("Sector to confirm")}</span>
-            {responsePending && responseDeadline ? <span>{copy(responseExpired ? "Response window expired: {date}" : "Respond by: {date}", { date: responseDeadline })}</span> : null}
+            {!paused && responsePending && responseDeadline ? <span>{copy(responseExpired ? "Response window expired: {date}" : "Respond by: {date}", { date: responseDeadline })}</span> : null}
           </div>
           {opportunity.pursuit_stage_provenance === "staff_confirmed_history" ? <p className="mt-2 text-xs text-muted-foreground">{copy("This progress was confirmed by Re-New from the existing process. Document checks and access remain separate.")}</p> : null}
         </div>
       </header>}
 
-      {(mode === "all" || mode === "overview" || mode === "response") && (opportunity.match_status || canExpressUnassignedInterest) ? <Card className="order-1">
+      {paused && (mode === "all" || mode === "overview" || mode === "response" || mode === "documents") ? <Alert>
+        <ShieldCheck />
+        <AlertTitle>{copy("Paused")}</AlertTitle>
+        <AlertDescription>{copy("This opportunity is temporarily paused. Its retained history is read-only; responses and confidential documents are unavailable.")}</AlertDescription>
+      </Alert> : null}
+      {!paused && (mode === "all" || mode === "overview" || mode === "response") && (opportunity.match_status || canExpressUnassignedInterest) ? <Card className="order-1">
         <CardHeader>
           <CardTitle>{copy(canExpressUnassignedInterest ? "Express interest" : readOnly ? "Response" : "Your response")}</CardTitle>
           <CardDescription>
@@ -266,7 +275,7 @@ export function RepreneurOpportunityDetail({
         </CardContent>
       </Card> : null}
 
-      {(mode === "all" || mode === "documents") && opportunity.match_status === "active_pursuit" && (
+      {!paused && (mode === "all" || mode === "documents") && opportunity.match_status === "active_pursuit" && (
         <Card className="order-3">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
