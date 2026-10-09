@@ -185,6 +185,25 @@ describe("idempotent email logging and accounting", () => {
     mocks.isSuppressed.mockResolvedValue(false)
   })
 
+  it("keeps reminder copies only once in the current shared CC", async () => {
+    const database = fakeEmailDatabase()
+    mocks.createAdminClient.mockReturnValue(database.client)
+    mocks.resendSend.mockResolvedValue({ data: { id: "provider-1" }, error: null })
+
+    await expect(sendEmail({
+      ...emailParams(),
+      templateKey: "interview_reminder",
+      bcc: ["bertrand@re-new.team"],
+    })).resolves.toMatchObject({ success: true })
+
+    expect(mocks.resendSend).toHaveBeenCalledTimes(1)
+    expect(mocks.resendSend.mock.calls[0][0]).toMatchObject({
+      to: ["ada@example.test"],
+      cc: ["bertrand@re-new.team", "contact@re-new.team"],
+      bcc: [],
+    })
+  })
+
   it("rejoins a terminal log without another provider request or daily count", async () => {
     const database = fakeEmailDatabase({
       initialLog: {
