@@ -28,9 +28,9 @@ export const maxDuration = 60
 const ABANDONMENT_HOURS = 24 // Send reminder after 24 hours
 const MAX_REMINDERS_PER_REPRENEUR = 2
 
-// Bertrand is BCC'd on every interview reminder so he has a paper trail.
-// Override with CC_ON_INTERVIEW_REMINDER env var if the address changes.
-const INTERVIEW_REMINDER_BCC = env.CC_ON_INTERVIEW_REMINDER || "bertrand.galas@edu.escp.eu"
+// Preserve the optional reminder-copy override; the default is deduplicated
+// against Bertrand's shared business CC before sending.
+const INTERVIEW_REMINDER_BCC = env.CC_ON_INTERVIEW_REMINDER || "bertrand@re-new.team"
 
 export async function GET(request: Request) {
   // Verify the request is from Vercel Cron.

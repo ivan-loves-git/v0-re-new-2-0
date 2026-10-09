@@ -54,7 +54,6 @@ vi.mock("@/lib/env", () => ({
   env: {
     CRON_SECRET: "test-cron-secret",
     RESEND_WEBHOOK_SECRET: `whsec_${Buffer.from("test-webhook-secret").toString("base64")}`,
-    CC_ON_INTERVIEW_REMINDER: "staff@test.invalid",
   },
 }))
 
@@ -582,6 +581,7 @@ describe("critical route traces", () => {
     expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         templateKey: "interview_reminder",
+        bcc: ["bertrand@re-new.team"],
         idempotencyKey:
           "cron-interview-interview-activity-1-2026-08-22",
       }),
@@ -589,6 +589,7 @@ describe("critical route traces", () => {
     if (bookingState === "due") expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         templateKey: "booking_reminder",
+        bcc: ["bertrand@re-new.team"],
         idempotencyKey: "cron-booking-booking-repreneur-1",
       }),
     )

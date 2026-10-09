@@ -19,7 +19,7 @@ const reviewId = "00000000-0000-4000-8000-000000000001"
 const messageId = "00000000-0000-4000-8000-000000000002"
 const body = "Release QA — synthetic message only."
 const subject = "[TEST] Receipt QA"
-const cc = ["bertrand.galas@edu.escp.eu", "colin.hofman@edu.escp.eu"]
+const cc = ["bertrand@re-new.team", "contact@re-new.team"]
 
 describe("Email Operations public tooling", () => {
   it("rejects an unrelated source project before making any external request", async () => {

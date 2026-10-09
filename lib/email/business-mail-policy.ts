@@ -1,6 +1,6 @@
 /** #247: the catalogue is a policy index, never authority for a business event. */
 export type BusinessEmailCategory = "status" | "intake" | "offer" | "ma"
-export const BUSINESS_STAFF_CC = ["bertrand.galas@edu.escp.eu", "colin.hofman@edu.escp.eu"] as const
+export const BUSINESS_STAFF_CC = ["bertrand@re-new.team", "contact@re-new.team"] as const
 export const ACCESS_EMAIL_KEYS = ["portal_access_setup", "password_reset"] as const
 export function businessCategory(key: string): BusinessEmailCategory | null {
   if ((ACCESS_EMAIL_KEYS as readonly string[]).includes(key)) return null
