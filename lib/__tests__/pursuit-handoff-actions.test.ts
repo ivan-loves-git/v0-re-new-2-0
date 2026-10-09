@@ -78,7 +78,7 @@ describe("canonical pursuit handoff actions", () => {
     const [request, options] = m.resend.mock.calls[0]
     expect(request.from).toBe("Configured Re-New <configured@re-new.invalid>")
     expect(request.to).toEqual(["buyer@re-new.invalid"])
-    expect(request.cc).toEqual(["bertrand.galas@edu.escp.eu", "colin.hofman@edu.escp.eu"])
+    expect(request.cc).toEqual(["bertrand@re-new.team", "contact@re-new.team"])
     expect(request.text).toContain("https://app.re-new.team/portal/deals/match")
     expect(request.subject).toBe("Votre NDA est prêt à signer - PME industrielle")
     expect(request.text).toContain("Le NDA de l'opportunité : PME industrielle")

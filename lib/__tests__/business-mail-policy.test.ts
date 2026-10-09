@@ -8,9 +8,13 @@ import {
 
 describe("accepted business email policy", () => {
   it("copies both canonical staff members once, excluding primary recipients", () => {
+    expect(businessCc(["client@example.test"])).toEqual([
+      "bertrand@re-new.team",
+      "contact@re-new.team",
+    ])
     expect(
-      businessCc([" BERTRAND@RE-NEW.TEAM "], [], ["bertrand@re-new.team", "colin@re-new.team"]),
-    ).toEqual(["colin@re-new.team"])
+      businessCc([" BERTRAND@RE-NEW.TEAM "]),
+    ).toEqual(["contact@re-new.team"])
     expect(
       businessCc(
         ["client@example.test"],
