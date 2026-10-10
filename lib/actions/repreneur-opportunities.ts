@@ -18,6 +18,7 @@ import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
 import { automaticMatchingThesisCompleteness } from "@/lib/repreneur-target-thesis-completeness"
 import {
   loadMatchingGeographyContext,
+  type MatchingGeographyContext,
   withMatchingGeography,
   withMatchingGeographyTargets,
   withRepreneurGeographyLabel,
@@ -326,8 +327,11 @@ async function ownerCriteriaForDeal(
   supabase: ReturnType<typeof createAdminClient>,
   repreneur: RepreneurDealFlowProfile,
   opportunity: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity,
+  loadedGeography?: MatchingGeographyContext,
 ): Promise<OwnerCriterionComparison[]> {
-  const geography = await loadMatchingGeographyContext(supabase, [repreneur.id])
+  // The Deal Flow projection already holds this owner's geography context;
+  // reuse it rather than reading the hierarchy again for the same request.
+  const geography = loadedGeography ?? await loadMatchingGeographyContext(supabase, [repreneur.id])
   const ownerWithGeography = withMatchingGeographyTargets(repreneur, geography)
   const dealWithGeography = withMatchingGeography(opportunity, geography)
   const outcomes = compareOwnerOpportunityCriteria(ownerWithGeography, dealWithGeography)
@@ -616,6 +620,7 @@ const EMPTY_REPRENEUR_DEAL_FLOW: RepreneurDealFlowResult = {
 async function listRepreneurDealFlowForProfile(
   repreneur: RepreneurDealFlowProfile,
   sort: RepreneurDealSort,
+  loadedGeography?: MatchingGeographyContext,
 ): Promise<RepreneurDealFlowResult> {
 
   const supabase = createAdminClient()
@@ -675,7 +680,7 @@ async function listRepreneurDealFlowForProfile(
       p_repreneur_id: repreneur.id,
       p_opportunity_id: null,
     }),
-    loadMatchingGeographyContext(supabase, [repreneur.id]),
+    loadedGeography ?? loadMatchingGeographyContext(supabase, [repreneur.id]),
   ])
 
   if (matchesResult.error) throw new Error(matchesResult.error.message)
@@ -686,15 +691,19 @@ async function listRepreneurDealFlowForProfile(
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
   const allOpportunities = ((opportunitiesResult.data ?? []) as RepreneurDealFlowOpportunityRow[])
     .filter((opportunity) => opportunity.is_demo === (repreneur.is_demo === true))
-  const activeOwnerByOpportunity = await getActivePursuitOwners(
-    supabase,
-    allOpportunities.map((opportunity) => opportunity.id),
-    repreneur.is_demo === true,
-  )
-  const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
-    supabase,
-    matchedOpportunities.filter((opportunity) => opportunity.opportunity_status !== "paused").map((opportunity) => opportunity.match_id),
-  )
+  // Both lookups depend only on the rows above, so they run together; the
+  // interest outcomes below need the locked timestamps and wait for them.
+  const [activeOwnerByOpportunity, interestStateByMatch] = await Promise.all([
+    getActivePursuitOwners(
+      supabase,
+      allOpportunities.map((opportunity) => opportunity.id),
+      repreneur.is_demo === true,
+    ),
+    listLockedOpportunityInterestStateByMatch(
+      supabase,
+      matchedOpportunities.filter((opportunity) => opportunity.opportunity_status !== "paused").map((opportunity) => opportunity.match_id),
+    ),
+  ])
   const decisionState = await readRepreneurInterestStates(repreneur.id,
     matchedOpportunities.filter((opportunity) => opportunity.opportunity_status !== "paused").map((opportunity) => ({
       id: opportunity.match_id,
@@ -843,15 +852,20 @@ export async function listStaffPreviewRepreneurDealFlow(
   if (!isUuid(repreneurId)) return EMPTY_REPRENEUR_DEAL_FLOW
 
   const supabase = createAdminClient()
-  const repreneur = await getRepreneurDealFlowProfileById(supabase, repreneurId)
+  // The geography hierarchy depends only on the owner id, so it loads beside
+  // the profile and is reused by the projection and the criteria comparison.
+  const [repreneur, geography] = await Promise.all([
+    getRepreneurDealFlowProfileById(supabase, repreneurId),
+    loadMatchingGeographyContext(supabase, [repreneurId]),
+  ])
   if (!repreneur) return EMPTY_REPRENEUR_DEAL_FLOW
 
-  const result = await listRepreneurDealFlowForProfile(repreneur, sort)
+  const result = await listRepreneurDealFlowForProfile(repreneur, sort, geography)
   // Detail-only comparison uses the selected owner's current targets. The
   // list stays compact and never projects private matching reasons or scores.
   if (selectedDealId && isUuid(selectedDealId)) {
     const selected = result.deals.find((deal) => deal.match_id === selectedDealId || deal.opportunity_id === selectedDealId)
-    if (selected) selected.criteria_comparison = await ownerCriteriaForDeal(supabase, repreneur, selected)
+    if (selected) selected.criteria_comparison = await ownerCriteriaForDeal(supabase, repreneur, selected, geography)
   }
   return result
 }

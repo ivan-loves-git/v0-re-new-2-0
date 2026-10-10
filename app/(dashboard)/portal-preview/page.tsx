@@ -54,10 +54,15 @@ interface StaffPortalPreviewPageProps {
 }
 
 export default async function StaffPortalPreviewPage({ searchParams }: StaffPortalPreviewPageProps) {
-  const access = await requireStaffAccess()
-  const previewLanguage = await previewUiLanguage()
-  const params = await searchParams
-  const options = await listStaffPortalPreviewOptions()
+  // Every loader below is one or more database round trips. A deal switch
+  // re-renders this whole page, so independent loads start together and only
+  // a real data dependency adds a serialized stage.
+  const [access, previewLanguage, params, options] = await Promise.all([
+    requireStaffAccess(),
+    previewUiLanguage(),
+    searchParams,
+    listStaffPortalPreviewOptions(),
+  ])
   const requestedRepreneurId = params.repreneurId
   const selectedOption = resolvePortalPreviewRepreneur(options, requestedRepreneurId)
   const selectedRepreneurId = selectedOption?.id ?? null
@@ -76,14 +81,11 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   const query = typeof params.q === "string" ? params.q.slice(0, 120) : ""
   const returnView: PortalPreviewSection = params.returnView === "profile" || params.returnView === "renew-pursuits" || params.returnView === "external-pursuits"
     ? params.returnView : "deals"
-  const selectedOwnerToken = selectedRepreneurId
-    ? await currentStaffPortalSelectionToken(workspaceId ?? undefined, selectedRepreneurId, access.user.id) : null
-  const selectedOwnerSelection = selectedOwnerToken && selectedRepreneurId
-    ? parseStaffPortalSelection(selectedOwnerToken, selectedRepreneurId, access.user.id) : null
-  const currentWorkspace = !workspaceId || Boolean(selectedOwnerToken)
-
-  const [profileData, opportunityData, externalPursuits] = selectedRepreneurId
+  // Stage 2: the staff workspace token and the selected owner's content only
+  // depend on the resolved selection, not on each other.
+  const [selectedOwnerToken, profileData, opportunityData, externalPursuits] = selectedRepreneurId
     ? await Promise.all([
+        currentStaffPortalSelectionToken(workspaceId ?? undefined, selectedRepreneurId, access.user.id),
         section === "profile" ? getStaffPortalPreviewProfile(selectedRepreneurId) : Promise.resolve({ repreneur: null }),
         selectedDealId
           ? listStaffPortalPreviewOpportunities(selectedRepreneurId, selectedDealId)
@@ -91,10 +93,14 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
         section === "external-pursuits" ? listStaffPortalPreviewExternalPursuits(selectedRepreneurId) : Promise.resolve([]),
       ])
     : [
+        null,
         { repreneur: null },
         { repreneur: null, opportunities: [] },
         [],
       ]
+  const selectedOwnerSelection = selectedOwnerToken && selectedRepreneurId
+    ? parseStaffPortalSelection(selectedOwnerToken, selectedRepreneurId, access.user.id) : null
+  const currentWorkspace = !workspaceId || Boolean(selectedOwnerToken)
 
   const selectedOpportunity = currentWorkspace && selectedDealId
     ? opportunityData.opportunities.find((opportunity) => opportunity.match_id === selectedDealId || opportunity.opportunity_id === selectedDealId) ?? null
@@ -107,28 +113,35 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     match_id: string
     match_status: NonNullable<typeof deal.match_status>
   } => Boolean(deal.match_id && deal.match_status))
-  const actions = selectedRepreneurId && currentWorkspace && (selectedOpportunity || section === "renew-pursuits")
-    ? await readPortalDealActionIndicators(workspaceDeals.filter((deal) => deal.opportunity_status !== "paused").map((deal) => deal.match_id), {
-        kind: "staff-preview", repreneurId: selectedRepreneurId,
-      }) : {}
-  const previewJourney = selectedRepreneurId && selectedOpportunity?.opportunity_status !== "paused" && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
-    ? await readPortalCurrentPursuit({
-        matchId: selectedOpportunity.match_id,
-        viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId },
-      })
-    : null
-  const opportunityUpdatedAt = selectedOpportunity && selectedOpportunity.opportunity_status !== "paused" && selectedOwnerToken
-    ? (await createAdminClient().from("opportunities").select("updated_at")
-      .eq("id", selectedOpportunity.opportunity_id).maybeSingle()).data?.updated_at ?? null
-    : null
-  const attachmentsByPursuit = externalPursuits.length
-    ? await getExternalPursuitAttachmentMap(externalPursuits.map((pursuit) => pursuit.id))
-    : {}
-  const nextActions = selectedRepreneurId && selectedOwnerToken && currentWorkspace && !selectedDealId
-    && (section === "renew-pursuits" || section === "external-pursuits")
-    ? await readPortalNextActions({ kind: "staff-preview", repreneurId: selectedRepreneurId,
-        selectionToken: selectedOwnerToken }, opportunityData)
-    : null
+  // Stage 3: everything derived from the loaded deals is independent, so the
+  // action badges, the journey, the freshness stamp, attachments and next
+  // actions are requested together.
+  const [actions, previewJourney, opportunityUpdatedAt, attachmentsByPursuit, nextActions] = await Promise.all([
+    selectedRepreneurId && currentWorkspace && (selectedOpportunity || section === "renew-pursuits")
+      ? readPortalDealActionIndicators(workspaceDeals.filter((deal) => deal.opportunity_status !== "paused").map((deal) => deal.match_id), {
+          kind: "staff-preview", repreneurId: selectedRepreneurId,
+        })
+      : Promise.resolve({}),
+    selectedRepreneurId && selectedOpportunity?.opportunity_status !== "paused" && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
+      ? readPortalCurrentPursuit({
+          matchId: selectedOpportunity.match_id,
+          viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId },
+        })
+      : Promise.resolve(null),
+    selectedOpportunity && selectedOpportunity.opportunity_status !== "paused" && selectedOwnerToken
+      ? createAdminClient().from("opportunities").select("updated_at")
+          .eq("id", selectedOpportunity.opportunity_id).maybeSingle()
+          .then((result) => (result.data?.updated_at as string | null | undefined) ?? null)
+      : Promise.resolve(null),
+    externalPursuits.length
+      ? getExternalPursuitAttachmentMap(externalPursuits.map((pursuit) => pursuit.id))
+      : Promise.resolve({}),
+    selectedRepreneurId && selectedOwnerToken && currentWorkspace && !selectedDealId
+      && (section === "renew-pursuits" || section === "external-pursuits")
+      ? readPortalNextActions({ kind: "staff-preview", repreneurId: selectedRepreneurId,
+          selectionToken: selectedOwnerToken }, opportunityData)
+      : Promise.resolve(null),
+  ])
   const staffName = access.user.name?.trim() || access.user.email
 
   return (
