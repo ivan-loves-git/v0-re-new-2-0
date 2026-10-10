@@ -63,7 +63,12 @@ and Analytics. Their authenticated unowned callbacks are acknowledged without
 retaining orphan events or generating another failure alert. Business receipt
 races keep their retryable 503 and exact-parent retention rules. Previously
 misclassified technical callbacks retain their finite retry treatment; this
-repair does not rewrite historical mail or replay events.
+repair does not rewrite historical mail or replay events. The
+[operational incident contract](operational-alert-incidents-v1.md) owns durable
+notification grouping, bounded retries, daily reminders and quiet notices.
+A signed business event awaiting its receipt for at most five minutes remains
+retryable without paging the operator; older missing receipts and actual
+persistence errors remain alertable.
 
 ## Tracking activation and rollback (held)
 

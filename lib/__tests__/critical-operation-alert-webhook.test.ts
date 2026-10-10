@@ -85,7 +85,13 @@ beforeEach(() => {
   provider.scheduled.length = 0
   provider.receipt = null
   provider.send.mockResolvedValue({ data: { id: "synthetic-provider-message" }, error: null })
-  provider.rpc.mockResolvedValue({ error: null })
+  provider.rpc.mockImplementation(async (name: string, args: Record<string, string>) => ({ error: null, data: name === "critical_alert_observe" ? {
+    id: "synthetic-notification", lease_token: "synthetic-lease", idempotency_key: "wave-critical:synthetic-notification", kind: "opening",
+    payload: { format_version: 1, operation: args.p_operation, error_category: args.p_category,
+      environment: args.p_environment, release: args.p_release, from_email: args.p_from, recipient: args.p_recipient,
+      first_failure_at: "2026-10-10T06:00:00Z", last_failure_at: "2026-10-10T06:00:00Z",
+      notice_at: "2026-10-10T06:00:00Z", failure_count: 1 },
+  } : true }))
 })
 
 afterEach(() => {
@@ -106,6 +112,7 @@ describe("critical alerts through the shared sender and signed webhook", () => {
     expect(provider.send).toHaveBeenCalledOnce()
 
     const message = provider.send.mock.calls[0][0]
+    provider.rpc.mockClear()
     const response = await POST(signedCallback(message))
 
     expect(response.status).toBe(200)
