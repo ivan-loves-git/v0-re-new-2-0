@@ -24,6 +24,21 @@ interface ResendWebhookPayload {
   }
 }
 
+const RECEIPT_PENDING_GRACE_MS = 5 * 60_000
+const MAX_RECEIPT_CLOCK_SKEW_MS = 60_000
+
+function isWithinReceiptPendingGrace(createdAt: string, now = Date.now()) {
+  const occurredAt = Date.parse(createdAt)
+  if (!Number.isFinite(occurredAt)) return false
+
+  // Permit a small provider/server clock difference, but never allow a future
+  // timestamp to suppress an otherwise actionable missing-receipt failure.
+  return (
+    occurredAt <= now + MAX_RECEIPT_CLOCK_SKEW_MS &&
+    occurredAt >= now - RECEIPT_PENDING_GRACE_MS
+  )
+}
+
 // Verify webhook signature from Resend
 function verifyWebhookSignature(
   payload: string,
@@ -112,7 +127,11 @@ export async function POST(request: Request) {
       // exact receipt commits; access and unrelated events are acknowledged
       // without content or orphan retention and cannot disable measurement.
       if (event.data.tags?.renew_mail_class === "business") {
-        trace.failure("persistence_failed")
+        trace.failure(
+          isWithinReceiptPendingGrace(event.created_at)
+            ? "provider_pending"
+            : "persistence_failed",
+        )
         return NextResponse.json(
           { error: "Business receipt not yet available; retry event" },
           { status: 503 },
