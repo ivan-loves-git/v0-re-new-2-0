@@ -171,6 +171,47 @@ describe("staff Tools portal page", () => {
     expect(mocks.readJourney).not.toHaveBeenCalled()
   })
 
+  it("starts independent loads together instead of one database round trip after another", async () => {
+    // A deal switch re-renders this whole page. Every loader below is one or
+    // more database round trips; from Vercel to the database that is tens of
+    // milliseconds each, so the number of serialized stages decides how slow a
+    // click feels. Only genuine data dependencies may add a stage.
+    const timeline: { name: string; start: number; end: number }[] = []
+    let clock = 0
+    const timed = <T,>(name: string, value: T) => async () => {
+      const entry = { name, start: clock++, end: -1 }
+      timeline.push(entry)
+      await new Promise((resolve) => setImmediate(resolve))
+      entry.end = clock++
+      return value
+    }
+    mocks.previewLanguage.mockImplementation(timed("language", "en"))
+    mocks.listOptions.mockImplementation(timed("options", [{ id: ownerId, name: "Ada Owner", email: "ada@example.test", portalRoleLinked: false, isDemo: false }]))
+    mocks.selectionToken.mockImplementation(timed("token", "staff-selection-token"))
+    mocks.listOpportunities.mockImplementation(timed("opportunities", { repreneur: { id: ownerId, is_demo: false }, opportunities: [
+      { match_id: matchId, match_status: "active_pursuit", opportunity_id: "00000000-0000-4000-8000-000000000011", public_title: "Selected pursuit", visible_documents: [], updated_at: "2026-09-27T08:00:00Z" },
+      { match_id: otherMatchId, match_status: "proposed", opportunity_id: "00000000-0000-4000-8000-000000000012", public_title: "Other deal", visible_documents: [], updated_at: "2026-09-27T08:00:00Z" },
+    ] }))
+    mocks.readActions.mockImplementation(timed("actions", { [matchId]: null, [otherMatchId]: "respond" }))
+    mocks.readJourney.mockImplementation(timed("journey", null))
+    mocks.createAdminClient.mockReturnValue({ from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: timed("updated_at", { data: { updated_at: "2026-09-27T08:00:00Z" } }) }) }),
+    }) })
+
+    await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId, workspaceId, dealId: matchId }) })
+
+    // Longest chain of non-overlapping loads = serialized stages on the critical path.
+    const stages = [...timeline].sort((a, b) => a.start - b.start).reduce((acc, entry) => {
+      if (entry.start > acc.chainEnd) return { stages: acc.stages + 1, chainEnd: entry.end }
+      return acc
+    }, { stages: 0, chainEnd: -1 }).stages
+    const names = timeline.map((entry) => entry.name)
+    expect(names).toEqual(expect.arrayContaining(["language", "options", "token", "opportunities", "actions", "journey", "updated_at"]))
+    // Stage 1: language + repreneur options. Stage 2: workspace token + the
+    // selected owner's deals. Stage 3: action badges, journey and freshness.
+    expect(stages, `serialized stages: ${stages}; order: ${names.join(" → ")}`).toBeLessThanOrEqual(3)
+  })
+
   it("shows a French customer subtree while staff identity and preview chrome remain English", async () => {
     mocks.previewLanguage.mockResolvedValue("fr")
     const page = await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId }) })
