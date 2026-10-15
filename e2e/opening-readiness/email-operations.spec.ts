@@ -30,7 +30,8 @@ async function login(page: Page, email: string) {
   await expect(page).toHaveURL(/\/(dashboard_re|portal\/deals)/, { timeout: 30000 })
 }
 async function prepare(page: Page) {
-  await page.goto("/emails?tab=send")
+  await page.goto("/emails")
+  await page.getByRole("button", { name: "Create email", exact: true }).click()
   await page.getByPlaceholder("Name or email...").fill(fixture.repreneurs.real.email)
   await page.getByRole("button").filter({ hasText: fixture.repreneurs.real.email }).click()
   await page.getByRole("combobox").click()
@@ -38,9 +39,7 @@ async function prepare(page: Page) {
   const prepareButton = page.getByRole("button", { name: "Prepare for review", exact: true })
   await expect(prepareButton).toBeEnabled()
   await prepareButton.click()
-  await expect(
-    page.getByText("Draft prepared for Review & send. No email was sent.", { exact: true }),
-  ).toBeVisible()
+  await expect(page).toHaveURL(/\/emails\/review\//)
 }
 test("complete staff business review, history and analytics retain actual outcomes on desktop and mobile", async ({
   page,
@@ -84,7 +83,6 @@ test("complete staff business review, history and analytics retain actual outcom
       "Review & send",
       "History",
       "Templates",
-      "Manual Send",
       "Analytics",
     ])
     await page.getByRole("tab", { name: "Templates", exact: true }).click()
@@ -99,6 +97,27 @@ test("complete staff business review, history and analytics retain actual outcom
     ).toBeDisabled()
     await expect(page.getByText("Legacy first contact", { exact: true })).toBeVisible()
     await expect(page.getByText("E7 signed copies", { exact: true })).toBeVisible()
+    await page.goto("/emails?tab=manual")
+    await expect(page.getByRole("dialog", { name: "Create email", exact: true })).toBeVisible()
+    await page.screenshot({
+      path: join(evidenceDirectory, "email-247-create-desktop.png"),
+      fullPage: true,
+      animations: "disabled",
+    })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.screenshot({
+      path: join(evidenceDirectory, "email-247-create-mobile.png"),
+      fullPage: true,
+      animations: "disabled",
+    })
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true)
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.keyboard.press("Escape")
+    await page.goto("/emails?tab=send")
+    await expect(page.getByRole("dialog", { name: "Create email", exact: true })).toBeVisible()
+    await page.keyboard.press("Escape")
     await prepare(page)
     const prepared = await db.query<{ id: string; body_text: string }>(
       "SELECT id,body_text FROM public.staff_email_reviews WHERE source_kind='business' AND template_key='welcome' AND repreneur_id=$1 AND source_context->>'kind'='manual' ORDER BY created_at DESC LIMIT 1",

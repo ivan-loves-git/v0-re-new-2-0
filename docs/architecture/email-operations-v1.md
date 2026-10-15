@@ -4,7 +4,7 @@ Accepted by [Decision #250](https://github.com/re-new-team/renew-governance/issu
 
 ## Catalogue and source authority
 
-The staff navigation order is **Review & send → History → Templates → Manual Send → Analytics**. Catalogue entries are indexed centrally by `TEMPLATE_METADATA` and `CODE_EMAIL_CATALOGUE`. A visible entry does not create a trigger. Stable variants may explicitly share a policy key, never a new campaign.
+The staff navigation order is **Review & send → History → Templates → Analytics**. Catalogue entries are indexed centrally by `TEMPLATE_METADATA` and `CODE_EMAIL_CATALOGUE`. A visible entry does not create a trigger. Stable variants may explicitly share a policy key, never a new campaign.
 
 | Type / variant | Existing eligible source | Category / policy |
 | --- | --- | --- |
@@ -35,9 +35,19 @@ Only current staff may read or mutate staff policy, reviews, history and Analyti
 
 `email_templates.is_active` and `auto_send` are independent. The additive migration defaults **every business Auto-send to false**, preserves existing activation/custom copy and adds the three previously uncatalogued code business entries. Missing/inactive policy fails closed. Access and reset senders bypass business review and have no CC. Their existing token, expiry, anti-enumeration and delivery flow remain authoritative.
 
-Active business + Auto-send off prepares one source-bound review. Active + Auto-send on permits only a new eligible operation after the existing gates. Preparation persists its policy/version; each setting change records actor, old/new policy and effective time. Enabling never drains an existing review. A change since preparation prevents unstarted automatic claiming; turning off vetoes an unstarted automatic attempt. In-flight/accepted mail retains its identity and is reconciled. Manual Send follows the same path and displays the actual prepared/accepted outcome.
+Active business + Auto-send off prepares one source-bound review. Active + Auto-send on permits only a new eligible operation after the existing gates. Preparation persists its policy/version; each setting change records actor, old/new policy and effective time. Enabling never drains an existing review. A change since preparation prevents unstarted automatic claiming; turning off vetoes an unstarted automatic attempt. In-flight/accepted mail retains its identity and is reconciled. **Create email** inside Review & send follows the same path and displays the actual prepared/accepted outcome.
 
 New staff-recipient notices also retain their canonical match parent and follow its existing deletion cascade. New provider facts are removed only when their last retained operational parent is deleted through the existing owning process; no historic rows are purged or rewritten. The business review identity is an immutable operation key, original event context, canonical recipient, repreneur namespace and prepared time. Preparing or releasing a notification lease does not record a sent clock, consume a reminder or grant access. Source-owned interest/cycle/grant/digest/recommendation services are re-entered at approval, retaining their current fences instead of replaying a business mutation. Generic offer, intake, interview, rejection and reminder contexts are revalidated. REAL/DEMO, canonical relationships, consent, suppression, document grants, exact upstream evidence, immutable documents and the established uncertainty windows remain authoritative.
+
+## Create email and selected automatic notifications — #247, 15 October 2026
+
+Ivan approved replacing the separate Manual Send tab with **Create email** inside **Review & send**. The existing creation form retains its supported repreneur/template choices, staff access and test-copy behavior. A newly queued draft opens directly for review and individual editing; the existing acknowledgement and final send confirmation remain required. A template already permitted to send automatically keeps that policy and shows its actual result. This entry point does not enable arbitrary recipients or bypass source-owned workflow gates. Old `?tab=send` and `?tab=manual` links open the new creation dialog. Closing the dialog preserves the queue filters.
+
+Ivan separately approved future automatic sending for the two internal interest alerts, `locked_opportunity_interest` and `proposed_opportunity_response_staff`, and then for `opportunity_recommendation_assignment`. Each uses the existing audited staff policy operations with **Active on / Auto-send on**. All other policies remain unchanged. The usual canonical recipients, staff CC, current-source eligibility, suppression and history rules still apply. This is an explicit configuration choice, not a change to the migration default for other templates.
+
+Activation does not send older queued drafts or replay suppressed historical events. The observed 16 pending direct-interest drafts and 14 pending assignment drafts remain for staff review; the 12 previously suppressed proposed-response events retain their recorded outcome. A compatible rollback restores only these three prior policy pairs through the same audited operation and preserves all history. No migration, deletion or provider replay is introduced.
+
+Acceptance uses the existing protected email-operations browser journey for creation through the queue, direct draft review, legacy links and desktop/mobile dialog views. Policy readback and the unchanged older queue are separate live configuration evidence; neither proves a future email has reached an inbox.
 
 ## Frozen words, envelope and selection
 
