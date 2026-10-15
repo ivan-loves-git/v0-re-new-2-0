@@ -508,7 +508,6 @@ export async function listMyRepreneurOpportunities() {
   return repreneur ? listOwnedOpportunitiesForProfile(repreneur) : { repreneur: null, opportunities: [] }
 }
 
-/** The same owned-match projection, without customer identity or personal review evidence. */
 export async function listStaffPreviewOwnedOpportunities(repreneurId: string) {
   await requireStaffAccess()
   if (!isUuid(repreneurId)) return { repreneur: null, opportunities: [] }

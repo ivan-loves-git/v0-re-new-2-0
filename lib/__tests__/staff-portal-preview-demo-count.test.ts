@@ -234,7 +234,7 @@ describe("Staff Portal Preview DEMO counts", () => {
     { isDemo: false, opportunityDemo: true, status: "active", matchStatus: "interested" },
     { isDemo: false, opportunityDemo: false, status: "paused", matchStatus: "interested" },
     { isDemo: false, opportunityDemo: false, status: "active", matchStatus: "completed" },
-  ])("does not resolve an owned opportunity outside its namespace or visible lifecycle (%j)", async ({ isDemo, opportunityDemo, status, matchStatus }) => {
+  ])("preserves namespace and lifecycle eligibility with read-only paused history (%j)", async ({ isDemo, opportunityDemo, status, matchStatus }) => {
     const originalFrom = mocks.from.getMockImplementation()!
     mocks.from.mockImplementation((table: string) => {
       if (table === "repreneurs") return query({ data: [{ id: repreneurId, is_demo: isDemo }], error: null })
@@ -247,7 +247,14 @@ describe("Staff Portal Preview DEMO counts", () => {
       return originalFrom(table)
     })
     mocks.rpc.mockResolvedValue({ data: [], error: null })
-    await expect(getStaffPortalPreviewOpportunity(repreneurId, opportunityId)).resolves.toBeNull()
+    const detail = await getStaffPortalPreviewOpportunity(repreneurId, opportunityId)
+    if (status === "paused" && isDemo === opportunityDemo) {
+      expect(detail).toMatchObject({ opportunity_id: opportunityId, opportunity_status: "paused", match_status: "interested", visible_documents: [] })
+      expect(detail).not.toHaveProperty("nda_status")
+      expect(detail).not.toHaveProperty("personal_review")
+    } else {
+      expect(detail).toBeNull()
+    }
   })
 
   it("rejects an ambiguous match/opportunity ID instead of choosing an arbitrary match", async () => {

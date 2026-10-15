@@ -50,7 +50,6 @@ const matchId = "00000000-0000-4000-8000-000000000002"
 const otherMatchId = "00000000-0000-4000-8000-000000000003"
 const workspaceId = "00000000-0000-4000-8000-000000000004"
 
-// Inspect the public server-to-client screen payload, not just visible HTML.
 function findPursuitsContentProps(node: ReactNode): ComponentProps<typeof PortalPursuitsContent> | null {
   if (Array.isArray(node)) {
     for (const child of node) {
@@ -248,7 +247,7 @@ describe("staff Tools portal page", () => {
     expect(mocks.readJourney).not.toHaveBeenCalled()
   })
 
-  it("starts independent loads together instead of one database round trip after another", async () => {
+  it("starts independent reads together while selected-owner data waits for workspace authorization", async () => {
     const timeline: { name: string; start: number; end: number }[] = []
     let clock = 0
     const timed = <T,>(name: string, value: T) => async () => {

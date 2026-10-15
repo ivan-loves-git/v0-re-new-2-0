@@ -491,8 +491,7 @@ function toPortalCurrentPursuit(
   }
 }
 
-// React's server cache is scoped to one render request. Only safe owner projections
-// share work; mutation and resource authorization deliberately never use it.
+// React's server cache is scoped to one render request.
 const readCurrentPursuitForOwner = cache(async (matchId: string, repreneurId: string) => {
   const pursuit = await loadCurrentPursuit(matchId, repreneurId)
   return pursuit ? toPortalCurrentPursuit(pursuit) : null

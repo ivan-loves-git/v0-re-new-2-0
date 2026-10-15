@@ -14,7 +14,6 @@ function NavigationFeedback() {
   </span> : null
 }
 
-/** Prefetch only after navigation intent, with immediate feedback while it resolves. */
 export function PortalNavigationLink({ children, onMouseEnter, onFocus, prefetch, ...props }: ComponentProps<typeof Link>) {
   const [intent, setIntent] = useState(false)
   return <Link {...props} prefetch={prefetch === false ? false : intent ? null : false}

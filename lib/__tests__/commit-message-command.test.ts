@@ -79,6 +79,28 @@ describe("commit message command", () => {
     expect(invalid.stderr).toContain(git(root, "rev-parse", "--short=12", "HEAD"));
   });
 
+  it("preserves pre-enforcement branch history and checks commits after adoption", () => {
+    const root = repository();
+    const base = git(root, "rev-parse", "HEAD");
+    git(root, "switch", "-c", "legacy");
+    git(root, "commit", "--allow-empty", "-m", "test: reviewed before enforcement");
+    git(root, "switch", "main");
+    mkdirSync(join(root, "scripts"));
+    copyFileSync(checker, join(root, "scripts/check-commit-message.mjs"));
+    git(root, "add", "scripts/check-commit-message.mjs");
+    git(root, "commit", "-m", "chore: enforce commit messages");
+    git(root, "switch", "legacy");
+    git(root, "merge", "--no-ff", "main", "-m", "Merge current main");
+    git(root, "commit", "--allow-empty", "-m", "fix: preserve reviewed history");
+    const valid = run(root, process.execPath, [checker, "--range", `${base}..HEAD`]);
+    expect(valid.status, valid.stderr).toBe(0);
+    expect(valid.stdout).toContain("2 authored commit messages passed.");
+    git(root, "commit", "--allow-empty", "-m", "test: invalid after enforcement");
+    const invalid = run(root, process.execPath, [checker, "--range", `${base}..HEAD`]);
+    expect(invalid.status).toBe(1);
+    expect(invalid.stderr).toContain(git(root, "rev-parse", "--short=12", "HEAD"));
+  });
+
   it("installs the native Git hook and blocks an invalid commit before it exists", () => {
     const root = repository();
     mkdirSync(join(root, "scripts"));

@@ -13,8 +13,6 @@ export default async function PortalPursuitsPage({ searchParams }: {
   await connection()
   const search = await searchParams
   if (search.view === "external") {
-    // Owned matches supplement the summary, not the authorized External board.
-    // A failed summary read is unavailable, never a fabricated empty queue.
     const [external, source] = await Promise.all([
       listExternalPursuitBoard(), listMyRepreneurOpportunities().catch(() => null),
     ])

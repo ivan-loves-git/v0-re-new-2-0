@@ -92,8 +92,6 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     ? parseStaffPortalSelection(selectedOwnerToken, selectedRepreneurId, access.user.id) : null
   const currentWorkspace = !workspaceId || Boolean(selectedOwnerToken)
 
-  // Only the selected screen reads its required projection. The cross-space
-  // next-actions panel needs owned matches, never the full live Deal Flow.
   const readable = Boolean(selectedRepreneurId && currentWorkspace && !invalidDealSelection)
   const [profileData, dealFlow, ownedSource, externalPursuits, selectedOpportunity] = await Promise.all([
     readable && section === "profile" && !selectedDealId
@@ -102,8 +100,6 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
       ? listStaffPortalPreviewOpportunities(selectedRepreneurId!, undefined, sort) : Promise.resolve(null),
     readable && (selectedDealId || section !== "deals")
       ? listStaffPortalPreviewOwnedOpportunities(selectedRepreneurId!).catch((error: unknown) => {
-          // External owned matches are supplemental summary inputs. Required
-          // profile, Re-New and detail reads retain their normal failure boundary.
           if (section === "external-pursuits" && !selectedDealId) return null
           throw error
         }) : Promise.resolve({ repreneur: null, opportunities: [] }),
