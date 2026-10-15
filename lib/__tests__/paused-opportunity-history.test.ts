@@ -25,6 +25,11 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({
     const field = (row: Record<string, any>, name: string): any => name.split(".").reduce<any>((value, key) => value?.[key], row)
     const builder: any = {
       select: () => builder,
+      or: (expression: string) => {
+        const clauses = expression.split(",").map(clause => clause.split(".eq."))
+        rows = rows.filter(row => clauses.some(([name, value]) => field(row, name) === value))
+        return builder
+      },
       eq: (name: string, value: unknown) => { rows = rows.filter(row => field(row, name) === value); return builder },
       in: (name: string, values: unknown[]) => { rows = rows.filter(row => values.includes(field(row, name))); return builder },
       gt: (name: string, value: string) => { rows = rows.filter(row => field(row, name) > value); return builder },
@@ -46,7 +51,7 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({
   })),
 }) }))
 
-import { getMyRepreneurOpportunity, listMyRepreneurDealFlow, listStaffPreviewRepreneurDealFlow } from "@/lib/actions/repreneur-opportunities"
+import { getMyRepreneurOpportunity, getStaffPreviewRepreneurOpportunity, listStaffPreviewOwnedOpportunities, listMyRepreneurDealFlow, listStaffPreviewRepreneurDealFlow } from "@/lib/actions/repreneur-opportunities"
 
 const owner = "25600000-0000-4000-8000-000000000001"
 const pausedId = "25600000-0000-4000-8000-000000000021"
@@ -142,6 +147,35 @@ describe("authorized Paused history through owner and staff preview readers", ()
     expect(result.deals[0]).not.toHaveProperty("personal_review")
   })
 
+  it("keeps shared detail history owner-safe without personal marker reads in preview", async () => {
+    mocks.rows.repreneur_opportunity_review_state = [{ repreneur_id: owner, is_demo: false, opportunity_id: pausedId, opportunity: paused }]
+    expect(await getStaffPreviewRepreneurOpportunity(owner, matchId)).toMatchObject({
+      match_id: matchId, opportunity_status: "paused", visible_documents: [],
+    })
+    expect(mocks.from.mock.calls.some(([table]) => table === "repreneur_opportunity_review_state")).toBe(false)
+    mocks.rows.opportunity_matches = []
+    expect(await getStaffPreviewRepreneurOpportunity(owner, pausedId)).toBeNull()
+    expect(mocks.from.mock.calls.some(([table]) => table === "repreneur_opportunity_review_state")).toBe(false)
+  })
+
+  it("retains genuine paused relationships in the owned preview sidebar without private visits or action state", async () => {
+    const before = structuredClone(mocks.rows)
+    expect((await listStaffPreviewOwnedOpportunities(owner)).opportunities).toEqual([])
+    const result = await listStaffPreviewOwnedOpportunities(owner, true)
+    expect(result.opportunities).toHaveLength(1)
+    expect(result.opportunities[0]).toMatchObject({
+      opportunity_id: pausedId, match_id: matchId, match_status: "dropped",
+      opportunity_status: "paused", visible_documents: [],
+    })
+    expect(result.opportunities[0]).not.toHaveProperty("nda_status")
+    expect(result.opportunities[0]).not.toHaveProperty("personal_review")
+    expect(result.opportunities[0]).not.toHaveProperty("interest_rejected")
+    expect(mocks.from.mock.calls.some(([table]) => table === "repreneur_opportunity_review_state")).toBe(false)
+    expect(mocks.rpc.mock.calls.some(([name]) => name === "w173_repreneur_rejections")).toBe(false)
+    expect(JSON.stringify(result.opportunities)).not.toContain("PRIVATE")
+    expect(mocks.rows).toEqual(before)
+  })
+
   it("represents missing private history as unavailable while preserving genuine relationships", async () => {
     mocks.unavailableVisits = true
     const result = await listMyRepreneurDealFlow("relevance")
@@ -168,6 +202,24 @@ describe("authorized Paused history through owner and staff preview readers", ()
     expect((await listStaffPreviewRepreneurDealFlow(owner)).deals.map(deal => deal.match_id)).toEqual([null])
     expect(await getMyRepreneurOpportunity(matchId)).toBeNull()
     expect(await getMyRepreneurOpportunity(pausedId)).toMatchObject({ opportunity_id: pausedId, match_id: null, match_status: null })
+  })
+
+  it("includes only completed paused relationships in the selected preview sidebar", async () => {
+    const active = { ...paused, id: "25600000-0000-4000-8000-000000000024", status: "active" }
+    mocks.rows.opportunity_matches = [
+      { ...relationship, status: "completed" },
+      { ...relationship, id: "active-completed", opportunity_id: active.id, status: "completed", opportunity: active },
+      { ...relationship, id: "wrong-owner", repreneur_id: "other-owner", status: "completed" },
+      { ...relationship, id: "wrong-namespace", opportunity: { ...paused, id: "wrong-namespace", is_demo: true }, status: "completed" },
+    ]
+    const result = await listStaffPreviewOwnedOpportunities(owner, true)
+    expect(result.opportunities.map((opportunity) => [opportunity.match_id, opportunity.opportunity_status]))
+      .toEqual([[matchId, "paused"]])
+  })
+
+  it("does not include paused history in the selected preview sidebar when disabled", async () => {
+    process.env.PAUSED_OPPORTUNITY_HISTORY_DISABLED = "1"
+    expect((await listStaffPreviewOwnedOpportunities(owner, true)).opportunities).toEqual([])
   })
 
   it.each([false, true])("preserves exact owner and namespace detail/list eligibility when is_demo=%s", async (isDemo) => {

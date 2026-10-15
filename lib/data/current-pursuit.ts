@@ -1,5 +1,7 @@
 import "server-only"
 
+import { cache } from "react"
+
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
 import {
   projectOpportunityPursuitEvidence,
@@ -489,6 +491,12 @@ function toPortalCurrentPursuit(
   }
 }
 
+// React's server cache is scoped to one render request.
+const readCurrentPursuitForOwner = cache(async (matchId: string, repreneurId: string) => {
+  const pursuit = await loadCurrentPursuit(matchId, repreneurId)
+  return pursuit ? toPortalCurrentPursuit(pursuit) : null
+})
+
 /** Authoritative, same-owner projection for the workspace's small per-deal indicator. */
 export async function readPortalDealActionIndicators(
   matchIds: string[],
@@ -509,8 +517,8 @@ export async function readPortalDealActionIndicators(
   const pairs = await Promise.all(rows.map(async (row): Promise<[string, PortalDealAction]> => {
     if (row.status === "proposed" && isRecommendationResponseOpen(row.recommendation_expires_at)) return [row.id, "respond"]
     if (row.status !== "active_pursuit") return [row.id, null]
-    const pursuit = await loadCurrentPursuit(row.id, viewer.repreneurId!)
-    return [row.id, pursuit ? toPortalCurrentPursuit(pursuit).action : "unknown"]
+    const pursuit = await readCurrentPursuitForOwner(row.id, viewer.repreneurId!)
+    return [row.id, pursuit ? pursuit.action : "unknown"]
   }))
   return Object.fromEntries(pairs)
 }
@@ -523,8 +531,7 @@ export async function readPortalCurrentPursuit(input: {
   const viewer = await resolveViewer(input.viewer)
   const repreneurId = viewer.repreneurId
   if (!repreneurId) return null
-  const pursuit = await loadCurrentPursuit(input.matchId, repreneurId)
-  return pursuit ? toPortalCurrentPursuit(pursuit) : null
+  return readCurrentPursuitForOwner(input.matchId, repreneurId)
 }
 
 /**

@@ -1,5 +1,5 @@
 import { connection } from "next/server"
-import { RepreneurProfileSummary } from "@/components/portal/repreneur-profile-summary"
+import { PortalProfileContent } from "@/components/portal/portal-profile-content"
 import { listMyRepreneurOpportunities } from "@/lib/actions/repreneur-opportunities"
 import { getMyRepreneurProfile } from "@/lib/actions/repreneur-profile"
 import { getMyDiscoveryDigestOptOut } from "@/lib/actions/discovery-digest"
@@ -14,8 +14,6 @@ export default async function PortalProfilePage() {
     getMyDiscoveryDigestOptOut(),
   ])
 
-  return <div className="flex flex-col gap-6">
-    <RepreneurProfileSummary repreneur={repreneur} opportunities={opportunities} />
-    {repreneur ? <DiscoveryDigestOptOut optedOut={optedOut} /> : null}
-  </div>
+  return <PortalProfileContent repreneur={repreneur} opportunities={opportunities}
+    accountPreferences={<DiscoveryDigestOptOut optedOut={optedOut} />} />
 }
