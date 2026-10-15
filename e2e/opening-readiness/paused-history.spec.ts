@@ -328,7 +328,7 @@ test("ordinary Paused history preserves genuine own openings and relationships w
         await expect(card.getByText(language === "en" ? "Paused" : "En pause", { exact: true })).toBeVisible()
         await expect(card.getByText(language === "en" ? "Read-only history" : "Historique en lecture seule", { exact: true })).toBeVisible()
         await expect(card.getByRole("button", { name: /interest|intérêt|review|examin|reconsider/i })).toHaveCount(0)
-        const detail = card.getByRole("link", { name: language === "en" ? "Preview detail" : "Voir l’aperçu détaillé", exact: true })
+        const detail = card.getByRole("link", { name: language === "en" ? "View detail" : "Voir le détail", exact: true })
         await activateHistoryControl(detail, size)
         const workspace = preview.locator('[data-wave-workspace="pursuit"]').filter({ visible: true })
         await expect(workspace.getByRole("heading", { name: title("relation"), exact: true })).toBeVisible()

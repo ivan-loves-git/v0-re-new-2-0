@@ -120,7 +120,7 @@ describe("staff Tools portal page", () => {
     const html = renderToStaticMarkup(await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId, workspaceId, view: "profile" }) }))
     expect(html).toContain("Selected repreneur profile unavailable")
     expect(mocks.getProfile).toHaveBeenCalledWith(ownerId)
-    expect(mocks.listOwned).toHaveBeenCalledWith(ownerId)
+    expect(mocks.listOwned).toHaveBeenCalledWith(ownerId, false)
     expect(mocks.listOpportunities).not.toHaveBeenCalled()
     expect(mocks.listExternal).not.toHaveBeenCalled()
   })
@@ -176,6 +176,7 @@ describe("staff Tools portal page", () => {
     expect(html).not.toContain('data-wave-action="express_interest"')
     expect(html).not.toContain('data-wave-workflow="portal_deals"')
     expect(html).not.toContain("Mark as reviewed")
+    expect(mocks.listOwned).toHaveBeenCalledWith(ownerId, true)
     expect(mocks.readActions).toHaveBeenCalledWith([matchId, otherMatchId], { kind: "staff-preview", repreneurId: ownerId })
   })
 

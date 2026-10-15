@@ -508,16 +508,21 @@ export async function listMyRepreneurOpportunities() {
   return repreneur ? listOwnedOpportunitiesForProfile(repreneur) : { repreneur: null, opportunities: [] }
 }
 
-export async function listStaffPreviewOwnedOpportunities(repreneurId: string) {
+export async function listStaffPreviewOwnedOpportunities(repreneurId: string, includePausedHistory = false) {
   await requireStaffAccess()
   if (!isUuid(repreneurId)) return { repreneur: null, opportunities: [] }
   const { data, error } = await createAdminClient().from("repreneurs")
     .select("id, first_name, last_name, email, is_demo").eq("id", repreneurId).maybeSingle()
   if (error) throw new Error(error.message)
-  return data ? listOwnedOpportunitiesForProfile(normalizeProfile(data)) : { repreneur: null, opportunities: [] }
+  return data
+    ? listOwnedOpportunitiesForProfile(normalizeProfile(data), includePausedHistory)
+    : { repreneur: null, opportunities: [] }
 }
 
-async function listOwnedOpportunitiesForProfile(repreneur: RepreneurOpportunityProfile): Promise<{
+async function listOwnedOpportunitiesForProfile(
+  repreneur: RepreneurOpportunityProfile,
+  includePausedHistory = false,
+): Promise<{
   repreneur: RepreneurOpportunityProfile | null
   opportunities: RepreneurOpportunityExposure[]
 }> {
@@ -565,27 +570,29 @@ async function listOwnedOpportunitiesForProfile(repreneur: RepreneurOpportunityP
     `)
     .eq("repreneur_id", repreneur.id)
     .eq("opportunity.is_demo", repreneur.is_demo === true)
-    .in("status", VISIBLE_MATCH_STATUSES)
+    .in("status", includePausedHistory ? HISTORY_MATCH_STATUSES : VISIBLE_MATCH_STATUSES)
     .order("updated_at", { ascending: false })
     .order("id", { ascending: true })
 
   if (error) throw new Error(error.message)
 
   const opportunities = (data ?? [])
-    .map((row) => normalizeExposure(row, repreneur))
+    .map((row) => normalizeExposure(row, repreneur, includePausedHistory))
     .filter((record): record is RepreneurOpportunityExposure => Boolean(record))
+
+  const activeOpportunities = opportunities.filter((opportunity) => opportunity.opportunity_status === "active")
 
   const activeOwnerByOpportunity = await getActivePursuitOwners(
     supabase,
-    opportunities.map((opportunity) => opportunity.opportunity_id),
+    activeOpportunities.map((opportunity) => opportunity.opportunity_id),
     repreneur.is_demo === true,
   )
   const interestStateByMatch = await listLockedOpportunityInterestStateByMatch(
     supabase,
-    opportunities.map((opportunity) => opportunity.match_id),
+    activeOpportunities.map((opportunity) => opportunity.match_id),
   )
   const decisionState = await readRepreneurInterestStates(repreneur.id,
-    opportunities.map((opportunity) => ({
+    activeOpportunities.map((opportunity) => ({
       id: opportunity.match_id,
       interest_expressed_at: interestStateByMatch.get(opportunity.match_id)?.interest_expressed_at ?? opportunity.interest_expressed_at,
     })))
@@ -593,20 +600,22 @@ async function listOwnedOpportunitiesForProfile(repreneur: RepreneurOpportunityP
   return {
     repreneur,
     opportunities: opportunities
-      .map((exposure) => ({
-        ...exposure,
-        ...interestStateByMatch.get(exposure.match_id),
-        interest_rejected: decisionState.rejected.has(exposure.match_id),
-        is_locked_for_other_repreneur: isLockedForOtherRepreneur(
-          exposure.opportunity_id,
-          repreneur.id,
-          activeOwnerByOpportunity,
-        ),
-        // Documents are added only by the canonical pursuit projection on the
-        // portal detail page; legacy approval metadata never projects an IM.
-        visible_documents: [],
-        memo_availability: undefined,
-      }))
+      .map((exposure) => exposure.opportunity_status === "paused"
+        ? exposure
+        : {
+            ...exposure,
+            ...interestStateByMatch.get(exposure.match_id),
+            interest_rejected: decisionState.rejected.has(exposure.match_id),
+            is_locked_for_other_repreneur: isLockedForOtherRepreneur(
+              exposure.opportunity_id,
+              repreneur.id,
+              activeOwnerByOpportunity,
+            ),
+            // Documents are added only by the canonical pursuit projection on the
+            // portal detail page; legacy approval metadata never projects an IM.
+            visible_documents: [],
+            memo_availability: undefined,
+          })
       .map((opportunity) => withDealBucket(opportunity, opportunity.match_status === "withdrawn"))
       .filter(isDefined),
   }

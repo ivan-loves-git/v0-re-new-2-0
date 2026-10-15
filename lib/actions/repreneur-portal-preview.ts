@@ -187,8 +187,8 @@ export async function getStaffPortalPreviewProfile(repreneurId: string): Promise
   return { repreneur: normalizePortalRepreneurProfile(repreneur) }
 }
 
-export async function listStaffPortalPreviewOwnedOpportunities(repreneurId: string) {
-  return listStaffPreviewOwnedOpportunities(repreneurId)
+export async function listStaffPortalPreviewOwnedOpportunities(repreneurId: string, includePausedHistory = false) {
+  return listStaffPreviewOwnedOpportunities(repreneurId, includePausedHistory)
 }
 
 export async function listStaffPortalPreviewOpportunities(repreneurId: string, selectedDealId?: string | null, sort: RepreneurDealSort = "relevance") {

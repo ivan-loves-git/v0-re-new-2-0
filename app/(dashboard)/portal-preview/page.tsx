@@ -99,7 +99,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     readable && section === "deals" && !selectedDealId
       ? listStaffPortalPreviewOpportunities(selectedRepreneurId!, undefined, sort) : Promise.resolve(null),
     readable && (selectedDealId || section !== "deals")
-      ? listStaffPortalPreviewOwnedOpportunities(selectedRepreneurId!).catch((error: unknown) => {
+      ? listStaffPortalPreviewOwnedOpportunities(selectedRepreneurId!, Boolean(selectedDealId)).catch((error: unknown) => {
           if (section === "external-pursuits" && !selectedDealId) return null
           throw error
         }) : Promise.resolve({ repreneur: null, opportunities: [] }),
