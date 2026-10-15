@@ -12,17 +12,6 @@ ALTER TABLE public.email_provider_deleted_source_markers ENABLE ROW LEVEL SECURI
 REVOKE ALL ON public.email_provider_deleted_source_markers
   FROM PUBLIC, anon, authenticated, service_role;
 
--- Three provider receipts from the authorised 15 October owned-QA cleanup
--- were already deleted before this marker existed. These irreversible hashes
--- are the only historical exception; no lookup, backfill, or provider replay
--- is performed.
-INSERT INTO public.email_provider_deleted_source_markers(provider_message_hash)
-VALUES
-  ('d939d7747b460d9e3c414e666a6d2a5d6f4739807d24c6e7d7589061e06d6781'),
-  ('b5feb5f3e5d0df3800dad99a9d7905d86a0fdf0422ce3394f708a4f8d082328a'),
-  ('942ad06063911e912cffe7f13159b8a99f60f20ba1378ff6971954dd4f701563')
-ON CONFLICT (provider_message_hash) DO NOTHING;
-
 -- A callback can update email_logs, while deleting a final source can remove
 -- that same row. Callbacks share one transaction-scoped lock; source deletion
 -- takes it exclusively before a DELETE statement can take row locks. This
