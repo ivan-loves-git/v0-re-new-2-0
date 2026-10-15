@@ -46,6 +46,7 @@ interface RepreneurOpportunityListProps {
   detailLabel?: string
   emptyDescription?: string
   readOnly?: boolean
+  pausedHistoryAvailability?: "available" | "unavailable" | "disabled"
   returnSort?: string
 }
 
@@ -286,9 +287,10 @@ function DealCard({
     }
   }, [opportunity.personal_review?.reviewed])
   const staffRecommended = isStaffRecommended(opportunity)
-  const isDeclined = opportunity.match_status === "declined" || opportunity.match_status === "dropped"
+  const paused = opportunity.opportunity_status === "paused"
+  const isDeclined = !paused && (opportunity.match_status === "declined" || opportunity.match_status === "dropped")
   const lockedForAnotherRepreneur = Boolean(opportunity.is_locked_for_other_repreneur)
-  const responsePending = opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && !opportunity.interest_expressed_at
+  const responsePending = !paused && opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" && !opportunity.interest_expressed_at
   const responseExpired = responsePending && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)
   const responseDeadline = responsePending ? formatRecommendationDeadline(opportunity.recommendation_expires_at, language) : null
 
@@ -303,11 +305,12 @@ function DealCard({
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-          {staffRecommended && !isDeclined && opportunity.match_status !== "withdrawn" && !opportunity.interest_rejected ? <Badge variant="secondary">{u("Selected by Re-New")}</Badge> : null}
-          {lockedForAnotherRepreneur ? <Badge variant="outline">{u("Someone is already positioned")}</Badge> : null}
-          {opportunity.match_status === "interested" ? <Badge variant="outline">{opportunity.interest_rejected ? u("Interest not selected by Re-New") : u("Interest sent, awaiting Re-New validation")}</Badge> : null}
-          {opportunity.match_status === "active_pursuit" ? <Badge variant="outline">{u("Active pursuit")}</Badge> : null}
-          {opportunity.match_status && opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" ? <Badge variant="outline">{matchStatusUiLabel(opportunity.match_status, language)}</Badge> : null}
+          {paused ? <Badge variant="outline">{u("Paused")}</Badge> : null}
+          {!paused && staffRecommended && !isDeclined && opportunity.match_status !== "withdrawn" && !opportunity.interest_rejected ? <Badge variant="secondary">{u("Selected by Re-New")}</Badge> : null}
+          {!paused && lockedForAnotherRepreneur ? <Badge variant="outline">{u("Someone is already positioned")}</Badge> : null}
+          {!paused && opportunity.match_status === "interested" ? <Badge variant="outline">{opportunity.interest_rejected ? u("Interest not selected by Re-New") : u("Interest sent, awaiting Re-New validation")}</Badge> : null}
+          {!paused && opportunity.match_status === "active_pursuit" ? <Badge variant="outline">{u("Active pursuit")}</Badge> : null}
+          {!paused && opportunity.match_status && opportunity.match_status !== "interested" && opportunity.match_status !== "active_pursuit" ? <Badge variant="outline">{matchStatusUiLabel(opportunity.match_status, language)}</Badge> : null}
           {responseExpired ? <Badge variant="outline">{u("Response window expired")}</Badge> : null}
           </div>
           <div className="mt-2 flex min-w-0 flex-col gap-1">
@@ -348,8 +351,9 @@ function DealCard({
           {responseDeadline ? <p className="mt-1 text-xs text-muted-foreground">{u(responseExpired ? "Response window expired: {date}" : "Respond by: {date}", { date: responseDeadline })}</p> : null}
         </div>
         <div className="flex min-w-0 flex-col gap-3 lg:items-end">
-          {!readOnly ? <PersonalReviewHint state={opportunity.personal_review} /> : null}
-          {!readOnly && opportunity.personal_review?.reviewed ? <RepreneurPersonalReviewControl
+          {paused ? <p className="text-sm text-muted-foreground">{u("Read-only history")}</p> : null}
+          {!readOnly && !paused ? <PersonalReviewHint state={opportunity.personal_review} /> : null}
+          {!readOnly && !paused && opportunity.personal_review?.reviewed ? <RepreneurPersonalReviewControl
             key={`${opportunity.opportunity_id}-${opportunity.personal_review.reviewed}`}
             opportunityId={opportunity.opportunity_id} initialState={opportunity.personal_review}
             onUndo={() => { restoreFocus.current = true }}
@@ -392,10 +396,12 @@ export function DealSection({
   if (opportunities.length === 0) return null
 
   const headingId = `deal-section-${sectionKey}`
-  const groups = partitionPersonalReviews(opportunities)
-  const reviewEligible = !readOnly && (sectionKey === "recommended" || sectionKey === "live-opportunities")
+  const pausedHistory = opportunities.filter((deal) => deal.opportunity_status === "paused")
+  const activeOpportunities = opportunities.filter((deal) => deal.opportunity_status !== "paused")
+  const groups = partitionPersonalReviews(activeOpportunities)
+  const reviewEligible = !readOnly && activeOpportunities.length > 0 && (sectionKey === "recommended" || sectionKey === "live-opportunities")
   const reviewOrdering = reviewEligible && groups.available
-  const ordered = reviewOrdering ? [...groups.unreviewed, ...groups.reviewed] : opportunities
+  const ordered = reviewOrdering ? [...pausedHistory, ...groups.unreviewed, ...groups.reviewed] : opportunities
   const rationale = sectionKey === "recommended" ? "Re-New selections come first so you can respond to the team."
     : sectionKey === "in-progress" ? "Your existing interest and active pursuits stay together; personal review marks do not change their priority."
     : sectionKey === "live-opportunities" ? "Explore other available opportunities after your selections and ongoing discussions."
@@ -409,7 +415,7 @@ export function DealSection({
           <span className="text-xs tabular-nums text-muted-foreground" aria-label={`${opportunities.length} ${u(opportunities.length === 1 ? "deal" : "deals")}`}>{opportunities.length}</span>
           <DealOrderInfo label={u("About {title} ordering", { title: u(title) })}>
             <p>{u(rationale)}</p>
-            {reviewOrdering ? <p className="mt-2">{u("Not reviewed first, reviewed below. Your existing order is kept inside each group.")}</p> : null}
+            {reviewOrdering ? <p className="mt-2">{u(pausedHistory.length ? "Personal review ordering applies only to active opportunities." : "Not reviewed first, reviewed below. Your existing order is kept inside each group.")}</p> : null}
             {reviewEligible && !groups.available ? <p className="mt-2">{u("Review order is unavailable right now. Your existing deal order is shown.")}</p> : null}
             <p className="mt-2">{u("Overall order: {order}", { order: u("Recommended → In Progress → Live Opportunities → Declined") })}</p>
           </DealOrderInfo>
@@ -419,7 +425,7 @@ export function DealSection({
       <div className="grid gap-3">
         {ordered.map((opportunity, index) => (
           <Fragment key={opportunity.match_id ?? opportunity.opportunity_id}>
-          {reviewOrdering && groups.reviewed.length > 0 && index === groups.unreviewed.length ? <div className="flex items-center gap-3 pt-2">
+          {reviewOrdering && groups.reviewed.length > 0 && index === pausedHistory.length + groups.unreviewed.length ? <div className="flex items-center gap-3 pt-2">
             <h3 className="shrink-0 text-xs font-medium text-muted-foreground">{u("Reviewed · {count}", { count: groups.reviewed.length })}</h3>
             <span className="h-px flex-1 bg-border" aria-hidden="true" />
           </div> : null}
@@ -445,6 +451,7 @@ export function RepreneurOpportunityList({
   detailLabel = "View detail",
   emptyDescription,
   readOnly = false,
+  pausedHistoryAvailability,
   returnSort,
 }: RepreneurOpportunityListProps) {
   const u = useUiCopy()
@@ -500,6 +507,10 @@ export function RepreneurOpportunityList({
     }
     const usesDealBuckets = filteredOpportunities.some((opportunity) => "deal_bucket" in opportunity && Boolean(opportunity.deal_bucket))
     for (const opportunity of filteredOpportunities) {
+      if (opportunity.opportunity_status === "paused") {
+        buckets.live.push(opportunity)
+        continue
+      }
       if (opportunity.match_status === "proposed" && !isRecommendationResponseOpen(opportunity.recommendation_expires_at)) {
         buckets.live.push(opportunity)
         continue
@@ -528,7 +539,7 @@ export function RepreneurOpportunityList({
     )
   }
 
-  if (opportunities.length === 0) {
+  if (opportunities.length === 0 && pausedHistoryAvailability !== "unavailable") {
     return (
       <Alert>
         <BriefcaseBusiness />
@@ -548,10 +559,11 @@ export function RepreneurOpportunityList({
     return `/portal/deals/${key}${from}`
   }
   const reviewOrderUnavailable = !readOnly && [...sections.recommended, ...sections.live]
-    .some((opportunity) => opportunity.personal_review == null)
+    .some((opportunity) => opportunity.opportunity_status !== "paused" && opportunity.personal_review == null)
 
   return (
     <div className="flex flex-col gap-6">
+      {pausedHistoryAvailability === "unavailable" ? <Alert><AlertTitle>{u("Historical availability unknown")}</AlertTitle><AlertDescription>{u("Some previously opened paused opportunities could not be checked. Retained relationships are still shown; refresh to retry.")}</AlertDescription></Alert> : null}
       <DealDiscoveryToolbar
         search={search}
         onSearchChange={setSearch}
@@ -588,13 +600,13 @@ export function RepreneurOpportunityList({
               <p>{u("Re-New selections first, then ongoing discussions, other live deals and declined deals.")}</p>
               {!readOnly ? <><p className="mt-2">{reviewOrderUnavailable
                 ? u("Where review status is available, Reviewed deals move down within Recommended and Live Opportunities. Sections with unavailable review status keep their existing order.")
-                : u("Reviewed deals move down within Recommended and Live Opportunities.")} {u("Opening a detail only marks it Viewed and does not move it.")}</p>
+                : u("Reviewed deals move down within Recommended and Live Opportunities.")} {u("Opening an active detail only marks it Viewed and does not move it. Paused history does not change personal review marks.")}</p>
               <p className="mt-2">{u("Not yet viewed means no opening recorded since tracking began. It does not mean newly published. Reviewed means finished for now, not a response or confirmation that you read later updates.")}</p></> : null}
             </DealOrderInfo>
           </div>
           <DealSection sectionKey="recommended" title="Recommended" description="Selections from Re-New that are waiting for your first response." opportunities={sections.recommended} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
           <DealSection sectionKey="in-progress" title="In Progress" description="Interest sent to Re-New or a validated active pursuit." opportunities={sections.inProgress} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
-          <DealSection sectionKey="live-opportunities" title="Live Opportunities" description="Other live opportunities available for you to review." opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
+          <DealSection sectionKey="live-opportunities" title={sections.live.some((deal) => deal.opportunity_status === "paused") ? "Opportunities" : "Live Opportunities"} description={sections.live.some((deal) => deal.opportunity_status === "paused") ? "Other opportunities and retained read-only history." : "Other live opportunities available for you to review."} opportunities={sections.live} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} />
           <DealSection sectionKey="declined" title="Declined" description="Deals you can safely review and reconsider." opportunities={sections.declined} detailHrefForOpportunity={detailHref} detailLabel={detailLabel} readOnly={readOnly} compact />
         </div>
       )}

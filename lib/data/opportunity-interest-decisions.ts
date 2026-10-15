@@ -69,23 +69,30 @@ export async function readRepreneurInterestStates(
   matches: { id: string; interest_expressed_at?: string | null }[],
 ) {
   const matchIds = matches.map((match) => match.id)
-  const rejected = new Set<string>()
-  for (let offset = 0; offset < matchIds.length; offset += 100) {
-    const { data, error } = await createAdminClient().rpc("w173_repreneur_rejections", {
+  const chunks: string[][] = []
+  for (let offset = 0; offset < matchIds.length; offset += 100) chunks.push(matchIds.slice(offset, offset + 100))
+  const supabase = createAdminClient()
+  // Rejections and response origins are independent reads of the same match
+  // set, so every chunk of both is requested together instead of in sequence.
+  const [rejectionResults, eventResults] = await Promise.all([
+    Promise.all(chunks.map((chunk) => supabase.rpc("w173_repreneur_rejections", {
       p_repreneur_id: repreneurId,
-      p_match_ids: matchIds.slice(offset, offset + 100),
-    })
+      p_match_ids: chunk,
+    }))),
+    Promise.all(chunks.map((chunk) => supabase.from("opportunity_interest_events")
+      .select("match_id,interest_expressed_at")
+      .in("match_id", chunk)
+      .eq("event_type", "proposed_interested"))),
+  ])
+  const rejected = new Set<string>()
+  for (const { data, error } of rejectionResults) {
     if (error) throw new Error("Could not read current interest outcomes.")
     for (const row of data ?? []) rejected.add(row.match_id)
   }
   const proposed = new Set<string>()
-  for (let offset = 0; offset < matchIds.length; offset += 100) {
-    const { data, error } = await createAdminClient().from("opportunity_interest_events")
-      .select("match_id,interest_expressed_at")
-      .in("match_id", matchIds.slice(offset, offset + 100))
-      .eq("event_type", "proposed_interested")
+  const currentInterest = new Map(matches.map((match) => [match.id, match.interest_expressed_at ?? null]))
+  for (const { data, error } of eventResults) {
     if (error) throw new Error("Could not read response origin.")
-    const currentInterest = new Map(matches.map((match) => [match.id, match.interest_expressed_at ?? null]))
     for (const event of data ?? []) {
       if (currentInterest.get(event.match_id) === event.interest_expressed_at) proposed.add(event.match_id)
     }

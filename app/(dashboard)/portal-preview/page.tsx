@@ -58,10 +58,15 @@ interface StaffPortalPreviewPageProps {
 }
 
 export default async function StaffPortalPreviewPage({ searchParams }: StaffPortalPreviewPageProps) {
-  const access = await requireStaffAccess()
-  const previewLanguage = await previewUiLanguage()
-  const params = await searchParams
-  const options = await listStaffPortalPreviewOptions()
+  // Every loader below is one or more database round trips. A deal switch
+  // re-renders this whole page, so independent loads start together and only
+  // a real data dependency adds a serialized stage.
+  const [access, previewLanguage, params, options] = await Promise.all([
+    requireStaffAccess(),
+    previewUiLanguage(),
+    searchParams,
+    listStaffPortalPreviewOptions(),
+  ])
   const requestedRepreneurId = params.repreneurId
   const selectedOption = resolvePortalPreviewRepreneur(options, requestedRepreneurId)
   const selectedRepreneurId = selectedOption?.id ?? null
@@ -118,6 +123,8 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
     match_status: NonNullable<typeof deal.match_status>
   } => Boolean(deal.match_id && deal.match_status))
   const sidebarDeals: SidebarDeal[] = workspaceDeals.map((deal) => ({
+    opportunity_id: deal.opportunity_id,
+    opportunity_status: deal.opportunity_status,
     match_id: deal.match_id,
     match_status: deal.match_status,
     pursuit_stage: deal.pursuit_stage,
@@ -132,13 +139,13 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
   }))
   const [actions, previewJourney, opportunityVersion, attachmentsByPursuit] = await Promise.all([
     selectedRepreneurId && currentWorkspace && (selectedOpportunity || section === "renew-pursuits")
-      ? readPortalDealActionIndicators(workspaceDeals.map((deal) => deal.match_id), {
+      ? readPortalDealActionIndicators(workspaceDeals.filter((deal) => deal.opportunity_status !== "paused").map((deal) => deal.match_id), {
           kind: "staff-preview", repreneurId: selectedRepreneurId,
         }) : Promise.resolve({}),
-    selectedRepreneurId && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
+    selectedRepreneurId && selectedOpportunity?.opportunity_status !== "paused" && selectedOpportunity?.match_id && selectedOpportunity.match_status === "active_pursuit"
       ? readPortalCurrentPursuit({ matchId: selectedOpportunity.match_id,
           viewer: { kind: "staff-preview", repreneurId: selectedRepreneurId } }) : Promise.resolve(null),
-    selectedOpportunity && selectedOwnerToken
+    selectedOpportunity && selectedOpportunity.opportunity_status !== "paused" && selectedOwnerToken
       ? createAdminClient().from("opportunities").select("updated_at")
           .eq("id", selectedOpportunity.opportunity_id).maybeSingle() : Promise.resolve(null),
     externalPursuits.length
@@ -237,7 +244,7 @@ export default async function StaffPortalPreviewPage({ searchParams }: StaffPort
             workspaceId,
             returnView,
             sort,
-            documentHrefs: selectedOpportunity.match_id && workspaceId && selectedOwnerSelection ? {
+            documentHrefs: selectedOpportunity.opportunity_status !== "paused" && selectedOpportunity.match_id && workspaceId && selectedOwnerSelection ? {
               ndaTemplate: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, { kind: "nda-template" }, workspaceId, selectedOwnerSelection.generation),
               ...(previewJourney?.confidentialGrant ? {
                 informationMemorandum: createPortalPreviewDocumentHref(selectedRepreneurId, selectedOpportunity.match_id, {

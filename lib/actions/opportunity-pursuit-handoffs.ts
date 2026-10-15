@@ -2,9 +2,9 @@ import "server-only"
 
 import { requireStaffAccess } from "@/lib/access-control"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { sendMaSourceWorkflowEmailPayload, renderMaWorkflowContent } from "@/lib/ma-workflows"
+import { sendMaSourceWorkflowEmailPayload } from "@/lib/ma-workflows"
 import { requireReservedHandoffReview, sameAttachmentSnapshot } from "@/lib/staff-email-review-guard"
-import { fixedIntermediaryHandoffCopy, buildPursuitNdaReadyRequest } from "@/lib/pursuit-handoff-copy"
+import { buildPursuitNdaReadyRequest } from "@/lib/pursuit-handoff-copy"
 import { preparePursuitHandoff, beginPursuitHandoff, finalizePursuitHandoff, assertPursuitHandoffCurrent, type HandoffAttempt } from "@/lib/pursuit-handoff-delivery"
 import { fingerprintResendDeliveryRequest, classifyResendDeliveryOutcome } from "@/lib/email/resend-delivery-outcome"
 import { resend } from "@/lib/email/resend-client"
@@ -24,13 +24,7 @@ export async function sendPursuitIntermediaryHandoff(matchId: string, type: "e4"
     const blankPresent = context.upstream.metadata?.blank_nda_present_at_validation
     if (type === "e4" && typeof blankPresent !== "boolean") throw new Error("This historical validation has no frozen NDA request. Record a new mutual-interest validation before starting a new handoff.")
     const review = await requireReservedHandoffReview(reviewId, type, matchId, handoff.upstreamId)
-    const copy = fixedIntermediaryHandoffCopy(type, Boolean(blankPresent))
-    const rendered = await renderMaWorkflowContent(handoff.opportunityId, copy.subject, copy.body)
-    if (review.subject !== rendered.subject || review.body_text !== rendered.body ||
-        review.template_version !== `w112-${type}-v1` ||
-        !sameAttachmentSnapshot(review.attachment_snapshot, handoff.snapshot)) {
-      throw new Error("The governed handoff content or signed copies changed after review. No email was sent.")
-    }
+    if (review.template_version !== `w112-${type}-v1` || !sameAttachmentSnapshot(review.attachment_snapshot, handoff.snapshot)) throw new Error("The governed handoff or signed copies changed after review.")
     const result = await sendMaSourceWorkflowEmailPayload(handoff.opportunityId, {
       templateKey: "ma_nda_info_memo_request", subject: review.subject, body: review.body_text,
       contactId: review.contact_link_id, clientOperationKey: handoff.upstreamId,
@@ -47,13 +41,15 @@ export async function sendPursuitNdaReadyNotice(matchId: string, reviewId?: stri
   let attemptReserved = false
   try {
     const { handoff, context } = await preparePursuitHandoff(db, matchId, "e6")
-    const request = buildPursuitNdaReadyRequest(matchId, context)
+    const currentRequest = buildPursuitNdaReadyRequest(matchId, context)
+    const request = { ...currentRequest }
     const email = request.to[0]
     const review = await requireReservedHandoffReview(reviewId, "e6", matchId, handoff.upstreamId)
     if (review.template_key !== "code:e6_nda_ready" || review.template_version !== "w112-e6-v1" ||
-        review.subject !== request.subject || review.body_text !== request.text || review.recipient_email !== email) {
+        review.recipient_email !== email) {
       throw new Error("The NDA-ready recipient or governed copy changed after review. No email was sent.")
     }
+    request.subject = review.subject; request.text = review.body_text; request.html = (await import("@/lib/email/business-mail-policy")).plainEmailHtml(review.body_text)
     if (await isMaContactEmailAddressSuppressed(email)) throw new Error("The existing email suppression policy blocks this recipient.")
     const attempt = reserved?.handoffAttempt ?? await beginPursuitHandoff(db, handoff, fingerprintResendDeliveryRequest(request, `e6:${handoff.upstreamId}`), staff.user.id)
     if (reserved?.handoffAttempt && attempt.delivery_status !== "sending") {

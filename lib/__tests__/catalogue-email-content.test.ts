@@ -10,7 +10,7 @@ const m = vi.hoisted(() => ({
 }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 vi.mock("@/lib/data/dashboard-snapshots", () => ({ revalidateRepreneurDashboardTags: vi.fn() }))
-vi.mock("@/lib/access-control", () => ({ requireStaffAccess: vi.fn() }))
+vi.mock("@/lib/access-control", () => ({ requireStaffAccess: vi.fn(async () => ({ user: { id: "synthetic-staff" } })) }))
 vi.mock("@/lib/email", () => ({ sendEmail: m.send }))
 vi.mock("@/lib/utils/scoring-v2", () => ({ calculateDualScore: () => ({ who: { score: 50 }, when: { score: 50 }, flags: { flags: [] }, recommendation: "interview" }) }))
 vi.mock("@/lib/repreneur-target-thesis", () => ({ validateIntakeTargetThesis: () => null }))

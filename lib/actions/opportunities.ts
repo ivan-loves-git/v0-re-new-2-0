@@ -1,5 +1,10 @@
 "use server"
 
+import { areReasonedLifecycleWritesEnabled, REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE } from "@/lib/reasoned-lifecycle-release"
+
+import { validateOpportunityPauseInput } from "@/lib/opportunity-outcome-reasons"
+import type { OpportunityStaleClosureEligibility } from "@/lib/types/opportunity"
+
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
@@ -16,7 +21,6 @@ import {
 } from "@/lib/demo-classification"
 import {
   isOpportunityClosureReason,
-  isOpportunityPauseReason,
   type MaSource,
   type MaSourceContact,
   type Opportunity,
@@ -422,7 +426,7 @@ export async function getOpportunityPauseHistory(
 
   const { data, error } = await supabase
     .from("opportunity_pause_history")
-    .select("id, opportunity_id, reason, previous_status, paused_by, paused_at")
+    .select("id, opportunity_id, reason, reason_note, previous_status, paused_by, paused_at")
     .eq("opportunity_id", id)
     .order("paused_at", { ascending: false })
 
@@ -513,6 +517,15 @@ export async function setOpportunityDemoClassification(
   }
 }
 
+export async function getOpportunityStaleClosureEligibility(id: string): Promise<OpportunityStaleClosureEligibility> {
+  await requireStaffAccess()
+  const { data, error } = await createAdminClient().rpc("opportunity_stale_closure_eligibility", { p_opportunity_id: id })
+  if (error || !data || typeof data.eligible !== "boolean") {
+    return { eligible: false, startedAt: null, eligibleAt: null, completedDays: 0, basis: null, message: "Stale is unavailable until its 90-day eligibility can be verified." }
+  }
+  return data as OpportunityStaleClosureEligibility
+}
+
 export async function closeOpportunity(
   id: string,
   reason: unknown,
@@ -526,6 +539,11 @@ export async function closeOpportunity(
     }
   }
 
+  if (reason === "stale") {
+    if (!areReasonedLifecycleWritesEnabled()) return { success: false, message: REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE }
+    const eligibility = await getOpportunityStaleClosureEligibility(id)
+    if (!eligibility.eligible) return { success: false, message: eligibility.message, fieldErrors: { closure_reason: eligibility.message } }
+  }
   const supabase = createAdminClient()
   const { error } = await supabase.rpc("close_opportunity_with_reason", {
     p_opportunity_id: id,
@@ -534,6 +552,8 @@ export async function closeOpportunity(
   })
 
   if (error) {
+    if (error.message.includes("opportunity_stale_not_eligible")) return { success: false, message: "Stale requires 90 consecutive Active days without an active pursuit. Refresh before deciding.", fieldErrors: { closure_reason: "This opportunity is not eligible for Stale closure." } }
+
     if (error.message.includes("opportunity_not_open_for_closure")) {
       return { success: false, message: "This opportunity is already closed." }
     }
@@ -558,21 +578,19 @@ export async function closeOpportunity(
 export async function pauseOpportunity(
   id: string,
   reason: unknown,
+  reasonNote: unknown = null,
 ): Promise<OpportunityActionResult> {
   const { user } = await requireStaffAccess()
-  if (!isOpportunityPauseReason(reason)) {
-    return {
-      success: false,
-      message: "Choose the pause reason before pausing this opportunity.",
-      fieldErrors: { pause_reason: "Choose a valid pause reason." },
-    }
-  }
+  if (!areReasonedLifecycleWritesEnabled()) return { success: false, message: REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE }
+  const explanation = validateOpportunityPauseInput(reason, reasonNote)
+  if (!explanation.success) return { success: false, message: explanation.message, fieldErrors: { [explanation.field]: explanation.message } }
 
   const supabase = createAdminClient()
   const { error } = await supabase.rpc("pause_opportunity_with_reason", {
     p_opportunity_id: id,
-    p_reason: reason,
+    p_reason: explanation.reason,
     p_paused_by: user.id,
+    p_reason_note: explanation.note,
   })
 
   if (error) {

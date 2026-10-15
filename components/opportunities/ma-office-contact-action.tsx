@@ -15,16 +15,23 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MaOfficeCombobox } from "@/components/opportunities/ma-office-combobox"
+import type { MaOfficeIdentity } from "@/lib/ma-office-presentation"
 import { createMaOfficeContact } from "@/lib/actions/opportunity-intake"
 
 export function MaOfficeContactAction({
-  officeId,
+  officeId = "",
+  officeLabel,
+  offices,
   disabled = false,
 }: {
-  officeId: string
+  officeId?: string
+  officeLabel?: string
+  offices?: readonly MaOfficeIdentity[]
   disabled?: boolean
 }) {
   const router = useRouter()
+  const [selectedOfficeId, setSelectedOfficeId] = useState(officeId)
   const [open, setOpen] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isPending, startTransition] = useTransition()
@@ -43,13 +50,13 @@ export function MaOfficeContactAction({
     setErrors({})
     formData.set("contact_mode", "new")
     startTransition(async () => {
-      const result = await createMaOfficeContact(officeId, formData)
+      const result = await createMaOfficeContact(selectedOfficeId, formData)
       if (!result.success) {
         setErrors(result.fieldErrors ?? { form: result.message })
         toast.error("Contact not added", { description: result.message })
         return
       }
-      toast.success("Office contact added")
+      toast.success(result.message)
       setOpen(false)
       router.refresh()
     })
@@ -61,7 +68,7 @@ export function MaOfficeContactAction({
       onOpenChange={(next) => {
         if (isPending) return
         setOpen(next)
-        if (!next) setErrors({})
+        if (!next) { setErrors({}); setSelectedOfficeId(officeId) }
       }}
     >
       <Button
@@ -76,21 +83,24 @@ export function MaOfficeContactAction({
         <Plus data-icon="inline-start" />
         Add contact
       </Button>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add office contact</DialogTitle>
           <DialogDescription>
-            Create a new canonical person at this office. To place an existing
-            person here, move them from Contacts so their earlier office remains
-            in history.
+            Supply at least one name and an email address or phone number. For a person already in Contacts, use Edit details to retain their office history.
           </DialogDescription>
         </DialogHeader>
-        <form action={save} className="space-y-4">
+        <form noValidate onSubmit={(event) => { event.preventDefault(); save(new FormData(event.currentTarget)) }} className="space-y-4">
           {errors.form ? (
             <p className="text-sm text-destructive" role="alert">
               {errors.form}
             </p>
           ) : null}
+          {offices ? <div className="space-y-2">
+            <Label htmlFor="ma-contact-office">Firm and office (required)</Label>
+            <MaOfficeCombobox id="ma-contact-office" offices={offices} value={selectedOfficeId} onValueChange={(value) => { setSelectedOfficeId(value); clearError("office_id") }} />
+            {errors.office_id ? <p className="text-sm text-destructive" role="alert">{errors.office_id}</p> : null}
+          </div> : <p className="text-sm break-words">Firm and office: {officeLabel}</p>}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="ma-office-contact-first-name">First name</Label>
@@ -98,10 +108,11 @@ export function MaOfficeContactAction({
                 id="ma-office-contact-first-name"
                 name="contact_first_name"
                 aria-invalid={Boolean(errors.contact_first_name)}
+                aria-describedby={errors.contact_first_name ? "ma-office-contact-first_name-error" : undefined}
                 onChange={() => clearError("contact_first_name")}
               />
               {errors.contact_first_name ? (
-                <p className="text-sm text-destructive" role="alert">
+                <p id="ma-office-contact-first_name-error" className="text-sm text-destructive" role="alert">
                   {errors.contact_first_name}
                 </p>
               ) : null}
@@ -112,10 +123,11 @@ export function MaOfficeContactAction({
                 id="ma-office-contact-last-name"
                 name="contact_last_name"
                 aria-invalid={Boolean(errors.contact_last_name)}
+                aria-describedby={errors.contact_last_name ? "ma-office-contact-last_name-error" : undefined}
                 onChange={() => clearError("contact_last_name")}
               />
               {errors.contact_last_name ? (
-                <p className="text-sm text-destructive" role="alert">
+                <p id="ma-office-contact-last_name-error" className="text-sm text-destructive" role="alert">
                   {errors.contact_last_name}
                 </p>
               ) : null}
@@ -127,17 +139,19 @@ export function MaOfficeContactAction({
                 name="contact_email"
                 type="email"
                 aria-invalid={Boolean(errors.contact_email)}
+                aria-describedby={errors.contact_email ? "ma-office-contact-email-error" : undefined}
                 onChange={() => clearError("contact_email")}
               />
               {errors.contact_email ? (
-                <p className="text-sm text-destructive" role="alert">
+                <p id="ma-office-contact-email-error" className="text-sm text-destructive" role="alert">
                   {errors.contact_email}
                 </p>
               ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="ma-office-contact-phone">Phone</Label>
-              <Input id="ma-office-contact-phone" name="contact_phone" />
+              <Input id="ma-office-contact-phone" name="contact_phone" type="tel" aria-invalid={Boolean(errors.contact_phone)} aria-describedby={errors.contact_phone ? "ma-office-contact-phone-error" : undefined} onChange={() => clearError("contact_phone")} />
+              {errors.contact_phone ? <p id="ma-office-contact-phone-error" className="text-sm text-destructive" role="alert">{errors.contact_phone}</p> : null}
             </div>
           </div>
           <div className="space-y-2">

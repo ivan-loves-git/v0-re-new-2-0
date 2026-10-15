@@ -1,4 +1,5 @@
 import "server-only"
+import { configuredBusinessCc } from "@/lib/email/business-mail"
 import { createHash } from "node:crypto"
 
 import { beginPursuitHandoff, finalizePursuitHandoff, assertPursuitHandoffCurrent, type PreparedPursuitHandoff, type HandoffAttempt } from "@/lib/pursuit-handoff-delivery"
@@ -433,7 +434,7 @@ function markdownToEmailHtml(body: string) {
 
 export function buildMaReviewedRequest(subject: string, body: string, recipientEmail: string, attachments?: ResendDeliveryRequest["attachments"]): ResendDeliveryRequest {
   return {
-    from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [recipientEmail], subject,
+    from: `${FROM_NAME} <${FROM_EMAIL}>`, to: [recipientEmail], cc: configuredBusinessCc([recipientEmail]), subject,
     html: markdownToEmailHtml(body), text: body,
     ...(attachments ? { attachments } : {}),
   }
@@ -826,8 +827,8 @@ export async function sendMaSourceWorkflowEmailPayload(
   const supabase = createAdminClient()
   if (!review) return { success: false, message: "Prepare this email in Review & send before delivery." }
   try {
-    const version = await getMaReviewTemplateVersion(templateKey, true)
-    if (!handoff && version !== review.templateVersion) return { success: false, message: "The catalogue template changed after preparation. This draft cannot be sent." }
+    await getMaReviewTemplateVersion(templateKey, true)
+    // Catalogue copy changes never replace or invalidate retained reviewed words.
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : "The catalogue template could not be verified." }
   }

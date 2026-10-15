@@ -20,9 +20,11 @@ import { Eye, Loader2 } from "lucide-react"
 import { TEMPLATE_AUDIENCE_LABELS, TEMPLATE_METADATA } from "@/lib/email/templates"
 import {
   toggleTemplateEnabled,
+  toggleTemplateAutoSend,
   getRenderedTemplate,
   updateTemplateSettings,
 } from "@/lib/actions/emails"
+import { CODE_EMAIL_CATALOGUE } from "@/lib/email/business-mail-policy"
 import type { EmailTemplate, EmailTemplateKey } from "@/lib/types/email"
 import type { EmailTemplateAudience } from "@/lib/email/templates"
 
@@ -41,6 +43,8 @@ interface PreviewState {
   templateKey: EmailTemplateKey
   templateName: string
   subject: string
+  renderedSubject?: string
+  freshnessExample?: "single" | "multiple"
   initialSubject: string
   body: string
   initialBody: string
@@ -75,6 +79,14 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
     }
   }
 
+  const handleAutoToggle = async (templateKey: string, enabled: boolean) => {
+    setLoading(templateKey); setToggleError(null)
+    try { await toggleTemplateAutoSend(templateKey, enabled)
+      setLocalTemplates(previous => previous.map(template => template.template_key === templateKey ? { ...template, auto_send: enabled } : template))
+    } catch (error) { setToggleError(error instanceof Error ? error.message : "Auto-send was not saved.") }
+    finally { setLoading(null) }
+  }
+
   const openPreview = async (key: string, name: string) => {
     setPreview({
       templateKey: key as EmailTemplateKey,
@@ -91,13 +103,15 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       saved: false,
     })
     try {
-      const { subject, html, bodyMarkdown, bodyEditable } = await getRenderedTemplate(key as EmailTemplateKey)
+      const { subject, sourceSubject, html, bodyMarkdown, bodyEditable } = await getRenderedTemplate(key as EmailTemplateKey)
       setPreview((prev) =>
         prev && prev.templateKey === key
           ? {
               ...prev,
-              subject,
-              initialSubject: subject,
+              subject: sourceSubject ?? subject,
+              renderedSubject: subject,
+              freshnessExample: "single",
+              initialSubject: sourceSubject ?? subject,
               body: bodyMarkdown ?? "",
               initialBody: bodyMarkdown ?? "",
               bodyEditable,
@@ -115,6 +129,39 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
     }
   }
 
+  const chooseFreshnessExample = async (example: "single" | "multiple") => {
+    if (!preview) return;
+    const key = preview.templateKey;
+    setPreview((previous) =>
+      previous
+        ? { ...previous, loading: true, freshnessExample: example }
+        : previous,
+    );
+    try {
+      const rendered = await getRenderedTemplate(key, example);
+      setPreview((previous) =>
+        previous?.templateKey === key && previous.freshnessExample === example
+          ? {
+              ...previous,
+              html: rendered.html,
+              renderedSubject: rendered.subject,
+              loading: false,
+            }
+          : previous,
+      );
+    } catch (error) {
+      setPreview((previous) =>
+        previous?.templateKey === key
+          ? {
+              ...previous,
+              loading: false,
+              error: error instanceof Error ? error.message : "Render failed",
+            }
+          : previous,
+      );
+    }
+  };
+
   const saveTemplate = async () => {
     if (!preview) return
     setPreview({ ...preview, saving: true, saved: false, error: null })
@@ -126,7 +173,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
         await updateTemplateSettings(preview.templateKey, updates)
       }
       // Re-render the preview with the new body so the iframe matches what was saved
-      const { html } = await getRenderedTemplate(preview.templateKey)
+      const { html, subject: renderedSubject } = await getRenderedTemplate(preview.templateKey, preview.freshnessExample)
       setPreview((prev) =>
         prev
           ? {
@@ -136,6 +183,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
               initialSubject: prev.subject,
               initialBody: prev.body,
               html,
+              renderedSubject,
             }
           : prev,
       )
@@ -153,7 +201,8 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
       const item = {
         key,
         ...meta,
-        isEnabled: template?.is_active ?? (key === "opportunity_discovery_digest" || meta.copyEditable === true ? false : true),
+        isEnabled: template?.is_active === true,
+        autoSend: template?.auto_send === true,
       }
       if (!acc[meta.category]) {
         acc[meta.category] = []
@@ -170,6 +219,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
         category: string
         audience: EmailTemplateAudience
         isEnabled: boolean
+        autoSend: boolean
       }>
     >,
   )
@@ -193,7 +243,7 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                 <div
                   key={item.key}
                   id={`template-${item.key}`}
-                  className="flex min-w-0 flex-col justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center"
+                  className={`flex min-w-0 flex-col justify-between gap-4 rounded-md border p-4 sm:flex-row sm:items-center ${item.autoSend ? "border-info/60 bg-info/5" : ""}`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -205,8 +255,8 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                     </div>
                     <p className="mt-1 break-words text-sm text-muted-foreground">{item.description}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <Button
+                  <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
+                    {item.key !== "code:e6_nda_ready" && item.key !== "opportunity_memo_available" && item.key !== "locked_opportunity_interest" ? <Button
                       type="button"
                       variant="outline"
                       size="sm"
@@ -214,15 +264,24 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       Voir le contenu
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      {item.isEnabled ? "Actif" : "Inactif"}
-                    </span>
-                    <Switch
-                      checked={item.isEnabled}
-                      onCheckedChange={(checked) => handleToggle(item.key, checked)}
-                      disabled={loading === item.key}
-                    />
+                    </Button> : <Badge variant="outline">Code-governed copy</Badge>}
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        Active
+                      </span>
+                      <Switch
+                        aria-label={`Active: ${item.name}`}
+                        checked={item.isEnabled}
+                        onCheckedChange={(checked) => handleToggle(item.key, checked)}
+                        disabled={loading === item.key}
+                      />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Auto-send</span>
+                      <Switch aria-label={`Auto-send: ${item.name}`} checked={item.autoSend}
+                        onCheckedChange={checked => handleAutoToggle(item.key, checked)} disabled={loading === item.key} />
+                    </div>
+                    {item.autoSend ? <Badge variant="outline" className="border-info/60 text-info">Auto-send · future mail</Badge> : null}
                   </div>
                 </div>
               ))}
@@ -231,6 +290,15 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
         </Card>
       ))}
 
+      <Card className="xl:col-span-2"><CardHeader><CardTitle>Variants and system exceptions</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
+        {CODE_EMAIL_CATALOGUE.filter(item => !(item.key in TEMPLATE_METADATA)).map(item => <div key={item.key} className="rounded-md border p-4 space-y-2">
+          <div className="flex flex-wrap gap-2 items-center"><h4 className="font-medium">{item.name}</h4><Badge variant="outline">Code-governed</Badge></div>
+          <p className="text-sm text-muted-foreground">{item.description}</p>
+          {item.key==="code:critical_operation_alert" ? <p className="text-sm">Technical delivery follows its environment configuration.</p> : "locked" in item ? <div className="flex gap-3 items-center"><Switch checked disabled aria-label={`Active locked: ${item.name}`} /><span>Active · automatic · locked</span></div>
+            : <p className="text-sm">Policy: {"policyKey" in item ? TEMPLATE_METADATA[item.policyKey]?.name ?? item.policyKey : item.key}. Individual draft words can be edited before sending.</p>}
+        </div>)}
+        <p className="text-sm text-muted-foreground sm:col-span-2">Auto-send affects future eligible messages. Existing review drafts retain their mode and words. Business mail copies Bertrand and Colin; personal access links are excluded.</p>
+      </CardContent></Card>
       <Dialog open={preview !== null} onOpenChange={(o) => !o && setPreview(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
@@ -284,6 +352,16 @@ export function EmailTemplates({ templates }: EmailTemplatesProps) {
 
               <div className="space-y-2">
                 <Label>Aperçu</Label>
+                {preview.templateKey === "ma_opportunity_validity_check" ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Exemples fictifs · texte enregistré, sans envoi</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" disabled={preview.loading} onClick={() => chooseFreshnessExample("single")}>Une opportunité</Button>
+                      <Button variant="outline" size="sm" disabled={preview.loading} onClick={() => chooseFreshnessExample("multiple")}>Plusieurs opportunités</Button>
+                    </div>
+                    <p className="break-words text-sm">{preview.renderedSubject}</p>
+                  </div>
+                ) : null}
                 <div className="border rounded-md overflow-auto bg-white">
                   {preview.loading ? (
                     <div className="flex items-center justify-center h-64 text-muted-foreground">

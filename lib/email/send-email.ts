@@ -5,15 +5,19 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { isMaContactEmailAddressSuppressed } from "@/lib/email/ma-contact-email-authorization"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import type { EmailTemplateKey, EmailSendResult, EmailLog_Insert } from "@/lib/types/email"
+import { routeBusinessMail, finishBusinessMail, configuredBusinessCc, businessTrackingCapability } from "./business-mail"
 import type { ReactElement } from "react"
 
-interface SendEmailParams {
+export interface SendEmailParams {
   to: string
   subject: string
   repreneurId: string
   templateKey: EmailTemplateKey
   react: ReactElement
   metadata?: Record<string, unknown>
+  sourceContext?: Record<string, unknown>
+  retainedHtml?: string
+  retainedText?: string
   requiresConsent?: boolean // For explicit consent check (overrides template setting)
   /** Optional BCC recipients — used e.g. to copy Bertrand on interview reminders without exposing his email. */
   bcc?: string[]
@@ -69,13 +73,14 @@ async function checkMarketingConsent(repreneurId: string, templateKey: EmailTemp
   const supabase = createAdminClient()
 
   // Check if this template requires consent
-  const { data: template } = await supabase
+  const { data: template, error } = await supabase
     .from("email_templates")
     .select("requires_consent")
     .eq("template_key", templateKey)
     .single()
 
-  if (!template?.requires_consent) {
+  if (error || !template) return false
+  if (template.requires_consent === false) {
     return true // Transactional email, no consent needed
   }
 
@@ -101,7 +106,7 @@ async function isTemplateActive(templateKey: EmailTemplateKey): Promise<boolean>
     .eq("template_key", templateKey)
     .single()
 
-  return template?.is_active !== false
+  return template?.is_active === true
 }
 
 /**
@@ -129,7 +134,7 @@ type IdempotentEmailLog = {
   provider_outcome: "attempting" | "uncertain" | "rejected" | "accepted" | null
 }
 
-const terminalEmailStatuses = new Set(["sent", "delivered", "opened", "clicked"])
+const terminalEmailStatuses = new Set(["sent", "delivered", "opened", "clicked", "bounced", "complained", "suppressed", "delayed"])
 const ambiguousProviderOutcomes = new Set(["attempting", "uncertain"])
 // Resend guarantees an idempotency key for 24 hours. Stop one hour short so a
 // delayed retry never crosses the provider boundary while it is in flight.
@@ -217,8 +222,9 @@ async function updateEmailLogStatus(
 /**
  * Main function to send an email
  */
-export async function sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
+async function dispatchEmail(params: SendEmailParams): Promise<EmailSendResult> {
   const { to, subject, repreneurId, templateKey, react, metadata = {}, bcc, idempotencyKey, beforeProviderAttempt } = params
+  const cc = configuredBusinessCc([to])
   const trace = startCriticalOperation("email.repreneur_send")
   let activeIdempotentEmailLogId: string | null = null
   let providerRequestStarted = false
@@ -300,6 +306,8 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       subject,
       status: "pending",
       metadata,
+      retained_html: params.retainedHtml, retained_text: params.retainedText, actual_cc: cc,
+      tracking_verified: businessTrackingCapability().verified,
     }
     const durableEmailLog = idempotencyKey ? await getOrCreateIdempotentEmailLog(emailLogInput, idempotencyKey) : null
     const emailLogId = idempotencyKey ? (durableEmailLog?.id ?? null) : await logEmail(emailLogInput)
@@ -351,7 +359,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
     // delivery. Generic/manual paths have no operational-purpose exception.
     const blockedRecipient = (
       await Promise.all(
-        [to, ...(bcc ?? [])].map(async (recipient) => ({
+        [to, ...cc, ...(bcc ?? [])].map(async (recipient) => ({
           recipient,
           blocked: await isMaContactEmailAddressSuppressed(recipient),
         })),
@@ -417,9 +425,10 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
       {
         from: `${FROM_NAME} <${FROM_EMAIL}>`,
         to: [to],
-        ...(bcc && bcc.length > 0 ? { bcc } : {}),
+        ...(bcc && bcc.length > 0 ? { bcc: bcc.filter(value => !cc.includes(value.trim().toLowerCase()) && value.trim().toLowerCase() !== to.trim().toLowerCase()) } : {}),
+        cc,
         subject,
-        react,
+        ...(params.retainedHtml ? { html: params.retainedHtml, text: params.retainedText } : { react }),
       },
       idempotencyKey ? { idempotencyKey } : undefined,
     )
@@ -441,6 +450,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
         success: false,
         emailLogId: emailLogId ?? undefined,
         error: error.message,
+        providerOutcome: "rejected",
       }
     }
 
@@ -459,6 +469,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
         success: false,
         emailLogId,
         error: "The email provider did not confirm delivery.",
+        providerOutcome: "uncertain",
       }
     }
 
@@ -483,6 +494,7 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
           success: false,
           emailLogId,
           error: "Email provider accepted delivery, but durable finalization needs retry.",
+          providerOutcome: "uncertain",
         }
       }
     } else if (emailLogId) {
@@ -530,22 +542,51 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailSendResul
   }
 }
 
+/** Shared prospective policy; preparing a draft is never success-as-sent. */
+export async function sendEmail(params: SendEmailParams): Promise<EmailSendResult> {
+  let outcome: EmailSendResult | undefined
+  try {
+    const operation = await routeBusinessMail(params)
+    if (operation.accepted) return { success: true, resendId: operation.review.provider_message_id ?? undefined, providerOutcome: "accepted" }
+    if (operation.queued) return { success: false, queued: true, reviewId: operation.review.id, providerOutcome: "review", error: "Draft prepared for Review & send. No email was sent." }
+    const result = outcome = await dispatchEmail({ ...params, subject: operation.subject!, retainedHtml: operation.html,
+      retainedText: operation.text, idempotencyKey: operation.key,
+      beforeProviderAttempt: async () => {
+        if (params.beforeProviderAttempt && !(await params.beforeProviderAttempt())) return false
+        await (await import("./review-envelope")).captureReviewEnvelope(operation.review, operation.token!)
+        const { data, error } = await createAdminClient().rpc("email_business_authorize_attempt", {
+          p_review_id: operation.review.id, p_token: operation.token,
+        })
+        if (error) throw new Error("The current business sending policy is unavailable.")
+        return data === true
+      },
+    })
+    await finishBusinessMail(operation, result)
+    return result
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : "Business email is unavailable.", providerOutcome: outcome?.providerOutcome === "accepted" || outcome?.providerOutcome === "uncertain" ? "uncertain" : "deferred" }
+  }
+}
+
 /**
  * Direct email send without logging (for testing purposes)
  */
-export async function sendEmailDirect(params: {
+async function dispatchEmailDirect(params: {
   to: string
   subject: string
   react: ReactElement
   idempotencyKey?: string
   beforeProviderAttempt?: () => Promise<boolean>
+  html?: string
+  text?: string
 }): Promise<{ success: boolean; resendId?: string; error?: string; providerOutcome?: "accepted" | "rejected" | "blocked" | "deferred" | "fenced" | "uncertain" }> {
   const { to, subject, react, idempotencyKey, beforeProviderAttempt } = params
   const trace = startCriticalOperation("email.repreneur_send")
   let providerRequestStarted = false
 
   try {
-    if (await isMaContactEmailAddressSuppressed(to)) {
+    const blockedRecipient = (await Promise.all([to, ...configuredBusinessCc([to])].map(isMaContactEmailAddressSuppressed))).some(Boolean)
+    if (blockedRecipient) {
       trace.failure("precondition_failed")
       return {
         success: false,
@@ -565,7 +606,8 @@ export async function sendEmailDirect(params: {
         from: `${FROM_NAME} <${FROM_EMAIL}>`,
         to: [to],
         subject,
-        react,
+        cc: configuredBusinessCc([to]),
+        ...(params.html ? { html: params.html, text: params.text } : { react }),
       },
       idempotencyKey ? { idempotencyKey } : undefined,
     )
@@ -587,6 +629,31 @@ export async function sendEmailDirect(params: {
   }
 }
 
+export async function sendEmailDirect(params: BusinessDirectEmailParams): Promise<EmailSendResult> {
+  if (!params.templateKey) return { success: false, error: "Choose a catalogued business type before preparing mail.", providerOutcome: "blocked" }
+  let outcome: EmailSendResult | undefined
+  try {
+    const operation = await routeBusinessMail({ ...params, templateKey: params.templateKey })
+    if (operation.accepted) return { success: true, resendId: operation.review.provider_message_id ?? undefined }
+    if (operation.queued) return { success: false, queued: true, reviewId: operation.review.id, providerOutcome: "review", error: "Draft prepared for Review & send. No email was sent." }
+    const result = outcome = await dispatchEmailDirect({ ...params, subject: operation.subject!, html: operation.html, text: operation.text, idempotencyKey: operation.key,
+      beforeProviderAttempt: async () => {
+        if (params.beforeProviderAttempt && !(await params.beforeProviderAttempt())) return false
+        await (await import("./review-envelope")).captureReviewEnvelope(operation.review, operation.token!)
+        const { data, error } = await createAdminClient().rpc("email_business_authorize_attempt", { p_review_id: operation.review.id, p_token: operation.token })
+        if (error) throw new Error("Current email policy is unavailable.")
+        return data === true
+      },
+    })
+    await finishBusinessMail(operation, result)
+    return result
+  } catch (error) { return { success: false, error: error instanceof Error ? error.message : "Business email unavailable.", providerOutcome: outcome?.providerOutcome === "accepted" || outcome?.providerOutcome === "uncertain" ? "uncertain" : "deferred" } }
+}
+export interface BusinessDirectEmailParams {
+  to: string; subject: string; react: ReactElement; templateKey?: string; repreneurId?: string;
+  idempotencyKey?: string; sourceContext?: Record<string, unknown>; beforeProviderAttempt?: () => Promise<boolean>
+}
+
 /**
  * Check if an email was already sent to avoid duplicates
  * Useful for preventing re-sending welcome emails, etc.
@@ -606,7 +673,7 @@ export async function wasEmailSent(
     .select("id")
     .eq("repreneur_id", repreneurId)
     .eq("template_key", templateKey)
-    .in("status", ["sent", "delivered", "opened", "clicked"])
+    .in("status", ["sent", "delivered", "opened", "clicked", "bounced", "complained", "suppressed", "delayed"])
 
   // Add time filter if specified
   if (withinMinutes) {

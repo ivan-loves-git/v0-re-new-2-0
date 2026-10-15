@@ -1,15 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  criticalOperationAlertWindow,
   isAlertableCriticalOperationFailure,
   scheduleCriticalOperationAlert,
   type CriticalOperationAlertScheduler,
 } from "@/lib/observability/critical-operation-alert"
 
+const database = vi.hoisted(() => ({ rpc: vi.fn() }))
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => database }))
+
 describe("critical operation internal alerts", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    database.rpc.mockImplementation(async (name: string, args: Record<string, string>) => ({ error: null, data: name === "critical_alert_observe" ? {
+      id: "synthetic-notification", lease_token: "synthetic-lease", idempotency_key: "wave-critical:synthetic-notification", kind: "opening",
+      payload: { format_version: 1, operation: args.p_operation, error_category: args.p_category,
+        environment: args.p_environment, release: args.p_release, from_email: args.p_from, recipient: args.p_recipient,
+        first_failure_at: "2026-08-25T07:07:42.000Z", last_failure_at: "2026-08-25T07:07:42.000Z",
+        notice_at: "2026-08-25T07:07:42.000Z", failure_count: 1 },
+    } : true }))
     vi.spyOn(console, "info").mockImplementation(() => undefined)
     vi.spyOn(console, "error").mockImplementation(() => undefined)
   })
@@ -26,14 +35,6 @@ describe("critical operation internal alerts", () => {
     expect(isAlertableCriticalOperationFailure("precondition_failed")).toBe(false)
     expect(isAlertableCriticalOperationFailure("signature_invalid")).toBe(false)
     expect(isAlertableCriticalOperationFailure("validation_failed")).toBe(false)
-  })
-
-  it("uses one stable 15-minute window for provider idempotency", () => {
-    expect(criticalOperationAlertWindow(new Date("2026-08-25T07:07:42.000Z"))).toEqual({
-      start: "2026-08-25T07:00:00.000Z",
-      end: "2026-08-25T07:15:00.000Z",
-      key: "20260825T0700Z",
-    })
   })
 
   it("schedules one content-free alert without blocking the failed action", async () => {
@@ -67,14 +68,14 @@ describe("critical operation internal alerts", () => {
     const [message, options] = send.mock.calls[0]
     expect(message).toMatchObject({
       to: "alerts@example.test",
-      subject: "[WAVE] Critical operation failed: opportunity.create",
+      subject: "[WAVE] Operational incident: opportunity.create",
     })
     expect(message.text).toContain("persistence_failed")
-    expect(message.text).toContain("2026-08-25T07:00:00.000Z")
+    expect(message.text).toContain("2026-08-25T07:07:42.000Z")
     expect(message.text).not.toContain("person@")
     expect(options).toEqual({
       idempotencyKey:
-        "wave-critical-production-opportunity.create-persistence_failed-2d76e5e-20260825T0700Z",
+        "wave-critical:synthetic-notification",
     })
   })
 

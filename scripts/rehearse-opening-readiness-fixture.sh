@@ -6,6 +6,35 @@ bash scripts/bootstrap-opening-readiness-supabase.sh
 evidence_dir="${RUNNER_TEMP:-/tmp}/opening-readiness-evidence"
 mkdir -p "$evidence_dir"
 
+# A rollback by itself would hide this deferred failure. Prove that the public
+# preflight command surfaces it before removing this disposable test-only guard.
+psql -X -v ON_ERROR_STOP=1 "$OPENING_FIXTURE_DATABASE_URL" <<'SQL'
+CREATE FUNCTION public.opening_fixture_reject_deferred_setup() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'opening_fixture_deferred_preflight_rejected';
+END
+$$;
+CREATE CONSTRAINT TRIGGER opening_fixture_deferred_setup_probe
+AFTER INSERT ON public.opportunities DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION public.opening_fixture_reject_deferred_setup();
+SQL
+if pnpm tsx scripts/opening-readiness-fixture.ts preflight \
+  > "$evidence_dir/deferred-preflight-rejection.log" 2>&1; then
+  echo "Opening preflight hid a deferred constraint failure." >&2
+  exit 1
+fi
+if ! grep -Fq 'opening_fixture_deferred_preflight_rejected' "$evidence_dir/deferred-preflight-rejection.log"; then
+  echo "Opening preflight failed before reaching the deferred constraint probe." >&2
+  exit 1
+fi
+psql -X -v ON_ERROR_STOP=1 "$OPENING_FIXTURE_DATABASE_URL" <<'SQL'
+DROP TRIGGER opening_fixture_deferred_setup_probe ON public.opportunities;
+DROP FUNCTION public.opening_fixture_reject_deferred_setup();
+SQL
+pnpm tsx scripts/opening-readiness-fixture.ts preflight \
+  | tee "$evidence_dir/preflight.jsonl"
+
 NODE_OPTIONS="${NODE_OPTIONS:+${NODE_OPTIONS} }--conditions=react-server" \
   pnpm tsx scripts/verify-opening-readiness-mail.ts \
   | tee "$evidence_dir/mail-boundary.jsonl"

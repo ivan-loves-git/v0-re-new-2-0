@@ -32,7 +32,6 @@ describe("canonical multi-contact M&A intake", () => {
     expect(source("supabase/migrations/20260930040401_future_discovery_digest.sql"))
       .toContain("public.create_opportunity_with_office_context_v2(p_reference")
     expect(actions).toContain("save_opportunity_office_context")
-    expect(actions).toContain("create_ma_firm_with_default_office")
     expect(actions).toContain("create_or_affiliate_ma_contact")
     expect(form).toContain('name="source_office_id"')
     expect(form).toContain('name="affiliation_ids"')

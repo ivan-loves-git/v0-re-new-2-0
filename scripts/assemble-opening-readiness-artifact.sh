@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# The runner may retain diagnostic material while it executes, but published
-# artifacts have a smaller contract: one aggregate JSON file with a fixed
-# allowlist of outcome counts and booleans. This script is intentionally the
-# only boundary between working evidence and the retained GitHub artifact.
+# The runner may retain diagnostic material while it executes, but the published
+# structured aggregate artifact has a smaller contract: one JSON file with a
+# fixed allowlist of outcome counts and booleans. This script is the publication
+# boundary for structured aggregate evidence. The workflow separately allows
+# named synthetic UI PNG captures; raw diagnostics and other working
+# evidence are never published.
 working_dir="${OPENING_READINESS_EVIDENCE_DIR:-${RUNNER_TEMP:?RUNNER_TEMP is required}/opening-readiness-evidence}"
 published_dir="${OPENING_READINESS_PUBLISHED_DIR:-${RUNNER_TEMP:?RUNNER_TEMP is required}/opening-readiness-published}"
 : "${OPENING_FIXTURE_RELEASE_SHA:?OPENING_FIXTURE_RELEASE_SHA is required}"
@@ -77,6 +79,27 @@ if [[ -f "$working_dir/pursuit-handoffs.json" ]]; then
      e8: {memoApproval: (.e8.memoApproval|flag), completed: (.e8.completed|flag)}}' "$working_dir/pursuit-handoffs.json")
 fi
 
+external_handoff_summary='null'
+if [[ -f "$working_dir/external-handoffs.json" ]]; then
+  external_handoff_summary=$(jq -ce '
+    def flag: if type == "boolean" then . else error("expected aggregate boolean") end;
+    {exactStaff:(.exactStaff|flag),phaseDocuments:(.phaseDocuments|flag),noDispatch:(.noDispatch|flag),dateOnlyPreserved:(.dateOnlyPreserved|flag),knownTimePreserved:(.knownTimePreserved|flag),frenchEnglishDesktopMobile:(.frenchEnglishDesktopMobile|flag),noAccessGrant:(.noAccessGrant|flag),currentLdcPdfVersion:(.currentLdcPdfVersion|flag),retainedLdcAfterReplacement:(.retainedLdcAfterReplacement|flag)}' "$working_dir/external-handoffs.json")
+fi
+
+external_memo_summary='null'
+if [[ -f "$working_dir/external-memo-notice.json" ]]; then
+  external_memo_summary=$(jq -ce '
+    def flag: if type == "boolean" then . else error("expected aggregate boolean") end;
+    {atomicFourEffects:(.atomicFourEffects|flag),retainedMemoBytes:(.retainedMemoBytes|flag),exactStaff:(.exactStaff|flag),noDispatch:(.noDispatch|flag),exactGrantSuppression:(.exactGrantSuppression|flag),ownerAccessBoundaries:(.ownerAccessBoundaries|flag),frenchEnglishDesktopMobile:(.frenchEnglishDesktopMobile|flag)}' "$working_dir/external-memo-notice.json")
+fi
+
+paused_history_summary='null'
+if [[ -f "$working_dir/paused-history.json" ]]; then
+  paused_history_summary=$(jq -ce '
+    def flag: if type == "boolean" then . else error("expected aggregate boolean") end;
+    {genuineOwnOpening:(.genuineOwnOpening|flag),authenticRelationships:(.authenticRelationships|flag),deduplicated:(.deduplicated|flag),exclusions:(.exclusions|flag),previewPrivateBoundary:(.previewPrivateBoundary|flag),pausedReadsUnchanged:(.pausedReadsUnchanged|flag),staleCommandDenied:(.staleCommandDenied|flag),oldNdaLinkDenied:(.oldNdaLinkDenied|flag),validatedInterestAlreadyCorrect:(.validatedInterestAlreadyCorrect|flag),frenchEnglishDesktopMobile:(.frenchEnglishDesktopMobile|flag),previewFrenchEnglishDesktopMobile:(.previewFrenchEnglishDesktopMobile|flag),navigationCoherent:(.navigationCoherent|flag)}' "$working_dir/paused-history.json")
+fi
+
 language_summary='null'
 if [[ -f "$working_dir/repreneur-ui-language.json" ]]; then
   language_summary=$(jq -ce '
@@ -122,5 +145,8 @@ jq -n \
   --argjson teardown "$teardown_summary" \
   --argjson handoffs "$handoff_summary" \
   --argjson language "$language_summary" \
-  '{releaseSha: $releaseSha, artifactPolicy: "aggregate-safe allowlist only", accessUat: $access, pursuitHandoffs: $handoffs, uiLanguage: $language, teardown: $teardown}' \
+  --argjson externalHandoffs "$external_handoff_summary" \
+  --argjson externalMemo "$external_memo_summary" \
+  --argjson pausedHistory "$paused_history_summary" \
+  '{releaseSha: $releaseSha, artifactPolicy: "aggregate-safe allowlist only", accessUat: $access, pursuitHandoffs: $handoffs, uiLanguage: $language, externalHandoffs: $externalHandoffs, pausedHistory: $pausedHistory, externalMemo: $externalMemo, teardown: $teardown}' \
   > "$published_dir/aggregate-summary.json"

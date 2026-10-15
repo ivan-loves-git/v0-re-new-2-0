@@ -4,6 +4,7 @@ import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { CirclePause, CircleX, History } from "lucide-react"
 import { toast } from "sonner"
+import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -39,7 +40,9 @@ import {
   type OpportunityPauseHistoryEntry,
   type OpportunityPauseReason,
   type OpportunityStatus,
+  type OpportunityStaleClosureEligibility,
 } from "@/lib/types/opportunity"
+import { validateOpportunityPauseInput } from "@/lib/opportunity-outcome-reasons"
 import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 
 interface OpportunityClosureControlsProps {
@@ -47,11 +50,13 @@ interface OpportunityClosureControlsProps {
   sourceReviewRequired: boolean
   closureHistory: OpportunityClosureHistoryEntry[]
   pauseHistory: OpportunityPauseHistoryEntry[]
+  staleEligibility: OpportunityStaleClosureEligibility
   closeAction: (
     reason: OpportunityClosureReason,
   ) => Promise<OpportunityActionResult>
   pauseAction: (
     reason: OpportunityPauseReason,
+    note?: string,
   ) => Promise<OpportunityActionResult>
 }
 
@@ -72,6 +77,7 @@ export function OpportunityClosureControls({
   sourceReviewRequired,
   closureHistory,
   pauseHistory,
+  staleEligibility,
   closeAction,
   pauseAction,
 }: OpportunityClosureControlsProps) {
@@ -82,6 +88,7 @@ export function OpportunityClosureControls({
   const [selectedPauseReason, setSelectedPauseReason] = useState<
     OpportunityPauseReason | ""
   >("")
+  const [pauseNote, setPauseNote] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const summaryRef = useRef<HTMLDivElement>(null)
@@ -102,6 +109,7 @@ export function OpportunityClosureControls({
       toast.success(result.message)
       setSelectedClosureReason("")
       setSelectedPauseReason("")
+      setPauseNote("")
       setFieldErrors({})
       router.refresh()
     } catch (error) {
@@ -143,6 +151,7 @@ export function OpportunityClosureControls({
             reason: "Closure reason",
             closure_reason: "Closure reason",
             pause_reason: "Pause reason",
+            pause_note: "Pause explanation",
             form: "Opportunity lifecycle",
           }}
         />
@@ -160,13 +169,14 @@ export function OpportunityClosureControls({
                   Pause opportunity
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Use this when the cabinet temporarily stops the deal. It does
-                  not close the opportunity or end one repreneur pursuit.
+                  Use this for a temporary suspension of the whole sale. Waiting
+                  for information must block the sale itself, rather than one
+                  buyer’s task. Confidential access is revoked during Pause.
                 </p>
               </div>
               {opportunityStatus === "active" ? (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                  <div className="min-w-0 flex-1 space-y-2">
+                <div className="space-y-3">
+                  <div className="space-y-2">
                     <FormFieldLabel
                       htmlFor="opportunity-pause-reason"
                       requirement="required"
@@ -182,6 +192,7 @@ export function OpportunityClosureControls({
                     >
                       <SelectTrigger
                         id="opportunity-pause-reason"
+                        className="h-auto min-h-9 w-full whitespace-normal text-left"
                         {...fieldErrorProps(
                           "opportunity-pause-reason",
                           fieldErrors.pause_reason,
@@ -192,7 +203,7 @@ export function OpportunityClosureControls({
                       <SelectContent>
                         <SelectGroup>
                           {OPPORTUNITY_PAUSE_REASON_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
+                            <SelectItem key={option.value} value={option.value} className="whitespace-normal">
                               {option.label}
                             </SelectItem>
                           ))}
@@ -204,13 +215,18 @@ export function OpportunityClosureControls({
                       message={fieldErrors.pause_reason}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <FormFieldLabel htmlFor="opportunity-pause-note" requirement={selectedPauseReason === "other" ? "required" : "optional"}>Pause explanation</FormFieldLabel>
+                    <Textarea id="opportunity-pause-note" value={pauseNote} maxLength={4000} disabled={isSubmitting} onChange={(event) => { setPauseNote(event.target.value); setFieldErrors({}) }} placeholder={selectedPauseReason === "other" ? "Explain why the whole sale is paused." : "Add useful context for staff (optional)."} {...fieldErrorProps("opportunity-pause-note", fieldErrors.pause_note)} />
+                    <FieldError id="opportunity-pause-note" message={fieldErrors.pause_note} />
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={!selectedPauseReason || isSubmitting}
+                    disabled={!validateOpportunityPauseInput(selectedPauseReason, pauseNote).success || isSubmitting}
                     onClick={() =>
                       runAction(() =>
-                        pauseAction(selectedPauseReason as OpportunityPauseReason),
+                        pauseAction(selectedPauseReason as OpportunityPauseReason, pauseNote),
                       )
                     }
                   >
@@ -221,7 +237,7 @@ export function OpportunityClosureControls({
               ) : opportunityStatus === "paused" ? (
                 <p className="text-sm text-amber-700">
                   This opportunity is paused. Use Edit to return it to Active
-                  when the cabinet resumes the deal.
+                  when the sale resumes. The 90-day Stale count starts again from zero.
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -243,6 +259,11 @@ export function OpportunityClosureControls({
                   unsuitable for every repreneur. To end one pursuit, use its
                   Drop control instead.
                 </p>
+              </div>
+              <div className="rounded-md bg-muted p-3 text-sm" aria-live="polite">
+                <p className="font-medium">Stale: {staleEligibility.completedDays} of 90 completed days</p>
+                <p className="text-muted-foreground">{staleEligibility.message}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Reaching 90 days only enables this manual choice. You can keep the opportunity Active.</p>
               </div>
               {sourceReviewRequired ? (
                 <p className="text-sm text-amber-700">
@@ -266,6 +287,7 @@ export function OpportunityClosureControls({
                     >
                       <SelectTrigger
                         id="opportunity-closure-reason"
+                        className="h-auto min-h-9 w-full whitespace-normal text-left"
                         {...fieldErrorProps(
                           "opportunity-closure-reason",
                           fieldErrors.closure_reason,
@@ -276,7 +298,7 @@ export function OpportunityClosureControls({
                       <SelectContent>
                         <SelectGroup>
                           {OPPORTUNITY_CLOSURE_REASON_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
+                            <SelectItem key={option.value} value={option.value} className="whitespace-normal" disabled={option.value === "stale" && !staleEligibility.eligible}>
                               {option.label}
                             </SelectItem>
                           ))}
@@ -291,7 +313,7 @@ export function OpportunityClosureControls({
                   <Button
                     type="button"
                     variant="destructive"
-                    disabled={!selectedClosureReason || isSubmitting}
+                    disabled={!selectedClosureReason || isSubmitting || (selectedClosureReason === "stale" && !staleEligibility.eligible)}
                     onClick={() =>
                       runAction(() =>
                         closeAction(
@@ -323,9 +345,10 @@ export function OpportunityClosureControls({
                   key={entry.id}
                   className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <span className="font-medium text-foreground">
-                    {getOpportunityPauseReasonLabel(entry.reason)}
-                  </span>
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-medium text-foreground">{getOpportunityPauseReasonLabel(entry.reason)}</p>
+                    {entry.reason_note ? <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{entry.reason_note}</p> : null}
+                  </div>
                   <span className="text-xs text-muted-foreground">
                     {formatLifecycleTimestamp(entry.paused_at)}
                   </span>

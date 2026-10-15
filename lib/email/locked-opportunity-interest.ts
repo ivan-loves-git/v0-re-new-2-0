@@ -26,6 +26,7 @@ export async function sendLockedOpportunityInterestEmail(
   let began = false
 
   const result = await sendEmailDirect({
+    templateKey: "locked_opportunity_interest", sourceContext: { kind: "direct_interest", input },
     to: env.RENEW_STAFF_NOTIFICATION_EMAIL ?? DEFAULT_STAFF_NOTIFICATION_EMAIL,
     subject: `Nouvel intérêt repreneur — ${input.opportunityTitle}`,
     idempotencyKey: input.idempotencyKey,

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   listOpportunities: vi.fn(),
+  listDealFlow: vi.fn(),
   getOpportunity: vi.fn(),
   listExternal: vi.fn(),
   listLegacyBoard: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock("next/server", () => ({ connection: vi.fn() }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), notFound: mocks.notFound }))
 vi.mock("@/lib/actions/repreneur-opportunities", () => ({
   listMyRepreneurOpportunities: mocks.listOpportunities,
+  listMyRepreneurDealFlow: mocks.listDealFlow,
   getMyRepreneurOpportunity: mocks.getOpportunity,
 }))
 vi.mock("@/lib/actions/external-pursuits", () => ({ listExternalPursuitBoard: mocks.listExternal }))
@@ -35,6 +37,7 @@ describe("owner Pursuits entry", () => {
       public_title: "Safe selected match", sector: "Industrie", activity: "Manufacturing",
       location: "France", visible_documents: [], recommendation_expires_at: null,
     }] })
+    mocks.listDealFlow.mockImplementation(async () => ({ deals: (await mocks.listOpportunities()).opportunities }))
     mocks.listExternal.mockResolvedValue([])
     mocks.listLegacyBoard.mockResolvedValue([])
     mocks.getAttachments.mockResolvedValue({})

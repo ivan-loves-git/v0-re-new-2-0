@@ -630,12 +630,13 @@ export async function rejectRepreneur(id: string) {
     throw new Error("Repreneur is already rejected")
   }
 
+  const rejectionAt = new Date().toISOString()
   const { error } = await supabase
     .from("repreneurs")
     .update({
       lifecycle_status: "rejected",
       previous_status: repreneur.lifecycle_status,
-      rejected_at: new Date().toISOString(),
+      rejected_at: rejectionAt,
     })
     .eq("id", id)
 
@@ -648,7 +649,7 @@ export async function rejectRepreneur(id: string) {
     to: repreneur.email,
     subject: await getTemplateSubject("rejection", "Suite à la revue de votre dossier repreneur"),
     repreneurId: id,
-    templateKey: "rejection",
+    templateKey: "rejection", sourceContext: { kind: "rejection", rejectedAt: rejectionAt },
     react: RejectionEmail({
       repreneur: {
         id,

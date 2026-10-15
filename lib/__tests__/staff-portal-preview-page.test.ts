@@ -64,6 +64,7 @@ function findPursuitsContentProps(node: ReactNode): ComponentProps<typeof Portal
 }
 
 const allowedSidebarDeal = {
+  opportunity_id: "00000000-0000-4000-8000-000000000011", opportunity_status: "active",
   match_id: matchId, match_status: "proposed", pursuit_stage: null,
   interest_rejected: false, recommendation_expires_at: null,
   public_title: "Allowed public title", canonical_sector: "Industrie manufacturière",
@@ -245,6 +246,41 @@ describe("staff Tools portal page", () => {
     expect(html).toContain("Repreneur not found")
     expect(mocks.listOpportunities).not.toHaveBeenCalled()
     expect(mocks.readJourney).not.toHaveBeenCalled()
+  })
+
+  it("starts independent loads together instead of one database round trip after another", async () => {
+    const timeline: { name: string; start: number; end: number }[] = []
+    let clock = 0
+    const timed = <T,>(name: string, value: T) => async () => {
+      const entry = { name, start: clock++, end: -1 }
+      timeline.push(entry)
+      await new Promise((resolve) => setImmediate(resolve))
+      entry.end = clock++
+      return value
+    }
+    mocks.previewLanguage.mockImplementation(timed("language", "en"))
+    mocks.listOptions.mockImplementation(timed("options", [{ id: ownerId, name: "Ada Owner", email: "ada@example.test", portalRoleLinked: false, isDemo: false }]))
+    mocks.selectionToken.mockImplementation(timed("token", "staff-selection-token"))
+    mocks.listOwned.mockImplementation(timed("owned", { repreneur: { id: ownerId, is_demo: false }, opportunities: [
+      { match_id: matchId, match_status: "active_pursuit", opportunity_id: "00000000-0000-4000-8000-000000000011", public_title: "Selected pursuit", visible_documents: [], updated_at: "2026-09-27T08:00:00Z" },
+      { match_id: otherMatchId, match_status: "proposed", opportunity_id: "00000000-0000-4000-8000-000000000012", public_title: "Other deal", visible_documents: [], updated_at: "2026-09-27T08:00:00Z" },
+    ] }))
+    mocks.readActions.mockImplementation(timed("actions", { [matchId]: null, [otherMatchId]: "respond" }))
+    mocks.readJourney.mockImplementation(timed("journey", null))
+    mocks.createAdminClient.mockReturnValue({ from: () => ({
+      select: () => ({ eq: () => ({ maybeSingle: timed("updated_at", { data: { updated_at: "2026-09-27T08:00:00Z" } }) }) }),
+    }) })
+
+    await StaffPortalPreviewPage({ searchParams: Promise.resolve({ repreneurId: ownerId, workspaceId, dealId: matchId }) })
+
+    const stages = [...timeline].sort((a, b) => a.start - b.start).reduce((acc, entry) => {
+      if (entry.start > acc.chainEnd) return { stages: acc.stages + 1, chainEnd: entry.end }
+      return acc
+    }, { stages: 0, chainEnd: -1 }).stages
+    const names = timeline.map((entry) => entry.name)
+    expect(names).toEqual(expect.arrayContaining(["language", "options", "token", "owned", "actions", "journey", "updated_at"]))
+    expect(timeline.find(entry => entry.name === "owned")!.start).toBeGreaterThan(timeline.find(entry => entry.name === "token")!.end)
+    expect(stages, `serialized stages: ${stages}; order: ${names.join(", ")}`).toBeLessThanOrEqual(4)
   })
 
   it("shows a French customer subtree while staff identity and preview chrome remain English", async () => {

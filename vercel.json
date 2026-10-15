@@ -1,7 +1,11 @@
 {
-  "regions": ["fra1"],
   "ignoreCommand": "node scripts/vercel-ignore-build.mjs",
+  "regions": ["fra1"],
   "crons": [
+    {
+      "path": "/api/cron/critical-operation-alerts",
+      "schedule": "15 9 * * *"
+    },
     {
       "path": "/api/cron/abandoned-forms",
       "schedule": "0 9 * * *"

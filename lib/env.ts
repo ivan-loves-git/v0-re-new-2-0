@@ -20,6 +20,9 @@ const envSchema = z.object({
   // Resend (email)
   RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required").optional(),
   RESEND_FROM_EMAIL: z.string().email("RESEND_FROM_EMAIL must be a valid email").default("noreply@re-new.com"),
+  RESEND_ACCESS_FROM_EMAIL: z.string().email().optional(),
+  EMAIL_BUSINESS_TRACKING_VERIFIED_AT: z.string().datetime().optional(),
+  EMAIL_BUSINESS_TRACKING_DOMAIN: z.string().optional(),
   RESEND_WEBHOOK_SECRET: z.string().optional(),
   RENEW_STAFF_NOTIFICATION_EMAIL: z.string().email("RENEW_STAFF_NOTIFICATION_EMAIL must be a valid email").optional(),
   WAVE_CRITICAL_ALERT_EMAIL: z.string().email("WAVE_CRITICAL_ALERT_EMAIL must be a valid email").optional(),
@@ -39,6 +42,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_SHOW_TEST_AUTOFILL: z.string().optional(),
   RECIPIENT_IM_OPERATIONS_DISABLED: z.enum(["1"]).optional(),
   INTEREST_WITHDRAWAL_DISABLED: z.enum(["1"]).optional(),
+  PAUSED_OPPORTUNITY_HISTORY_DISABLED: z.enum(["1"]).optional(),
   QA_CONTRACT_MODE: z.enum(["protected"]).optional(),
 
   // Node environment

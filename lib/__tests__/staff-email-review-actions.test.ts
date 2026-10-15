@@ -20,7 +20,7 @@ vi.mock("@/lib/pursuit-handoff-copy", () => ({
   buildPursuitNdaReadyRequest: m.e6Copy, fixedIntermediaryHandoffCopy: m.fixedCopy,
 }))
 
-import { approveAndSendStaffEmailReview, archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, editStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview, restoreStaffEmailReview } from "@/lib/actions/staff-email-review"
+import { approveAndSendStaffEmailReview, archiveStaffEmailReview, changeStaffEmailReviewArchiveSelection, editStaffEmailReview, getStaffEmailReview, listStaffEmailReviews, prepareMaEmailReview, preparePursuitEmailReview, restoreStaffEmailReview } from "@/lib/actions/staff-email-review"
 
 const reviewId = "18600000-0000-4000-8000-000000000010"
 const opportunityId = "18600000-0000-4000-8000-000000000011"
@@ -50,7 +50,7 @@ beforeEach(() => {
   m.e6Copy.mockReturnValue({ from: "Re-New <noreply@example.test>", to: ["buyer@example.test"], subject: "NDA ready", html: "<p>Ready</p>", text: "Ready" })
   m.fixedCopy.mockReturnValue({ subject: "Fixed subject", body: "Fixed body" })
   m.from.mockImplementation((table) => query(table === "staff_email_reviews" ? row : table === "ma_interactions" ? { id: "evidence", delivery_status: "sent", provider_message_id: "accepted" } : null))
-  m.rpc.mockImplementation(async (name) => ({ data: name === "staff_email_review_prepare" ? reviewId : name === "staff_email_review_reserve" ? sourceId : null, error: null }))
+  m.rpc.mockImplementation(async (name) => ({ data: name === "staff_email_review_prepare" ? reviewId : ["staff_email_review_reserve", "staff_email_review_reserve_manual_handoff"].includes(name) ? sourceId : null, error: null }))
   m.sourceSend.mockResolvedValue({ success: true, message: "accepted", operationState: "sent" })
 })
 
@@ -95,6 +95,31 @@ describe("staff email review public actions", () => {
     m.staff.mockRejectedValue(new Error("Staff access required"))
     await expect(listStaffEmailReviews({ page: 1, view: "active", search: "", purpose: "all", sort: "prepared", direction: "desc" })).rejects.toThrow("Staff access")
     expect(m.from).not.toHaveBeenCalled()
+  })
+
+  it("denies detail metadata before service access for a non-staff caller", async () => {
+    m.staff.mockRejectedValue(new Error("Staff access required"))
+    await expect(getStaffEmailReview(reviewId)).rejects.toThrow("Staff access")
+    expect(m.from).not.toHaveBeenCalled()
+    expect(m.rpc).not.toHaveBeenCalled()
+  })
+
+  it("returns only display metadata owned by the exact review recipient and opportunity", async () => {
+    const recipient = { recipient_email: row.recipient_email, recipient_name: "Fictional Source", company_name: "Fictional Firm", purpose_label: "Validity check" }
+    const opportunity = { id: opportunityId, reference: "QA-222", public_title: "Fictional opportunity" }
+    m.from.mockImplementation((table) => {
+      const data = table === "staff_email_reviews" ? row : table === "staff_email_review_queue" ? recipient : table === "opportunities" ? opportunity : null
+      const q = { select: () => q, eq: () => q, order: () => q,
+        limit: () => Promise.resolve({ data: [], error: null }),
+        maybeSingle: () => Promise.resolve({ data, error: null }) }
+      return q
+    })
+    m.rpc.mockResolvedValue({ data: true, error: null })
+    expect((await getStaffEmailReview(reviewId)).display).toEqual({ recipient, opportunity })
+    recipient.recipient_email = "another@example.invalid"
+    opportunity.id = "another-opportunity"
+    expect((await getStaffEmailReview(reviewId)).display).toEqual({ recipient: null, opportunity: null })
+    expect(m.sourceSend).not.toHaveBeenCalled()
   })
 
   it("keeps records beyond the old latest-50 boundary navigable", async () => {
@@ -164,6 +189,93 @@ describe("staff email review public actions", () => {
     expect(m.sourceSend).not.toHaveBeenCalled()
   })
 
+  it("denies a stale/external exact memo at the public individual reservation boundary without changing policy or invoking any sender", async () => {
+    const pending = { ...row, source_kind: "business", template_key: "opportunity_memo_available",
+      opportunity_id: null, business_match_id: contactId, source_context: { kind: "memo_available", opportunityId, matchId: contactId, grantEvidenceId: sourceId },
+      prepared_policy: { auto_send: true, version: 2 }, approved_by: null, attempted_at: null, attempted_payload: null }
+    const original = structuredClone(pending)
+    m.from.mockImplementation(() => query(pending))
+    m.rpc.mockResolvedValue({ data: null, error: { message: "memo_notice_source_stale" } })
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("blocked")
+    expect(m.rpc.mock.calls.map(([name]) => name)).toEqual(["email_business_reserve_manual"])
+    expect(pending).toEqual(original)
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    expect(m.e6).not.toHaveBeenCalled()
+    expect(m.pursue).not.toHaveBeenCalled()
+  })
+
+  it.each(["e4", "e6", "e7"] as const)("stops individual %s approval at an externally-completed reservation before source/provider dispatch", async (kind) => {
+    const pending = {
+      ...row, source_kind: kind, match_id: contactId, upstream_evidence_id: sourceId,
+      contact_link_id: kind === "e6" ? null : contactId,
+      recipient_email: kind === "e6" ? "buyer@example.test" : row.recipient_email,
+      template_key: kind === "e6" ? "code:e6_nda_ready" : "ma_nda_info_memo_request",
+      template_version: `w112-${kind}-v1`,
+      subject: kind === "e6" ? "NDA ready" : "Fixed subject",
+      body_text: kind === "e6" ? "Ready" : "Fixed body",
+      approved_by: null, approved_at: null, attempted_at: null, attempted_payload: null,
+      prepared_policy: { auto_send: true, version: 2, auto_claimed_at: "2026-10-07T09:00:00Z" },
+    }
+    const original = structuredClone(pending)
+    m.from.mockImplementation((table) => query(table === "staff_email_reviews" ? pending : null))
+    m.handoff.mockResolvedValue({
+      handoff: { upstreamId: sourceId, snapshot: [], attachments: [] },
+      context: { opportunity: { is_demo: false }, repreneur: { email: "buyer@example.test" },
+        upstream: { metadata: { blank_nda_present_at_validation: false } } },
+    })
+    m.rpc.mockImplementation(async (name) => {
+      if (name === "email_review_mark_manual") {
+        delete (pending.prepared_policy as Partial<typeof pending.prepared_policy>).auto_claimed_at
+        return { data: null, error: null }
+      }
+      return { data: null, error: { message: "external_handoff_already_completed" } }
+    })
+
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("blocked")
+    expect(m.rpc.mock.calls.map(([name]) => name)).toEqual(["staff_email_review_reserve_manual_handoff"])
+    expect(pending).toEqual(original)
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    expect(m.pursue).not.toHaveBeenCalled()
+    expect(m.e6).not.toHaveBeenCalled()
+  })
+
+  it("keeps a failed manual handoff reservation unchanged and never starts source delivery", async () => {
+    const pending = { ...row, source_kind: "e6", match_id: contactId, upstream_evidence_id: sourceId,
+      contact_link_id: null, recipient_email: "buyer@example.test", template_key: "code:e6_nda_ready",
+      template_version: "w112-e6-v1", prepared_policy: { auto_send: true, version: 2, auto_claimed_at: "2026-10-07T09:00:00Z" } }
+    const original = structuredClone(pending)
+    m.from.mockImplementation((table) => query(table === "staff_email_reviews" ? pending : null))
+    m.handoff.mockResolvedValue({ handoff: { upstreamId: sourceId, snapshot: [], attachments: [] },
+      context: { opportunity: { is_demo: false }, repreneur: { email: "buyer@example.test" }, upstream: { metadata: {} } } })
+    m.rpc.mockResolvedValue({ data: null, error: { message: "email_review_stale" } })
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("blocked")
+    expect(m.rpc.mock.calls.map(([name]) => name)).toEqual(["staff_email_review_reserve_manual_handoff"])
+    expect(pending).toEqual(original)
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    expect(m.e6).not.toHaveBeenCalled()
+    expect(m.pursue).not.toHaveBeenCalled()
+  })
+
+  it("saves an editable message with CAS and sends only its read-back canonical version and words", async () => {
+    const subject = "New saved subject"
+    const body = "Complete new saved body"
+    await editStaffEmailReview(reviewId, 1, subject, body)
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_edit", {
+      p_review_id: reviewId, p_version: 1, p_subject: subject, p_body_text: body, p_actor: "staff-1",
+    })
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    const saved = { ...row, version: 2, subject, body_text: body }
+    m.from.mockImplementation(table => query(table === "staff_email_reviews" ? saved : table === "ma_interactions" ? { id: "evidence", delivery_status: "sent", provider_message_id: "accepted" } : null))
+    m.rpc.mockClear()
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("changed")
+    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.sourceSend).not.toHaveBeenCalled()
+    await approveAndSendStaffEmailReview(reviewId, 2)
+    expect(m.rpc).toHaveBeenCalledWith("staff_email_review_reserve", expect.objectContaining({ p_review_id: reviewId, p_version: 2 }))
+    expect(m.build).toHaveBeenCalledWith(subject, body, row.recipient_email)
+    expect(m.sourceSend).toHaveBeenCalledTimes(1)
+  })
+
   it("fails closed when a catalogue key is inactive at approval", async () => {
     m.version.mockRejectedValue(new Error("This catalogue email is disabled in Templates."))
     await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("disabled")
@@ -185,11 +297,10 @@ describe("staff email review public actions", () => {
     expect(m.sourceSend).not.toHaveBeenCalled()
   })
 
-  it("does not send a draft pinned to an older catalogue copy", async () => {
+  it("sends the retained individually reviewed words after reusable copy changes", async () => {
     m.version.mockResolvedValue("copy-v2")
-    await expect(approveAndSendStaffEmailReview(reviewId, 1)).rejects.toThrow("template changed")
-    expect(m.rpc).not.toHaveBeenCalled()
-    expect(m.sourceSend).not.toHaveBeenCalled()
+    await expect(approveAndSendStaffEmailReview(reviewId, 1)).resolves.toMatchObject({ state: "sent" })
+    expect(m.sourceSend).toHaveBeenCalledWith(opportunityId, expect.objectContaining({ subject: row.subject, body: row.body_text }), undefined, expect.anything())
   })
 
   it("reserves the exact reviewed content and records accepted evidence once", async () => {

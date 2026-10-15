@@ -13,14 +13,14 @@ describe("grouped freshness copy", () => {
       body: "Bonjour {firstName},\n\nPouvez-vous confirmer {opportunityTitle} ?",
       contactName: "Marie Dubois", members,
     })
-    expect(result.subject).toBe("Vérification A-01 — Alpine; B-02 — Bay")
+    expect(result.subject).toBe("Vérification les opportunités suivantes")
     expect(result.body).toContain("Bonjour Marie,")
-    expect(result.body).toContain("A-01 — Alpine; B-02 — Bay")
+    expect(result.body).toContain("- Alpine\n- Bay")
   })
 
   it("appends the exact members when customized copy removed the placeholder", () => {
     const result = renderGroupedFreshnessCopy({ subject: "Bonjour", body: "Votre avis ?", contactName: "Marie", members })
-    expect(result.body).toContain("- A-01 — Alpine\n- B-02 — Bay")
+    expect(result.body).toContain("- Alpine\n- Bay")
   })
 
   it("refuses empty membership", () => {

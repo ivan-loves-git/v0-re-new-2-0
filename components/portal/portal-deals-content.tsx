@@ -50,7 +50,7 @@ export function PortalDealsContent({
           </Button>
         </AlertDescription>
       </Alert> : null}
-      <RepreneurOpportunityList repreneur={repreneur} opportunities={deals} returnSort={sort === "relevance" ? undefined : sort}
+      <RepreneurOpportunityList repreneur={repreneur} opportunities={deals} pausedHistoryAvailability={result.pausedHistoryAvailability} returnSort={sort === "relevance" ? undefined : sort}
         detailHrefByOpportunityId={staffPreview?.detailHrefByOpportunityId} readOnly={Boolean(staffPreview)} />
     </section>
   </div>

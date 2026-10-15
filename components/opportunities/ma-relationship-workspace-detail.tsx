@@ -59,6 +59,7 @@ function Notes({
   target,
   id,
   notes,
+  city,
   createdAt,
   updatedAt,
   updatedBy,
@@ -66,6 +67,7 @@ function Notes({
   target: "office" | "firm"
   id: string
   notes: string | null
+  city?: string | null
   createdAt: string | null
   updatedAt: string | null
   updatedBy: string | null
@@ -83,6 +85,7 @@ function Notes({
           target={target}
           id={id}
           initialNotes={notes}
+          initialCity={city}
         />
         <p className="text-xs text-muted-foreground">
           Created {dateLabel(createdAt)} · Last changed {dateLabel(updatedAt)}
@@ -340,6 +343,7 @@ export function MaOfficeWorkspaceDetail({
         </div>
         <MaOfficeContactAction
           officeId={workspace.id}
+          officeLabel={`${workspace.firmName} · ${workspace.name}`}
           disabled={workspace.status !== "active"}
         />
         <MaRelationshipCorrectionAction
@@ -369,6 +373,7 @@ export function MaOfficeWorkspaceDetail({
         <Activity activity={workspace.activity} />
         <Notes
           target="office"
+          city={workspace.city}
           id={workspace.id}
           notes={workspace.internalNotes}
           createdAt={workspace.createdAt}
@@ -395,9 +400,9 @@ export function MaFirmWorkspaceDetail({
       </Button>
       <header className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Badge variant={statusVariant(workspace.status)}>
-            {workspace.status}
-          </Badge>
+          {workspace.status === "archived" ? (
+            <Badge variant={statusVariant(workspace.status)}>Archived</Badge>
+          ) : null}
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
             {workspace.name}
           </h1>
@@ -407,7 +412,7 @@ export function MaFirmWorkspaceDetail({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <MaFirmOfficeAction firmId={workspace.id} firmName={workspace.name} disabled={workspace.status !== "active"} />
+          <MaFirmOfficeAction firmId={workspace.id} firmName={workspace.name} disabled={workspace.status === "archived"} />
           <MaRelationshipCorrectionAction
             target="firm"
             id={workspace.id}

@@ -53,8 +53,8 @@ export function MaRelationshipCorrectionAction({ target, id, affiliationId = "",
   return <Dialog open={open} onOpenChange={changeOpen}>
     <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}><Pencil data-icon="inline-start" />Edit details</Button>
     <DialogContent className="max-h-[90vh] overflow-y-auto">
-      <DialogHeader><DialogTitle>Edit {label} details</DialogTitle><DialogDescription>{target === "contact" ? "Contact details and the current office are corrected together. Moving a person ends the old office relationship but keeps it as history." : "Only the approved relationship fields are editable. This does not move, merge, archive, or disclose any record."}</DialogDescription></DialogHeader>
-      <form action={save} className="space-y-4">
+      <DialogHeader><DialogTitle>Edit {label} details</DialogTitle><DialogDescription>{target === "contact" ? "Contact details and the current office are corrected together. Supply at least one name and an email or phone. Moving a person ends the old office relationship and retains its history." : "Correct this relationship profile. Office name and city are required when saving an office."}</DialogDescription></DialogHeader>
+      <form noValidate onSubmit={(event) => { event.preventDefault(); save(new FormData(event.currentTarget)) }} className="space-y-4">
         {errors.form ? <p className="text-sm text-destructive" role="alert">{errors.form}</p> : null}
         {target === "contact" && officeOptions?.length ? <div className="space-y-2">
           <Label htmlFor={`${target}-${id}-office`}>Current firm and office</Label>
@@ -67,8 +67,8 @@ export function MaRelationshipCorrectionAction({ target, id, affiliationId = "",
         </div> : null}
         {fields.map((field) => <div className="space-y-2" key={field.name}>
           <Label htmlFor={`${target}-${id}-${field.name}`}>{field.label}</Label>
-          {field.type === "textarea" ? <Textarea id={`${target}-${id}-${field.name}`} name={field.name} defaultValue={field.value ?? ""} rows={4} aria-invalid={Boolean(errors[field.name])} /> : <Input id={`${target}-${id}-${field.name}`} name={field.name} type={field.type ?? "text"} defaultValue={field.value ?? ""} aria-invalid={Boolean(errors[field.name])} />}
-          {errors[field.name] ? <p className="text-sm text-destructive" role="alert">{errors[field.name]}</p> : null}
+          {field.type === "textarea" ? <Textarea id={`${target}-${id}-${field.name}`} name={field.name} defaultValue={field.value ?? ""} rows={4} aria-invalid={Boolean(errors[field.name])} aria-describedby={errors[field.name] ? `${target}-${id}-${field.name}-error` : undefined} /> : <Input id={`${target}-${id}-${field.name}`} name={field.name} type={field.type ?? "text"} defaultValue={field.value ?? ""} aria-invalid={Boolean(errors[field.name])} aria-describedby={errors[field.name] ? `${target}-${id}-${field.name}-error` : undefined} />}
+          {errors[field.name] ? <p id={`${target}-${id}-${field.name}-error`} className="text-sm text-destructive" role="alert">{errors[field.name]}</p> : null}
         </div>)}
         <DialogFooter><Button type="button" variant="outline" onClick={() => changeOpen(false)} disabled={isPending}>Cancel</Button><Button type="submit" disabled={isPending}>{isPending ? "Saving..." : "Save correction"}</Button></DialogFooter>
       </form>

@@ -53,6 +53,7 @@ import type {
   OpportunityNdaArtifact,
   OpportunityPauseHistoryEntry,
   OpportunityPauseReason,
+  OpportunityStaleClosureEligibility,
   OpportunityPursuitEvent,
   OpportunityWithSource,
 } from "@/lib/types/opportunity"
@@ -92,11 +93,13 @@ interface OpportunityDetailProps {
   resolveSourceAction: (formData: FormData) => Promise<OpportunityActionResult>
   closureHistory: OpportunityClosureHistoryEntry[]
   pauseHistory: OpportunityPauseHistoryEntry[]
+  staleEligibility: OpportunityStaleClosureEligibility
   closeAction: (
     reason: OpportunityClosureReason,
   ) => Promise<OpportunityActionResult>
   pauseAction: (
     reason: OpportunityPauseReason,
+    note?: string,
   ) => Promise<OpportunityActionResult>
   demoClassificationAction: (
     isDemo: boolean,
@@ -166,6 +169,7 @@ export function OpportunityDetail({
   resolveSourceAction,
   closureHistory,
   pauseHistory,
+  staleEligibility,
   closeAction,
   pauseAction,
   demoClassificationAction,
@@ -339,6 +343,7 @@ export function OpportunityDetail({
             sourceReviewRequired={opportunity.source_review_required === true}
             closureHistory={closureHistory}
             pauseHistory={pauseHistory}
+            staleEligibility={staleEligibility}
             closeAction={closeAction}
             pauseAction={pauseAction}
           />
@@ -604,6 +609,7 @@ export function OpportunityDetail({
 
         <TabsContent value="pursuit">
           <OpportunityPursuitPanel
+            key={pursuitProjection?.matchId ?? opportunity.id}
             opportunityId={opportunity.id}
             recipientImRequired={Boolean(opportunity.recipient_im_required)}
             matches={matches}
