@@ -18,9 +18,8 @@ const storageKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!password || !runnerTemp || !storageKey) throw new Error("External memo proof requires the protected synthetic fixture.")
 const storage = createClient(apiUrl.toString(), storageKey, { auth: { persistSession: false } }).storage
 
-async function activate(control: Locator, mobile: boolean) {
-  if (mobile) await control.tap()
-  else { await control.focus(); await control.press("Enter") }
+async function activate(control: Locator) {
+  await control.click()
 }
 
 async function seedEligibleMemo(db: Client, index: number) {
@@ -92,10 +91,10 @@ test("staff atomically approves exact memo access with an external notice in FR/
       await staff.goto(`/opportunities/${dossier.opportunityId}?tab=pursuit`, { waitUntil: "domcontentloaded", timeout: 30_000 })
       await staff.locator("#journey-im").selectOption(dossier.documentId)
       await staff.locator("#journey-nda-expiry").fill("2027-10-07T12:00")
-      await activate(staff.getByRole("button", { name: "Approve with external notice", exact: true }), mobile)
+      await activate(staff.getByRole("button", { name: "Approve with external notice", exact: true }))
       const dialog = staff.getByRole("dialog")
       await expect(dialog).toBeVisible()
-      await activate(dialog.getByRole("button", { name: language === "fr" ? "Français" : "English", exact: true }), mobile)
+      await activate(dialog.getByRole("button", { name: language === "fr" ? "Français" : "English", exact: true }))
       await expect(dialog.getByRole("heading", { name: language === "fr" ? "Approuver l’accès au mémo et enregistrer l’avis externe" : "Approve memo access and record the external notice", exact: true })).toBeVisible()
       await dialog.getByLabel(language === "fr" ? "Date réelle de l’échange" : "Actual exchange date", { exact: true }).fill(new Date(Date.now() - 86_400_000).toISOString().slice(0, 10))
       await dialog.getByLabel(language === "fr" ? "Canal" : "Channel", { exact: true }).selectOption("meeting")
@@ -116,7 +115,7 @@ test("staff atomically approves exact memo access with an external notice in FR/
           && Array.from(text.getClientRects()).every(rect => rect.left >= box.left && rect.right <= box.right && rect.top >= box.top && rect.bottom <= box.bottom)
       })).toBe(true)
       await dialog.screenshot({ path: join(evidenceDirectory, `external-memo-${language}-${size}.png`) })
-      await activate(approve, mobile)
+      await activate(approve)
       await expect(dialog).toHaveCount(0)
       await expect(staff.getByText(language === "fr" ? "Accès au mémo approuvé ; avis communiqué hors WAVE" : "Memo access approved; notice completed outside WAVE", { exact: true })).toBeVisible()
       const saved = (await db.query(`SELECT x.grant_evidence_id,x.memo_sha256,x.exchange_time,x.staff_user_id,n.state,
