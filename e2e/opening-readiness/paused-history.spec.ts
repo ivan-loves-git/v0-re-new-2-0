@@ -351,7 +351,7 @@ test("ordinary Paused history preserves genuine own openings and relationships w
         const deniedUrl = new URL(preview.url())
         deniedUrl.searchParams.set("dealId", ids.visit)
         await preview.goto(deniedUrl.toString())
-        await expect(preview.getByText("Deal not visible in portal preview", { exact: true })).toBeVisible()
+        await expect(preview.getByText("Deal not visible in portal preview", { exact: true }).filter({ visible: true })).toBeVisible()
         await expect(preview.getByRole("heading", { name: title("visit"), exact: true })).toHaveCount(0)
         await expect(preview.locator('[data-wave-workspace="pursuit"],input[type="file"],a[href*="nda-template"],a[href*="/documents/"]')).toHaveCount(0)
         await expect(preview.getByText("Staff only", { exact: true })).toBeVisible()

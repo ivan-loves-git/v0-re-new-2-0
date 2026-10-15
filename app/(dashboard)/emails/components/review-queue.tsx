@@ -105,6 +105,8 @@ import { formatDisplayDateTime } from "@/lib/utils/display-date-time"
 import { ReviewDetail } from "../review/[id]/review-detail"
 import { BulkEmailConfirmation } from "../bulk/[id]/bulk-confirmation"
 import { SingleEmailConfirmation } from "./single-confirmation"
+import { ManualSend } from "./manual-send"
+import type { EmailTemplate } from "@/lib/types/email"
 import {
   initialReviewSearch,
   canonicalReviewSearch,
@@ -276,7 +278,17 @@ function canPrepareSend(review: EmailReviewQueueRow) {
   )
 }
 
-export function ReviewQueue({ queue, sent }: { queue: Queue; sent?: Awaited<ReturnType<typeof getEmailHistory>> & { error?: string | null } }) {
+export function ReviewQueue({
+  queue,
+  sent,
+  templates = [],
+  initialCreateEmail = false,
+}: {
+  queue: Queue
+  sent?: Awaited<ReturnType<typeof getEmailHistory>> & { error?: string | null }
+  templates?: EmailTemplate[]
+  initialCreateEmail?: boolean
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -311,6 +323,7 @@ export function ReviewQueue({ queue, sent }: { queue: Queue; sent?: Awaited<Retu
   const [batchError, setBatchError] = useState("")
   const [singleConfirmation, setSingleConfirmation] =
     useState<ReviewRecord | null>(null)
+  const [createEmailOpen, setCreateEmailOpen] = useState(initialCreateEmail)
   const batchRequest = useRef(0)
   const detailRequest = useRef(0)
   const pageKey = emailReviewSelectionContext(queue, queue.reviews)
@@ -878,6 +891,10 @@ export function ReviewQueue({ queue, sent }: { queue: Queue; sent?: Awaited<Retu
           <span className="border-l pl-4 text-muted-foreground">
             Active <Badge variant="warning-light">{queue.activeCount}</Badge>
           </span>
+          <Button size="sm" onClick={() => setCreateEmailOpen(true)}>
+            <Mail aria-hidden="true" className="size-3.5" />
+            Create email
+          </Button>
         </div>
       </div>
       <div className="email-viewbar">
@@ -1166,6 +1183,23 @@ export function ReviewQueue({ queue, sent }: { queue: Queue; sent?: Awaited<Retu
           </ul>
         </div>
       ) : null}
+      <Dialog open={createEmailOpen} onOpenChange={setCreateEmailOpen}>
+        <DialogContent className="email-review-scope max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create email</DialogTitle>
+            <DialogDescription>
+              Choose a recipient and template. Emails wait for review unless Auto-send is enabled for that template.
+            </DialogDescription>
+          </DialogHeader>
+          <ManualSend
+            templates={templates}
+            onQueuedDraft={(reviewId) => {
+              setCreateEmailOpen(false)
+              router.push(`/emails/review/${encodeURIComponent(reviewId)}`)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <Sheet
         open={Boolean(selectedReview)}
         onOpenChange={(open) => {

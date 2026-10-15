@@ -185,6 +185,8 @@ jobs:
           path: |
             ${{ runner.temp }}/opening-readiness-evidence/email-review-desktop.png
             ${{ runner.temp }}/opening-readiness-evidence/email-review-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-create-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-create-mobile.png
             ${{ runner.temp }}/opening-readiness-evidence/email-247-sent-desktop.png
             ${{ runner.temp }}/opening-readiness-evidence/email-247-history-desktop.png
             ${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png

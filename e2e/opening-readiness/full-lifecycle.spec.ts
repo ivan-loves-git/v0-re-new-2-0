@@ -1024,9 +1024,10 @@ test("one disposable opportunity proves the implemented lifecycle subset on desk
     await expect(page.getByRole("tab", { name: "Review & send" })).toBeVisible();
     const emailTabStrip = page.locator('#main-content:visible [data-slot="tabs-list"]:visible').locator("..");
     await emailTabStrip.evaluate((strip) => { strip.scrollLeft = strip.scrollWidth; });
-    expect(await emailTabStrip.evaluate((strip) => strip.scrollLeft)).toBeGreaterThan(0);
-    await expect(page.getByRole("tab", { name: "Manual Send" })).toBeInViewport();
+    await expect(page.getByRole("tab", { name: "Analytics", exact: true })).toBeInViewport();
+    await expect(page.getByRole("tab", { name: "Manual Send", exact: true })).toHaveCount(0);
     await readyReviewQueue(page);
+    await expect(emailQueue.getByRole("button", { name: "Create email", exact: true })).toBeVisible();
     await emailTabStrip.evaluate((strip) => { strip.scrollLeft = 0; });
     await page.screenshot({ path: join(evidenceDirectory, "email-review-mobile.png"), fullPage: true });
     await cancelledReviewRow.getByRole("link", { name: "Review", exact: true }).click();

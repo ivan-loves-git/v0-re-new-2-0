@@ -2,7 +2,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EmailOverview } from "./components/email-overview"
 import { EmailLog } from "./components/email-log"
 import { EmailTemplates } from "./components/email-templates"
-import { ManualSend } from "./components/manual-send"
 import { ReviewQueue } from "./components/review-queue"
 import { listStaffEmailReviews } from "@/lib/actions/staff-email-review"
 import { parseEmailReviewQueueOptions } from "@/lib/email/review-queue-query"
@@ -52,7 +51,7 @@ export default async function EmailsPage({
       </header>
 
       <Tabs
-        defaultValue={["templates", "logs", "send", "analytics"].includes(value("tab") ?? "") ? value("tab") : "review"}
+        defaultValue={["templates", "logs", "analytics"].includes(value("tab") ?? "") ? value("tab") : "review"}
         className="w-full gap-0"
       >
         <div className="email-operations-tabs overflow-x-auto border-b border-border/80">
@@ -60,13 +59,17 @@ export default async function EmailsPage({
             <TabsTrigger value="review">Review &amp; send</TabsTrigger>
             <TabsTrigger value="logs">History</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="send">Manual Send</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="review" className="mt-0">
-          <ReviewQueue queue={reviews} sent={sent} />
+          <ReviewQueue
+            queue={reviews}
+            sent={sent}
+            templates={templates}
+            initialCreateEmail={value("tab") === "manual" || value("tab") === "send"}
+          />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-6">
@@ -79,10 +82,6 @@ export default async function EmailsPage({
 
         <TabsContent value="templates" className="mt-6">
           <EmailTemplates templates={templates} />
-        </TabsContent>
-
-        <TabsContent value="send" className="mt-6 space-y-6">
-          <ManualSend templates={templates} />
         </TabsContent>
       </Tabs>
     </div>

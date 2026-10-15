@@ -22,7 +22,13 @@ interface Repreneur {
   marketing_consent: boolean
 }
 
-export function ManualSend({ templates }: { templates: EmailTemplate[] }) {
+export function ManualSend({
+  templates,
+  onQueuedDraft,
+}: {
+  templates: EmailTemplate[]
+  onQueuedDraft?: (reviewId: string) => void
+}) {
   const [testMode, setTestMode] = useState(false)
   const [testEmail, setTestEmail] = useState("")
   const [testFirstName, setTestFirstName] = useState("")
@@ -85,6 +91,7 @@ export function ManualSend({ templates }: { templates: EmailTemplate[] }) {
           success: true,
           message: testResult.message,
         })
+        if (testResult.queued && testResult.reviewId) onQueuedDraft?.(testResult.reviewId)
       } else {
         const manualResult = await sendManualEmail(selectedRepreneur!.id, selectedTemplate!)
         if (!manualResult.success) {
@@ -98,6 +105,7 @@ export function ManualSend({ templates }: { templates: EmailTemplate[] }) {
           success: true,
           message: manualResult.message,
         })
+        if (manualResult.queued && manualResult.reviewId) onQueuedDraft?.(manualResult.reviewId)
         setSelectedRepreneur(null)
       }
       setSelectedTemplate(null)
@@ -122,7 +130,7 @@ export function ManualSend({ templates }: { templates: EmailTemplate[] }) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Manual Email Send</CardTitle>
+            <CardTitle>Create email</CardTitle>
             <CardDescription>
               {testMode
                 ? "Prepare fictional test copy under the selected business review policy"
