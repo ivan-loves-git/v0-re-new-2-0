@@ -319,7 +319,7 @@ test("ordinary Paused history preserves genuine own openings and relationships w
         await expect(preview.getByRole("heading", { name: "Portal preview", exact: true })).toBeVisible()
         await expect(preview.getByText("Staff only", { exact: true })).toBeVisible()
         await expect(preview.locator("html")).toHaveAttribute("lang", "en")
-        const list = preview.getByRole("tabpanel", { name: "Deals", exact: true }).filter({ visible: true })
+        const list = preview.getByRole("tabpanel", { name: language === "en" ? "Deals" : "Opportunités", exact: true }).filter({ visible: true })
         await list.getByRole("textbox", { name: language === "en" ? "Search deal flow" : "Rechercher parmi les opportunités" }).fill("QA PAUSED")
         for (const kind of ["relation", "ended", "active"]) await expect(list.getByText(title(kind), { exact: true })).toBeVisible()
         for (const kind of ["visit", "other", "unopened", "internal", "wrongMode"]) await expect(list.getByText(title(kind), { exact: true })).toHaveCount(0)
