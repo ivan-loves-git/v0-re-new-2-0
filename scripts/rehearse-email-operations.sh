@@ -117,5 +117,79 @@ CREATE EXTENSION pgcrypto WITH SCHEMA extensions;
 SQL
 "${psql[@]}" -f "$repo_root/supabase/migrations/20260929235619_bounded_staff_email_bulk_send.sql" >/dev/null
 "${psql[@]}" -f "$repo_root/supabase/migrations/20261007123000_email_operations_policy.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/supabase/migrations/20261015130000_email_provider_deleted_source_markers.sql" >/dev/null
 "${psql[@]}" -f "$repo_root/scripts/rehearsals/email-operations-247-assert.sql" >/dev/null
-echo "#247 disposable PostgreSQL: baseline template schema, actor guards, copy/audit and frozen wording, future-only automatic claims, archive/version fences, private history and event facts passed"
+"${psql[@]}" -f "$repo_root/scripts/rehearsals/email-provider-deleted-source-marker-assert.sql" >/dev/null
+"${psql[@]}" -c "INSERT INTO public.email_logs(repreneur_id,template_key,resend_id,to_email,subject,status,sent_at) VALUES ('22300000-0000-4000-8000-000000000003','welcome','race-primary-provider','rep@example.test','Concurrent deletion fixture','sent',now())" >/dev/null
+
+# The delete transaction takes the exclusive statement lock before its row
+# lock. Once it is holding that lock, a primary delivery callback must wait,
+# then observe the deletion marker and finish without retaining an orphan.
+"${psql[@]}" -c "BEGIN; DELETE FROM public.email_logs WHERE resend_id='race-primary-provider'; SELECT pg_sleep(2); COMMIT" >/dev/null &
+delete_pid=$!
+delete_lock_seen=0
+for _ in {1..200}; do
+  if [[ "$("${psql[@]}" -Atqc "SELECT pg_try_advisory_xact_lock(20261015,1300)")" == "f" ]]; then
+    delete_lock_seen=1
+    break
+  fi
+  sleep 0.02
+done
+if [[ "$delete_lock_seen" != "1" ]]; then
+  wait "$delete_pid"
+  echo "email provider deletion lock was not observed" >&2
+  exit 1
+fi
+"${psql[@]}" -c "SELECT public.email_provider_record_event('race-primary-delivery','race-primary-provider','email.delivered',now(),'primary',NULL,'rep@example.test')" >/dev/null
+wait "$delete_pid"
+"${psql[@]}" >/dev/null <<'SQL'
+DO $$
+BEGIN
+  IF NOT public.email_provider_was_deleted('race-primary-provider')
+    OR EXISTS (SELECT 1 FROM public.email_provider_events WHERE id='race-primary-delivery') THEN
+    RAISE EXCEPTION 'primary_callback_delete_race_not_serialized';
+  END IF;
+END $$;
+SQL
+
+# Exercise the opposite order too: a primary callback retains its fact under a
+# shared lock, then final deletion waits, removes that fact and leaves only the
+# irreversible marker. The delete session has a bounded timeout so CI cannot
+# hang if locking regresses.
+"${psql[@]}" -c "INSERT INTO public.email_logs(repreneur_id,template_key,resend_id,to_email,subject,status,sent_at) VALUES ('22300000-0000-4000-8000-000000000003','welcome','race-callback-first-provider','rep@example.test','Callback first fixture','sent',now())" >/dev/null
+"${psql[@]}" -c "BEGIN; SELECT public.email_provider_retention_callback_lock(); SELECT public.email_provider_record_event('race-callback-first-delivery','race-callback-first-provider','email.delivered',now(),'primary',NULL,'rep@example.test'); SELECT pg_sleep(2); COMMIT" >/dev/null &
+callback_pid=$!
+callback_lock_seen=0
+for _ in {1..200}; do
+  if [[ "$("${psql[@]}" -Atqc "SELECT pg_try_advisory_xact_lock(20261015,1300)")" == "f" ]]; then
+    callback_lock_seen=1
+    break
+  fi
+  sleep 0.02
+done
+if [[ "$callback_lock_seen" != "1" ]]; then
+  wait "$callback_pid"
+  echo "email provider callback lock was not observed" >&2
+  exit 1
+fi
+"${psql[@]}" -c "SET statement_timeout='5s'; DELETE FROM public.email_logs WHERE resend_id='race-callback-first-provider'" >/dev/null &
+delete_after_callback_pid=$!
+sleep 0.1
+if ! "${psql[@]}" -Atqc "SELECT EXISTS(SELECT 1 FROM public.email_logs WHERE resend_id='race-callback-first-provider')" | grep -qx 't'; then
+  wait "$callback_pid"
+  wait "$delete_after_callback_pid"
+  echo "delete did not wait for the primary callback lock" >&2
+  exit 1
+fi
+wait "$callback_pid"
+wait "$delete_after_callback_pid"
+"${psql[@]}" >/dev/null <<'SQL'
+DO $$
+BEGIN
+  IF NOT public.email_provider_was_deleted('race-callback-first-provider')
+    OR EXISTS (SELECT 1 FROM public.email_provider_events WHERE id='race-callback-first-delivery') THEN
+    RAISE EXCEPTION 'callback_primary_delete_cleanup_not_serialized';
+  END IF;
+END $$;
+SQL
+echo "#247 disposable PostgreSQL: baseline template schema, actor guards, copy/audit and frozen wording, future-only automatic claims, archive/version fences, private history, event facts and deletion-origin callback markers passed"

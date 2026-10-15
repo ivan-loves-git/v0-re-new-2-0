@@ -127,6 +127,20 @@ export async function POST(request: Request) {
       // exact receipt commits; access and unrelated events are acknowledged
       // without content or orphan retention and cannot disable measurement.
       if (event.data.tags?.renew_mail_class === "business") {
+        const { data: deleted, error: deletionError } = await supabase.rpc(
+          "email_provider_was_deleted",
+          { p_provider_id: event.data.email_id },
+        )
+        if (deletionError) {
+          trace.failure("persistence_failed")
+          return NextResponse.json({ error: "Deletion check unavailable" }, { status: 500 })
+        }
+        if (deleted === true) {
+          trace.success()
+          return NextResponse.json({
+            message: "Deleted receipt event acknowledged without retention",
+          })
+        }
         trace.failure(
           isWithinReceiptPendingGrace(event.created_at)
             ? "provider_pending"

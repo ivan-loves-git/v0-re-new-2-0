@@ -12,6 +12,13 @@ Approved technical follow-up to [Email Operations #247](https://github.com/re-ne
 
 ## Durability and uncertainty
 
+The [15 October deletion/callback rule](email-operations-v1.md#callbacks-after-deliberate-source-deletion--247-15-october-2026)
+distinguishes intentionally deleted email receipts from missing receipts. Signed
+callbacks for known deletions are acknowledged without retained event facts or
+failure alerts. Unknown missing receipts and database errors remain actionable.
+The existing incident record is preserved; a quiet notice still describes only
+the observed period, not a claim that every workflow is healthy.
+
 Atomic database claims choose notifications before provider I/O. Freeze their technical snapshot and operator envelope with an opaque provider idempotency key. Short claims prevent simultaneous dispatch; retries use the exact same payload/key only within a conservative 23-hour window from the first attempt. After that, an unresolved attempt is recorded as uncertain and is not automatically replayed. A separately due daily status summary is a new notification, not a replay of the uncertain message.
 
 If the incident ledger itself is unavailable, send one generic monitoring-degraded warning per UTC day through provider idempotency. Its key and body must remain identical across requests and releases. This fallback cannot prove delivery, and no failure in alerting may create a recursive alert or change the already-completed product operation.

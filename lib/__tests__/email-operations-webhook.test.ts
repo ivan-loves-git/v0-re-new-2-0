@@ -62,10 +62,10 @@ beforeEach(() => {
 describe("signed operational event receipt", () => {
   it("requests provider retry until the receipt parent exists, then retains the signed event once", async () => {
     expect((await POST(request(["primary@re-new.invalid"]))).status).toBe(503)
-    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.rpc).not.toHaveBeenCalledWith("email_provider_record_event", expect.anything())
     m.message = { recipient_email: "primary@re-new.invalid", cc: [] }
     expect((await POST(request(["primary@re-new.invalid"]))).status).toBe(200)
-    expect(m.rpc).toHaveBeenCalledOnce()
+    expect(m.rpc.mock.calls.filter(([name]) => name === "email_provider_record_event")).toHaveLength(1)
     expect(m.rpc).toHaveBeenCalledWith(
       "email_provider_record_event",
       expect.objectContaining({
