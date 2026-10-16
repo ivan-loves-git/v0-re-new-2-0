@@ -4,9 +4,6 @@ export const WAVE_AI_REASONING_EFFORT = "max" as const
 export const WAVE_AI_PROMPT_VERSION = "email-draft-v1" as const
 export const WAVE_AI_OUTPUT_SCHEMA_VERSION = "email-draft-v1" as const
 
-export const WAVE_AI_NEXT_ACTION_PROMPT_VERSION = "next-action-v1" as const
-export const WAVE_AI_NEXT_ACTION_OUTPUT_SCHEMA_VERSION = "next-action-v1" as const
-
 export const WAVE_AI_PRICING = {
   version: "2026-08-06",
   inputUsdPerMillion: 1,
