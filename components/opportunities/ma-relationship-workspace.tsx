@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ChevronDown,
   CheckCircle2,
+  Download,
   FileText,
   Mail,
   MessageSquareMore,
@@ -59,6 +60,7 @@ import {
 import { setMaContactCampaignEmailSuppression } from "@/lib/actions/ma-contact-email-policy"
 import { filterMaRelationshipTimeline, maRelationshipResultSummary } from "@/lib/ma-relationship-filters"
 import { presentMaOfficeOptions } from "@/lib/ma-office-presentation"
+import { buildMaContactsCsv, downloadMaContactsCsv } from "@/lib/ma-contacts-csv"
 import { MaFirmCreateAction } from "@/components/opportunities/ma-firm-create-action"
 import { MaOfficeContactAction } from "@/components/opportunities/ma-office-contact-action"
 import { MaOfficeCombobox } from "@/components/opportunities/ma-office-combobox"
@@ -1051,6 +1053,14 @@ function RelationshipContactsDirectory({
     (contact) => contact.campaignEmailSuppressed,
   ).length
 
+  const exportContacts = () => {
+    const date = new Date().toISOString().slice(0, 10)
+    downloadMaContactsCsv(
+      buildMaContactsCsv(filteredContacts, offices),
+      `ma-contacts-${date}.csv`,
+    )
+  }
+
   const closePolicyDialog = () => {
     setPolicyContact(null)
     setPolicyReason("")
@@ -1082,7 +1092,21 @@ function RelationshipContactsDirectory({
     <>
       <Card>
         <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3"><CardTitle className="text-base">Contacts</CardTitle><MaOfficeContactAction offices={offices.filter((office) => office.status === "active" && office.firmStatus !== "archived" && !office.isDefault)} /></div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-base">Contacts</CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportContacts}
+                disabled={filteredContacts.length === 0}
+              >
+                <Download data-icon="inline-start" />
+                Export CSV
+              </Button>
+              <MaOfficeContactAction offices={offices.filter((office) => office.status === "active" && office.firmStatus !== "archived" && !office.isDefault)} />
+            </div>
+          </div>
           <CardDescription>
             Canonical contacts, each with one current firm and office.
           </CardDescription>
