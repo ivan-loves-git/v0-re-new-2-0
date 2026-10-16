@@ -386,6 +386,50 @@ describe("table catalog", () => {
     expect((await catalog.describeTable("ma_firms"))?.referencedBy).toEqual(["ma_offices"])
   })
 
+  it("describes tables when the driver returns key columns as Postgres array text", async () => {
+    // Production on 16 October 2026: node-postgres returned name[] unparsed, so
+    // every describe_table failed with "source_columns.forEach is not a function".
+    const catalog = createCatalog({
+      async query<Row>(text: string) {
+        if (text.includes("pg_class c\n    JOIN pg_namespace")) {
+          return {
+            rows: ["opportunities", "repreneurs", "opportunity_matches"].map((name) => ({
+              name,
+              kind: "table",
+              approximate_rows: "120",
+              description: null,
+            })) as Row[],
+          }
+        }
+        if (!text.includes("pg_constraint")) {
+          return {
+            rows: ["opportunity_id", "repreneur_id", "status"].map((name) => ({
+              name,
+              type: name === "status" ? "text" : "uuid",
+              nullable: name === "status",
+              description: null,
+            })) as Row[],
+          }
+        }
+        return {
+          rows: [
+            { kind: "p", source_table: "opportunity_matches", target_table: null, source_columns: "{opportunity_id,repreneur_id}", target_columns: "{}" },
+            { kind: "f", source_table: "opportunity_matches", target_table: "opportunities", source_columns: "{opportunity_id}", target_columns: "{id}" },
+            { kind: "f", source_table: "opportunity_matches", target_table: "repreneurs", source_columns: "{repreneur_id}", target_columns: "{id}" },
+          ] as Row[],
+        }
+      },
+    })
+
+    const matches = await catalog.describeTable("opportunity_matches")
+    expect(matches?.columns.map((column) => [column.name, column.primaryKey, column.references])).toEqual([
+      ["opportunity_id", true, "opportunities.id"],
+      ["repreneur_id", true, "repreneurs.id"],
+      ["status", false, null],
+    ])
+    expect((await catalog.describeTable("opportunities"))?.referencedBy).toEqual(["opportunity_matches"])
+  })
+
   it("reuses the table list for five minutes", async () => {
     let now = 0
     const database = fakeDatabase()

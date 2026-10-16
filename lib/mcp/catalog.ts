@@ -56,15 +56,16 @@ const COLUMNS_SQL = `
      AND NOT a.attisdropped
    ORDER BY a.attnum`
 
+// Column lists are text[]: node-postgres leaves name[] unparsed, as "{id}".
 const CONSTRAINTS_SQL = `
   SELECT con.contype AS kind,
          source.relname AS source_table,
          target.relname AS target_table,
-         ARRAY(SELECT att.attname
+         ARRAY(SELECT att.attname::text
                  FROM unnest(con.conkey) WITH ORDINALITY AS k(attnum, position)
                  JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = k.attnum
                 ORDER BY k.position) AS source_columns,
-         ARRAY(SELECT att.attname
+         ARRAY(SELECT att.attname::text
                  FROM unnest(con.confkey) WITH ORDINALITY AS k(attnum, position)
                  JOIN pg_attribute att ON att.attrelid = con.confrelid AND att.attnum = k.attnum
                 ORDER BY k.position) AS target_columns
@@ -94,8 +95,16 @@ interface ConstraintRow {
   kind: "p" | "f"
   source_table: string
   target_table: string | null
-  source_columns: string[]
-  target_columns: string[]
+  source_columns: string[] | string
+  target_columns: string[] | string
+}
+
+/** An array, or Postgres array text such as `{id}` from a driver that left it unparsed. */
+function columnList(value: string[] | string): string[] {
+  if (Array.isArray(value)) return value
+  return [...value.replace(/^\{|\}$/g, "").matchAll(/"((?:[^"\\]|\\.)*)"|([^,]+)/g)].map(
+    ([, quoted, plain]) => quoted?.replace(/\\(.)/g, "$1") ?? plain,
+  )
 }
 
 const CATALOG_TTL_MS = 5 * 60 * 1000
@@ -127,10 +136,15 @@ export function createCatalog(database: Queryable, now: () => number = Date.now)
     const exposed = await exposedTableNames()
     if (!exposed.has(name)) return null
     const summary = (await listTables()).find((table) => table.name === name)!
-    const [{ rows: columns }, { rows: constraints }] = await Promise.all([
+    const [{ rows: columns }, { rows: constraintRows }] = await Promise.all([
       database.query<ColumnRow>(COLUMNS_SQL, [name]),
       database.query<ConstraintRow>(CONSTRAINTS_SQL, [name]),
     ])
+    const constraints = constraintRows.map((row) => ({
+      ...row,
+      source_columns: columnList(row.source_columns),
+      target_columns: columnList(row.target_columns),
+    }))
 
     const primaryKey = new Set(
       constraints

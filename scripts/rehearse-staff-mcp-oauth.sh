@@ -69,6 +69,10 @@ SQL
 STAFF_MCP_REHEARSAL_DATABASE_URL="postgresql://renew_rehearsal_admin@127.0.0.1:$port/staff_mcp" \
   node --import tsx "$repo_root/scripts/rehearsals/staff-mcp-oauth-proof.ts"
 
+# describe_table reads keys and relations through the real pg driver.
+STAFF_MCP_REHEARSAL_DATABASE_URL="postgresql://renew_rehearsal_admin@127.0.0.1:$port/staff_mcp" \
+  node --import tsx "$repo_root/scripts/rehearsals/staff-mcp-catalog-proof.ts"
+
 # Removing a person removes their connection.
 "${psql[@]}" >/dev/null <<'SQL'
 DO $$
