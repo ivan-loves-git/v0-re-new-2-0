@@ -2,9 +2,20 @@
 
 Product Change: [#265](https://github.com/re-new-team/renew-governance/issues/265), released 16 October 2026. Claude app connector: Ticket [#273](https://github.com/re-new-team/renew-governance/issues/273).
 
-WAVE staff can connect Claude Code or the Claude app to WAVE and ask questions about WAVE data, then build their own analyses and documents. The connection is **read-only** and **staff-only**.
+WAVE staff can connect Claude or OpenAI apps to WAVE and ask questions about WAVE data, then build their own analyses and documents. The connection is **read-only** and **staff-only**.
 
-The Claude app's sign-in delivers access to whichever Claude account started it. WAVE's confirmation page therefore tells staff never to approve a sign-in someone else sent them; Ivan accepted this risk in #273.
+A hosted app's sign-in (Claude app, ChatGPT) delivers access to whichever account started it. WAVE's confirmation page therefore tells staff never to approve a sign-in someone else sent them; Ivan accepted this risk in #273 and for ChatGPT.
+
+## Which apps work
+
+| App | Plans | Where it works | How it signs in |
+| --- | --- | --- | --- |
+| Claude app | Pro, Max, Team, Enterprise | Web and desktop; mobile uses connectors added on the web | Hosted callback `https://claude.ai/api/mcp/auth_callback` |
+| Claude Code | Any Claude plan with Claude Code | Terminal or the desktop app's Code tab | Listener on this computer |
+| Codex | ChatGPT plans that include Codex | Codex CLI, IDE extension and desktop app (shared `~/.codex/config.toml`) | Listener on this computer (`http://127.0.0.1/callback…`) |
+| ChatGPT | Business, Enterprise and Edu workspaces, created by a workspace admin | ChatGPT on the web only; not on mobile | Hosted callback `https://chatgpt.com/connector/oauth/{id}` |
+
+Personal ChatGPT Free, Plus and Pro plans cannot add custom connectors in ChatGPT chat; use Codex instead. Plan rules belong to Anthropic and OpenAI and can change.
 
 ## Connect
 
@@ -33,9 +44,24 @@ claude mcp add --scope user --transport http wave https://app.re-new.team/api/mc
 3. WAVE asks you to confirm. Press **Allow read access**, then return to Claude Code.
 4. Check it works: ask Claude "list the WAVE tables".
 
-Press **Allow** only for a sign-in you started yourself in Claude Code moments before. **Cancel** tells Claude Code the connection was refused.
+### Codex
 
-Claude stays connected while it is used; after 30 days without use it asks you to sign in again.
+Once per computer; the CLI, IDE extension and desktop app share the setting:
+
+```bash
+codex mcp add wave --url https://app.re-new.team/api/mcp
+codex mcp login wave
+```
+
+The browser opens WAVE: sign in, and on **Connect an app on this computer to WAVE** press **Allow read access**. In Codex, ask "list the WAVE tables".
+
+### ChatGPT (Business, Enterprise or Edu workspace)
+
+A workspace admin enables Developer Mode (Workspace settings → Permissions & roles), then creates the app: Workspace settings → Apps → **Create**, server URL `https://app.re-new.team/api/mcp`, authentication **OAuth** with automatic registration. Each person then connects with their own WAVE staff account; WAVE shows **Connect ChatGPT to WAVE**.
+
+Press **Allow** only for a sign-in you started yourself moments before. **Cancel** tells the app the connection was refused.
+
+The app stays connected while it is used; after 30 days without use it asks you to sign in again.
 
 If WAVE says **Staff accounts only**, the account you signed in with is not a staff account. If it says **One detail missing**, your account has no display name; ask Ivan to add it.
 
@@ -53,8 +79,9 @@ Tools: `list_tables`, `describe_table`, `query_table` (select with embedded rela
 | Step | Rule |
 | --- | --- |
 | Discovery | `/.well-known/oauth-protected-resource[/api/mcp]` and `/.well-known/oauth-authorization-server` describe the endpoint. |
-| Client registration | Better Auth `mcp` plugin at `/api/auth/mcp/register`. Only Claude's callbacks are accepted: loopback for Claude Code (`http://localhost`, `127.0.0.1`, `[::1]`) and exactly `https://claude.ai/api/mcp/auth_callback` or `https://claude.com/api/mcp/auth_callback` for the Claude app. Queries on the hosted callback and commas are refused because the plugin stores the list comma-joined. |
-| Confirmation page | Names the destination WAVE enforces ("Claude Code on this computer" or "the Claude account that started this connection"), never the client's self-chosen name. For the Claude app it adds: if someone sent you this link, press Cancel. |
+| Client registration | Better Auth `mcp` plugin at `/api/auth/mcp/register`. Accepted callbacks only: loopback on this computer for Claude Code and Codex (`http://localhost`, `127.0.0.1`, `[::1]`, any path); exactly `https://claude.ai/api/mcp/auth_callback` or `https://claude.com/api/mcp/auth_callback` for the Claude app; `https://chatgpt.com/connector/oauth/{id}` or `https://chatgpt.com/connector_platform_oauth_redirect` for ChatGPT. Queries on hosted callbacks and commas are refused because the plugin stores the list comma-joined. |
+| Confirmation page | Names the destination WAVE enforces ("an app on this computer, such as Claude Code or Codex", "the Claude account …" or "the ChatGPT account that started this connection"), never the client's self-chosen name. For hosted apps it adds: if someone sent you this link, press Cancel. |
+| Activity | `mcp.connected` records the app (`this_computer`, `claude_app`, `chatgpt`) and the registered client name; `mcp.tool_called` records each tool call. |
 | Sign-in | `/api/mcp/authorize` (WAVE code): signed-out → WAVE login and back; non-staff → refused; staff → `/auth/connect` confirmation. PKCE S256 is required. |
 | Code issue | Only the confirmation page's same-origin POST asks Better Auth for a code, in-process. The plugin's public `/api/auth/mcp/authorize`, `/api/auth/mcp/get-session`, `/api/auth/oauth2/consent` and `/api/auth/.well-known/*` return 404. |
 | Tokens | Access tokens last 1 hour. Each refresh deletes the presented token row, so a used refresh token or previous access token stops working. |
