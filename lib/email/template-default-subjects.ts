@@ -10,6 +10,7 @@ export const TEMPLATE_DEFAULT_SUBJECTS: Partial<Record<EmailTemplateKey, string>
   booking_reminder: "Réservez votre entretien avec Re-New",
   interview_reminder: "Rappel — votre entretien avec Re-New",
   memo_feedback_reminder: "Un retour sur votre mémorandum — {opportunityTitle}",
+  opportunity_paused: "L’opportunité {opportunityTitle} est en pause",
   recommendation_response_reminder: "Votre recommandation — {opportunityTitle}",
   recommendation_unanswered_staff_alert: "Recommandation sans réponse — {opportunityTitle}",
   interest_outcome_validated: "Suite à votre intérêt pour {opportunityTitle}",

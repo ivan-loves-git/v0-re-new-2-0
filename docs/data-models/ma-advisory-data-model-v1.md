@@ -1848,6 +1848,17 @@ Authority: [Product Change #119](https://github.com/re-new-team/renew-governance
 - Protected cycle and delivery tables have forced RLS and service-only bounded functions; browser roles have no direct access. The isolated CRON_SECRET-protected daily route fully awaits a small fair fresh/retry batch, stops starting new work after its elapsed budget, and reports failures/review-required counts. Its 09:00 UTC run is best effort and cannot guarantee exact-minute delivery, especially for a client window that has already passed. Rollback disables only the two new template switches and sender/cron route, preserving historical cycle/provider evidence and W172 behavior. Positive timing, renewal, cancellation, race, provider-fence, ACL and deletion proofs use disposable PostgreSQL and synthetic UI; production QA uses only an owned removable DEMO match, with no activation or real outbound send.
 
 
+## #247 — public pause notification (approved target, 16 October 2026)
+
+Ivan requested automatic notice after a staff pause and selected both Interested repreneurs and Active pursuits. The [pause notification contract](../architecture/email-operations-v1.md#automatic-opportunity-pause-notifications--16-october-2026) owns prospective capture, eligibility, retries, template editing and role restrictions. Whole-sale Pause still revokes confidential access and retains read-only history.
+
+| Field | Required / conditional / optional | Writer and visibility | Retention and migration |
+| --- | --- | --- | --- |
+| `opportunity_pause_notifications.pause_id`, `match_id`, `repreneur_id` | Required exact event/relationship; unique pause/repreneur | Atomic new-pause trigger; trusted service only | Follows exact parents and immutable pause retention; no backfill or independent TTL |
+| `recipient_email`, `first_name`, `public_title` | Required recipient/title snapshot; safe generic title if missing | Same trigger; used for the exact eligible email | Event-parent lifetime; no internal reference/source details |
+| `opportunity_pause_history.reason` in payload | Required controlled choice, rendered in French | Narrow service payload; public only to affected recipient | Original immutable dropdown reason; never free text |
+| `opportunity_pause_history.reason_note` | Unchanged private staff context, including Other | Never selected into pause-mail payload or variables | Existing staff-only retention unchanged |
+
 ## #251 / #252 — reasoned Drop, whole-sale Pause and manual Stale (approved target, 7 October 2026)
 
 Authority: [Product Change #251](https://github.com/re-new-team/renew-governance/issues/251) and [Ticket #252](https://github.com/re-new-team/renew-governance/issues/252). Ivan selected Drop option B and approved these rules. His implement invocation permits this bounded build and disposable verification. This is the approved candidate contract; merge, production migration/backfill and release still require their recorded authority and proof.
@@ -1878,7 +1889,7 @@ Candidate persistence dictionary:
 | `opportunity_pursuit_evidence.evidence_reference` for `dropped` | Required current main key | Guarded staff Drop service; staff-only read/export | Existing immutable pursuit retention; historical values untouched |
 | `opportunity_pursuit_evidence.metadata.secondary_reasons` | Required array, optionally empty; distinct current keys | Same atomic Drop service; staff only | Same immutable event; absent legacy metadata stays absent |
 | `opportunity_pursuit_evidence.metadata.reason_note` | Optional normalized text/null, max 4,000 characters; required for Other anywhere | Same atomic Drop service; staff only | Same immutable event; no note backfill |
-| `opportunity_pause_history.reason` / `reason_note` | Required one of five / optional normalized text/null, max 4,000; required for Other | Guarded whole-sale Pause service; staff only | Existing immutable retention; additive nullable note; old cabinet rows unchanged |
+| `opportunity_pause_history.reason` / `reason_note` | Required one of five / optional normalized text/null, max 4,000; required for Other | Guarded whole-sale Pause service; history stays staff-only. The controlled reason label may appear in the pause email; reason_note stays private | Existing immutable retention; additive nullable note; old cabinet rows unchanged |
 | `opportunity_stale_policy.effective_at` | Required singleton activation timestamp | Written once by migration with database time; immutable, service-only | Retained policy fact; never a planned date or caller as-of |
 | `opportunities.stale_clock_started_at` / `stale_clock_basis` | Nullable pair; basis `policy_activation`, `became_active`, `pursuit_ended` | Database-managed triggers; staff-only projection | Existing opportunity retention; no manual update; initialization above |
 | Eligibility read projection | Eligible, start, eligible-at, completed days, basis, explanation | Service-only read after actual staff authorization | Computed current state; no new status or portal field |

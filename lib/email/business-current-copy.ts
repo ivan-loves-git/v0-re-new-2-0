@@ -7,7 +7,13 @@ export async function businessCurrentCopy(review: StaffEmailReview) {
   const db = createAdminClient(),
     context = review.source_context ?? {}
   let subject: string, element: ReactElement
-  if (context.kind === "interest") {
+  if (context.kind === "opportunity_pause") {
+    const payload = await (await import("./opportunity-pause-delivery")).getOpportunityPausePayload(String(context.notificationId))
+    if (!payload) throw new Error("This pause is no longer current for the recipient.")
+    const copy = (await import("./opportunity-pause-copy")).renderOpportunityPauseCopy(payload)
+    subject = copy.subject
+    element = (await import("./templates/opportunity-paused")).OpportunityPausedEmail(copy)
+  } else if (context.kind === "interest") {
     const { data, error } = await db.rpc("w173_interest_delivery_payload", {
       p_event_id: context.eventId,
     })

@@ -122,6 +122,9 @@ export async function dispatchBusinessReview(
   try {
     await withBusinessMailApproval({ review, token, actor }, async () => {
       switch (context.kind) {
+        case "opportunity_pause":
+          await (await import("./opportunity-pause-delivery")).deliverOpportunityPauseNotification(String(context.notificationId))
+          break
         case "interest":
           await (
             await import("./interest-notification-delivery")
