@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { requirePortalAccess } from "@/lib/access-control"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActor } from "@/lib/activity/actor"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { queueM2RepreneurEvent } from "@/lib/telemetry/m2-repreneur"
 import { isOpportunityInRepreneurNamespace } from "@/lib/repreneur-opportunity-eligibility"
@@ -168,6 +170,13 @@ export async function markMyOpportunityInterested(matchId: string) {
     action: "express_interest",
     outcome: "success",
   })
+  recordActivity({
+    action: "portal.interest_expressed",
+    ...activityActor(access),
+    matchId,
+    opportunityId: result.opportunityId,
+    details: { path: result.proposedResponse ? "recommendation" : "reconsideration" },
+  })
   if (result.proposedResponse) {
     // Persistence and notification have separate outcomes. The committed event
     // remains retryable by the daily recovery job if this process ends here.
@@ -213,6 +222,17 @@ export async function declineMyOpportunity(
     workflow: "portal_deals",
     action: "decline",
     outcome: "success",
+  })
+  // The match keeps only the latest reasons; the log keeps every decline's.
+  recordActivity({
+    action: "portal.interest_declined",
+    ...activityActor(access),
+    matchId,
+    opportunityId: result.opportunityId,
+    details: {
+      reason_categories: readDeclineReasonCategories(formData),
+      reason_text: readDeclineReasonText(formData),
+    },
   })
   if (result.proposedResponse) {
     await deliverResponseNotification(matchId, "declined").catch(() => "failed")

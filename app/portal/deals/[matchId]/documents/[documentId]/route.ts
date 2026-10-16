@@ -4,13 +4,15 @@ import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { withRecipientImPursuitLock } from "@/lib/recipient-im-download-lock"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActorFromHeaders } from "@/lib/activity/actor"
 import {
   privateStorageDownloadError,
   proxyPrivateSignedStorageDownload,
 } from "@/lib/storage/private-signed-download"
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<unknown> }
 ) {
   const trace = startCriticalOperation("portal.memo_download")
@@ -131,6 +133,16 @@ export async function GET(
         }
       }
       trace.success()
+      recordActivity(async () => {
+        const actor = await activityActorFromHeaders(request.headers)
+        return actor && {
+          action: "portal.memo_opened",
+          ...actor,
+          opportunityId: match.opportunity_id,
+          matchId,
+          details: { document_id: documentId },
+        }
+      })
       return response
     }
     if (!document.recipient_match_id) return deliver()

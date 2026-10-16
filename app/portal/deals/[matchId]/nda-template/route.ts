@@ -2,6 +2,8 @@ import { unstable_rethrow } from "next/navigation"
 import { resolvePortalPursuitResource } from "@/lib/data/current-pursuit"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActorFromHeaders } from "@/lib/activity/actor"
 import {
   privateStorageDownloadError,
   proxyPrivateSignedStorageDownload,
@@ -22,7 +24,7 @@ function templateDownloadOptions(storagePath: string) {
 }
 
 /** The portal may read the exact opportunity template only after canonical Gate 1. */
-export async function GET(_request: Request, context: { params: Promise<{ matchId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ matchId: string }> }) {
   const trace = startCriticalOperation("portal.nda_template_download")
   try {
     const { matchId } = await context.params
@@ -59,6 +61,10 @@ export async function GET(_request: Request, context: { params: Promise<{ matchI
       return privateStorageDownloadError("Template file is unavailable.")
     }
     trace.success()
+    recordActivity(async () => {
+      const actor = await activityActorFromHeaders(request.headers)
+      return actor && { action: "portal.nda_template_downloaded", ...actor, matchId }
+    })
     return response
   } catch (error) {
     unstable_rethrow(error)

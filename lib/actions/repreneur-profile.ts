@@ -2,6 +2,8 @@
 
 import { randomUUID } from "node:crypto"
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
+import { fieldChanges, recordActivity } from "@/lib/activity/activity-log"
+import { activityActor } from "@/lib/activity/actor"
 import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { revalidatePath } from "next/cache"
 import { WHEN_QUESTIONS } from "@/lib/config/questionnaire-v2"
@@ -179,8 +181,36 @@ async function prepareTargetThesisForRepreneur(repreneurId: string, input: Targe
   }
 }
 
+const TARGET_THESIS_FIELDS =
+  "q12_geo_zones, q13_target_sectors_v2, q14_deal_size, q16_equity, target_revenue_min_meur, target_revenue_max_meur, target_ebitda_min_keur, target_ebitda_max_keur, target_ebitda_margin_min_pct, target_staff_size_min, target_staff_size_max"
+
+/** The stored criteria before a save, for the activity log's from/to values. */
+async function readTargetThesis(repreneurId: string) {
+  const { data } = await createAdminClient()
+    .from("repreneurs")
+    .select(TARGET_THESIS_FIELDS)
+    .eq("id", repreneurId)
+    .maybeSingle()
+  return (data as Record<string, unknown> | null) ?? null
+}
+
+function recordTargetThesisChange(
+  access: Awaited<ReturnType<typeof requirePortalAccess>>,
+  repreneurId: string,
+  changes: ReturnType<typeof fieldChanges>,
+) {
+  if (Object.keys(changes).length === 0) return
+  recordActivity({
+    action: "profile.target_thesis_changed",
+    ...activityActor(access),
+    repreneurId,
+    details: { changes },
+  })
+}
+
 async function updateTargetThesisForRepreneur(repreneurId: string, input: TargetThesisInput) {
   const values = await prepareTargetThesisForRepreneur(repreneurId, input)
+  const before = await readTargetThesis(repreneurId)
   const supabase = createAdminClient()
   const fitBefore = await captureRepreneurFitSource(supabase, repreneurId).catch(() => null)
   const { error } = await supabase
@@ -200,6 +230,7 @@ async function updateTargetThesisForRepreneur(repreneurId: string, input: Target
     const fitAfter = await captureRepreneurFitSource(supabase, repreneurId)
     if (fitSourceChanged(fitBefore, fitAfter)) await settleRepreneurFitAfterSave(repreneurId, { previousRepreneur: fitBefore?.value })
   } catch { /* Thesis save remains successful; Fit stays Unknown or Stale. */ }
+  return fieldChanges(before, values)
 }
 
 /** Updates only the authenticated repreneur's matching thesis. */
@@ -207,7 +238,8 @@ export async function updateMyTargetThesis(input: TargetThesisInput) {
   const access = await requirePortalAccess()
   if (!access.repreneurId) throw new Error("No linked repreneur profile")
 
-  await updateTargetThesisForRepreneur(access.repreneurId, input)
+  const changes = await updateTargetThesisForRepreneur(access.repreneurId, input)
+  recordTargetThesisChange(access, access.repreneurId, changes)
   revalidatePath("/portal/profile")
 }
 
@@ -224,7 +256,8 @@ export async function updateRepreneurTargetThesis(
   // Preserve the pre-existing staff profile editor outside Tools Portal.
   // Only the selected-owner Portal assistance path carries a workspace token.
   if (!selectionToken) {
-    await updateTargetThesisForRepreneur(repreneurId, input)
+    const changes = await updateTargetThesisForRepreneur(repreneurId, input)
+    recordTargetThesisChange(access, repreneurId, changes)
     revalidatePath(`/repreneurs/${repreneurId}`)
     return
   }
@@ -232,6 +265,7 @@ export async function updateRepreneurTargetThesis(
   if (!selection) return { code: "staff_workspace_changed" }
   const supabase = createAdminClient()
   const values = await prepareTargetThesisForRepreneur(repreneurId, input)
+  const before = await readTargetThesis(repreneurId)
   const fitBefore = await captureRepreneurFitSource(supabase, repreneurId).catch(() => null)
   let expected = expectedUpdatedAt
   if (!expected) {
@@ -251,6 +285,7 @@ export async function updateRepreneurTargetThesis(
   })
   if (error) return { code: "staff_profile_changed" }
   if (!saveReceipt?.reusedExisting) {
+    recordTargetThesisChange(access, repreneurId, fieldChanges(before, values))
     await recalculateRepreneurScoresAndMatches(repreneurId)
     const changedFields: string[] = Array.isArray(saveReceipt?.changedFields) ? saveReceipt.changedFields : []
     if (changedFields.some((field) => field === "q12_geo_zones" || field === "q13_target_sectors_v2"
@@ -289,5 +324,10 @@ export async function certifyMyProfileContribution(item: ProfileContribution) {
     .eq("id", access.repreneurId)
 
   if (error) throw new Error(error.message)
+  recordActivity({
+    action: "profile.contribution_certified",
+    ...activityActor(access),
+    details: { item },
+  })
   revalidatePath("/portal/profile")
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { getCurrentUserAccessFromHeaders } from "@/lib/access-control"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActor } from "@/lib/activity/actor"
 import {
   MISSING_DISPLAY_NAME,
   hasValidAuthorizeRequest,
@@ -70,5 +72,6 @@ export async function POST(request: Request) {
   const location = issuedCodeLocation(response, params.get("redirect_uri")!)
   if (!location) return plainText(400, INVALID_REQUEST)
   console.info(JSON.stringify({ event: "wave_mcp.connected", userId: access.user.id }))
+  recordActivity({ action: "mcp.connected", ...activityActor(access) })
   return redirectTo(location, request, 303)
 }
