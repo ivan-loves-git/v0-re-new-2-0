@@ -1430,6 +1430,28 @@ records the approved v1.0 contract; GitHub Ticket #167 owns release evidence.
 
 ## Repreneur pursuit workspace projection (#188 / Ticket #207)
 
+**Shared customer screen foundation (#241 / Ticket #243, 30 September 2026):**
+The real portal and selected-owner staff preview use the same complete Deals,
+Profile, Re-New/External Pursuits and deal-detail composition, including applicable
+headings, guidance, sorting, navigation and FR/EN interface. The staff shell,
+selector, identity attribution and existing #183 assistance remain separate.
+Profile uses the same owned-match projection as the customer instead of full
+live inventory; detail resolves the exact owner-safe match or opportunity plus
+an owned-match sidebar. An owned opportunity-ID link retains its current match,
+status, interest token and version through the same owner/namespace predicates
+as a match-ID link. Each selected screen loads only its required inputs,
+including narrow cross-space facts needed by the existing next-actions panel.
+Safe duplicate projections may be reused within one request, never as a
+persistent cross-user data or permission cache. Every mutation and private
+resource continues to recheck role, exact owner, current workspace generation
+and current authorization independently. Customer personal Viewed/Reviewed,
+account preferences, feedback, certifications, consents and signatures remain
+personal; preview states their unavailability. This foundation changes no schema,
+status, entitlement, domain validation, notification, lifecycle, retention or
+migration rule. The existing [portal architecture contract](../architecture/portal-next-actions-v1.md#shared-portal-foundation-241--ticket-243)
+owns composition, loading, navigation feedback and acceptance mapping; #243
+owns candidate verification and separately authorized release evidence.
+
 **Entry navigation correction (#218, 27 September 2026):** The owner
 `/portal/pursuits` entry and the selected-owner staff Portal preview
 `Re-New Pursuits` tab open this same matched list/detail workspace in its
@@ -1603,6 +1625,7 @@ OFF; it never clears unknown provider outcomes or changes business rows.
 
 | Date | Version | Change | PDR or implementation reference |
 | --- | --- | --- | --- |
+| 2026-09-30 | #241 Ticket #243 foundation candidate | Shares complete customer Deals/Profile/Pursuits/detail composition with selected-owner staff preview, replaces unselected live inventory reads with required owned projections, and reuses safe same-request reads. Owned opportunity-ID detail links retain their exact current match and response tokens. Personal evidence and account actions remain unavailable in preview; existing assistance, fresh resource/mutation checks, domain rules and history are preserved. No migration, business write or production release; the architecture contract records navigation feedback, runtime placement and required timing proof. | GitHub Product Change #241 / Ticket #243 / Decision #183; `portal-next-actions-v1.md` |
 | 2026-10-08 | #247 / #263 / #264 recognizable freshness candidate | Adds recorded optional revenue and a copy-contract marker to frozen grouped evidence; blocks internal references and invented revenue, requires explicit unattempted-draft refresh/replacement, and preserves attempted legacy copy/reconciliation. No business records are rewritten. | Approved #247 subsection; migration `20261008160000_freshness_recognizable_copy.sql`; public workflow and isolated concurrency acceptance |
 | 2026-10-07 | Ticket #262 firm-state candidate | Removes the firm prospect/active business distinction; normal firms default to active and archive remains guarded. The atomic migration normalizes only existing prospect status, preserves all non-status audit/profile values and source/history links, maps legacy creation input before storage and enables immediate additional-office creation. No opportunity activation, publication, missing-data completion or email is introduced. Rollback retains legitimate records and normalized state. | GitHub #262, follow-up to #257 / Decision #258; migration `20261007193000_ma_firm_operational_status.sql` |
 | 2026-10-07 | #254 additional E4 PDF/version candidate | Records approved US-39–41 / AC-26/27: existing owner LDC, actual safe current PDF/version/hash, privately retained exact bytes, cleanup/replacement/rollback fences and prospective-only treatment; no email delivery claim. | Product Change #248 / Ticket #254; additive E4 retention migration and action/SQL/protected fixture proof |

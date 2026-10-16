@@ -1,6 +1,7 @@
 "use client"
 
-import { useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useTransition } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   REPRENEUR_DEAL_SORT_OPTIONS,
@@ -16,6 +17,8 @@ export function RepreneurDealSortSelector({ value }: RepreneurDealSortSelectorPr
   const u = useUiCopy()
   const language = useUiLanguage()
   const router = useRouter()
+  const pathname = usePathname()
+  const [pending, startTransition] = useTransition()
   const searchParams = useSearchParams()
 
   function handleValueChange(sort: RepreneurDealSort) {
@@ -27,12 +30,13 @@ export function RepreneurDealSortSelector({ value }: RepreneurDealSortSelectorPr
     }
 
     const query = params.toString()
-    router.replace(`/portal/deals${query ? `?${query}` : ""}`, { scroll: false })
+    startTransition(() => router.replace(`${pathname}${query ? `?${query}` : ""}`, { scroll: false }))
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" aria-busy={pending}>
       <span className="text-sm text-muted-foreground">{u("Sort by")}</span>
+      {pending ? <span role="status" className="text-xs text-muted-foreground">{u("Loading…")}</span> : null}
       <Select value={value} onValueChange={(nextValue) => handleValueChange(nextValue as RepreneurDealSort)}>
         <SelectTrigger aria-label={u("Sort deal flow")} size="sm" className="min-w-36">
           <SelectValue />
