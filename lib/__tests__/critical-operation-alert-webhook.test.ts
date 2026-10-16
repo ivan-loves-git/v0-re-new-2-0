@@ -91,7 +91,7 @@ beforeEach(() => {
       environment: args.p_environment, release: args.p_release, from_email: args.p_from, recipient: args.p_recipient,
       first_failure_at: "2026-10-10T06:00:00Z", last_failure_at: "2026-10-10T06:00:00Z",
       notice_at: "2026-10-10T06:00:00Z", failure_count: 1 },
-  } : true }))
+  } : name !== "email_provider_was_deleted" }))
 })
 
 afterEach(() => {
@@ -137,11 +137,11 @@ describe("critical alerts through the shared sender and signed webhook", () => {
     const message = provider.send.mock.calls[0][0]
 
     expect((await POST(signedCallback(message))).status).toBe(503)
-    expect(provider.rpc).not.toHaveBeenCalled()
+    expect(provider.rpc).not.toHaveBeenCalledWith("email_provider_record_event", expect.anything())
 
     provider.receipt = { recipient_email: "primary@re-new.invalid", cc: [] }
     expect((await POST(signedCallback(message))).status).toBe(200)
-    expect(provider.rpc).toHaveBeenCalledOnce()
+    expect(provider.rpc.mock.calls.filter(([name]) => name === "email_provider_record_event")).toHaveLength(1)
     expect(provider.rpc).toHaveBeenCalledWith(
       "email_provider_record_event",
       expect.objectContaining({

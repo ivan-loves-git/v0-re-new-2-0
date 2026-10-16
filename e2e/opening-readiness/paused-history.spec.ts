@@ -317,7 +317,7 @@ test("ordinary Paused history preserves genuine own openings and relationships w
         const languageButton = preview.getByRole("group", { name: /^(Interface language|Langue de l’interface)$/ }).getByRole("button", { name: language === "en" ? "English" : "Français", exact: true })
         await activateHistoryControl(languageButton, size)
         await expect(preview.getByRole("heading", { name: "Portal preview", exact: true })).toBeVisible()
-        await expect(preview.getByText("Staff only", { exact: true })).toBeVisible()
+        await expect(preview.getByText("Staff only", { exact: true }).filter({ visible: true })).toBeVisible()
         await expect(preview.locator("html")).toHaveAttribute("lang", "en")
         const list = preview.getByRole("tabpanel", { name: language === "en" ? "Deals" : "Opportunités", exact: true }).filter({ visible: true })
         await list.getByRole("textbox", { name: language === "en" ? "Search deal flow" : "Rechercher parmi les opportunités" }).fill("QA PAUSED")
@@ -354,7 +354,7 @@ test("ordinary Paused history preserves genuine own openings and relationships w
         await expect(preview.getByText("Deal not visible in portal preview", { exact: true }).filter({ visible: true })).toBeVisible()
         await expect(preview.getByRole("heading", { name: title("visit"), exact: true })).toHaveCount(0)
         await expect(preview.locator('[data-wave-workspace="pursuit"],input[type="file"],a[href*="nda-template"],a[href*="/documents/"]')).toHaveCount(0)
-        await expect(preview.getByText("Staff only", { exact: true })).toBeVisible()
+        await expect(preview.getByText("Staff only", { exact: true }).filter({ visible: true })).toBeVisible()
         expect(await snapshot(db)).toEqual(before)
       }
     }

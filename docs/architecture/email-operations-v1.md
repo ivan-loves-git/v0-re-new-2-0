@@ -80,6 +80,39 @@ A signed business event awaiting its receipt for at most five minutes remains
 retryable without paging the operator; older missing receipts and actual
 persistence errors remain alertable.
 
+### Callbacks after deliberate source deletion — #247, 15 October 2026
+
+Deleting the last retained operational parent also leaves one private SHA-256
+fingerprint of its opaque provider message identifier. This is solely a technical
+deletion signal: no raw identifier, recipient, body, event, actor, timestamp or
+other business fact is retained. It is service-only, has no application-user
+visibility and has no expiry, because opening an old email can generate a callback
+long after deletion. It cannot restore deleted history or contribute to Analytics.
+
+A signed business callback with no retained parent is acknowledged without event
+retention only when that deletion signal exists. A retained parent always takes
+precedence. Unknown missing receipts keep the existing retry and alert rules;
+failed deletion checks remain actionable database errors. Callbacks share a
+transaction lock; deleting from any of the four operational source tables takes
+that lock exclusively before row locks. Callbacks can run concurrently, while
+source cleanup waits for them (and vice versa), preventing orphan facts and lock
+inversion. Only rows qualifying as operational parents can leave a deletion
+signal. This changes no business deletion rights,
+email sending, templates or recipients.
+
+The additive migration does not infer or backfill historical deletions. This
+incident's separately recorded cleanup treatment may insert only the three
+fingerprints of today's verified, already-deleted owned QA messages after checking
+their parents remain absent. No callback replay, mail resend, business-history
+reconstruction or incident-history purge is part of this repair. Apply the schema
+before source release and preserve its fingerprints on rollback.
+
+Acceptance uses the existing signed-webhook route and disposable email-operations
+SQL rehearsal: late opens after final deletion are acknowledged; shared remaining
+parents still retain events; unknown receipts and database failures still fail;
+deletion/callback races leave no orphan events; user roles cannot read or write
+deletion signals. No synthetic production failure or extra email is required.
+
 ## Tracking activation and rollback (held)
 
 Read-only baseline on 7 October 2026: Re-New `news.re-new.team` is verified; open/click tracking are disabled; tracking subdomain is absent; the live webhook has the six original sent/delivered/opened/clicked/bounced/complained subscriptions. New failure/delay/suppression handling is prepared support, not current live coverage.

@@ -37,11 +37,11 @@ function installDatabaseBoundary() {
   })
 }
 
-function signedBusinessCallback(createdAt: string, valid = true) {
+function signedBusinessCallback(createdAt: string, valid = true, type = "email.delivered") {
   const sentAt = new Date()
   const id = "evt-receipt-grace"
   const payload = JSON.stringify({
-    type: "email.delivered",
+    type,
     created_at: createdAt,
     data: {
       email_id: "provider-receipt-grace",
@@ -89,7 +89,7 @@ describe("signed Resend receipt grace", () => {
       error: "Business receipt not yet available; retry event",
     })
     expect(m.trace.failure).toHaveBeenCalledWith("provider_pending")
-    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.rpc).not.toHaveBeenCalledWith("email_provider_record_event", expect.anything())
   })
 
   it("treats a missing business receipt older than five minutes as persistence failure", async () => {
@@ -99,7 +99,22 @@ describe("signed Resend receipt grace", () => {
 
     expect(response.status).toBe(503)
     expect(m.trace.failure).toHaveBeenCalledWith("persistence_failed")
-    expect(m.rpc).not.toHaveBeenCalled()
+    expect(m.rpc).not.toHaveBeenCalledWith("email_provider_record_event", expect.anything())
+  })
+
+  it("acknowledges a late callback after its receipt was intentionally deleted", async () => {
+    m.rpc.mockResolvedValue({ data: true, error: null })
+
+    const response = await POST(
+      signedBusinessCallback(new Date(now.getTime() - 6 * 60_000).toISOString(), true, "email.opened"),
+    )
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      message: "Deleted receipt event acknowledged without retention",
+    })
+    expect(m.trace.failure).not.toHaveBeenCalled()
+    expect(m.rpc).not.toHaveBeenCalledWith("email_provider_record_event", expect.anything())
   })
 
   it("does not grant the pending grace to a pathological future timestamp", async () => {
@@ -109,6 +124,17 @@ describe("signed Resend receipt grace", () => {
 
     expect(response.status).toBe(503)
     expect(m.trace.failure).toHaveBeenCalledWith("persistence_failed")
+  })
+
+  it("keeps a failed deletion check alertable instead of discarding an unknown callback", async () => {
+    m.rpc.mockResolvedValue({ data: null, error: { message: "private database detail" } })
+
+    const response = await POST(signedBusinessCallback(now.toISOString()))
+
+    expect(response.status).toBe(500)
+    expect(await response.json()).toEqual({ error: "Deletion check unavailable" })
+    expect(m.trace.failure).toHaveBeenCalledWith("persistence_failed")
+    expect(m.trace.success).not.toHaveBeenCalled()
   })
 
   it("keeps database correlation failures alertable immediately", async () => {
