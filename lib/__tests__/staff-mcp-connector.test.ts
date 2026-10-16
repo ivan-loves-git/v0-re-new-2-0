@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { createCatalog, type Queryable } from "@/lib/mcp/catalog"
 import {
   cancelledAuthorizeLocation,
+  connectionCopy,
   hasValidAuthorizeRequest,
   isSameOriginPost,
   issuedCodeLocation,
@@ -26,6 +27,7 @@ import {
 import {
   areAllowedMcpRedirectUris,
   isAllowedMcpRedirectUri,
+  mcpRedirectDestination,
   pickMcpAuthorizeParams,
   safeMcpContinuation,
 } from "@/lib/mcp/oauth-policy"
@@ -48,12 +50,17 @@ function authorizeParams(overrides: Record<string, string> = {}) {
 }
 
 describe("staff Claude connection sign-in", () => {
-  it("lets registered clients return codes only to Claude Code's listener on the same computer", () => {
-    expect(isAllowedMcpRedirectUri("http://localhost:53682/callback")).toBe(true)
-    expect(isAllowedMcpRedirectUri("http://127.0.0.1:9000/callback")).toBe(true)
+  it("lets registered clients return codes only to Claude Code's listener or the Claude app's callback", () => {
+    expect(mcpRedirectDestination("http://localhost:53682/callback")).toBe("claude_code")
+    expect(mcpRedirectDestination("http://127.0.0.1:9000/callback")).toBe("claude_code")
+    expect(mcpRedirectDestination("https://claude.ai/api/mcp/auth_callback")).toBe("claude_app")
+    expect(mcpRedirectDestination("https://claude.com/api/mcp/auth_callback")).toBe("claude_app")
 
-    // A hosted callback would deliver a forwarded link's code to whoever started it.
-    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/auth_callback")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/auth_callback?next=https://evil.example")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/other")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://claude.ai.evil.example/api/mcp/auth_callback")).toBe(false)
+    expect(isAllowedMcpRedirectUri("http://claude.ai/api/mcp/auth_callback")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/auth_callback,https://evil.example/cb")).toBe(false)
     expect(isAllowedMcpRedirectUri("https://localhost/callback")).toBe(false)
     expect(isAllowedMcpRedirectUri("https://evil.example/callback")).toBe(false)
     expect(isAllowedMcpRedirectUri("http://localhost.evil.example/callback")).toBe(false)
@@ -111,6 +118,19 @@ describe("staff Claude connection sign-in", () => {
     const withoutChallenge = authorizeParams()
     withoutChallenge.delete("code_challenge")
     expect(nextAuthorizeStep(withoutChallenge, "staff")).toEqual({ kind: "invalid" })
+  })
+
+  it("names the real destination and warns against forwarded Claude app sign-ins", () => {
+    const code = connectionCopy("claude_code", "colin@example.test")
+    expect(code.title).toBe("Connect Claude Code to WAVE")
+    expect(code.description).toContain("Claude Code on this computer")
+    expect(code.warning).toBeNull()
+
+    const app = connectionCopy("claude_app", "colin@example.test")
+    expect(app.title).toBe("Connect the Claude app to WAVE")
+    expect(app.description).toContain("The Claude account that started this connection")
+    expect(app.caution).toContain("started this from the Claude app yourself just now")
+    expect(app.warning).toContain("If someone sent you this link, press Cancel")
   })
 
   it("tells Claude Code's listener when the staff member cancels", () => {
