@@ -3,13 +3,17 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { render } from "@react-email/render"
 import { createElement, type ReactElement } from "react"
 import type { StaffEmailReview } from "@/lib/actions/staff-email-review"
+import { pauseNotificationSourceContext } from "./opportunity-pause-copy"
 export async function businessCurrentCopy(review: StaffEmailReview) {
   const db = createAdminClient(),
     context = review.source_context ?? {}
   let subject: string, element: ReactElement
   if (context.kind === "opportunity_pause") {
-    const payload = await (await import("./opportunity-pause-delivery")).getOpportunityPausePayload(String(context.notificationId))
-    if (!payload) throw new Error("This pause is no longer current for the recipient.")
+    const pause = pauseNotificationSourceContext.parse(context)
+    const payload = await (await import("./opportunity-pause-delivery")).getOpportunityPausePayload(pause.notificationId)
+    if (!payload || payload.pauseId !== pause.pauseId || payload.matchId !== pause.matchId
+      || payload.repreneurId !== review.repreneur_id || payload.matchId !== review.business_match_id)
+      throw new Error("This pause is no longer current for the recipient.")
     const copy = (await import("./opportunity-pause-copy")).renderOpportunityPauseCopy(payload)
     subject = copy.subject
     element = (await import("./templates/opportunity-paused")).OpportunityPausedEmail(copy)

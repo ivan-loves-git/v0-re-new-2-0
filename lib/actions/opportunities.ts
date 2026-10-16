@@ -1,6 +1,7 @@
 "use server"
 
 import { after } from "next/server"
+import { z } from "zod"
 import { runPendingOpportunityPauseNotifications } from "@/lib/email/opportunity-pause-delivery"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 
@@ -607,16 +608,18 @@ export async function pauseOpportunity(
     throw new Error(error.message)
   }
 
-  if (typeof pauseId === "string") after(async () => {
+  const savedPause = z.string().uuid().safeParse(pauseId)
+  if (savedPause.success) after(async () => {
     const trace = startCriticalOperation("email.opportunity_pause_notification")
     try {
-      const result = await runPendingOpportunityPauseNotifications({ pauseId, limit: 50 })
+      const result = await runPendingOpportunityPauseNotifications({ pauseId: savedPause.data, limit: 50 })
       if (result.failed > 0) trace.failure("provider_unavailable")
       else trace.success()
     } catch {
       trace.failure("persistence_failed")
     }
   })
+  else startCriticalOperation("email.opportunity_pause_notification").failure("persistence_failed")
 
   revalidatePath("/opportunities")
   revalidatePath("/opportunities/find")

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { render } from "@react-email/render"
-import { PAUSE_EMAIL_BODY, PAUSE_EMAIL_SUBJECT, pauseNotificationPayload, PUBLIC_PAUSE_REASONS, renderOpportunityPauseCopy } from "@/lib/email/opportunity-pause-copy"
+import { PAUSE_EMAIL_BODY, PAUSE_EMAIL_SUBJECT, pauseNotificationPayload, pauseNotificationSourceContext, PUBLIC_PAUSE_REASONS, renderOpportunityPauseCopy } from "@/lib/email/opportunity-pause-copy"
 import { OpportunityPausedEmail } from "@/lib/email/templates/opportunity-paused"
 import { OPPORTUNITY_PAUSE_REASON_OPTIONS } from "@/lib/opportunity-outcome-reasons"
 
@@ -32,5 +32,9 @@ describe("public opportunity pause email", () => {
 
   it("rejects an unknown or free-text reason rather than publishing it", () => {
     expect(pauseNotificationPayload.safeParse({ ...payload, reason: "PRIVATE STAFF NOTE" }).success).toBe(false)
+  })
+
+  it.each([{}, { notificationId: "undefined" }, { notificationId: payload.notificationId, matchId: payload.matchId }])("rejects incomplete or malformed review source identity", (source) => {
+    expect(pauseNotificationSourceContext.safeParse({ kind: "opportunity_pause", ...source }).success).toBe(false)
   })
 })

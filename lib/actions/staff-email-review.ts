@@ -78,6 +78,7 @@ export interface StaffEmailReview {
   source_context?: Record<string, unknown>
   prepared_policy?: { auto_send: boolean; version: number }
   repreneur_id?: string | null
+  business_match_id?: string | null
   retained_html?: string | null
   protected_links?: string[]
   provider_cc?: string[]

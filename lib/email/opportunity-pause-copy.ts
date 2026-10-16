@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { OpportunityPauseReason } from "@/lib/opportunity-outcome-reasons"
+import { OPPORTUNITY_PAUSE_REASON_OPTIONS, type OpportunityPauseReason } from "@/lib/opportunity-outcome-reasons"
 
 export const PUBLIC_PAUSE_REASONS = {
   paused_cabinet: "Mise en pause par le cabinet",
@@ -12,6 +12,13 @@ export const PUBLIC_PAUSE_REASONS = {
 export const PAUSE_EMAIL_SUBJECT = "L’opportunité {opportunityTitle} est en pause"
 export const PAUSE_EMAIL_BODY = "Bonjour {firstName},\n\nL’opportunité {opportunityTitle} est temporairement mise en pause."
 
+export const pauseNotificationSourceContext = z.object({
+  kind: z.literal("opportunity_pause"),
+  notificationId: z.string().uuid(),
+  pauseId: z.string().uuid(),
+  matchId: z.string().uuid(),
+})
+
 export const pauseNotificationPayload = z.object({
   notificationId: z.string().uuid(),
   pauseId: z.string().uuid(),
@@ -20,7 +27,7 @@ export const pauseNotificationPayload = z.object({
   recipientEmail: z.string().email(),
   firstName: z.string(),
   publicTitle: z.string().trim().min(1),
-  reason: z.enum(["paused_cabinet", "seller_paused_sale", "exclusivity_another_buyer", "waiting_updated_information", "other"]),
+  reason: z.enum(OPPORTUNITY_PAUSE_REASON_OPTIONS.map(option => option.value)),
   subject: z.string().trim().min(1),
   body: z.string().trim().min(1),
 })
