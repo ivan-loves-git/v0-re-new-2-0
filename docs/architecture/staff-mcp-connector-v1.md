@@ -71,4 +71,4 @@ Tokens live in `oauthApplication`, `oauthAccessToken` and `oauthConsent` (migrat
 ## Verification
 
 - Behavior tests: `lib/__tests__/staff-mcp-connector.test.ts`.
-- Disposable PostgreSQL rehearsal of the migration and the real Better Auth flow: `bash scripts/rehearse-staff-mcp-oauth.sh` (in CI `Verify`). On macOS set `LC_ALL=en_US.UTF-8` if PostgreSQL refuses to start.
+- Disposable PostgreSQL rehearsal of the migration, the real Better Auth flow and `describe_table` through the real `pg` driver: `bash scripts/rehearse-staff-mcp-oauth.sh` (in CI `Verify`). On macOS set `LC_ALL=en_US.UTF-8` if PostgreSQL refuses to start.
