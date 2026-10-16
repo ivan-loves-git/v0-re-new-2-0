@@ -128,7 +128,8 @@ async function findRepreneurForRole(
   return findRepreneurByEmail(fallbackEmail, supabase)
 }
 
-async function resolveCurrentUserAccess(
+/** Resolves the WAVE role for a user found by any means, such as an OAuth token. */
+export async function resolveCurrentUserAccess(
   user: Awaited<ReturnType<typeof getCurrentUser>>,
 ): Promise<CurrentUserAccess | null> {
   if (!user) return null

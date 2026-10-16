@@ -8,6 +8,11 @@ import { env } from "@/lib/env"
 import { startCriticalOperation } from "@/lib/observability/critical-operation"
 import { buildPasswordResetBrowserUrl } from "@/lib/password-reset-browser-url"
 import { authorizePasswordResetDelivery } from "@/lib/password-reset-link"
+import {
+  staffMcpPlugin,
+  staffMcpRefreshRotation,
+  staffMcpRegistrationGuard,
+} from "@/lib/mcp/better-auth-mcp"
 import { postgresSslForConnection } from "@/lib/postgres-ssl"
 
 /**
@@ -16,7 +21,7 @@ import { postgresSslForConnection } from "@/lib/postgres-ssl"
  */
 let pool: Pool | null = null
 
-function getPool(): Pool {
+export function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: env.DATABASE_URL,
@@ -145,7 +150,13 @@ export const auth = betterAuth({
   // Plugins
   plugins: [
     nextCookies(), // Enables Server Component cookie support
+    staffMcpPlugin(new URL(env.BETTER_AUTH_URL).origin), // Staff Claude connection (#265)
   ],
+
+  hooks: {
+    before: staffMcpRegistrationGuard,
+    after: staffMcpRefreshRotation,
+  },
 
   // Security settings
   advanced: {

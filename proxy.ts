@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { MCP_CONTINUE_PARAM, safeMcpContinuation } from "@/lib/mcp/oauth-policy"
 
 export async function proxy(request: NextRequest) {
   // Check for Better Auth session cookie (works in Edge runtime)
@@ -76,8 +77,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(routingUrl)
   }
 
-  // Redirect through role routing if already logged in and trying to access login
-  if (pathname === "/auth/login" && isLoggedIn) {
+  // Redirect through role routing if already logged in and trying to access login.
+  // A Claude connection reaches login only when its session check failed, so a
+  // stale cookie must not bounce the staff member away from signing in again.
+  if (
+    pathname === "/auth/login" &&
+    isLoggedIn &&
+    safeMcpContinuation(request.nextUrl.searchParams.get(MCP_CONTINUE_PARAM)) === null
+  ) {
     const routingUrl = new URL("/routing", request.url)
     return NextResponse.redirect(routingUrl)
   }
