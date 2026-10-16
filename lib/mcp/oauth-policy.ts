@@ -1,11 +1,12 @@
 /**
  * Sign-in rules for the staff Claude connection (#265).
  *
- * A registered OAuth client may only send authorization codes back to Claude:
- * the loopback listener Claude Code opens on the staff member's own Mac, or
- * the Claude app's hosted connector callback (#273). A hosted callback
- * delivers the code to whichever Claude account started the sign-in, so the
- * confirmation page warns staff never to approve a sign-in someone sent them.
+ * A registered OAuth client may only send authorization codes to the loopback
+ * listener an app such as Claude Code or Codex opens on the staff member's own
+ * computer, or to the hosted connector callbacks of the Claude app (#273) and
+ * ChatGPT. A hosted callback delivers the code to whichever account started
+ * the sign-in, so the confirmation page warns staff never to approve a
+ * sign-in someone sent them.
  */
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
@@ -13,8 +14,12 @@ const CLAUDE_APP_CALLBACKS = new Set([
   "https://claude.ai/api/mcp/auth_callback",
   "https://claude.com/api/mcp/auth_callback",
 ])
+// ChatGPT uses the stable callback only for servers with RFC 9207 issuer
+// identification; otherwise one callback id per connection.
+const CHATGPT_STABLE_CALLBACK = "https://chatgpt.com/connector_platform_oauth_redirect"
+const CHATGPT_CALLBACK_ID_PATH = /^\/connector\/oauth\/[A-Za-z0-9_-]{1,128}$/
 
-export type McpDestination = "claude_code" | "claude_app"
+export type McpDestination = "this_computer" | "claude_app" | "chatgpt"
 
 export const MCP_AUTHORIZE_PATH = "/api/mcp/authorize"
 export const MCP_CONTINUE_PARAM = "mcp_continue"
@@ -44,8 +49,14 @@ export function mcpRedirectDestination(value: unknown): McpDestination | null {
     return null
   }
   if (url.username || url.password || url.hash) return null
-  if (url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname)) return "claude_code"
-  if (!url.search && CLAUDE_APP_CALLBACKS.has(`${url.origin}${url.pathname}`)) return "claude_app"
+  if (url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname)) return "this_computer"
+  if (url.search) return null
+  const address = `${url.origin}${url.pathname}`
+  if (CLAUDE_APP_CALLBACKS.has(address)) return "claude_app"
+  if (address === CHATGPT_STABLE_CALLBACK) return "chatgpt"
+  if (url.origin === "https://chatgpt.com" && CHATGPT_CALLBACK_ID_PATH.test(url.pathname)) {
+    return "chatgpt"
+  }
   return null
 }
 

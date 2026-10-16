@@ -10,9 +10,13 @@ import {
   lacksDisplayName,
   nextAuthorizeStep,
 } from "@/lib/mcp/authorize-flow"
-import { mcpLoginRedirectPath, pickMcpAuthorizeParams } from "@/lib/mcp/oauth-policy"
+import {
+  mcpLoginRedirectPath,
+  mcpRedirectDestination,
+  pickMcpAuthorizeParams,
+} from "@/lib/mcp/oauth-policy"
 import { mcpOrigin } from "@/lib/mcp/origin"
-import { requestAuthorizationCode } from "@/lib/mcp/runtime"
+import { findMcpClient, requestAuthorizationCode } from "@/lib/mcp/runtime"
 
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store, max-age=0",
@@ -71,7 +75,16 @@ export async function POST(request: Request) {
   const response = await requestAuthorizationCode(params, request.headers.get("cookie"))
   const location = issuedCodeLocation(response, params.get("redirect_uri")!)
   if (!location) return plainText(400, INVALID_REQUEST)
-  console.info(JSON.stringify({ event: "wave_mcp.connected", userId: access.user.id }))
-  recordActivity({ action: "mcp.connected", ...activityActor(access) })
+  const app = mcpRedirectDestination(params.get("redirect_uri"))
+  console.info(JSON.stringify({ event: "wave_mcp.connected", userId: access.user.id, app }))
+  // Which app connected; the registered name is self-chosen, so it is context only.
+  recordActivity(async () => ({
+    action: "mcp.connected",
+    ...activityActor(access),
+    details: {
+      app,
+      client_name: (await findMcpClient(params.get("client_id")!).catch(() => null))?.name ?? null,
+    },
+  }))
   return redirectTo(location, request, 303)
 }
