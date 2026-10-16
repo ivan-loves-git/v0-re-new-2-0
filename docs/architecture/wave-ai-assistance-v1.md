@@ -118,7 +118,7 @@ Append-only events link to generation_id:
 - copied;
 - send review opened;
 - send succeeded or failed through an existing deterministic route;
-- confirmed workflow action;
+- historical confirmed workflow action (retired next-action advice; no new writes);
 - optional helpful/not-helpful feedback;
 - discarded.
 

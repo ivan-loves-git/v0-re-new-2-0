@@ -25,7 +25,6 @@ export const waveAiGenerationEventSchema = z.object({
     "send_review_opened",
     "send_succeeded",
     "send_failed",
-    "workflow_action_confirmed",
     "feedback_helpful",
     "feedback_not_helpful",
     "discarded",
@@ -37,7 +36,6 @@ export const waveAiGenerationEventSchema = z.object({
     "missing_context",
     "other_without_text",
   ]).optional(),
-  actionKey: z.enum(["resolve_source_review", "complete_opportunity_profile"]).optional(),
 }).strict().superRefine((event, context) => {
   if (event.eventType === "feedback_not_helpful" && !event.reasonCode) {
     context.addIssue({
@@ -52,12 +50,6 @@ export const waveAiGenerationEventSchema = z.object({
       message: "A feedback reason is only valid for negative feedback.",
       path: ["reasonCode"],
     })
-  }
-  if (event.eventType === "workflow_action_confirmed" && !event.actionKey) {
-    context.addIssue({ code: "custom", message: "A workflow outcome requires an allowlisted action.", path: ["actionKey"] })
-  }
-  if (event.eventType !== "workflow_action_confirmed" && event.actionKey) {
-    context.addIssue({ code: "custom", message: "An action key is valid only for a workflow outcome.", path: ["actionKey"] })
   }
 })
 

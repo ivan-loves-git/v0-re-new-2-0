@@ -113,6 +113,21 @@ describe("WAVE AI runtime contract", () => {
     }).success).toBe(false)
   })
 
+  it("rejects retired opportunity outcomes while accepting email draft feedback", () => {
+    const generationId = "8d00a3f2-2d4a-45fe-ae39-5cba0d2134fd"
+    expect(waveAiGenerationEventSchema.safeParse({
+      generationId,
+      eventType: "workflow_action_confirmed",
+      actionKey: "complete_opportunity_profile",
+    }).success).toBe(false)
+    expect(waveAiGenerationEventSchema.safeParse({
+      generationId, eventType: "feedback_helpful",
+    }).success).toBe(true)
+    expect(waveAiGenerationEventSchema.safeParse({
+      generationId, eventType: "copied", actionKey: "resolve_source_review",
+    }).success).toBe(false)
+  })
+
   it("retires the direct AI send path", () => {
     const retiredSend = source("app/api/wavy/send/route.ts")
     const tool = source("components/wave-ai/wave-ai-tool.tsx")
