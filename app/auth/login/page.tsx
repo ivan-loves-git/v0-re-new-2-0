@@ -14,6 +14,7 @@ import { LanguageToggle } from "@/components/intake-v2/language-toggle"
 import { useUiCopy } from "@/components/i18n/ui-text"
 import { signInErrorCopy } from "@/lib/i18n/auth-outcomes"
 import type { UiCopyKey } from "@/lib/i18n/ui-copy"
+import { MCP_CONTINUE_PARAM, safeMcpContinuation } from "@/lib/mcp/oauth-policy"
 
 export default function LoginPage() {
   const u = useUiCopy()
@@ -74,7 +75,11 @@ export default function LoginPage() {
           action: "sign_in",
           outcome: "success",
         })
-        window.location.href = "/routing"
+        // A staff member signing in to connect Claude returns to that step.
+        window.location.href =
+          safeMcpContinuation(
+            new URLSearchParams(window.location.search).get(MCP_CONTINUE_PARAM),
+          ) ?? "/routing"
       } else {
         captureWaveEvent("wave_auth_failed", {
           surface: "auth",
