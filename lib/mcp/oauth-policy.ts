@@ -1,14 +1,20 @@
 /**
  * Sign-in rules for the staff Claude connection (#265).
  *
- * A registered OAuth client may only send authorization codes to the loopback
- * listener Claude Code opens on the staff member's own Mac. A forwarded sign-in
- * link therefore delivers its code to the clicker's own computer, never to
- * whoever sent it. Hosted callbacks (claude.ai) are deliberately excluded in
- * v1: there the code would reach the account that started the flow.
+ * A registered OAuth client may only send authorization codes back to Claude:
+ * the loopback listener Claude Code opens on the staff member's own Mac, or
+ * the Claude app's hosted connector callback (#273). A hosted callback
+ * delivers the code to whichever Claude account started the sign-in, so the
+ * confirmation page warns staff never to approve a sign-in someone sent them.
  */
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
+const CLAUDE_APP_CALLBACKS = new Set([
+  "https://claude.ai/api/mcp/auth_callback",
+  "https://claude.com/api/mcp/auth_callback",
+])
+
+export type McpDestination = "claude_code" | "claude_app"
 
 export const MCP_AUTHORIZE_PATH = "/api/mcp/authorize"
 export const MCP_CONTINUE_PARAM = "mcp_continue"
@@ -26,18 +32,25 @@ export const MCP_AUTHORIZE_FIELDS = [
   "resource",
 ] as const
 
-export function isAllowedMcpRedirectUri(value: unknown): boolean {
+/** Where a callback delivers the code, or null when WAVE refuses it. */
+export function mcpRedirectDestination(value: unknown): McpDestination | null {
   // Better Auth stores the list comma-joined, so a comma could smuggle in a
   // second address after this check.
-  if (typeof value !== "string" || value.length > 2048 || value.includes(",")) return false
+  if (typeof value !== "string" || value.length > 2048 || value.includes(",")) return null
   let url: URL
   try {
     url = new URL(value)
   } catch {
-    return false
+    return null
   }
-  if (url.username || url.password || url.hash) return false
-  return url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname)
+  if (url.username || url.password || url.hash) return null
+  if (url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname)) return "claude_code"
+  if (!url.search && CLAUDE_APP_CALLBACKS.has(`${url.origin}${url.pathname}`)) return "claude_app"
+  return null
+}
+
+export function isAllowedMcpRedirectUri(value: unknown): boolean {
+  return mcpRedirectDestination(value) !== null
 }
 
 export function areAllowedMcpRedirectUris(value: unknown): boolean {

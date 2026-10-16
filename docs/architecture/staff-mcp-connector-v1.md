@@ -1,16 +1,28 @@
 # Staff Claude connection v1
 
-Product Change: [#265](https://github.com/re-new-team/renew-governance/issues/265). Status: candidate, not released.
+Product Change: [#265](https://github.com/re-new-team/renew-governance/issues/265), released 16 October 2026. Claude app connector: Ticket [#273](https://github.com/re-new-team/renew-governance/issues/273).
 
-WAVE staff can connect Claude Code (terminal or the Claude desktop app's Code tab) to WAVE and ask questions about WAVE data, then build their own analyses and documents on their Mac. The connection is **read-only** and **staff-only**.
+WAVE staff can connect Claude Code or the Claude app to WAVE and ask questions about WAVE data, then build their own analyses and documents. The connection is **read-only** and **staff-only**.
 
-v1 accepts only Claude Code's sign-in listener on the staff member's own computer. Claude's hosted connectors (claude.ai web and chat custom connectors) are deliberately not accepted: with a hosted callback, a sign-in link forwarded to a staff member would deliver access to whoever started it.
+The Claude app's sign-in delivers access to whichever Claude account started it. WAVE's confirmation page therefore tells staff never to approve a sign-in someone else sent them; Ivan accepted this risk in #273.
 
 ## Connect
 
-You need a WAVE staff account with a display name, and Claude Code installed and signed in on your Mac.
+You need a WAVE staff account with a display name.
 
-Claude Code, once per Mac (`--scope user` makes WAVE available in every folder):
+### Claude app (claude.ai, desktop or web)
+
+1. Settings → Connectors → **Add custom connector**. Name `WAVE`, URL `https://app.re-new.team/api/mcp`.
+2. Authentication: keep **Sign in now** (OAuth). OAuth client: keep the detected **Register automatically**. Leave request headers empty and transport on **Streamable HTTP**.
+3. Press **Connect**. The normal WAVE login page opens. Sign in.
+4. WAVE shows **Connect the Claude app to WAVE**. Press **Allow read access** only if you started this yourself just now.
+5. In a new chat, enable the WAVE connector and ask "list the WAVE tables".
+
+On a Team or Enterprise Claude plan, an owner may need to add the connector for the organisation first.
+
+### Claude Code
+
+Once per Mac (`--scope user` makes WAVE available in every folder):
 
 ```bash
 claude mcp add --scope user --transport http wave https://app.re-new.team/api/mcp
@@ -41,7 +53,8 @@ Tools: `list_tables`, `describe_table`, `query_table` (select with embedded rela
 | Step | Rule |
 | --- | --- |
 | Discovery | `/.well-known/oauth-protected-resource[/api/mcp]` and `/.well-known/oauth-authorization-server` describe the endpoint. |
-| Client registration | Better Auth `mcp` plugin at `/api/auth/mcp/register`. Only loopback callbacks are accepted (`http://localhost`, `127.0.0.1`, `[::1]`); commas are refused because the plugin stores the list comma-joined. |
+| Client registration | Better Auth `mcp` plugin at `/api/auth/mcp/register`. Only Claude's callbacks are accepted: loopback for Claude Code (`http://localhost`, `127.0.0.1`, `[::1]`) and exactly `https://claude.ai/api/mcp/auth_callback` or `https://claude.com/api/mcp/auth_callback` for the Claude app. Queries on the hosted callback and commas are refused because the plugin stores the list comma-joined. |
+| Confirmation page | Names the destination WAVE enforces ("Claude Code on this computer" or "the Claude account that started this connection"), never the client's self-chosen name. For the Claude app it adds: if someone sent you this link, press Cancel. |
 | Sign-in | `/api/mcp/authorize` (WAVE code): signed-out → WAVE login and back; non-staff → refused; staff → `/auth/connect` confirmation. PKCE S256 is required. |
 | Code issue | Only the confirmation page's same-origin POST asks Better Auth for a code, in-process. The plugin's public `/api/auth/mcp/authorize`, `/api/auth/mcp/get-session`, `/api/auth/oauth2/consent` and `/api/auth/.well-known/*` return 404. |
 | Tokens | Access tokens last 1 hour. Each refresh deletes the presented token row, so a used refresh token or previous access token stops working. |

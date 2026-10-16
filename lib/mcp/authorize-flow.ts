@@ -1,6 +1,7 @@
 import {
   isAllowedMcpRedirectUri,
   mcpLoginRedirectPath,
+  type McpDestination,
 } from "@/lib/mcp/oauth-policy"
 
 /**
@@ -48,7 +49,30 @@ export function lacksDisplayName(user: { name?: string | null }) {
 export const MISSING_DISPLAY_NAME =
   "Your WAVE account has no display name, which the Claude sign-in needs. Ask Ivan to add your name, then try again."
 
-/** Cancelling tells Claude Code's waiting listener that access was refused. */
+/**
+ * Confirmation-page wording. It names the destination WAVE enforces, never the
+ * client's self-chosen name. A Claude app sign-in delivers access to whichever
+ * Claude account started it, so that page also warns against forwarded links.
+ */
+export function connectionCopy(destination: McpDestination, email: string) {
+  if (destination === "claude_code") {
+    return {
+      title: "Connect Claude Code to WAVE",
+      description: `Claude Code on this computer is asking to read WAVE as ${email}.`,
+      caution: "Only continue if you started this from Claude Code yourself just now.",
+      warning: null,
+    }
+  }
+  return {
+    title: "Connect the Claude app to WAVE",
+    description: `The Claude account that started this connection is asking to read WAVE as ${email}.`,
+    caution: "Only continue if you started this from the Claude app yourself just now.",
+    warning:
+      "If someone sent you this link, press Cancel: approving would give their Claude account your read access to WAVE.",
+  }
+}
+
+/** Cancelling tells Claude's waiting sign-in that access was refused. */
 export function cancelledAuthorizeLocation(params: URLSearchParams) {
   const target = new URL(params.get("redirect_uri")!)
   target.searchParams.set("error", "access_denied")
