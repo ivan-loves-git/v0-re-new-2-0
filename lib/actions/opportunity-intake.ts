@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { maContactProfileErrors } from "@/lib/ma-relationship-validation"
 import { maContactSaveMessage } from "@/lib/data/ma-contact-save-message"
-import { appendConfirmedWaveAiOutcome } from "@/lib/ai/next-action-outcome"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { captureOpportunityFitSource, fitSourceChanged } from "@/lib/match-source-change"
@@ -686,12 +685,6 @@ export async function updateOpportunityIntake(
 
   try {
     revalidateOpportunityIntake(opportunityId)
-    await appendConfirmedWaveAiOutcome({
-      token: readOpportunityFormString(formData, "wave_ai_outcome"),
-      userId: user.id,
-      opportunityId,
-      action: "complete_opportunity_profile",
-    })
   } catch (error) {
     trace.failure("internal_error")
     throw error
@@ -751,12 +744,6 @@ export async function resolveAcmeProvisionalSource(
   if (error) return normalizeDbError(error)
 
   revalidateOpportunityIntake(opportunityId)
-  await appendConfirmedWaveAiOutcome({
-    token: readOpportunityFormString(formData, "wave_ai_outcome"),
-    userId: user.id,
-    opportunityId,
-    action: "resolve_source_review",
-  })
   return {
     success: true,
     message:

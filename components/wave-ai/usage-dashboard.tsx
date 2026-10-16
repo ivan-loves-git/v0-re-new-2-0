@@ -6,7 +6,7 @@ import type { WaveAiLedgerSnapshot } from "@/lib/ai/ledger"
 const INTEGER = new Intl.NumberFormat("en-GB")
 const featureLabels: Record<string, string> = {
   email_draft: "Email drafts",
-  next_action: "Next actions",
+  next_action: "Next-action advice (retired)",
   match_review: "Match review",
   pdr_screening: "PDR screening",
 }

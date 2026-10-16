@@ -825,7 +825,7 @@ const roadmapEvents: RoadmapPeriod[] = [
   {
     period: "Aug 7, 2026",
     version: "0.9.38",
-    title: "Staff can export opportunity data and ask WAVE AI what to do next",
+    title: "Staff opportunity export and the former AI next-action advice",
     isCompleted: true,
     events: [
       {
@@ -834,14 +834,14 @@ const roadmapEvents: RoadmapPeriod[] = [
         description: "Staff can download one row per opportunity with its current pipeline position, matching context, source information, internal notes and calculated EBITDA margin.",
       },
       {
-        title: "WAVE AI can recommend existing actions from recorded facts",
+        title: "Opportunity AI advice was introduced here and is now retired",
         type: "feature",
-        description: "On an opportunity, staff can request up to three next actions that separate recorded facts, inference and unknown information and link only to controls already available in WAVE.",
+        description: "This release introduced optional AI suggestions on opportunities. The advice panel was removed on 16 October 2026; normal opportunity actions and AI email drafting remain available.",
       },
       {
         title: "Staff remains responsible for every business action",
         type: "decision",
-        description: "Luna can rank and explain available actions, but it cannot invent a workflow, change a record or confirm an action on behalf of the team.",
+        description: "The former advice ranked existing actions without changing records or confirming work. Staff continue to perform all business actions through the normal WAVE controls.",
       },
     ],
   },

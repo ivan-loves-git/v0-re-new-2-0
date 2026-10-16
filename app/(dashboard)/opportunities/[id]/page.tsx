@@ -42,7 +42,7 @@ export default function OpportunityDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string; wave_ai_outcome?: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   return (
     <Suspense fallback={null}>
@@ -56,11 +56,11 @@ async function OpportunityDetailContent({
   searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string; wave_ai_outcome?: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { id } = await params
   if (!isUuid(id)) notFound()
-  const { tab, wave_ai_outcome: waveAiOutcome } = await searchParams
+  const { tab } = await searchParams
   const opportunity = await getOpportunity(id)
   if (!opportunity) {
     notFound()
@@ -116,7 +116,6 @@ async function OpportunityDetailContent({
 
   async function updateAction(formData: FormData) {
     "use server"
-    if (waveAiOutcome) formData.set("wave_ai_outcome", waveAiOutcome)
     return updateOpportunityIntake(id, formData)
   }
 
@@ -137,7 +136,6 @@ async function OpportunityDetailContent({
 
   async function resolveSourceAction(formData: FormData) {
     "use server"
-    if (waveAiOutcome) formData.set("wave_ai_outcome", waveAiOutcome)
     return resolveAcmeProvisionalSource(id, formData)
   }
 
