@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Re-New Business Discovery — fictional logic prototype</title>
+  <style>
+    :root { --teal:#087c73; --ink:#17312e; --muted:#627572; --line:#dbe5e2; --wash:#f2f8f7; --warn:#895b00; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#fff; color:var(--ink); font:15px/1.48 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { max-width:1120px; margin:auto; padding:32px 22px 56px; }
+    .eyebrow { color:var(--teal); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+    h1 { font-size:clamp(27px,4vw,42px); letter-spacing:-.045em; margin:8px 0; } h2 { font-size:18px; margin:0 0 12px; }
+    p { margin:7px 0; } .sub { max-width:780px; color:var(--muted); font-size:17px; }
+    .notice { border-left:3px solid var(--teal); background:var(--wash); padding:12px 14px; margin:22px 0; color:#315450; }
+    .grid { display:grid; grid-template-columns:1.4fr .85fr; gap:20px; align-items:start; }
+    .panel { border:1px solid var(--line); border-radius:12px; padding:18px; background:#fff; }
+    .search { background:#fbfdfd; } label { display:block; font-size:12px; color:var(--muted); font-weight:650; margin:12px 0 4px; }
+    select { width:100%; border:1px solid #bfcfcb; border-radius:7px; background:#fff; padding:9px; font:inherit; color:var(--ink); }
+    button { appearance:none; background:var(--teal); color:#fff; border:0; border-radius:7px; cursor:pointer; font:inherit; font-weight:650; padding:9px 12px; }
+    button:hover { background:#05645d; } button.secondary { background:#fff; color:var(--teal); border:1px solid #a9c7c2; } button.secondary:hover { background:var(--wash); }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }.cards { display:grid; gap:12px; margin-top:14px; }
+    .card { border:1px solid var(--line); border-radius:10px; padding:15px; }.card h3 { margin:0 0 3px; font-size:17px; }.meta { color:var(--muted); font-size:13px; }.card p { color:#405552; }.card button { margin-top:7px; }
+    .empty { padding:18px; color:var(--muted); background:#fafcfc; border-radius:8px; }.warn { color:var(--warn); background:#fff8e9; padding:10px; border-radius:7px; }
+    .state dl { margin:0; }.state div { display:flex; justify-content:space-between; gap:16px; border-bottom:1px solid #edf2f0; padding:7px 0; }.state dt { color:var(--muted); }.state dd { margin:0; text-align:right; font-weight:600; }
+    .tabs { display:flex; gap:6px; flex-wrap:wrap; margin:20px 0 10px; }.tab { color:var(--teal); background:#fff; border:1px solid #b9d2cd; }.tab.active { color:#fff; background:var(--teal); }.scenario { background:var(--wash); border-radius:9px; padding:14px; }.steps { display:grid; gap:8px; margin-top:12px; }.step { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#fff; border:1px solid var(--line); padding:9px 10px; border-radius:7px; }.step button { padding:6px 9px; font-size:13px; white-space:nowrap; }
+    .modal { position:fixed; inset:0; z-index:5; background:rgba(10,35,32,.32); display:grid; place-items:center; padding:18px; }.modal[hidden] { display:none; }.browser { max-width:490px; width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 18px 60px rgba(0,0,0,.18); }.browserbar { background:#eaf1ef; color:#66807b; padding:8px 12px; font-size:12px; }.browserbody { padding:22px; }.browserbody input { width:100%; border:1px solid #cbd9d6; padding:10px; border-radius:7px; background:#f6f9f8; font:inherit; }.fine { color:var(--muted); font-size:12px; }.confirmation { background:#eaf7f4; border-radius:8px; padding:13px; color:#18534d; }.hidden { display:none; }
+    @media (max-width:760px) { main{padding:24px 14px 44px}.grid{grid-template-columns:1fr}.state div{display:block}.state dd{text-align:left;margin-top:2px} }
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Fictional throwaway logic prototype · no real opportunities</div>
+  <h1>Re-New Business Discovery</h1>
+  <p class="sub">Question: can anonymous public discovery move a buyer from a useful search to a Re-New access request without exposing a business identity or requiring sign-in?</p>
+  <div class="notice">All cards, descriptions, addresses and people in this demo are invented. This page stores nothing, calls no service, and does not send an access request.</div>
+
+  <div class="grid">
+    <section class="panel search">
+      <h2>Anonymous opportunity search</h2>
+      <p>Only active, publication-approved teasers may appear. A financial filter excludes listings with no stated revenue band.</p>
+      <label for="sector">Sector</label><select id="sector"><option value="all">Any sector</option><option value="logistics">Logistics</option><option value="services">Services</option></select>
+      <label for="geo">Broad geography</label><select id="geo"><option value="france">France</option><option value="all">Any listed geography</option></select>
+      <label for="revenue">Annual revenue band (optional)</label><select id="revenue"><option value="all">Any stated or unstated revenue</option><option value="3-5">€3–5m</option><option value="5-10">€5–10m</option></select>
+      <div class="row"><button id="searchBtn">Search anonymous teasers</button><button id="resetBtn" class="secondary">Reset demo</button></div>
+      <div id="results" class="cards" aria-live="polite"></div>
+    </section>
+
+    <aside class="panel state">
+      <h2>Observer panel</h2><p class="fine">Plain-language state for this prototype.</p>
+      <dl id="state"></dl>
+      <div class="row"><button class="secondary" data-action="WITHDRAW">Withdraw sample listing</button><button class="secondary" data-action="UNPUBLISH">Make sample unavailable</button></div>
+      <p class="fine">These switches model what must happen if a teaser is withdrawn or loses publication approval: it disappears from new searches and its detail can no longer open.</p>
+    </aside>
+  </div>
+
+  <section class="panel" style="margin-top:20px">
+    <h2>Guided scenarios</h2>
+    <div id="tabs" class="tabs"></div><div id="scenario" class="scenario"></div>
+  </section>
+</main>
+
+<div id="modal" class="modal" hidden>
+  <section class="browser" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+    <div class="browserbar">re-new.example / buyer-access · simulated browser handoff</div>
+    <div class="browserbody"><div id="formContent"><h2 id="formTitle">Request buyer access</h2><p>This is a generic buyer request. The anonymous teaser is not passed to the form.</p><label>Email</label><input readonly value="buyer@example.com" /><label>Name</label><input readonly value="Example Buyer" /><p class="fine">Demo fields are read-only. No personal data is collected or sent.</p><div class="row"><button id="submitBtn">Simulate access request</button><button id="closeBtn" class="secondary">Close</button></div></div><div id="confirmation" class="confirmation hidden"><h2>Request recorded in this demo</h2><p>Re-New staff would review a buyer access request. It does not reserve a business or grant access to any opportunity.</p><button id="doneBtn">Return to discovery</button></div></div>
+  </section>
+</div>
+
+<script>
+/* Portable pure module: fixtures + reducer contain the behavioral question; DOM starts below. */
+const DiscoveryLogic = (() => {
+  const baseListings = [
+    { key:'regional-logistics', title:'Regional logistics operator', sector:'logistics', geography:'France', revenue:'3-5', description:'Fictional established operator serving regional business customers.', active:true, approved:true },
+    { key:'specialist-logistics', title:'Specialist transport services', sector:'logistics', geography:'France', revenue:null, description:'Fictional specialist service business with revenue intentionally unspecified.', active:true, approved:true },
+    { key:'business-services', title:'Business services provider', sector:'services', geography:'France', revenue:'5-10', description:'Fictional recurring-revenue services business.', active:true, approved:true },
+    { key:'withdrawn-sample', title:'Withdrawn logistics sample', sector:'logistics', geography:'France', revenue:'3-5', description:'Fictional listing used only to test removal.', active:true, approved:true },
+    { key:'unpublished-sample', title:'Unavailable service sample', sector:'services', geography:'France', revenue:'3-5', description:'Fictional listing used only to test publication control.', active:true, approved:true }
+  ];
+  const initial = () => ({ filters:{sector:'all', geography:'france', revenue:'all'}, listings:baseListings.map(x=>({...x})), searched:false, selected:null, handoff:'not started', lastChange:'Ready to explore.' });
+  const eligible = (l,f) => l.active && l.approved && (f.sector==='all'||l.sector===f.sector) && (f.geography==='all'||l.geography.toLowerCase()===f.geography.toLowerCase()) && (f.revenue==='all'||l.revenue===f.revenue);
+  function reduce(state, action) {
+    if(action.type==='RESET') return initial();
+    if(action.type==='FILTER') return {...state, filters:{...state.filters,[action.field]:action.value}, searched:false, selected:null, lastChange:'Search criteria changed; run a fresh search for updated results.'};
+    if(action.type==='SEARCH') return {...state, searched:true, selected:null, lastChange:'Only active and publication-approved teasers were checked.'};
+    if(action.type==='OPEN') { const l=state.listings.find(x=>x.key===action.key); return (!l||!l.active||!l.approved) ? {...state, selected:null,lastChange:'That teaser is no longer available to open.'} : {...state,selected:l.key,lastChange:'Anonymous teaser opened; no business identity was revealed.'}; }
+    if(action.type==='WITHDRAW') return {...state,listings:state.listings.map(l=>l.key==='withdrawn-sample'?{...l,active:false}:l),selected:state.selected==='withdrawn-sample'?null:state.selected,lastChange:'Sample listing withdrawn and removed from discovery.'};
+    if(action.type==='UNPUBLISH') return {...state,listings:state.listings.map(l=>l.key==='unpublished-sample'?{...l,approved:false}:l),selected:state.selected==='unpublished-sample'?null:state.selected,lastChange:'Sample listing is no longer publication-approved.'};
+    if(action.type==='HANDOFF') return {...state,handoff:'browser form opened',lastChange:'Buyer chose a generic Re-New access request.'};
+    if(action.type==='SUBMIT') return {...state,handoff:'simulated request submitted for staff review',lastChange:'Simulation confirms review, not access or reservation.'};
+    return state;
+  }
+  return { initial, eligible, reduce };
+})();
+
+let state=DiscoveryLogic.initial(), activeScenario='normal';
+const $=id=>document.getElementById(id); const money=v=>v ? `€${v}m` : 'Not specified';
+function dispatch(a){ state=DiscoveryLogic.reduce(state,a); render(); }
+function render(){
+  $('sector').value=state.filters.sector; $('geo').value=state.filters.geography; $('revenue').value=state.filters.revenue;
+  const available=state.listings.filter(l=>DiscoveryLogic.eligible(l,state.filters)); const selected=state.listings.find(l=>l.key===state.selected);
+  const filterSummary=`${state.filters.sector === 'all' ? 'Any sector' : state.filters.sector} · ${state.filters.geography === 'all' ? 'Any listed geography' : 'France'} · ${state.filters.revenue === 'all' ? 'Any revenue status' : `€${state.filters.revenue}m`}`;
+  $('state').innerHTML=[['Selected filters',filterSummary],['Search run',state.searched?'Yes':'No'],['Eligible teasers',state.searched?available.length:'Not searched'],['Selected teaser',selected?selected.title:'None'],['Buyer handoff',state.handoff],['Last change',state.lastChange]].map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
+  $('results').innerHTML=!state.searched ? '<div class="empty">Choose criteria, then search. The results never show a legal name, address, contact, source or identifier.</div>' : !available.length ? '<div class="empty">No eligible anonymous teasers match. Ineligible, withdrawn and non-public listings stay hidden.</div>' : available.slice(0,3).map(l=>`<article class="card"><h3>${l.title}</h3><div class="meta">${l.sector} · ${l.geography} · Annual revenue: ${money(l.revenue)}</div><p>${l.description}</p><button data-open="${l.key}">View anonymous teaser</button></article>`).join('') + (selected?`<div class="notice"><strong>Anonymous teaser open:</strong> ${selected.description} No identity or protected detail is available. <button id="requestBtn" style="margin-left:8px">Request buyer access</button></div>`:'');
+  renderScenarios();
+}
+const scenarios={
+ normal:{name:'Normal path',description:'Search for logistics in France with €3–5m revenue. Open a teaser, then use the generic access request. Watch that no opportunity context crosses the handoff.',steps:[['Set logistics',()=>dispatch({type:'FILTER',field:'sector',value:'logistics'})],['Set €3–5m',()=>dispatch({type:'FILTER',field:'revenue',value:'3-5'})],['Search',()=>dispatch({type:'SEARCH'})],['Open teaser',()=>dispatch({type:'OPEN',key:'regional-logistics'})],['Request buyer access',()=>openForm()]]},
+ missing:{name:'Missing revenue',description:'A listing with no financial band may appear in a broad logistics search, but it must be excluded if the buyer asks for €3–5m.',steps:[['Reset and choose logistics',()=>{dispatch({type:'RESET'});dispatch({type:'FILTER',field:'sector',value:'logistics'});} ],['Search without revenue filter',()=>dispatch({type:'SEARCH'})],['Require €3–5m',()=>dispatch({type:'FILTER',field:'revenue',value:'3-5'})],['Search again',()=>dispatch({type:'SEARCH'})]]},
+ none:{name:'No matches',description:'Use a combination with no eligible fixture. The result should be an honest empty state, not a near match.',steps:[['Reset',()=>dispatch({type:'RESET'})],['Choose logistics and €5–10m',()=>{dispatch({type:'FILTER',field:'sector',value:'logistics'});dispatch({type:'FILTER',field:'revenue',value:'5-10'});} ],['Search',()=>dispatch({type:'SEARCH'})]]},
+ withdrawn:{name:'Withdrawn listing',description:'A listing can disappear after it was once searchable. It must not return in the next search or remain openable.',steps:[['Reset and search logistics',()=>{dispatch({type:'RESET'});dispatch({type:'FILTER',field:'sector',value:'logistics'});dispatch({type:'SEARCH'});} ],['Withdraw sample listing',()=>dispatch({type:'WITHDRAW'})],['Search again',()=>dispatch({type:'SEARCH'})],['Try opening withdrawn teaser',()=>dispatch({type:'OPEN',key:'withdrawn-sample'})]]},
+ unavailable:{name:'Unavailable listing',description:'A teaser without publication approval must disappear in the same way, even though its internal record still exists.',steps:[['Reset',()=>dispatch({type:'RESET'})],['Remove publication approval',()=>dispatch({type:'UNPUBLISH'})],['Search services',()=>{dispatch({type:'FILTER',field:'sector',value:'services'});dispatch({type:'SEARCH'});} ],['Try opening unavailable teaser',()=>dispatch({type:'OPEN',key:'unpublished-sample'})]]}
+};
+function renderScenarios(){ $('tabs').innerHTML=Object.entries(scenarios).map(([k,s])=>`<button class="tab ${k===activeScenario?'active':''}" data-tab="${k}">${s.name}</button>`).join(''); const s=scenarios[activeScenario]; $('scenario').innerHTML=`<strong>${s.name}</strong><p>${s.description}</p><div class="steps">${s.steps.map(([name],i)=>`<div class="step"><span>${i+1}. ${name}</span><button data-step="${i}">Run step</button></div>`).join('')}</div>`; }
+function openForm(){ dispatch({type:'HANDOFF'}); $('modal').hidden=false; $('formContent').classList.remove('hidden'); $('confirmation').classList.add('hidden'); }
+['sector','geo','revenue'].forEach(id=>$(id).addEventListener('change',e=>dispatch({type:'FILTER',field:id==='geo'?'geography':id,value:e.target.value})));
+$('searchBtn').onclick=()=>dispatch({type:'SEARCH'}); $('resetBtn').onclick=()=>dispatch({type:'RESET'});
+document.addEventListener('click',e=>{ if(e.target.dataset.open) dispatch({type:'OPEN',key:e.target.dataset.open}); if(e.target.dataset.action) dispatch({type:e.target.dataset.action}); if(e.target.id==='requestBtn') openForm(); if(e.target.dataset.tab){activeScenario=e.target.dataset.tab; state=DiscoveryLogic.initial(); $('modal').hidden=true; $('formContent').classList.remove('hidden'); $('confirmation').classList.add('hidden'); render();} if(e.target.dataset.step!==undefined) scenarios[activeScenario].steps[+e.target.dataset.step][1](); });
+$('closeBtn').onclick=()=>{$('modal').hidden=true}; $('doneBtn').onclick=()=>{$('modal').hidden=true}; $('submitBtn').onclick=()=>{dispatch({type:'SUBMIT'});$('formContent').classList.add('hidden');$('confirmation').classList.remove('hidden')};
+render();
+</script>
+</body></html>
