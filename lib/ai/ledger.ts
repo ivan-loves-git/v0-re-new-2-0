@@ -20,6 +20,7 @@ import {
 } from "@/lib/ai/metrics"
 import { readCompleteLedgerPages, ledgerKeysetFilter, compareLedgerCursor, LEDGER_UUID, type LedgerIncompleteReason } from "@/lib/ai/ledger-pagination"
 import type { WaveAiTokenUsage } from "@/lib/ai/usage"
+import type { WaveAiGenerationEvent } from "@/lib/ai/email-contract"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export type WaveAiFeature = "email_draft" | "next_action" | "match_review" | "pdr_screening"
@@ -134,9 +135,8 @@ export async function failWaveAiRun(input: {
 export async function recordWaveAiGenerationEvent(input: {
   actorUserId: string
   generationId: string
-  eventType: string
+  eventType: WaveAiGenerationEvent["eventType"]
   reasonCode?: string
-  actionKey?: string
 }) {
   const supabase = createAdminClient()
   const { data: run, error: runError } = await supabase
@@ -156,7 +156,7 @@ export async function recordWaveAiGenerationEvent(input: {
       actor_user_id: input.actorUserId,
       event_type: input.eventType,
       reason_code: input.reasonCode ?? "",
-      action_key: input.actionKey ?? "",
+      action_key: "",
     }, {
       onConflict: "generation_id,event_type",
       ignoreDuplicates: true,

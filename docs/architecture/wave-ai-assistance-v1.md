@@ -1,6 +1,6 @@
 # WAVE AI assistance v1
 
-- **Status:** Released foundation; bounded capability expansion remains planned
+- **Status:** Released foundation; opportunity next-action advice retired by #266 / #267
 - **Scope:** Staff-only assistance in the Re-New WAVE platform
 - **Related product-intelligence contract:** [wave-product-observability-v1.md](./wave-product-observability-v1.md)
 - **Canonical business contract:** [../data-models/ma-advisory-data-model-v1.md](../data-models/ma-advisory-data-model-v1.md)
@@ -24,10 +24,7 @@ The current staff surface is /tools/wave-ai.
 
 ### Reuse of the same foundation
 
-The next capabilities use the same guardrails and do not widen the model’s authority:
-
-1. **Next-action recommendations** — up to three ranked suggestions that point to existing deterministic actions.
-2. **Match-review ordering** — a temporary qualitative order and short rationale inside a deterministic candidate set; it never changes the candidate set or authoritative score.
+The planned **match-review ordering** capability uses the same guardrails: a temporary qualitative order and short rationale inside a deterministic candidate set; it never changes the candidate set or authoritative score. Opportunity next-action advice is retired, not planned for restoration.
 
 No repreneur, public user or external M&A contact sees or invokes WAVE AI in this version.
 
@@ -78,9 +75,16 @@ It excludes internal notes not selected for the draft, source-review evidence, a
 
 The generated subject and body return only to the staff editor. They are not written to the AI ledger or PostHog.
 
-### Next-action recommendations
+### Retired opportunity next-action advice — 16 October 2026
 
-Inputs are limited to a server-built opportunity projection: status, computed source-review flag, profile completeness, date precision and age buckets, match counts, active-pursuit state, derived readiness or gate booleans, last canonical interaction age or next-due bucket, as-of time, and the server-derived allowed actions. It excludes raw rows, notes, audit data, secrets and identifiers. The model returns at most three unique ordered recommendations with rationale, confidence, recorded-fact references and explicit unknowns. Each recommendation references an existing deterministic action identifier and cannot invent a mutation, URL or identifier. In v1 the only confirmable actions are `resolve_source_review` and `complete_opportunity_profile`; match review and pursuit continue remain deterministic-only because they do not have one unambiguous completion boundary. The server gives each recommendation a short-lived, domain-separated HMAC outcome token. Only the matching successful staff mutation can append the confirmed outcome; a ledger failure never rolls back that mutation. The Opportunity Overview keeps the deterministic Next Best Action primary. Staff must explicitly select Ask WAVE AI to request this advisory output.
+[Product Change #266](https://github.com/re-new-team/renew-governance/issues/266) and [Decision #267](https://github.com/re-new-team/renew-governance/issues/267) retire the W-078 staff opportunity advisory at Ivan's request.
+
+- The Opportunity Overview no longer shows **WAVE AI next actions**, **Ask WAVE AI**, ranked AI advice or its feedback controls.
+- `POST /api/wave-ai/next-actions` returns a static `410 Gone` response, before authentication, body parsing, business-data reads, provider requests or ledger writes. An already-open browser cannot generate another recommendation.
+- The feature-specific projection, generation, response schema, UI state and outcome-token implementation are removed. Existing `wave_ai_outcome` query/form values are ignored; normal profile saves and source correction do not append AI outcomes.
+- Existing opportunity actions and the deterministic Next Best Action remain authoritative and available. Repreneur portal next actions, manual M&A/external-pursuit follow-up, AI email drafting and shared AI usage are unchanged.
+- Historical `next_action` runs and events remain readable under the existing 12-month metadata retention policy. Usage labels identify this advice as retired. The general event endpoint remains shared with email drafting; there is no new recommendation generation or outcome-confirmation path. No rows, migrations, constraints, credentials or provider settings are removed.
+- Acceptance covers the retired HTTP boundary, retained opportunity and email/portal behavior, desktop/mobile overview, exact-candidate verification and production readback. A scoped code revert is sufficient to roll back the removal; no data restoration is required.
 
 ### Match-review ordering
 
@@ -114,7 +118,7 @@ Append-only events link to generation_id:
 - copied;
 - send review opened;
 - send succeeded or failed through an existing deterministic route;
-- confirmed workflow action;
+- historical confirmed workflow action (retired next-action advice; no new writes);
 - optional helpful/not-helpful feedback;
 - discarded.
 
@@ -134,7 +138,7 @@ A generation is useful only when it produces a verified human action:
 
 - email: staff copies the reviewed draft or an existing send path reports successful delivery;
 - match: staff confirms or saves the match through an existing deterministic action;
-- next action: staff completes the corresponding existing workflow action.
+- historical next-action advice: staff completed the corresponding existing workflow action before retirement; existing outcome evidence remains readable.
 
 Views, renders, edits and ratings are diagnostic signals rather than useful outcomes.
 
