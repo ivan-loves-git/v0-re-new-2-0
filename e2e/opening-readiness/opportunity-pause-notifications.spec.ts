@@ -19,6 +19,9 @@ test("staff pause automatically sends only the public reason to both affected co
   test.setTimeout(180_000)
   const db = new Client({ connectionString: databaseUrl.toString() })
   await db.connect()
+  const originalSignInKeys = new Set((await db.query<{ key: string }>(
+    `SELECT "key" FROM public."rateLimit" WHERE "key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%'`,
+  )).rows.map(row => row.key))
   try {
     // Initial synthetic relationship states, matching the protected paused-history fixture.
     // The positive pause below goes through the real authenticated product action.
@@ -32,8 +35,8 @@ test("staff pause automatically sends only the public reason to both affected co
     await db.query(`INSERT INTO public.opportunity_matches(id,opportunity_id,repreneur_id,status,pursuit_stage,created_by)
       VALUES($1,$2,$3,'interested',null,$4),($5,$2,$6,'active_pursuit','interest',$4)`,
       [interestedMatch, opportunityId, fixture.ids.realRepreneur, fixture.authIds.staffUser, pursuitMatch, fixture.ids.realNonOwnerRepreneur])
-    await db.query(`INSERT INTO public.opportunities(id,reference,status,is_demo,source_office_id,public_title,created_by)
-      VALUES($1,'QA-PAUSE-QUEUE-REFERENCE','active',false,$2,'QA QUEUED PAUSE — SYNTHETIC',$3)`,
+    await db.query(`INSERT INTO public.opportunities(id,reference,status,is_demo,source_office_id,public_title,description,created_by)
+      VALUES($1,'QA-PAUSE-QUEUE-REFERENCE','active',false,$2,'QA QUEUED PAUSE — SYNTHETIC','PRIVATE SYNTHETIC SOURCE DESCRIPTION',$3)`,
       [queuedOpportunityId, fixture.ids.realOffice, fixture.authIds.staffUser])
     await db.query(`INSERT INTO public.opportunity_ma_contacts(opportunity_id,affiliation_id,contact_name_snapshot,is_primary,linked_by)
       VALUES($1,$2,'Synthetic source',true,$3)`, [queuedOpportunityId, fixture.ids.realAffiliation, fixture.authIds.staffUser])
@@ -117,6 +120,7 @@ test("staff pause automatically sends only the public reason to both affected co
     expect(queued.state).toBe("pending")
     expect(queued.provider_message_id).toBeNull()
     expect(queued.body_text).toContain("Mise en pause par le cabinet")
+    expect(queued.body_text).not.toContain("PRIVATE")
     await page.goto("/emails?tab=templates")
     await page.getByRole("tab", { name: "Templates", exact: true }).click()
     await autoSend.click()
@@ -138,6 +142,13 @@ test("staff pause automatically sends only the public reason to both affected co
   } finally {
     await db.query("ROLLBACK")
     await db.query("SELECT public.email_policy_set('opportunity_paused',true,$1)", [fixture.authIds.staffUser])
+    // This journey owns the new buckets for its unique fictional client only.
+    // Leave earlier journeys' budgets intact and do not leak a new IP to later ones.
+    const ownedSignInKeys = (await db.query<{ key: string }>(
+      `SELECT "key" FROM public."rateLimit" WHERE "key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%'`,
+    )).rows.map(row => row.key).filter(key => !originalSignInKeys.has(key))
+    for (const key of ownedSignInKeys) expect(key).toMatch(/^203\.0\.113\.221\|\/sign-in\/email$|^auth:\/api\/auth\/sign-in\/email:[A-Za-z0-9_-]{43}$/)
+    if (ownedSignInKeys.length) await db.query('DELETE FROM public."rateLimit" WHERE "key"=ANY($1::text[])', [ownedSignInKeys])
     await db.end()
   }
 })
