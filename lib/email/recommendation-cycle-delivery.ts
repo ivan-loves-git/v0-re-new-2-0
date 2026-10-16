@@ -1,3 +1,4 @@
+import { businessMailApproval, configuredBusinessCc } from "./business-mail"
 import "server-only"
 
 import { createHash } from "node:crypto"
@@ -125,7 +126,7 @@ export async function deliverRecommendationCycleNotification(
       return suppressOrReview(cycleId, kind, leaseToken)
     }
     const digest = createHash("sha256")
-      .update(JSON.stringify([to.toLowerCase(), copy.subject, copy.body])).digest("hex")
+      .update(JSON.stringify([to.toLowerCase(), businessMailApproval()?.review.subject ?? copy.subject, businessMailApproval()?.review.body_text ?? copy.body, configuredBusinessCc([to])])).digest("hex")
     const beforeProviderAttempt = async () => {
       const { data: began, error: beginError } = await db.rpc("w175_begin_cycle_provider_attempt", {
         p_cycle_id: cycleId, p_kind: kind, p_lease_token: leaseToken,
@@ -140,11 +141,12 @@ export async function deliverRecommendationCycleNotification(
       subject: copy.subject, body: copy.body, variables: copy.variables, staff,
     })
     const result = staff
-      ? await sendEmailDirect({ to, subject: copy.subject, react, idempotencyKey, beforeProviderAttempt })
+      ? await sendEmailDirect({ to, subject: copy.subject, react, idempotencyKey, beforeProviderAttempt, templateKey: payload.templateKey, sourceContext: { kind: "cycle", cycleId, deliveryKind: kind } })
       : await sendEmail({
           to, subject: copy.subject, react, repreneurId: payload.repreneurId,
-          templateKey: payload.templateKey, idempotencyKey, beforeProviderAttempt,
+          templateKey: payload.templateKey, idempotencyKey, beforeProviderAttempt, sourceContext: { kind: "cycle", cycleId, deliveryKind: kind },
         })
+    if (result.queued) { await complete(cycleId, kind, leaseToken, "deferred"); return "review_required" }
     if (result.success && (result.resendId || !staff)) {
       return await complete(cycleId, kind, leaseToken, "sent", result.resendId) === "sent"
         ? "sent" : "failed"

@@ -2,7 +2,7 @@ import "server-only"
 import { randomBytes } from "node:crypto"
 import { Pool } from "pg"
 import { env } from "@/lib/env"
-import { FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
+import { ACCESS_FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { renderPortalAccessSetupEmail } from "@/lib/email/portal-setup-email"
 import { buildPasswordResetBrowserUrl } from "@/lib/password-reset-browser-url"
 import { authorizePasswordResetDelivery, passwordResetUserLockKey } from "@/lib/password-reset-link"
@@ -98,7 +98,8 @@ export async function sendRepreneurPortalSetupInvitation(identity: PortalSetupId
     }
     const url = buildPasswordResetBrowserUrl(env.BETTER_AUTH_URL, token, true)
     const { error } = await resend.emails.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
+          tags: [{ name: "renew_mail_class", value: "access" }],
+      from: `${FROM_NAME} <${ACCESS_FROM_EMAIL}>`,
       to: recipient.email,
       subject: "Votre accès à votre espace Re-New",
       html: renderPortalAccessSetupEmail(recipient.name, url, "7 jours"),

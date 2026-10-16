@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation"
 import { connection } from "next/server"
-import { getMyRepreneurOpportunity, listMyRepreneurOpportunities } from "@/lib/actions/repreneur-opportunities"
+import { getMyRepreneurOpportunity, listMyRepreneurOpportunities, listMyRepreneurDealFlow } from "@/lib/actions/repreneur-opportunities"
 import { readPortalCurrentPursuit, readPortalDealActionIndicators } from "@/lib/data/current-pursuit"
 import { RepreneurPursuitWorkspace } from "@/components/portal/repreneur-pursuit-workspace"
 import { interestWithdrawalOperationsPaused } from "@/lib/interest-withdrawal-operations"
@@ -22,14 +22,20 @@ export default async function PortalDealDetailPage({ params, searchParams }: {
     notFound()
   }
 
+  const paused = opportunity.opportunity_status === "paused"
+  const ordinaryDeals = paused || search.return !== "/portal/pursuits"
+    ? (await listMyRepreneurDealFlow("relevance")).deals : null
+  const navigationDeals = ordinaryDeals?.some((deal) => deal.opportunity_status === "paused")
+    ? ordinaryDeals : list.opportunities
+
   const [journey, actions] = await Promise.all([
-    opportunity.match_id && opportunity.match_status === "active_pursuit"
+    !paused && opportunity.match_id && opportunity.match_status === "active_pursuit"
       ? readPortalCurrentPursuit({
         matchId: opportunity.match_id,
         viewer: { kind: "portal" },
       })
       : Promise.resolve(null),
-    readPortalDealActionIndicators(list.opportunities.map((deal) => deal.match_id)),
+    readPortalDealActionIndicators(navigationDeals.filter((deal) => deal.opportunity_status !== "paused" && deal.match_id).map((deal) => deal.match_id!)),
   ])
   const status = search.status === "active" || search.status === "awaiting" || search.status === "ended"
     ? search.status : "all"
@@ -41,7 +47,9 @@ export default async function PortalDealDetailPage({ params, searchParams }: {
 
   return <RepreneurPursuitWorkspace
     opportunity={opportunity}
-    deals={list.opportunities.map((deal) => ({
+    deals={navigationDeals.map((deal) => ({
+      opportunity_id: deal.opportunity_id,
+      opportunity_status: deal.opportunity_status,
       match_id: deal.match_id,
       match_status: deal.match_status,
       pursuit_stage: deal.pursuit_stage,

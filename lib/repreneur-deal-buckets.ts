@@ -3,6 +3,7 @@ import "server-only"
 import type { OpportunityMatchStatus, RepreneurDealBucket } from "@/lib/types/opportunity"
 
 export type RepreneurDealBucketCandidate = {
+  opportunityStatus?: "active" | "paused"
   opportunityId: string
   matchId: string | null
   matchStatus: OpportunityMatchStatus | null
@@ -18,6 +19,7 @@ export type RepreneurDealBucketCandidate = {
 export function classifyRepreneurDeal(
   candidate: RepreneurDealBucketCandidate,
 ): RepreneurDealBucket | null {
+  if (candidate.opportunityStatus === "paused") return "live"
   switch (candidate.matchStatus) {
     case "proposed":
       if (!candidate.matchId) return null

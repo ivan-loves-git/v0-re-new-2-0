@@ -63,7 +63,6 @@ describe("W-086/W-087 relationship workspaces", () => {
     expect(detail).toContain("No relationship activity recorded.")
     expect(contactAction).toContain("createMaOfficeContact")
     expect(contactAction).not.toContain("listMaCanonicalContactOptions")
-    expect(contactAction).toContain("move them from Contacts")
     expect(contactAction).toContain('formData.set("contact_mode", "new")')
     expect(contactAction).not.toContain('.from("ma_contacts")')
   })

@@ -14,6 +14,7 @@ import {
   startCriticalOperation,
   type CriticalOperationTrace,
 } from "@/lib/observability/critical-operation"
+import { cleanupExternalLdcStaging } from "@/lib/external-ldc-version"
 import { cleanupExpiredPrivateUploads } from "@/lib/private-upload-server"
 import { processRecipientImCleanup } from "@/lib/recipient-im-cleanup"
 import { purgeExpiredRepreneurFeedback } from "@/lib/repreneur-feedback/cleanup"
@@ -27,9 +28,9 @@ export const maxDuration = 60
 const ABANDONMENT_HOURS = 24 // Send reminder after 24 hours
 const MAX_REMINDERS_PER_REPRENEUR = 2
 
-// Bertrand is BCC'd on every interview reminder so he has a paper trail.
-// Override with CC_ON_INTERVIEW_REMINDER env var if the address changes.
-const INTERVIEW_REMINDER_BCC = env.CC_ON_INTERVIEW_REMINDER || "bertrand.galas@edu.escp.eu"
+// Preserve the optional reminder-copy override; the default is deduplicated
+// against Bertrand's shared business CC before sending.
+const INTERVIEW_REMINDER_BCC = env.CC_ON_INTERVIEW_REMINDER || "bertrand@re-new.team"
 
 export async function GET(request: Request) {
   // Verify the request is from Vercel Cron.
@@ -140,6 +141,7 @@ export async function GET(request: Request) {
             subject: abandonedSubject,
             repreneurId: repreneur.id,
             templateKey: "abandoned_reminder",
+            sourceContext: { kind: "abandoned", trackingId: form.id, reminderNumber: (form.reminder_count || 0) + 1 },
             requiresConsent: true,
             idempotencyKey,
             react: AbandonedReminderEmail({
@@ -244,7 +246,7 @@ export async function GET(request: Request) {
               to: rep.email,
               subject: interviewSubject,
               repreneurId: rep.id,
-              templateKey: "interview_reminder",
+              templateKey: "interview_reminder", sourceContext: { kind: "interview", activityId: activity.id, eventDate: activity.event_date },
               bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
               idempotencyKey,
               react: InterviewReminderEmail({
@@ -347,7 +349,7 @@ export async function GET(request: Request) {
               to: c.email,
               subject: bookingSubject,
               repreneurId: c.id,
-              templateKey: "booking_reminder",
+              templateKey: "booking_reminder", sourceContext: { kind: "booking", repreneurId: c.id, invitationAt: bookingEvent.sent_at },
               bcc: INTERVIEW_REMINDER_BCC ? [INTERVIEW_REMINDER_BCC] : undefined,
               idempotencyKey,
               react: BookingReminderEmail({
@@ -468,6 +470,7 @@ export async function GET(request: Request) {
     activeSubjobTrace = privateUploadCleanupTrace
     try {
       await cleanupExpiredPrivateUploads({ batchSize: 25 })
+      await cleanupExternalLdcStaging(createAdminClient())
     } catch {
       privateUploadCleanupErrors.push("private_upload_cleanup_failed")
     }

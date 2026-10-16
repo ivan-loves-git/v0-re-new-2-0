@@ -1,6 +1,7 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 import { Client } from "pg"
 import { OPENING_READINESS_FIXTURE } from "../../lib/opening-readiness-fixture"
+import { dismissNotifications } from "./dismiss-notifications"
 
 const fixture = OPENING_READINESS_FIXTURE
 const databaseUrl = process.env.OPENING_FIXTURE_DATABASE_URL
@@ -23,7 +24,20 @@ if (!databaseUrl || !password || !cronSecret || process.env.CI !== "true" ||
 
 test.use({ timezoneId: "Europe/Paris" })
 
-test("staff can review one generated contact group on desktop/mobile; non-staff cannot open its rule", async ({ page, browser, request }) => {
+async function readyReviewQueue(page: Page) {
+  const display = page.getByRole("region", { name: "Staff email review queue", exact: true })
+    .getByRole("button", { name: "Display", exact: true })
+  const density = page.getByText("Row density", { exact: true })
+  // Visible server markup alone does not prove the queue's client interactions.
+  await expect(async () => {
+    if (!(await density.isVisible())) await display.click()
+    expect(await density.isVisible()).toBe(true)
+  }).toPass({ timeout: 15_000 })
+  await page.keyboard.press("Escape")
+  await expect(density).toBeHidden()
+}
+
+test("staff can review one generated contact group on desktop/mobile; non-staff cannot open its rule", async ({ page, browser, request }, testInfo) => {
   test.setTimeout(180_000)
   const client = new Client({ connectionString: databaseUrl })
   await client.connect()
@@ -68,9 +82,16 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
       GROUP BY review.id`, [recipient])
     expect(grouped.rows).toHaveLength(1)
     expect(grouped.rows[0]).toMatchObject({ count: 2 })
-    expect(grouped.rows[0]!.body_text).toContain("QA-FRESH-A")
-    expect(grouped.rows[0]!.body_text).toContain("QA-FRESH-B")
+    expect(grouped.rows[0]!.body_text).toContain("QA FRESHNESS A — SYNTHETIC (CA : 25 M€)")
+    expect(grouped.rows[0]!.body_text).not.toContain("QA-FRESH-A")
+    expect(grouped.rows[0]!.body_text).toContain("QA FRESHNESS B — SYNTHETIC (CA : 25 M€)")
     const reviewId = grouped.rows[0]!.id
+    // Model a retained, never-attempted legacy draft; no production data.
+    const oldBody = "QA-FRESH-A et QA-FRESH-B — retained staff words"
+    await client.query("UPDATE public.staff_email_reviews SET body_text=$2 WHERE id=$1", [reviewId, oldBody])
+    await client.query(`UPDATE public.opportunity_freshness_members
+      SET frozen_member=frozen_member-'revenue_meur'-'copy_contract' WHERE review_id=$1`, [reviewId])
+
 
     const anonymous = await browser.newContext()
     const anonymousPage = await anonymous.newPage()
@@ -94,19 +115,27 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
       has: page.locator(`a[href="/emails/review/${reviewId}"]`),
     })
     await expect(reviewRow.getByText("Source freshness", { exact: true })).toBeVisible()
-    await reviewRow.getByRole("link", { name: "Review" }).click()
-    await expect(page.getByText("Catalogue template disabled")).toBeVisible()
-    await expect(page.getByRole("button", { name: "Approve and send" })).toBeDisabled()
-    await expect(page.getByText("QA-FRESH-A", { exact: false }).first()).toBeVisible()
-    await expect(page.getByText("QA-FRESH-B", { exact: false }).first()).toBeVisible()
-    await page.getByRole("link", { name: "View the internal 45-day rule" }).click()
+    await readyReviewQueue(page)
+    await reviewRow.getByRole("link", { name: "Review", exact: true }).click()
+    const reviewSheet = page.getByRole("dialog", { name: "Review message", exact: true })
+    await expect(reviewSheet).toBeVisible()
+    await expect(reviewSheet.getByRole("button", { name: "Send", exact: true })).toBeDisabled()
+    await reviewSheet.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await expect(reviewSheet.getByText("Catalogue template disabled or unavailable", { exact: true })).toBeVisible()
+    await expect(reviewSheet.getByText("QA-FRESH-A", { exact: false }).first()).toBeVisible()
+    await expect(reviewSheet.getByText("QA-FRESH-B", { exact: false }).first()).toBeVisible()
+    await reviewSheet.getByRole("link", { name: "View the internal 45-day rule" }).click()
     await expect(page.getByRole("heading", { name: "Opportunity freshness" })).toBeVisible()
 
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(`/emails/review/${reviewId}`)
-    await expect(page.getByRole("heading", { name: "Review & send" })).toBeVisible()
-    await expect(page.getByRole("link", { name: "View the internal 45-day rule" })).toBeVisible()
-    const sendBox = await page.getByRole("button", { name: "Approve and send" }).boundingBox()
+    const directReview = page.locator("#main-content:visible")
+    await expect(directReview.getByRole("heading", { name: "Review message", exact: true })).toBeVisible()
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await expect(directReview.getByRole("link", { name: "View the internal 45-day rule" })).toBeVisible()
+    const sendButton = directReview.getByRole("button", { name: "Send", exact: true })
+    await expect(sendButton).toBeDisabled()
+    const sendBox = await sendButton.boundingBox()
     expect(sendBox && sendBox.x + sendBox.width).toBeLessThanOrEqual(390)
 
     await client.query("UPDATE public.email_templates SET is_active=true WHERE template_key='ma_opportunity_validity_check'")
@@ -115,23 +144,79 @@ test("staff can review one generated contact group on desktop/mobile; non-staff 
     const body = page.locator("#review-body:visible")
     await expect(body).toHaveCount(1)
     await expect(body).toBeEditable()
-    await body.fill((await body.inputValue()) + "\nSynthetic QA group check.")
+    await expect(body).toHaveValue(oldBody)
+    await expect(sendButton).toBeDisabled()
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await directReview.getByRole("button", { name: "Refresh group evidence", exact: true }).click()
+    await expect(page.getByText("Exact group evidence refreshed", { exact: false })).toBeVisible()
+    await page.reload()
+    await expect(body).toHaveValue(oldBody)
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    await directReview.getByRole("button", { name: "Apply newer template copy", exact: true }).click()
+    await expect(page.getByText("Newer template copy applied", { exact: false })).toBeVisible()
+    await page.reload()
+    await expect(body).not.toHaveValue(oldBody)
+    expect(await body.inputValue()).not.toContain("QA-FRESH-A")
+
+    const reviewedBody = (await body.inputValue()) + "\nSynthetic QA group check."
+    await body.fill(reviewedBody)
     await page.getByRole("button", { name: "Save reviewed text" }).click()
     await expect(page.getByText("Review text saved.", { exact: false })).toBeVisible()
     await page.reload()
-    page.once("dialog", async (dialog) => dialog.accept())
-    await page.getByRole("button", { name: "Approve and send" }).click()
-    await expect(page.getByText("Provider accepted the grouped email.", { exact: false })).toBeVisible()
+    await expect(body).toHaveValue(reviewedBody)
+    const reviewedSubject = await directReview.getByRole("textbox", { name: "Subject", exact: true }).inputValue()
+    await dismissNotifications(page)
+    await sendButton.click()
+    const confirmation = page.getByRole("dialog", { name: "Confirm send", exact: true })
+    await expect(confirmation).toBeVisible()
+    await expect(confirmation).toContainText("every project title is recognizable to this contact")
+    await expect(confirmation).toContainText("no Re-New ownership or public-distribution claim")
+    await expect(confirmation).toContainText(reviewedSubject)
+    await expect(confirmation).toContainText(reviewedBody)
+    const confirmSend = confirmation.getByRole("button", { name: "Send", exact: true })
+    await expect(confirmSend).toBeDisabled()
+    await confirmation.getByRole("checkbox", { name: "Acknowledge complete message", exact: true }).check()
+    await expect(confirmSend).toBeEnabled()
+    await confirmSend.click()
+    // Sending advances the saved version and can remount away the confirmation.
+    await expect(directReview.getByText("Accepted by provider", { exact: true })).toBeVisible()
+    await page.reload()
+    await expect(directReview.getByText("Accepted by provider", { exact: true })).toBeVisible()
+    await expect(directReview.getByRole("textbox", { name: "Subject", exact: true })).toHaveValue(reviewedSubject)
+    await expect(body).toHaveValue(reviewedBody)
+    await expect(sendButton).toBeDisabled()
+    await directReview.locator("summary").filter({ hasText: /^More details$/ }).click()
+    const publicReceipt = directReview.locator('[data-slot="alert-description"]:visible')
+      .filter({ hasText: /Provider receipt qa-/ })
+    await expect(publicReceipt).toContainText("Sent means accepted by the provider, not delivered or read.")
     const receipt = await client.query<{ provider_message_id: string; members: number }>(`
       SELECT delivery.provider_message_id,count(member.opportunity_id)::int AS members
       FROM public.opportunity_freshness_deliveries delivery
       JOIN public.opportunity_freshness_members member ON member.review_id=delivery.review_id
       WHERE delivery.review_id=$1 GROUP BY delivery.provider_message_id`, [reviewId])
-    expect(receipt.rows).toEqual([{ provider_message_id: "qa-allowlist-accepted", members: 2 }])
+    expect(receipt.rows).toEqual([{ provider_message_id: expect.stringMatching(/^qa-/), members: 2 }])
     const fakeSingleSends = await client.query<{ count: number }>(`
       SELECT count(*)::int AS count FROM public.ma_interactions
       WHERE opportunity_id IN ($1,$2) AND template_key='ma_opportunity_validity_check'`, [opportunityA,opportunityB])
     expect(fakeSingleSends.rows[0]?.count).toBe(0)
+    await page.goto("/emails")
+    await page.getByRole("tab", { name: "Templates", exact: true }).click()
+    await page.locator("#template-ma_opportunity_validity_check").getByRole("button", { name: "Voir le contenu", exact: true }).click()
+    const preview = page.getByRole("dialog", { name: "M&A Validity Check", exact: true })
+    await expect(preview.getByRole("textbox", { name: "Sujet", exact: true })).toHaveValue("Vérification {opportunityTitle}")
+    await expect(preview.frameLocator('iframe[title="Email preview"]').locator("body")).toContainText("Projet Orion")
+    for (const width of [390, 1440]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 })
+      await preview.getByRole("button", { name: "Plusieurs opportunités", exact: true }).click()
+      const contents = preview.frameLocator('iframe[title="Email preview"]').locator("body")
+      await expect(contents).toContainText("Projet Atlas")
+      await expect(contents.locator("img")).toHaveCount(0)
+      await expect(preview.getByRole("textbox", { name: "Sujet", exact: true })).toHaveValue("Vérification {opportunityTitle}")
+      await page.screenshot({ path: testInfo.outputPath(`freshness-template-${width}.png`) })
+      await preview.getByRole("button", { name: "Une opportunité", exact: true }).click()
+      await expect(contents).not.toContainText("Projet Atlas")
+    }
+
   } finally {
     await client.end()
   }

@@ -92,7 +92,7 @@ describe("W-064 provisional Acme source foundation", () => {
       "Does NOT log to database - for testing only",
     )
     expect(manualEmailSurface).toContain(
-      "Test Mode: Emails are sent directly without logging",
+      "Prepare fictional test copy under the selected business review policy",
     )
     expect(action).not.toContain("sendTestEmail")
   })

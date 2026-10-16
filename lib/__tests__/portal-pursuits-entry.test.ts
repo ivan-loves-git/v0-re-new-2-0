@@ -3,18 +3,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   listOpportunities: vi.fn(),
+  listDealFlow: vi.fn(),
   getOpportunity: vi.fn(),
   listExternal: vi.fn(),
   listLegacyBoard: vi.fn(),
   getAttachments: vi.fn(),
   readActions: vi.fn(),
   readNextActions: vi.fn(),
+  notFound: vi.fn(() => { throw new Error("NEXT_NOT_FOUND") }),
 }))
 
 vi.mock("next/server", () => ({ connection: vi.fn() }))
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), notFound: mocks.notFound }))
 vi.mock("@/lib/actions/repreneur-opportunities", () => ({
   listMyRepreneurOpportunities: mocks.listOpportunities,
+  listMyRepreneurDealFlow: mocks.listDealFlow,
   getMyRepreneurOpportunity: mocks.getOpportunity,
 }))
 vi.mock("@/lib/actions/external-pursuits", () => ({ listExternalPursuitBoard: mocks.listExternal }))
@@ -34,6 +37,7 @@ describe("owner Pursuits entry", () => {
       public_title: "Safe selected match", sector: "Industrie", activity: "Manufacturing",
       location: "France", visible_documents: [], recommendation_expires_at: null,
     }] })
+    mocks.listDealFlow.mockImplementation(async () => ({ deals: (await mocks.listOpportunities()).opportunities }))
     mocks.listExternal.mockResolvedValue([])
     mocks.listLegacyBoard.mockResolvedValue([])
     mocks.getAttachments.mockResolvedValue({})
@@ -58,7 +62,7 @@ describe("owner Pursuits entry", () => {
     expect(html).toContain('href="/portal/pursuits?view=external"')
     expect(html).not.toContain("Approved public description")
     expect(mocks.readActions).toHaveBeenCalledWith(["match-1"])
-    expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" }, expect.any(Object))
+    expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" }, expect.any(Object), { indicators: { "match-1": "respond" } })
     expect(mocks.listExternal).not.toHaveBeenCalled()
     expect(mocks.listLegacyBoard).not.toHaveBeenCalled()
   })
@@ -95,8 +99,30 @@ describe("owner Pursuits entry", () => {
     expect(html).not.toContain("Re-New cards are a read-only view")
     expect(html).not.toContain('data-wave-workspace="pursuit"')
     expect(mocks.listExternal).toHaveBeenCalledOnce()
-    expect(mocks.listOpportunities).not.toHaveBeenCalled()
-    expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" })
+    expect(mocks.listOpportunities).toHaveBeenCalledOnce()
+    expect(mocks.readNextActions).toHaveBeenCalledWith({ kind: "portal" }, expect.any(Object), { external: [] })
     expect(mocks.readActions).not.toHaveBeenCalled()
+  })
+
+  it("returns not found when the detail reader cannot authorize the selected deal", async () => {
+    mocks.getOpportunity.mockResolvedValue(null)
+    await expect(PortalDealDetailPage({ params: Promise.resolve({ matchId: "match-1" }),
+      searchParams: Promise.resolve({}),
+    })).rejects.toThrow("NEXT_NOT_FOUND")
+    expect(mocks.notFound).toHaveBeenCalledOnce()
+  })
+
+  it("keeps the authorized External board available when its optional owned-match summary fails", async () => {
+    mocks.listOpportunities.mockRejectedValue(new Error("Owned match summary unavailable"))
+    const html = renderToStaticMarkup(await PortalPursuitsPage({ searchParams: Promise.resolve({ view: "external" }) }))
+    expect(html).toContain('aria-label="Pursuit board"')
+    expect(html).toContain("New external pursuit")
+    expect(html).toContain("Current actions are unavailable")
+    expect(mocks.readNextActions).not.toHaveBeenCalled()
+  })
+
+  it("does not conceal a required External board read failure", async () => {
+    mocks.listExternal.mockRejectedValue(new Error("External board denied"))
+    await expect(PortalPursuitsPage({ searchParams: Promise.resolve({ view: "external" }) })).rejects.toThrow("External board denied")
   })
 })

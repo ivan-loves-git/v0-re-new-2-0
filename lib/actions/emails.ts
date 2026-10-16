@@ -212,6 +212,13 @@ export async function getTemplateSettings() {
   }))
 }
 
+export async function toggleTemplateAutoSend(templateKey: string, enabled: boolean) {
+  const { user } = await requireStaffAccess()
+  const { error } = await createAdminClient().rpc("email_policy_set", { p_template_key: templateKey, p_auto_send: enabled, p_actor: user.id })
+  if (error) throw new Error("Auto-send was not saved. The prior policy remains in force.")
+  revalidatePath("/emails")
+}
+
 /**
  * Toggle template enabled/disabled
  */
@@ -219,20 +226,8 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
   const { user } = await requireStaffAccess()
   const supabase = createAdminClient()
 
-  if (templateKey === "opportunity_discovery_digest") {
-    const { error } = await supabase.rpc("d136_toggle", { p_actor: user.id, p_enabled: enabled })
-    if (error) throw new Error(error.message)
-    revalidatePath("/emails")
-    return
-  }
-
-  const { data, error } = await supabase
-    .from("email_templates")
-    .update({ is_active: enabled })
-    .eq("template_key", templateKey)
-    .select("template_key")
-
-  if (error || !data?.length) throw new Error(error?.message ?? "This template is unavailable and remains inactive.")
+  const { error } = await supabase.rpc("email_policy_set_active", { p_template_key: templateKey, p_active: enabled, p_actor: user.id })
+  if (error) throw new Error("Active setting was not saved; current activation and release gates remain required.")
 
   revalidatePath("/emails")
 }
@@ -243,7 +238,7 @@ export async function toggleTemplateEnabled(templateKey: EmailTemplateKey, enabl
  */
 export async function updateTemplateSettings(
   templateKey: EmailTemplateKey,
-  settings: { subject?: string; preview_text?: string; body_markdown?: string }
+  settings: { subject?: string; body_markdown?: string }
 ) {
   await requireStaffAccess()
   if (TEMPLATE_METADATA[templateKey]?.manualSend === false && TEMPLATE_METADATA[templateKey]?.copyEditable !== true) {
@@ -251,13 +246,9 @@ export async function updateTemplateSettings(
   }
   const supabase = createAdminClient()
 
-  const { data, error } = await supabase
-    .from("email_templates")
-    .update(settings)
-    .eq("template_key", templateKey)
-    .select("template_key")
-
-  if (error || !data?.length) throw new Error(error?.message ?? "This template is unavailable and cannot be edited.")
+  const { user } = await requireStaffAccess()
+  const { error } = await supabase.rpc("email_template_words_set", { p_template_key: templateKey, p_settings: settings, p_actor: user.id })
+  if (error) throw new Error("Template copy was not saved; refresh its current editing permissions.")
 
   revalidatePath("/emails")
 }
@@ -268,7 +259,8 @@ export async function updateTemplateSettings(
  */
 export async function getRenderedTemplate(
   templateKey: EmailTemplateKey,
-): Promise<{ subject: string; html: string; bodyMarkdown: string | null; bodyEditable: boolean }> {
+  freshnessExample: "single" | "multiple" = "single",
+): Promise<{ subject: string; sourceSubject?: string; html: string; bodyMarkdown: string | null; bodyEditable: boolean }> {
   await requireStaffAccess()
   if (templateKey === "opportunity_recommendation_assignment") {
     const html = await render(RecommendationAssignmentEmailV1({
@@ -297,6 +289,17 @@ export async function getRenderedTemplate(
   const bodyEditable = !!row?.body_editable
   const fallbackBody = MA_TEMPLATE_DEFAULT_BODIES[templateKey] ?? INTEREST_TEMPLATE_DEFAULT_BODIES[templateKey] ?? null
   const bodyMarkdown: string | null = bodyEditable ? (row?.body_markdown?.trim() || fallbackBody) : null
+  if (templateKey === "ma_opportunity_validity_check") {
+    const copy = (await import("@/lib/opportunity-freshness-copy")).renderGroupedFreshnessCopy({
+      subject, body: bodyMarkdown ?? MA_TEMPLATE_DEFAULT_BODIES.ma_opportunity_validity_check!,
+      contactName: "Camille", members: [{ opportunityId: "preview", reference: "INTERNAL-PREVIEW",
+        title: "Projet Orion", revenueMeur: 3.2, firmName: "Cabinet Atlantique M&A" },
+        ...(freshnessExample === "multiple" ? [{ opportunityId: "preview-2", reference: "INTERNAL-PREVIEW-2",
+          title: "Projet Atlas", revenueMeur: null, firmName: "Cabinet Atlantique M&A" }] : [])],
+    })
+    const request = (await import("@/lib/ma-workflows")).buildMaReviewedRequest(copy.subject, copy.body, "preview@example.test")
+    return { subject: copy.subject, sourceSubject: subject, html: request.html!, bodyMarkdown, bodyEditable }
+  }
   const bodyOverride = bodyMarkdown ?? undefined
 
   const sampleRepreneur = {
@@ -410,7 +413,6 @@ export async function getRenderedTemplate(
       })
       break
     }
-    case "ma_opportunity_validity_check":
     case "ma_request_more_information":
     case "ma_repreneur_interest_feedback":
     case "ma_nda_info_memo_request":
@@ -473,7 +475,7 @@ export async function sendManualEmail(
   templateKey: EmailTemplateKey,
   metadata?: Record<string, unknown>
 ) {
-  await requireStaffAccess()
+  const { user } = await requireStaffAccess()
   if (TEMPLATE_METADATA[templateKey]?.manualSend === false) {
     return { success: false, message: "Send this email only from its staff recommendation." }
   }
@@ -574,11 +576,12 @@ export async function sendManualEmail(
     subject,
     repreneurId: repreneur.id,
     templateKey,
-    react: template,
+    react: template, sourceContext: { kind: "manual", preparedBy: user.id, operationId: crypto.randomUUID() },
   })
 
   revalidatePath("/emails")
 
+  if (result.queued) return { success: true, queued: true, message: result.error!, reviewId: result.reviewId }
   if (!result.success) {
     return { success: false, message: result.error || "Failed to send email" }
   }
@@ -595,8 +598,8 @@ export async function sendTestEmail(
   email: string,
   firstName: string,
   templateKey: EmailTemplateKey
-): Promise<{ success: boolean; message: string }> {
-  await requireStaffAccess()
+): Promise<{ success: boolean; message: string; queued?: boolean; reviewId?: string }> {
+  const { user } = await requireStaffAccess()
   if (TEMPLATE_METADATA[templateKey]?.manualSend === false) {
     return { success: false, message: "This versioned email is verified with synthetic recommendation fixtures, not the generic sender." }
   }
@@ -645,6 +648,7 @@ export async function sendTestEmail(
     const renderedSubject = substituteTemplateVariables(baseSubject, variables)
     const { sendEmailDirect } = await import("@/lib/email/send-email")
     const result = await sendEmailDirect({
+      templateKey, sourceContext: { kind: "manual", preparedBy: user.id, operationId: crypto.randomUUID() },
       to: email,
       subject: `[TEST] ${renderedSubject}`,
       react: MaIntermediaryEmail({
@@ -654,6 +658,7 @@ export async function sendTestEmail(
       }),
     })
 
+    if (result.queued) return { success: true, queued: true, message: result.error!, reviewId: result.reviewId }
     if (!result.success) {
       return { success: false, message: result.error || "Failed to send email" }
     }
@@ -723,11 +728,13 @@ export async function sendTestEmail(
   // Use sendEmailDirect to send without logging
   const { sendEmailDirect } = await import("@/lib/email/send-email")
   const result = await sendEmailDirect({
+      templateKey, sourceContext: { kind: "manual", preparedBy: user.id, operationId: crypto.randomUUID() },
     to: email,
     subject,
     react: template,
   })
 
+  if (result.queued) return { success: true, queued: true, message: result.error!, reviewId: result.reviewId }
   if (!result.success) {
     return { success: false, message: result.error || "Failed to send email" }
   }

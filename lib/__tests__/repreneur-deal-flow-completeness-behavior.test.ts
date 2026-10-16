@@ -27,7 +27,7 @@ vi.mock("@/lib/supabase/admin", () => ({
       }
       const resolvedResponse = response ?? { data: [], error: null }
       const builder: Record<string, unknown> = {}
-      for (const method of ["select", "eq", "in", "neq", "order", "limit"]) {
+      for (const method of ["select", "eq", "or", "in", "neq", "order", "limit"]) {
         builder[method] = () => builder
       }
       builder.maybeSingle = () => Promise.resolve(resolvedResponse)

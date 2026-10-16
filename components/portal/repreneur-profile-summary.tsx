@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import { PortalNavigationLink as Link } from "@/components/portal/portal-navigation-link"
 import type { ReactNode } from "react"
 import { ArrowRight, CheckCircle2, Target } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -260,8 +260,8 @@ export function RepreneurProfileSummary({
   const completedMilestones = MILESTONES.filter(
     (milestone) => repreneur[`ms_${milestone.key}`] === true
   )
-  const proposedDeals = opportunities.filter((opportunity) => opportunity.match_status === "proposed")
-  const pursuedDeals = opportunities.filter((opportunity) => opportunity.match_status === "active_pursuit")
+  const proposedDeals = opportunities.filter((opportunity) => opportunity.opportunity_status !== "paused" && opportunity.match_status === "proposed")
+  const pursuedDeals = opportunities.filter((opportunity) => opportunity.opportunity_status !== "paused" && opportunity.match_status === "active_pursuit")
   const staffPreview = mode === "staff-preview"
   const opportunityDetailHref = (opportunity: RepreneurOpportunityListItem) =>
     detailHrefByOpportunityId?.[opportunity.match_id ?? opportunity.opportunity_id]

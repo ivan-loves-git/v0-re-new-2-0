@@ -5,6 +5,8 @@ export interface OpportunityMemoNotificationClaim {
   recipientEmail: string
   repreneurFirstName: string
   opportunityTitle: string
+  grantEvidenceId?: string
+  attemptToken?: string
 }
 
 export interface OpportunityMemoNotificationStore {
@@ -12,15 +14,21 @@ export interface OpportunityMemoNotificationStore {
     opportunityId: string
     matchId?: string
     attemptedAt: string
+    expectedGrantId?: string
   }): Promise<OpportunityMemoNotificationClaim | null>
   markSent(input: {
     matchId: string
     sentAt: string
+    grantEvidenceId?: string
+    attemptToken?: string
     providerId?: string
   }): Promise<void>
   markFailed(input: {
     matchId: string
     failedAt: string
+    grantEvidenceId?: string
+    attemptToken?: string
+    outcome?: "review" | "deferred" | "rejected" | "uncertain"
     error: string
   }): Promise<void>
 }
@@ -28,13 +36,14 @@ export interface OpportunityMemoNotificationStore {
 export interface OpportunityMemoNotifier {
   send(input: OpportunityMemoNotificationClaim & {
     idempotencyKey: string
-  }): Promise<{ success: boolean; resendId?: string; error?: string }>
+  }): Promise<{ success: boolean; resendId?: string; error?: string; queued?: boolean; providerOutcome?: "accepted" | "rejected" | "blocked" | "deferred" | "fenced" | "uncertain" | "review" }>
 }
 
 export type OpportunityMemoNotificationOutcome =
   | { status: "not_claimed" }
   | { status: "sent"; matchId: string }
   | { status: "failed"; matchId: string; error: string }
+  | { status: "review_required"; matchId: string }
 
 export function opportunityMemoNotificationIdempotencyKey(matchId: string) {
   return `opportunity-memo-available-${matchId}`
@@ -45,6 +54,7 @@ export async function notifyOpportunityMemoAvailable(
     opportunityId: string
     matchId?: string
     now: string
+    expectedGrantId?: string
   },
   dependencies: {
     store: OpportunityMemoNotificationStore
@@ -55,11 +65,13 @@ export async function notifyOpportunityMemoAvailable(
     opportunityId: input.opportunityId,
     matchId: input.matchId,
     attemptedAt: input.now,
+    ...(input.expectedGrantId ? { expectedGrantId: input.expectedGrantId } : {}),
   })
 
   if (!claim) return { status: "not_claimed" }
 
-  const idempotencyKey = opportunityMemoNotificationIdempotencyKey(claim.matchId)
+  const idempotencyKey = claim.grantEvidenceId ? `opportunity-memo-grant-${claim.grantEvidenceId}` : opportunityMemoNotificationIdempotencyKey(claim.matchId)
+  const identity = claim.grantEvidenceId ? { grantEvidenceId: claim.grantEvidenceId, attemptToken: claim.attemptToken } : {}
 
   try {
     const delivery = await dependencies.notifier.send({
@@ -67,12 +79,18 @@ export async function notifyOpportunityMemoAvailable(
       idempotencyKey,
     })
 
-    if (!delivery.success) {
-      const error = delivery.error ?? "Email delivery failed"
+    if (delivery.queued) {
+      await dependencies.store.markFailed({ matchId: claim.matchId, failedAt: input.now, error: "Prepared for staff review; no email sent.", ...identity, ...(claim.grantEvidenceId ? { outcome: "review" as const } : {}) })
+      return { status: "review_required", matchId: claim.matchId }
+    }
+    if (!delivery.success || (claim.grantEvidenceId && !delivery.resendId)) {
+      const error = delivery.error ?? (delivery.success ? "Provider acceptance is not confirmed" : "Email delivery failed")
       await dependencies.store.markFailed({
         matchId: claim.matchId,
         failedAt: input.now,
         error,
+        ...identity,
+        ...(claim.grantEvidenceId ? { outcome: delivery.providerOutcome === "rejected" ? "rejected" as const : ["blocked", "deferred", "fenced"].includes(delivery.providerOutcome ?? "") ? "deferred" as const : "uncertain" as const } : {}),
       })
       return { status: "failed", matchId: claim.matchId, error }
     }
@@ -81,6 +99,7 @@ export async function notifyOpportunityMemoAvailable(
       matchId: claim.matchId,
       sentAt: input.now,
       providerId: delivery.resendId,
+      ...identity,
     })
 
     return { status: "sent", matchId: claim.matchId }
@@ -92,10 +111,12 @@ export async function notifyOpportunityMemoAvailable(
         matchId: claim.matchId,
         failedAt: input.now,
         error: message,
+        ...identity,
+        ...(claim.grantEvidenceId ? { outcome: "uncertain" as const } : {}),
       })
     } catch {
-      // Leave the database lease to expire. A later trigger reuses the same
-      // provider idempotency key, so recovering from an interrupted attempt is safe.
+      // A versioned attempt remains Sending and blocks a blind retry until
+      // reconciled. Legacy records retain their existing recovery semantics.
     }
 
     return { status: "failed", matchId: claim.matchId, error: message }
@@ -106,6 +127,7 @@ export async function notifyOpportunityMemoCandidates(
   input: {
     opportunityId: string
     matchIds: string[]
+    expectedGrantId?: string
     now: string
   },
   dependencies: {
@@ -120,6 +142,7 @@ export async function notifyOpportunityMemoCandidates(
       opportunityId: input.opportunityId,
       matchId,
       now: input.now,
+      expectedGrantId: input.expectedGrantId,
     }, dependencies))
   }
 

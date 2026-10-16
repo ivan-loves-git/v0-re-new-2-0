@@ -20,6 +20,7 @@ import {
   getOpportunity,
   getOpportunityClosureHistory,
   getOpportunityPauseHistory,
+  getOpportunityStaleClosureEligibility,
   pauseOpportunity,
   setOpportunityDemoClassification,
 } from "@/lib/actions/opportunities"
@@ -73,6 +74,7 @@ async function OpportunityDetailContent({
     maWorkflow,
     closureHistory,
     pauseHistory,
+    staleEligibility,
     ndaArtifacts,
     pendingCleanups,
     demoClassificationControl,
@@ -85,6 +87,7 @@ async function OpportunityDetailContent({
     getMaOpportunityWorkflow(id),
     getOpportunityClosureHistory(id),
     getOpportunityPauseHistory(id),
+    getOpportunityStaleClosureEligibility(id),
     listOpportunityNdaArtifacts(id),
     listPendingUnusedRetainedDocumentCleanups(id),
     readOpportunityDemoClassificationControl(
@@ -122,9 +125,9 @@ async function OpportunityDetailContent({
     return closeOpportunity(id, reason)
   }
 
-  async function pauseAction(reason: OpportunityPauseReason) {
+  async function pauseAction(reason: OpportunityPauseReason, note?: string) {
     "use server"
-    return pauseOpportunity(id, reason)
+    return pauseOpportunity(id, reason, note)
   }
 
   async function demoClassificationAction(isDemo: boolean) {
@@ -162,6 +165,7 @@ async function OpportunityDetailContent({
         resolveSourceAction={resolveSourceAction}
         closureHistory={closureHistory}
         pauseHistory={pauseHistory}
+        staleEligibility={staleEligibility}
         closeAction={closeAction}
         pauseAction={pauseAction}
         demoClassificationAction={demoClassificationAction}

@@ -92,7 +92,7 @@ export async function createIntakeDraft(data: {
       to: data.email.toLowerCase().trim(),
       subject: "Bienvenue chez Re-New!",
       repreneurId: repreneur.id,
-      templateKey: "welcome",
+      templateKey: "welcome", sourceContext: { kind: "intake", variant: "legacy_first_contact" },
       react: WelcomeEmail({
         registrationComplete: false,
         repreneur: {
@@ -403,7 +403,7 @@ export async function completeIntake(
         to: repreneurData.email,
         subject: await getTemplateSubject("thank_you", "Votre inscription Re-New est confirmée"),
         repreneurId: id,
-        templateKey: "thank_you",
+        templateKey: "thank_you", sourceContext: { kind: "intake", variant: "legacy_completed" },
         react: ThankYouEmail({
           repreneur: emailData,
           bodyOverride: await getTemplateBody("thank_you"),
@@ -419,7 +419,7 @@ export async function completeIntake(
           to: repreneurData.email,
           subject: "Votre profil Re-New se demarque!",
           repreneurId: id,
-          templateKey: "high_score_alert",
+          templateKey: "high_score_alert", sourceContext: { kind: "intake", variant: "legacy_high_score", threshold: HIGH_SCORE_THRESHOLD },
           react: HighScoreAlertEmail({
             repreneur: emailData,
             metadata: { tier1Score: scoreBreakdown.total },

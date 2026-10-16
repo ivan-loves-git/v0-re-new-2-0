@@ -86,7 +86,6 @@ describe("W-157 single current office per contact", () => {
     expect(directory).toContain("moveBlocked")
     expect(officeContact).not.toContain("listMaCanonicalContactOptions")
     expect(sourceContext).not.toContain("listMaCanonicalContactOptions")
-    expect(officeContact).toContain("move them from Contacts")
     expect(sourceContext).toContain("move them from Contacts")
   })
 

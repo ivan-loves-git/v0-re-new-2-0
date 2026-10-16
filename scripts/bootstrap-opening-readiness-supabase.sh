@@ -130,11 +130,24 @@ $$;
 SQL
 
 while IFS= read -r migration; do
+  if [[ "$migration" == */20261007193000_ma_firm_operational_status.sql ]]; then
+    # #262's browser proof starts with a genuine pre-migration prospect.
+    # These fixed synthetic records exist only in the protected disposable DB.
+    "${psql_safe[@]}" <<'SQL'
+BEGIN;
+INSERT INTO public.ma_firms(id,name,status,internal_notes,created_by,updated_by) VALUES
+ ('26200000-0000-4000-8000-000000000071','QA OPENING FORMER PROSPECT — SYNTHETIC','prospect','Retained before #262 normalization','qa-opening-262','qa-opening-262');
+INSERT INTO public.ma_offices(id,firm_id,name,city,is_default,created_by,updated_by) VALUES
+ ('26200000-0000-4000-8000-000000000072','26200000-0000-4000-8000-000000000071','Retained first office','Paris',FALSE,'qa-opening-262','qa-opening-262');
+SET CONSTRAINTS ALL IMMEDIATE;
+COMMIT;
+SQL
+  fi
   "${psql_safe[@]}" -f "$migration"
 done < <(
   find supabase/migrations -maxdepth 1 -type f -name '*.sql' -print \
     | LC_ALL=C sort \
-    | awk -F/ '$NF >= "20260830113100" && $NF != "20260929230707_reversible_staff_email_archive.sql" && $NF != "20260929235619_bounded_staff_email_bulk_send.sql"'
+    | awk -F/ '$NF >= "20260830113100" && $NF != "20260929230707_reversible_staff_email_archive.sql" && $NF != "20260929235619_bounded_staff_email_bulk_send.sql" && $NF != "20261007123000_email_operations_policy.sql" && $NF != "20261007150000_external_pursuit_handoffs.sql" && $NF != "20261007170000_grant_specific_external_memo_notice.sql" && $NF != "20261007200000_external_e4_ldc_versions.sql" && $NF != "20261008160000_freshness_recognizable_copy.sql"'
 )
 
 # The additive #186 review queue is a numbered application migration. The
@@ -150,6 +163,15 @@ done < <(
 "${psql_safe[@]}" -f supabase/migrations/20260929230707_reversible_staff_email_archive.sql
 # #224 additionally depends on the archive exclusion and source guards.
 "${psql_safe[@]}" -f supabase/migrations/20260929235619_bounded_staff_email_bulk_send.sql
+"${psql_safe[@]}" -f supabase/migrations/20261007123000_email_operations_policy.sql
+# #254 follows the current email policy and guarded service foundations.
+"${psql_safe[@]}" -f supabase/migrations/20261007150000_external_pursuit_handoffs.sql
+# #255 retains the grant-specific fence after these exact service predecessors.
+"${psql_safe[@]}" -f supabase/migrations/20261007170000_grant_specific_external_memo_notice.sql
+"${psql_safe[@]}" -f supabase/migrations/20261007200000_external_e4_ldc_versions.sql
+
+# #263/#264 extends the numbered freshness foundation after Email Operations.
+"${psql_safe[@]}" -f supabase/migrations/20261008160000_freshness_recognizable_copy.sql
 
 # The sanitized structure snapshot deliberately omits the real Acme/Bertrand
 # singleton while retaining its redacted integrity function. Reconstruct the
@@ -225,9 +247,13 @@ BEGIN
   END IF;
 
   BEGIN
-    UPDATE public.opportunities
-    SET status='closed'
-    WHERE id='93000000-0000-4000-8000-000000000087';
+    -- Exercise the staff close service so the source-review guard remains
+    -- the tested boundary after direct unreasoned closure is prohibited.
+    PERFORM public.close_opportunity_with_reason(
+      '93000000-0000-4000-8000-000000000087',
+      'withdrawn_seller',
+      'test-schema-redacted-002'
+    );
     SET CONSTRAINTS ALL IMMEDIATE;
     RAISE EXCEPTION 'opening_fixture_flagged_close_was_allowed';
   EXCEPTION WHEN OTHERS THEN

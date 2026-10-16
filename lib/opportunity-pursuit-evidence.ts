@@ -41,6 +41,13 @@ export interface OpportunityPursuitProjection {
   nextAction: OpportunityPursuitJourneyAction | null
 }
 
+/** Only guarded finalizers can create these origins; historical notes do not qualify. */
+export function isQualifyingPursuitHandoff(event: { metadata?: Record<string, unknown> | null }) {
+  const m = event.metadata
+  return Boolean(m && ((typeof m.handoff_delivery_id === "string" && typeof m.provider_message_id === "string" && m.provider_message_id.trim())
+    || (m.qualifying_origin === "external_staff_v1" && typeof m.external_handoff_id === "string" && typeof m.operation_key === "string" && typeof m.context === "object" && m.context !== null)))
+}
+
 export function projectOpportunityPursuitEvidence(input: {
   enabled: boolean
   status: string
@@ -55,8 +62,8 @@ export function projectOpportunityPursuitEvidence(input: {
 }): OpportunityPursuitProjection {
   const cycleStart = [...input.events].reverse().find((event) => event.event_type === "mutual_interest_validated")
   const cycleEvents = cycleStart ? input.events.slice(input.events.indexOf(cycleStart)) : []
-  const currentE4 = cycleEvents.find((event) => event.event_type === "e4_qualification_requested" && event.metadata?.upstream_evidence_id === cycleStart?.id)
-  const currentE6 = cycleEvents.find((event) => event.event_type === "e6_nda_ready_notified" && event.metadata?.upstream_evidence_id === input.currentGate1EventId)
+  const currentE4 = cycleEvents.find((event) => event.event_type === "e4_qualification_requested" && isQualifyingPursuitHandoff(event) && event.metadata?.upstream_evidence_id === cycleStart?.id)
+  const currentE6 = cycleEvents.find((event) => event.event_type === "e6_nda_ready_notified" && isQualifyingPursuitHandoff(event) && event.metadata?.upstream_evidence_id === input.currentGate1EventId)
   const currentTemplateValidation = cycleEvents.find((event) => event.event_type === "template_validated" && event.nda_artifact_id === input.currentTemplateArtifactId)
   const gate1Index = cycleEvents.findIndex((event) => event.id === input.currentGate1EventId)
   const eventTypes = new Set(cycleEvents.map((event) => event.event_type))
@@ -93,6 +100,6 @@ export function projectOpportunityPursuitEvidence(input: {
     const event = recorded(key)
     return { key, label: key.replaceAll("_", " "), status: event ? "complete" as const : !available ? "not_available" as const : nextAction === stepAction[key] ? "current" as const : "blocked" as const, recordedAt: event?.recorded_at, actor: event?.actor, artifactId: event?.nda_artifact_id ?? undefined, artifactVersion: event?.nda_artifact_id ? input.artifactVersions?.[event.nda_artifact_id] : undefined, blocker: event ? undefined : blocker }
   }
-  const steps = [state("mutual_interest_validated", active, "Start an active pursuit first."), state("e4_qualification_requested", active, "Send the qualification and NDA request."), state("intermediary_qualified", active, "Qualification is required."), state("template_validated", active, "Validate the current blank template."), state("gate_1_passed", active, "Qualification and the current template are required."), state("e6_nda_ready_notified", gate1Passed, "Gate 1 is required."), state("renew_signed_copy_validated", gate1Passed && Boolean(currentE6), "The NDA-ready notice is required."), state("repreneur_signed_copy_validated", gate1Passed, "Gate 1 is required."), state("gate_2_passed", hasCurrentRenewCopy && hasCurrentRepreneurCopy, "Validate both current signed copies."), state("e7_signed_copies_and_memo_requested", gate2Passed, "Gate 2 is required."), state("confidential_access_granted", dispatched, "Send the signed-copy and memo request first."), state("e8_memo_enabled_completed", dispatched, "Confidential access is required.")]
+  const steps = [state("mutual_interest_validated", active, "Start an active pursuit first."), state("e4_qualification_requested", active, "Complete the qualification and NDA request."), state("intermediary_qualified", active, "Qualification is required."), state("template_validated", active, "Validate the current blank template."), state("gate_1_passed", active, "Qualification and the current template are required."), state("e6_nda_ready_notified", gate1Passed, "Gate 1 is required."), state("renew_signed_copy_validated", gate1Passed && Boolean(currentE6), "The NDA-ready notice is required."), state("repreneur_signed_copy_validated", gate1Passed, "Gate 1 is required."), state("gate_2_passed", hasCurrentRenewCopy && hasCurrentRepreneurCopy, "Validate both current signed copies."), state("e7_signed_copies_and_memo_requested", gate2Passed, "Gate 2 is required."), state("confidential_access_granted", dispatched, "Complete the signed-copy and memo request first."), state("e8_memo_enabled_completed", dispatched, "Confidential access is required.")]
   return { currentCycleId: cycleStart?.id ?? null, steps, gate1Passed, ndaReadyNotified: gate1Passed && Boolean(currentE6), gate2Passed, hasCurrentRenewCopy, hasCurrentRepreneurCopy, dispatched, canGrantConfidentialAccess: active && gate2Passed && dispatched, nextAction }
 }

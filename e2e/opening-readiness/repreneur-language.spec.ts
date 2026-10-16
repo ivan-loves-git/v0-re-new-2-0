@@ -65,6 +65,8 @@ test("French-first locale is account-scoped, live, and separate from staff previ
   const client = new Client({ connectionString: databaseUrl.toString() })
   const contexts: Awaited<ReturnType<Browser["newContext"]>>[] = []
   let releasePreflight = () => {}
+  let primaryFailure: unknown
+  let failedBeforeCleanup = false
   await client.connect()
   try {
     // Only the disposable synthetic identities are touched; no account row is inferred.
@@ -257,9 +259,10 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     await expect(previewLanguageGroup.locator("xpath=../..")).toHaveAttribute("lang", "en")
     await expect(previewLanguageGroup.getByRole("button", { name: "Français", exact: true })).toHaveAttribute("aria-pressed", "true")
     await expect(staffPage.locator("html")).toHaveAttribute("lang", "en")
-    await expect(staffPage.getByRole("tab", { name: "Deals", exact: true })).toBeVisible()
-    const previewDeals = staffPage.getByRole("tabpanel", { name: "Deals", exact: true }).filter({ visible: true })
+    await expect(staffPage.getByRole("tab", { name: "Opportunités", exact: true })).toHaveAttribute("aria-selected", "true")
+    const previewDeals = staffPage.getByRole("tabpanel", { name: "Opportunités", exact: true }).filter({ visible: true })
     await expect(previewDeals).toHaveCount(1)
+    await expect(previewDeals.getByRole("heading", { name: "Vos opportunités", exact: true })).toBeVisible()
     await expect(previewDeals.getByText("Recommandées → En cours → Opportunités disponibles → Écartées", { exact: true })).toBeVisible()
     const previewCard = previewDeals.locator('[data-slot="card"]')
       .filter({ has: staffPage.getByText(originalTeaser, { exact: true }) })
@@ -275,12 +278,21 @@ test("French-first locale is account-scoped, live, and separate from staff previ
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       await staffPage.setViewportSize(viewport)
       await expect(staffPage.getByRole("heading", { name: "Portal preview", exact: true })).toBeVisible()
-      await expect(staffPage.getByRole("tab", { name: "Deals", exact: true })).toBeVisible()
+      await expect(staffPage.getByRole("tab", { name: "Opportunités", exact: true })).toBeVisible()
+      await expect(previewDeals.getByRole("heading", { name: "Vos opportunités", exact: true })).toBeVisible()
     }
+
+    // Retained Paused relationships from another fixture select the historical
+    // workspace branch. A standalone Active-only run retains its exact oracle.
+    const previewHasPausedHistory = await previewDeals.locator('[data-slot="card"]')
+      .filter({ has: staffPage.getByText("En pause", { exact: true }) }).count() > 0
+    const workspaceNavigation = previewHasPausedHistory ? "Opportunities" : "Pursuits"
 
     // The selected staff route must show the same current workspace without
     // borrowing an owner session or changing the owner's review/language state.
-    await staffPage.goto(`/portal-preview?repreneurId=${fixture.repreneurs.real.id}&dealId=${fixtureMatches[0]?.id ?? fixture.ids.realOpportunity}`)
+    await staffPage.goto(`/portal-preview?repreneurId=${fixture.repreneurs.real.id}&dealId=${fixtureMatches[0]?.id ?? fixture.ids.realOpportunity}`, {
+      waitUntil: "domcontentloaded", timeout: 30_000,
+    })
     await expect(staffPage).toHaveURL(/workspaceId=/, { timeout: 30_000 })
     for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
       await staffPage.setViewportSize(viewport)
@@ -304,8 +316,8 @@ test("French-first locale is account-scoped, live, and separate from staff previ
         await expect(staffPage.locator("html")).toHaveAttribute("lang", "en")
       }
       if (viewport.width < 1000) {
-        await workspace.getByRole("button", { name: "Pursuits" }).click()
-        await expect(workspace.getByRole("navigation", { name: "Pursuits" })).toBeVisible()
+        await workspace.getByRole("button", { name: workspaceNavigation, exact: true }).click({ timeout: 10_000 })
+        await expect(workspace.getByRole("navigation", { name: workspaceNavigation, exact: true })).toBeVisible()
       }
       expect(await staffPage.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     }
@@ -369,12 +381,35 @@ test("French-first locale is account-scoped, live, and separate from staff previ
         previewNoCustomerWrite: true, staffChromeEnglish: true, portalDialogLanguageScoped: true,
         noScriptFrenchSkipLink: true, desktopAndMobile: true,
       }) + "\n")
+  } catch (error) {
+    // Preserve the failing navigation/assertion before any resource cleanup.
+    primaryFailure = error
+    failedBeforeCleanup = true
   } finally {
     releasePreflight()
-    for (const context of contexts) await context.close()
-    await client.query("DELETE FROM public.repreneur_ui_preferences WHERE user_id = ANY($1::text[])", [[
-      fixture.repreneurs.real.userId, fixture.repreneurs.realNonOwner.userId,
-    ]])
-    await client.end()
+    let cleanupTimer: ReturnType<typeof setTimeout> | undefined
+    let cleanupFailed = false
+    const cleanup = Promise.allSettled([
+      ...contexts.map(context => context.close()),
+      (async () => {
+        try {
+          await client.query("DELETE FROM public.repreneur_ui_preferences WHERE user_id = ANY($1::text[])", [[
+            fixture.repreneurs.real.userId, fixture.repreneurs.realNonOwner.userId,
+          ]])
+        } finally { await client.end() }
+      })(),
+    ])
+    try {
+      const results = await Promise.race([cleanup, new Promise<never>((_, reject) => {
+        cleanupTimer = setTimeout(() => reject(new Error("Synthetic language cleanup exceeded 5 seconds.")), 5_000)
+      })])
+      cleanupFailed = results.some(result => result.status === "rejected")
+    } catch { cleanupFailed = true }
+    finally { if (cleanupTimer) clearTimeout(cleanupTimer) }
+    if (failedBeforeCleanup) {
+      if (cleanupFailed) console.error("Synthetic language cleanup was incomplete; the original failure is preserved and whole-stack teardown is required.")
+      throw primaryFailure
+    }
+    if (cleanupFailed) throw new Error("Synthetic language resource cleanup failed; whole-stack teardown is required.")
   }
 })

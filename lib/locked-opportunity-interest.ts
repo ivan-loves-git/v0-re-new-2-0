@@ -42,7 +42,7 @@ export interface LockedOpportunityInterestNotifier {
     matchId: string
     expressedAt: string
     idempotencyKey: string
-  }): Promise<{ success: boolean; error?: string }>
+  }): Promise<{ success: boolean; queued?: boolean; error?: string }>
 }
 
 export type LockedOpportunityInterestOutcome =
@@ -127,6 +127,9 @@ export async function expressOpportunityInterest(
       ),
     })
 
+    if (notification.queued) {
+      return { status: "success", alreadyRecorded: false, expressedAt: interest.expressedAt }
+    }
     if (!notification.success) {
       return {
         status: "notification_failed",

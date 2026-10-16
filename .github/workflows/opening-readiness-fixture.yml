@@ -5,6 +5,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      journey:
+        description: Protected journey selection; PR/main always prove the full suite
+        type: choice
+        options: [all, ma-directory]
+        default: all
 
 permissions:
   contents: read
@@ -23,6 +29,7 @@ jobs:
       QA_CONTRACT_MODE: protected
       QA_EXECUTION_MODE: github-runner
       QA_MAIL_MODE: allowlist
+      QA_BUSINESS_STAFF_CC: qa-opening-staff@re-new.invalid,qa-opening-real-non-owner@re-new.invalid
       QA_EMAIL_FROM: onboarding@resend.dev
       QA_EMAIL_RECIPIENT: qa-opening-staff@re-new.invalid,qa-opening-real@re-new.invalid,qa-opening-real-non-owner@re-new.invalid,qa-opening-fresh-access-uat@re-new.invalid,qa-opening-demo@re-new.invalid,qa-opening-real-contact@re-new.invalid,qa-opening-demo-contact@re-new.invalid
       RENEW_STAFF_NOTIFICATION_EMAIL: qa-opening-staff@re-new.invalid
@@ -116,7 +123,14 @@ jobs:
       - name: Install the fixture browser
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Prove the fixture through the running product
+      - name: Prove bounded notification dismissal
+        run: pnpm test:tooling
+
+      - name: Prove M&A directory first
+        run: pnpm exec playwright test --config playwright.opening-readiness.config.ts ma-directory.spec.ts
+
+      - name: Prove the complete fixture through the running product
+        if: github.event_name != 'workflow_dispatch' || inputs.journey != 'ma-directory'
         run: pnpm exec playwright test --config playwright.opening-readiness.config.ts
 
       - name: Destroy disposable Supabase stack
@@ -160,5 +174,87 @@ jobs:
         with:
           name: opening-readiness-${{ github.run_id }}
           path: ${{ runner.temp }}/opening-readiness-published/aggregate-summary.json
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload synthetic email review screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: email-review-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/email-review-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-review-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-create-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-create-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-sent-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-history-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload synthetic external handoff dialogs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: external-handoffs-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-mobile-footer.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-handoff-fr-mobile-footer.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload synthetic Paused history interface
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: paused-history-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-history-fr-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/paused-preview-fr-mobile.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload synthetic external memo approval dialogs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: external-memo-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-en-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-fr-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-en-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/external-memo-fr-mobile.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload synthetic M&A directory screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ma-directory-synthetic-ui-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-validation-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-contacts-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-correction-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-firms-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-directory-contact-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-former-prospect-office-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-firm-add-office-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/ma-firm-second-office-mobile.png
           if-no-files-found: warn
           retention-days: 7

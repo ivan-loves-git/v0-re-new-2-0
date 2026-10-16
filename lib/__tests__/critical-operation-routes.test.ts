@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getTemplateBody: vi.fn(),
   deliverCronReminder: vi.fn(),
   cleanupExpiredPrivateUploads: vi.fn(),
+  cleanupExternalLdcStaging: vi.fn(),
   purgeExpiredRepreneurFeedback: vi.fn(),
   processRecipientImCleanup: vi.fn(),
   runPendingInterestNotifications: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("@/lib/email/cron-reminder-delivery", async (importOriginal) => {
     deliverCronReminder: mocks.deliverCronReminder,
   }
 })
+vi.mock("@/lib/external-ldc-version", () => ({ cleanupExternalLdcStaging: mocks.cleanupExternalLdcStaging }))
 vi.mock("@/lib/private-upload-server", () => ({
   cleanupExpiredPrivateUploads: mocks.cleanupExpiredPrivateUploads,
 }))
@@ -52,7 +54,6 @@ vi.mock("@/lib/env", () => ({
   env: {
     CRON_SECRET: "test-cron-secret",
     RESEND_WEBHOOK_SECRET: `whsec_${Buffer.from("test-webhook-secret").toString("base64")}`,
-    CC_ON_INTERVIEW_REMINDER: "staff@test.invalid",
   },
 }))
 
@@ -139,6 +140,7 @@ describe("critical route traces", () => {
       examined: 0,
       cleaned: 0,
     })
+    mocks.cleanupExternalLdcStaging.mockResolvedValue({ deleted: 0 })
     mocks.purgeExpiredRepreneurFeedback.mockResolvedValue(0)
     mocks.processRecipientImCleanup.mockResolvedValue({ examined: 0, deleted: 0, failed: 0, remaining: 0 })
     mocks.runPendingInterestNotifications.mockResolvedValue({ sent: 0, failed: 0, reviewRequired: 0 })
@@ -148,16 +150,11 @@ describe("critical route traces", () => {
   })
 
   it("traces an accepted Resend webhook without copying provider payload data", async () => {
-    const fetchSingle = vi.fn().mockResolvedValue({
-      data: { id: "email-log-1", status: "sent" },
-      error: null,
-    })
-    const fetchEq = vi.fn(() => ({ single: fetchSingle }))
-    const select = vi.fn(() => ({ eq: fetchEq }))
-    const updateEq = vi.fn().mockResolvedValue({ error: null })
-    const update = vi.fn(() => ({ eq: updateEq }))
     mocks.createAdminClient.mockReturnValue({
-      from: vi.fn(() => ({ select, update })),
+      from: vi.fn(() => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({
+        data: { recipient_email: "recipient@example.test", cc: [] }, error: null,
+      }) }) }) })),
+      rpc: vi.fn(async () => ({ error: null })),
     })
 
     const response = await receiveResendWebhook(webhookRequest(webhookPayload))
@@ -584,6 +581,7 @@ describe("critical route traces", () => {
     expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         templateKey: "interview_reminder",
+        bcc: ["bertrand@re-new.team"],
         idempotencyKey:
           "cron-interview-interview-activity-1-2026-08-22",
       }),
@@ -591,6 +589,7 @@ describe("critical route traces", () => {
     if (bookingState === "due") expect(mocks.sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         templateKey: "booking_reminder",
+        bcc: ["bertrand@re-new.team"],
         idempotencyKey: "cron-booking-booking-repreneur-1",
       }),
     )

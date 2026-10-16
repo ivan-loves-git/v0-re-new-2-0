@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
+import { maContactProfileErrors } from "@/lib/ma-relationship-validation"
+import { maContactSaveMessage } from "@/lib/data/ma-contact-save-message"
 import { appendConfirmedWaveAiOutcome } from "@/lib/ai/next-action-outcome"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -61,7 +63,7 @@ interface MaOfficeIntakeProjectionRow {
   office_id: string
   firm_id: string
   firm_name: string
-  firm_status: "prospect" | "active"
+  firm_status: "active"
   office_is_default: boolean
   office_name: string
   office_label: string
@@ -770,42 +772,38 @@ export async function createMaFirmOfficeContext(
   const firstName = readOpportunityFormString(formData, "contact_first_name")
   const lastName = readOpportunityFormString(formData, "contact_last_name")
   const officeName = readOpportunityFormString(formData, "office_name")
+  const officeCity = readOpportunityFormString(formData, "office_city")
   const email = readOpportunityFormString(formData, "contact_email")
   const phone = readOpportunityFormString(formData, "contact_phone")
   const jobTitle = readOpportunityFormString(formData, "contact_job_title")
 
-  if (!firmName) {
+  const fieldErrors: Record<string, string> = {}
+  if (!firmName) fieldErrors.firm_name = "Enter the M&A advisory firm name."
+  if (!officeName) fieldErrors.office_name = "Enter the real operating office name."
+  if (!officeCity) fieldErrors.office_city = "Enter the operating office city."
+  if (!firmName || !officeName || !officeCity) {
     return {
       success: false,
-      message: "M&A advisory firm name is required.",
-      fieldErrors: { firm_name: "Enter the M&A advisory firm name." },
+      message: "Complete the firm and first operating office details.",
+      fieldErrors,
     }
   }
-  if (!firstName && !lastName) {
-    const message = "Add a first name or last name for the first contact."
-    return {
-      success: false,
-      message,
-      fieldErrors: { contact_first_name: message, contact_last_name: message },
-    }
-  }
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return {
-      success: false,
-      message: "Contact email must be valid.",
-      fieldErrors: { contact_email: "Enter a valid email address, or leave it blank." },
-    }
+  const includeContact = readOpportunityFormString(formData, "include_contact") === "true" || Boolean(firstName || lastName || email || phone || jobTitle)
+  if (includeContact) {
+    const contactErrors = maContactProfileErrors({ firstName, lastName, email, phone }, "contact_")
+    if (Object.keys(contactErrors).length) return { success: false, message: "Complete the first contact details.", fieldErrors: contactErrors }
   }
 
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc(
-    "create_ma_firm_with_default_office",
+    "create_ma_firm_with_first_office",
     {
       p_firm_name: firmName,
       p_contact_first_name: firstName,
       p_contact_last_name: lastName,
       p_office_name: officeName,
-      p_is_synthetic_default: officeName ? false : true,
+      p_office_city: officeCity,
+      p_include_contact: includeContact,
       p_contact_email: email,
       p_contact_phone: phone,
       p_contact_job_title: jobTitle,
@@ -832,9 +830,8 @@ export async function createMaFirmOfficeContext(
 
   const identity = Array.isArray(data) ? data[0] : data
   if (
-    !identity?.office_id ||
-    !identity?.affiliation_id ||
-    !identity?.contact_id
+    !identity?.firm_id || !identity?.office_id ||
+    (includeContact && (!identity?.affiliation_id || !identity?.contact_id))
   ) {
     return {
       success: false,
@@ -844,18 +841,18 @@ export async function createMaFirmOfficeContext(
   }
 
   const contactName = [firstName, lastName].filter(Boolean).join(" ") || null
-  const resolvedOfficeName = officeName ?? firmName
+  const resolvedOfficeName = officeName
   const office: MaOfficeIntakeOffice = {
     office_id: identity.office_id as string,
     firm_id: identity.firm_id as string,
     firm_name: firmName,
-    firm_status: "prospect",
+    firm_status: "active",
     office_name: resolvedOfficeName,
     office_label:
       resolvedOfficeName.trim() === firmName.trim()
         ? firmName
         : `${firmName} — ${resolvedOfficeName}`,
-    contacts: [
+    contacts: includeContact ? [
       {
         affiliation_id: identity.affiliation_id as string,
         contact_id: identity.contact_id as string,
@@ -863,18 +860,20 @@ export async function createMaFirmOfficeContext(
         contact_email: email,
         job_title: jobTitle,
       },
-    ],
+    ] : [],
   }
 
+  revalidatePath("/opportunities/ma/firms")
+  revalidatePath("/opportunities/ma/contacts")
   return {
     success: true,
-    message: "M&A firm, operating office, and first contact created.",
+    message: includeContact ? await maContactSaveMessage(supabase, identity.contact_id, "M&A firm, operating office, and first contact created.") : "M&A firm and operating office created.",
     office,
   }
 }
 
 /**
- * Adds one real operating office to an existing active firm. This never
+ * Adds one real operating office to an existing non-archived firm. This never
  * creates a fallback office or a contact: those are separate, explicit staff
  * actions so a partial source context cannot silently become valid.
  */
@@ -884,15 +883,17 @@ export async function createMaOfficeForExistingFirm(
   const { user } = await requireStaffAccess()
   const firmId = readUuid(formData, "existing_firm_id")
   const officeName = readOpportunityFormString(formData, "office_name")
+  const officeCity = readOpportunityFormString(formData, "office_city")
   const fieldErrors: Record<string, string> = {}
 
   if (!firmId.value || firmId.error) {
     fieldErrors.existing_firm_id =
-      firmId.error ?? "Choose an active M&A advisory firm."
+      firmId.error ?? "Choose a non-archived M&A advisory firm."
   }
   if (!officeName) {
     fieldErrors.office_name = "A real operating office name is required."
   }
+  if (!officeCity) fieldErrors.office_city = "Enter the operating office city."
   if (Object.keys(fieldErrors).length > 0) {
     return {
       success: false,
@@ -907,13 +908,15 @@ export async function createMaOfficeForExistingFirm(
     {
       p_firm_id: firmId.value,
       p_office_name: officeName,
+      p_office_city: officeCity,
       p_actor: user.id,
     },
   )
 
   if (error) {
-    const message = error.message?.includes("ma_existing_firm_not_active")
-      ? "This firm is no longer active. Refresh and choose another firm."
+    const message = error.message?.includes("ma_existing_firm_archived") ||
+      error.message?.includes("ma_existing_firm_not_active")
+      ? "This firm is archived. Choose a non-archived firm."
       : error.message?.includes("ma_existing_firm_not_found")
         ? "This firm is no longer available. Refresh and choose another firm."
         : error.message?.includes("ma_real_office_name_already_exists")
@@ -954,6 +957,8 @@ export async function createMaOfficeForExistingFirm(
     contacts: [],
   }
 
+  revalidatePath(`/opportunities/ma/firms/${office.firm_id}`)
+  revalidatePath("/opportunities/ma/firms")
   return {
     success: true,
     message: "Operating office added to the existing firm.",
@@ -976,6 +981,7 @@ export async function createMaOfficeContact(
     return {
       success: false,
       message: "Choose a valid operating office before adding a contact.",
+      fieldErrors: { office_id: "Choose a firm and operating office." },
     }
   }
 
@@ -1062,21 +1068,8 @@ export async function createMaOfficeContact(
       }
     }
   } else {
-    if (!firstName && !lastName) {
-      const message = "Add a first name or last name for the contact."
-      return {
-        success: false,
-        message,
-        fieldErrors: { contact_first_name: message, contact_last_name: message },
-      }
-    }
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return {
-        success: false,
-        message: "Contact email must be valid.",
-        fieldErrors: { contact_email: "Enter a valid email address, or leave it blank." },
-      }
-    }
+    const contactErrors = maContactProfileErrors({ firstName, lastName, email, phone }, "contact_")
+    if (Object.keys(contactErrors).length) return { success: false, message: "Complete the contact details.", fieldErrors: contactErrors }
   }
 
   const supabase = createAdminClient()
@@ -1102,6 +1095,10 @@ export async function createMaOfficeContact(
   )
 
   if (error) {
+    if (error.message?.includes("ma_contact_affiliation_office_not_found") || error.message?.includes("ma_contact_affiliation_requires_active_office") || error.message?.includes("ma_contact_affiliation_requires_non_archived_firm")) {
+      const message = "This office is no longer available for contacts. Refresh and choose an active office under a current firm."
+      return { success: false, message, fieldErrors: { office_id: message } }
+    }
     if (error.message?.includes("ma_contact_already_has_active_office")) {
       return {
         success: false,
@@ -1148,9 +1145,11 @@ export async function createMaOfficeContact(
   }
 
   revalidateOpportunityIntake()
+  revalidatePath("/opportunities/ma/contacts")
+  revalidatePath(`/opportunities/ma/offices/${officeId}`)
   return {
     success: true,
-    message: "Office contact added.",
+    message: await maContactSaveMessage(supabase, identity.contact_id, "Office contact added."),
     contact: {
       affiliation_id: identity.affiliation_id as string,
       contact_id: identity.contact_id as string,

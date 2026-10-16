@@ -1,35 +1,40 @@
-# Compact email review queue — synthetic design reference
+# Approved email review prototype reference
 
 [Product Change #221](https://github.com/re-new-team/renew-governance/issues/221) /
 [Ticket #222](https://github.com/re-new-team/renew-governance/issues/222).
 
-The approved local prototype supplied the toolbar, compact sortable table,
-purpose-tag and page-selection layout direction. The reviewed layout files were
-`run-queue.tsx` (SHA-256
-`7060baede3ab159bfba336b4b099c1da521938677f4b3188addfdb2aeae825ef`)
-and `run-queue-columns.tsx` (SHA-256
-`16d253bea242d9040e32f1e8ad56ea8438266968e5ec33260460692bcbc1df73`)
-under the 27 September `email-review-prototype`. Its two real-data snapshots
-and `src/drafts.ts` were deliberately excluded. No prototype data or
-unreviewed ReUI scaffold was copied into the application.
+Ivan's approved 27 September prototype is `src/main.tsx` (SHA-256
+`92cb638a4d2353705b5a5920653a5cb7e4b69cd7088c0624fbf6ca085acb4934`) and
+`src/styles.css` (SHA-256
+`0509f52fbcefba2ad88f1c6bdfef97ffc810c31b49cc96b4711ff97eefd5070a`)
+under the private local `email-review-prototype`. The prototype data file
+`src/drafts.ts`, its two private snapshots and its customer data are excluded
+from application source, fixtures and public references.
 
-These five screenshots render the actual `ReviewQueue` component in a
-localhost-only, temporary synthetic route with `example.invalid` addresses
-and fictional names on the released neutral Vega theme baseline
-(`8b8be3b78e79df6e3366c87d59e9fea552b8ca0a`). They show desktop/mobile
-and light/dark presentation, including the horizontally scrolled mobile
-columns. The Prepared column shows the Paris date and hour; hovering its
-timestamp retains the full date, minute and second.
-The temporary route is removed before commit. The screenshots are a layout
-reference, not a production-data, authentication or database-migration claim.
+The earlier reference to `run-queue.tsx` and `run-queue-columns.tsx` identified
+an upstream scaffold, not the approved final screen. The five existing
+`queue-*.png` files in this directory are historical synthetic captures of the
+released layout that Ivan rejected on 30 September. They do not prove fidelity
+or acceptance and must not be presented as the target.
 
-- `queue-desktop-light.png`
-- `queue-mobile-light.png`
-- `queue-desktop-dark.png`
-- `queue-mobile-dark.png`
-- `queue-mobile-columns-dark.png`
+The correction reuses the installed ReUI Radix Vega grid and selection shell,
+one version-bound current-page selection, the prototype's column sizes,
+group headings, horizontal actions, toolbar/density controls, avatar, purpose
+tag, single-line preview, padding and typography. The original light palette
+is scoped to this queue and its portals; global Vega tokens and existing Radix
+controls are preserved. Real counts, source-derived purposes, timestamps and
+provider states replace simulated data truthfully.
 
-The production queue uses the existing Radix/shadcn controls and the
-service-role-only canonical projection in migration 130. E6 company remains
-unrecorded, and the real detail page retains source evidence, edits,
-attachments, exact freshness replies and current send gates.
+Production differences require Ivan's explicit approval: the five-message
+send limit and complete per-message acknowledgment/final confirmation, plus
+source-specific attachments, retry problems, reply controls and history
+behind More details, and fixed workflow copy remaining read-only. No service
+limit, authorization, optimistic version, namespace, archive eligibility,
+provider identity or uncertainty fence is relaxed. Existing full-page review
+and saved batch URLs remain available as deep links; the queue itself opens
+Review in a Sheet and sending in a Dialog.
+
+Browser proof of the correction is still required. Source comparison and
+synthetic render tests do not establish screenshot parity. Only fictional
+`example.invalid` fixtures may be used for candidate visual evidence; no
+customer email or real draft mutation is authorized as QA.

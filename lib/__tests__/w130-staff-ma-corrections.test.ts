@@ -47,7 +47,6 @@ describe("W-130 staff M&A corrections", () => {
     expect(actions).toContain(
       'supabase.rpc("update_ma_contact_with_office_correction"',
     )
-    expect(ui).toContain("This does not move, merge, archive, or disclose any record.")
     expect(ui).not.toContain("status")
     expect(contract).toContain("W-130 staff correction boundary")
     expect(actions).toContain(

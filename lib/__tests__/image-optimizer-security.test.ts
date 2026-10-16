@@ -18,16 +18,26 @@ function optimize(buffer: Buffer, contentType: string, href: string) {
 }
 
 describe("installed image optimizer security boundary", () => {
-  // Harmless truncated AVIF headers exercise the decoder admission boundary.
-  // Returning an error fallback is not enough: AVIF must never reach libheif.
+  // AVIF optimization was restored upstream once sharp shipped patched libheif.
+  // Keep that native prerequisite explicit before exercising malformed input.
+  // https://github.com/vercel/next.js/pull/97949
+  it("uses libheif with the AVIF decoder security fixes", () => {
+    expect(sharp.versions.heif).toBeDefined()
+    const [major, minor, patch] = (sharp.versions.heif ?? "0.0.0").split(".").map(Number)
+    const patched = major > 1 || (major === 1 && (minor > 23 || (minor === 23 && patch >= 2)))
+    expect(patched).toBe(true)
+  })
+
+  // Harmless truncated headers must report corruption and retain sniffed AVIF
+  // in the unoptimized fallback, even when the upstream MIME type is spoofed.
   it.each(["image/avif", "image/jpeg"])(
-    "bypasses AVIF decoding even when declared as %s",
+    "reports corrupt AVIF input even when declared as %s",
     async (declaredType) => {
       const avifHeader = Buffer.from("00000018667479706176696600000000", "hex")
       const result = await optimize(avifHeader, declaredType, "/synthetic-avatar.jpg")
       expect(result.buffer).toBe(avifHeader)
       expect(result.contentType).toBe("image/avif")
-      expect(result.error).toBeUndefined()
+      expect(result.error).toBeInstanceOf(Error)
     },
   )
 

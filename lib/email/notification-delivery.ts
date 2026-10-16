@@ -12,6 +12,7 @@ export interface NotificationDeliveryStore {
 }
 
 type NotificationSendResult = {
+  queued?: boolean
   success?: boolean
   resendId?: string
   error?: string
@@ -89,6 +90,7 @@ const databaseStore: NotificationDeliveryStore = {
 
 export type NotificationDeliveryResult =
   | { status: "busy" }
+  | { status: "review_required" }
   | { status: "already_sent" }
   | { status: "failed"; error?: string }
   | { status: "sent"; providerId?: string }
@@ -104,6 +106,7 @@ export async function deliverNotification({
 
   try {
     const delivery = await send(idempotencyKey)
+    if (delivery?.queued) { await store.markFailed(idempotencyKey, claim.leaseToken); return { status: "review_required" } }
     if (delivery?.success !== true) {
       await store.markFailed(idempotencyKey, claim.leaseToken)
       return {

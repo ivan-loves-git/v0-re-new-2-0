@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 import { LanguageProvider } from "@/lib/i18n/language-context"
 import { RepreneurPursuitWorkspace, currentWorkspaceAction, filterWorkspaceDeals, nextWorkspaceResponseRefreshDelay, type SidebarDeal } from "@/components/portal/repreneur-pursuit-workspace"
-import type { RepreneurOpportunityExposure } from "@/lib/types/opportunity"
+import type { RepreneurDealFlowOpportunity, RepreneurOpportunityExposure } from "@/lib/types/opportunity"
 import type { PortalCurrentPursuit } from "@/lib/data/current-pursuit"
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
@@ -25,6 +25,20 @@ const deals: SidebarDeal[] = [
 ]
 
 describe("repreneur pursuit workspace", () => {
+  it("navigates visit-only Paused history by opportunity identity without business counters or actions", () => {
+    const paused = { ...opportunity, opportunity_status: "paused", match_id: null, match_status: null } as never
+    const historical = [{ opportunity_id: "opportunity-1", opportunity_status: "paused", match_id: null, match_status: null, public_title: "Original approved title" }] as never
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(RepreneurPursuitWorkspace, { opportunity: paused, deals: historical,
+        actions: { "opportunity-1": "respond" }, journey: null, responseAsOf: "2026-10-07T10:00:00Z" })))
+    expect(html).toContain('href="/portal/deals/opportunity-1"')
+    expect(html).toContain("Paused")
+    expect(html).toContain("All opportunities")
+    expect(html).not.toContain("1 pursuits in this view")
+    expect(html).not.toContain('data-wave-action="express_interest"')
+    expect(html).not.toContain('data-action-avatar="true"')
+    expect(html).not.toContain("Pursuit ended")
+  })
   it("starts in the matched list on mobile and shows a non-selecting desktop prompt in both languages", () => {
     for (const language of ["en", "fr"] as const) {
       const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: language },
@@ -128,6 +142,30 @@ describe("repreneur pursuit workspace", () => {
     expect(html).toContain('data-wave-action="express_interest"')
     expect(html).toContain("0 pursuits in this view")
     expect(html).not.toContain('href="/portal/deals/own-match"')
+  })
+
+  it("replaces discovery interest with the durable current response when the owned match refreshes", () => {
+    const render = (selected: RepreneurOpportunityExposure | RepreneurDealFlowOpportunity) => renderToStaticMarkup(
+      createElement(LanguageProvider, { initialLanguage: "en" }, createElement(RepreneurPursuitWorkspace, {
+        opportunity: selected, deals: selected.match_id ? deals : [], actions: {}, journey: null,
+        responseAsOf: "2026-09-30T14:00:01Z",
+      })),
+    )
+    const discovery = render({ ...opportunity, match_id: null, match_status: null,
+      is_staff_recommended: false, is_outside_current_criteria: false,
+    })
+    expect(discovery).toContain("Express interest")
+    const currentResponse = render({ ...opportunity, match_status: "interested",
+      interest_expressed_at: "2026-09-30T14:00:00Z", interest_notification_sent_at: "2026-09-30T14:00:00Z",
+      updated_at: "2026-09-30T14:00:01Z",
+    })
+    expect(currentResponse).toContain("Interest sent, awaiting Re-New validation")
+    expect(currentResponse).toContain("Re-New can now review this signal and decide the next step.")
+    const buttons = currentResponse.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? []
+    expect(buttons.find((button) => button.includes("Interest sent"))).toContain('disabled=""')
+    expect(buttons.find((button) => button.includes("Withdraw interest"))).not.toContain('disabled=""')
+    expect(currentResponse).not.toContain("Interest received")
+    expect(currentResponse).not.toContain('name="opportunity_id"')
   })
 
   it("counts searched eligible results and files a rejected interest with ended discussions", () => {

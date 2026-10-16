@@ -1,3 +1,8 @@
+import { OPPORTUNITY_PAUSE_REASON_OPTIONS } from "@/lib/opportunity-outcome-reasons"
+import type { OpportunityPauseReason } from "@/lib/opportunity-outcome-reasons"
+export { OPPORTUNITY_PAUSE_REASON_OPTIONS, OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS, isOpportunityPursuitDropReason, getOpportunityPursuitDropReasonLabel } from "@/lib/opportunity-outcome-reasons"
+export type { OpportunityPauseReason, OpportunityPursuitDropReason } from "@/lib/opportunity-outcome-reasons"
+
 export type OpportunityStatus =
   | "draft"
   | "active"
@@ -93,12 +98,6 @@ export type HistoricalOpportunityClosureReason =
   | "paused_cabinet"
   | "no_viable_match"
 
-export type OpportunityPauseReason = "paused_cabinet"
-
-export type OpportunityPursuitDropReason =
-  | "no_viable_match"
-  | "dd_disqualified_repreneur"
-
 export const OPPORTUNITY_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
@@ -119,24 +118,6 @@ export const OPPORTUNITY_CLOSURE_REASON_OPTIONS = [
   },
 ] as const satisfies ReadonlyArray<{
   value: OpportunityClosureReason
-  label: string
-}>
-
-export const OPPORTUNITY_PAUSE_REASON_OPTIONS = [
-  { value: "paused_cabinet", label: "Paused by cabinet" },
-] as const satisfies ReadonlyArray<{
-  value: OpportunityPauseReason
-  label: string
-}>
-
-export const OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS = [
-  { value: "no_viable_match", label: "No viable match" },
-  {
-    value: "dd_disqualified_repreneur",
-    label: "Due diligence — this repreneur only",
-  },
-] as const satisfies ReadonlyArray<{
-  value: OpportunityPursuitDropReason
   label: string
 }>
 
@@ -263,13 +244,6 @@ export function isOpportunityPauseReason(
   )
 }
 
-export function isOpportunityPursuitDropReason(
-  value: unknown,
-): value is OpportunityPursuitDropReason {
-  return OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.some(
-    (option) => option.value === value,
-  )
-}
 
 export interface MaSource {
   id: string
@@ -503,7 +477,7 @@ export interface MaOfficeIntakeOffice {
   office_id: string
   firm_id: string
   firm_name: string
-  firm_status?: "prospect" | "active"
+  firm_status?: "active" | "archived"
   /** True only for the synthetic compatibility office; never eligible for W-109. */
   is_default?: boolean
   /** True for Acme or any later governed provisional source context. */
@@ -586,6 +560,7 @@ export interface OpportunityPauseHistoryEntry {
   previous_status: OpportunityStatus
   paused_by: string
   paused_at: string
+  reason_note?: string | null
 }
 
 export interface OpportunityActionResult {
@@ -923,6 +898,8 @@ export interface RepreneurGeographyFilterNode {
 }
 
 export interface RepreneurOpportunityExposure {
+  /** Canonical lifecycle; Paused is retained read-only history, never active work. */
+  opportunity_status?: "active" | "paused"
   /** Detail-only fresh comparison. It never controls recommendation or access. */
   criteria_comparison?: OwnerCriterionComparison[]
   /** Own navigation state only; null means unavailable, absent means no personal projection. */
@@ -979,6 +956,7 @@ export interface RepreneurOpportunityExposure {
 }
 
 export interface RepreneurDealFlowOpportunity {
+  opportunity_status?: "active" | "paused"
   criteria_comparison?: OwnerCriterionComparison[]
   personal_review?: RepreneurPersonalReview | null
   match_id: string | null
@@ -1063,15 +1041,6 @@ export function getOpportunityPauseReasonLabel(
   )
 }
 
-export function getOpportunityPursuitDropReasonLabel(
-  reason: OpportunityPursuitDropReason,
-): string {
-  return (
-    OPPORTUNITY_PURSUIT_DROP_REASON_OPTIONS.find(
-      (option) => option.value === reason,
-    )?.label ?? reason
-  )
-}
 
 export function getOpportunityIncompleteDataFieldLabel(
   field: OpportunityIncompleteDataField,
@@ -1127,4 +1096,14 @@ export function getOpportunityNdaStatusLabel(
     OPPORTUNITY_NDA_STATUS_OPTIONS.find((option) => option.value === status)
       ?.label ?? status
   )
+}
+
+/** Staff-only read projection. The database owns the clock and eligibility. */
+export interface OpportunityStaleClosureEligibility {
+  eligible: boolean
+  startedAt: string | null
+  eligibleAt: string | null
+  completedDays: number
+  basis: "policy_activation" | "became_active" | "pursuit_ended" | null
+  message: string
 }

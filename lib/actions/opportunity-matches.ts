@@ -1,5 +1,9 @@
 "use server"
 
+import { areReasonedLifecycleWritesEnabled, REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE } from "@/lib/reasoned-lifecycle-release"
+
+import { validateOpportunityPursuitDropInput } from "@/lib/opportunity-outcome-reasons"
+
 import { revalidatePath } from "next/cache"
 import { requireStaffAccess } from "@/lib/access-control"
 import { revalidateOpportunityDashboardTags } from "@/lib/data/dashboard-snapshots"
@@ -33,7 +37,6 @@ import type {
   RepreneurOpportunityCandidate,
 } from "@/lib/types/opportunity"
 import {
-  isOpportunityPursuitDropReason,
   OPPORTUNITY_MATCH_RECOMMENDATION_OPTIONS,
   OPPORTUNITY_MATCH_STATUS_OPTIONS,
 } from "@/lib/types/opportunity"
@@ -790,26 +793,24 @@ export async function rejectOpportunityInterest(
 export async function dropOpportunityPursuit(
   matchId: string,
   opportunityId: string,
-  reason: OpportunityPursuitDropReason,
+  reason: unknown,
+  secondaryReasons: unknown = [],
+  reasonNote: unknown = null,
+  idempotencyKey = crypto.randomUUID(),
 ) {
   const access = await requireStaffAccess()
-  if (!isOpportunityPursuitDropReason(reason)) {
-    throw new Error("Choose why this pursuit is ending.")
-  }
+  if (!areReasonedLifecycleWritesEnabled()) throw new Error(REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE)
+  const explanation = validateOpportunityPursuitDropInput(reason, secondaryReasons, reasonNote)
+  if (!explanation.success) throw new Error(explanation.message)
   const supabase = createAdminClient()
-  const { error } = await supabase.rpc("journey_transition_terminal", { p_match_id: matchId, p_transition: "drop", p_actor: access.user.email, p_idempotency_key: crypto.randomUUID(), p_closure_reason: reason })
-  if (error) {
-    const alreadyStored = await pursuitTransitionAlreadyStored(
-      supabase,
-      matchId,
-      opportunityId,
-      { status: "dropped", pursuitStage: "dropped" },
-    )
-    if (!alreadyStored) throw new Error(error.message)
-  }
-
+  const { error } = await supabase.rpc("journey_transition_terminal", {
+    p_match_id: matchId, p_transition: "drop", p_actor: access.user.email, p_idempotency_key: idempotencyKey,
+    p_closure_reason: explanation.primaryReason, p_secondary_reasons: explanation.secondaryReasons, p_reason_note: explanation.note,
+  })
+  // Status alone cannot prove which immutable explanation an uncertain write
+  // stored. Retrying the same intent uses the guarded service's exact replay.
+  if (error) throw new Error("Could not confirm this Drop. Retry the same decision or refresh its history.")
   const cleanup = await processRecipientImCleanup({ matchId }).catch(() => null)
-
   revalidateMatchPaths(opportunityId, matchId)
   return { cleanupPending: cleanup === null || cleanup.failed > 0 || cleanup.remaining > 0 }
 }

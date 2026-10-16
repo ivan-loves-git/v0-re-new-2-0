@@ -41,6 +41,23 @@ function render(language: "fr" | "en", detail: boolean) {
 }
 
 describe("repreneur deal interface locale", () => {
+  it("keeps active Viewed/Reviewed controls and ordering in an ordinary list containing Paused history", () => {
+    const activeReviewed = { ...deal, opportunity_id: "reviewed-active", match_id: null, match_status: null, deal_bucket: "live", public_title: "Reviewed active", personal_review: { viewed: true, reviewed: true } } as RepreneurDealFlowOpportunity
+    const activeUnreviewed = { ...activeReviewed, opportunity_id: "unreviewed-active", public_title: "Unreviewed active", personal_review: { viewed: true, reviewed: false } }
+    const paused = { ...activeReviewed, opportunity_id: "paused-history", public_title: "Paused history", opportunity_status: "paused", personal_review: undefined } as RepreneurDealFlowOpportunity
+    const html = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" },
+      createElement(RepreneurOpportunityList, { repreneur: { id: "owner", first_name: "Alex", last_name: "Martin", email: "qa@example.invalid" }, opportunities: [activeReviewed, paused, activeUnreviewed] })))
+    expect(html).toContain("Reviewed · 1")
+    expect(html).toContain("Undo reviewed")
+    expect(html.indexOf("Unreviewed active")).toBeLessThan(html.indexOf("Reviewed active"))
+    const cards = html.split('data-slot="card"')
+    const pausedCard = cards.find((card) => card.includes("Paused history"))!
+    expect(pausedCard).not.toContain("Undo reviewed")
+    expect(pausedCard).not.toContain("Viewed")
+    const activeDetail = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: "en" }, createElement(RepreneurOpportunityDetail, { opportunity: activeUnreviewed })))
+    expect(activeDetail).toContain("Mark as reviewed")
+    expect(activeDetail).toContain('data-wave-action="express_interest"')
+  })
   it("renders list and detail in French or English while preserving original content and month precision", () => {
     for (const detail of [false, true]) {
       const french = render("fr", detail)
@@ -69,5 +86,29 @@ describe("repreneur deal interface locale", () => {
       .toBe("The signed NDA could not be uploaded.")
     expect(publicDealOutcome("Your interest was withdrawn before Re-New validation. This opportunity remains available if eligible.", "fr", "The withdrawal could not be confirmed right now. Please try again."))
       .toContain("avant sa validation par Re-New")
+  })
+
+  it("renders Paused ordinary cards and safe read-only detail in both locales even with stale supplied grants", () => {
+    for (const language of ["fr", "en"] as const) {
+      for (const matchStatus of [null, "active_pursuit", "dropped", "withdrawn"] as const) {
+        const paused: RepreneurDealFlowOpportunity = { ...deal, opportunity_status: "paused", deal_bucket: "live", match_status: matchStatus, match_id: matchStatus ? "actual-match" : null }
+        const detail = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: language },
+          createElement(RepreneurOpportunityDetail, { opportunity: paused, journey: {
+            enabled: true, ndaReadyNotified: true, signedCopyState: "not_submitted", revoked: false,
+            confidentialGrant: { informationMemoDocumentId: "private-file", source: { firmName: "PRIVATE SOURCE", officeName: "PRIVATE OFFICE", contactNames: [] } },
+          } as never })))
+        const list = renderToStaticMarkup(createElement(LanguageProvider, { initialLanguage: language },
+          createElement(RepreneurOpportunityList, { repreneur: { id: "owner", first_name: "Alex", last_name: "Martin", email: "qa@example.invalid" }, opportunities: [paused] })))
+        for (const html of [list, detail]) {
+          expect(html).toContain(language === "fr" ? "En pause" : "Paused")
+          expect(html).not.toContain("PRIVATE")
+          expect(html).not.toContain('data-wave-action="express_interest"')
+          expect(html).not.toContain("/nda-template")
+          expect(html).not.toContain("private-file")
+          expect(html).not.toContain(language === "fr" ? "Marquer comme revue" : "Mark reviewed")
+          expect(html).not.toContain(language === "fr" ? "Revoir et reconsidérer" : "Review and reconsider")
+        }
+      }
+    }
   })
 })

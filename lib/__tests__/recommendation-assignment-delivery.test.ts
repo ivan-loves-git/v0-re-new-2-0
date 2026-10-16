@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { renderToStaticMarkup } from "react-dom/server"
 
 const boundary = vi.hoisted(() => ({ database: vi.fn(), staff: vi.fn(), provider: vi.fn() }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: boundary.database }))
@@ -21,7 +20,7 @@ const key = `recommendation-assignment:${notificationId}`
 function database() {
   let claim: string | null = null
   let log: Record<string, unknown> | null = null
-  const state = { eligible: true, active: true, exists: true, templateExists: true, suppressed: false, counted: 0, copyVersion: 1, email: "person@example.test" }
+  const state = { eligible: true, active: true, exists: true, templateExists: true, suppressed: false, autoSend: true, counted: 0, copyVersion: 1, email: "person@example.test" }
   return {
     state,
     client: {
@@ -51,6 +50,12 @@ function database() {
         return query
       },
       async rpc(name: string, args: Record<string, unknown>) {
+        if (name === "email_business_prepare") return { data: { id: "review-one", state: "pending", version: 1,
+          template_key: args.p_template_key, recipient_email: args.p_recipient, subject: args.p_subject,
+          body_text: args.p_body, retained_html: args.p_html, prepared_policy: { auto_send: state.autoSend, version: 1 } }, error: null }
+        if (name === "email_business_reserve") return { data: "review-token", error: null }
+        if (name === "email_business_authorize_attempt") return { data: true, error: null }
+        if (name === "email_business_finish" || name === "email_review_capture_envelope") return { data: null, error: null }
         if (name === "claim_notification_delivery") {
           if (claim === "sent") return { data: { status: "sent" }, error: null }
           if (claim === "pending") return { data: { status: "busy" }, error: null }
@@ -96,10 +101,19 @@ describe("staff recommendation assignment email", () => {
     expect(options).toEqual({ idempotencyKey: key })
     expect(envelope.to).toEqual(["person@example.test"])
     expect(envelope).not.toHaveProperty("bcc")
-    const html = renderToStaticMarkup(envelope.react)
+    const html = envelope.html
     expect(html).toContain("Public &lt;title&gt;")
     expect(html).toContain("Approved &lt;script&gt; text")
     expect(html).not.toMatch(/<script|href=|INTERNAL|72 heures|portail/i)
+  })
+
+  it("prepares a source-bound review when Auto-send is off without consuming acceptance or a sent clock", async () => {
+    const db = database(); db.state.autoSend = false
+    boundary.database.mockReturnValue(db.client)
+    expect(await retryRecommendationAssignmentEmail(matchId)).toMatchObject({ status: "review_required" })
+    expect(await retryRecommendationAssignmentEmail(matchId)).toMatchObject({ status: "review_required" })
+    expect(boundary.provider).not.toHaveBeenCalled()
+    expect(db.state.counted).toBe(0)
   })
 
   it("rejects nonstaff before database or email access", async () => {
@@ -134,7 +148,7 @@ describe("staff recommendation assignment email", () => {
     expect(await retryRecommendationAssignmentEmail(matchId)).toMatchObject({ status: "sent" })
     expect(db.state.counted).toBe(1)
     expect(boundary.provider.mock.calls.map(call => call[1])).toEqual([{ idempotencyKey: key }, { idempotencyKey: key }])
-    expect(renderToStaticMarkup(boundary.provider.mock.calls[0][0].react)).toBe(renderToStaticMarkup(boundary.provider.mock.calls[1][0].react))
+    expect(boundary.provider.mock.calls[0][0].html).toBe(boundary.provider.mock.calls[1][0].html)
   })
 
   it("fences a concurrent retry while the first provider request is in flight", async () => {

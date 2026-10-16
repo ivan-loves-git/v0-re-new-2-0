@@ -53,7 +53,15 @@ async function readStaffBatch(id: string, actor: string) {
 
 export async function getStaffEmailBulk(id: string) {
   const { user } = await requireStaffAccess()
-  return readStaffBatch(id, user.id)
+  const record = await readStaffBatch(id, user.id)
+  const { data, error } = await createAdminClient().from("staff_email_review_queue")
+    .select("id,recipient_email,recipient_name").in("id", record.items.map(item => item.review_id))
+  const recipients: Record<string, { recipient_email: string; recipient_name: string | null }> = {}
+  if (!error) for (const row of data ?? []) {
+    const item = record.items.find(item => item.review_id === row.id && item.review_snapshot.id === row.id && item.review_snapshot.recipient_email === row.recipient_email)
+    if (item) recipients[item.review_id] = { recipient_email: row.recipient_email, recipient_name: row.recipient_name }
+  }
+  return { ...record, recipients } as typeof record & { recipients?: typeof recipients }
 }
 
 export async function prepareStaffEmailBulk(input: {
@@ -93,11 +101,21 @@ export async function prepareStaffEmailBulk(input: {
   return { batchId: data, href: `/emails/bulk/${encodeURIComponent(data)}` }
 }
 
-export async function acknowledgeStaffEmailBulkItem(batchId: string, ordinal: number, snapshotSha256: string) {
+export async function acknowledgeStaffEmailBulkItem(batchId: string, ordinal: number, snapshotSha256: string, freshnessCopyConfirmed = false) {
   const { user } = await requireStaffAccess()
   requireBatchId(batchId)
   if (!Number.isSafeInteger(ordinal) || ordinal < 1 || ordinal > 5 || !/^[0-9a-f]{64}$/.test(snapshotSha256)) {
     throw new Error("Choose the exact reviewed message to acknowledge.")
+  }
+  if (freshnessCopyConfirmed) {
+    const record = await getStaffEmailBulk(batchId)
+    const item = record.items.find(item => item.ordinal === ordinal)
+    if (record.batch.prepared_by !== user.id || !item || item.snapshot_sha256 !== snapshotSha256 || item.review_snapshot.source_kind !== "freshness")
+      throw new Error("Reload the exact freshness message before confirming its title and neutral wording.")
+    const { error } = await createAdminClient().rpc("opportunity_freshness_acknowledge_copy", {
+      p_review_id: item.review_id, p_version: item.review_snapshot.version, p_actor: user.id,
+    })
+    if (error) throw new Error("The freshness copy or evidence changed. Review every title and the neutral wording again.")
   }
   const { error } = await createAdminClient().rpc("staff_email_bulk_ack", {
     p_batch_id: batchId, p_ordinal: ordinal, p_snapshot_sha256: snapshotSha256, p_actor: user.id,
@@ -131,8 +149,7 @@ async function currentBulkAttempt(review: StaffEmailReview) {
     throw new Error("Grouped freshness sending is temporarily disabled.")
   }
   if (review.namespace !== "REAL") throw new Error("DEMO freshness cannot be sent.")
-  const templateVersion = await getMaReviewTemplateVersion("ma_opportunity_validity_check", true)
-  if (templateVersion !== review.template_version) throw new Error("The catalogue copy changed. Refresh this group.")
+  await getMaReviewTemplateVersion("ma_opportunity_validity_check", true)
   const { error } = await createAdminClient().rpc("opportunity_freshness_assert_current", { p_review_id: review.id })
   if (error) throw new Error("A grouped member or recipient changed. Refresh this group.")
   const payload = buildMaReviewedRequest(review.subject, review.body_text, review.recipient_email)
