@@ -30,6 +30,17 @@ const AUTH_RATE_LIMITS: Record<string, { max: number; window: number }> = {
   "/api/auth/sign-up/email": { max: 1, window: 60 * 60 },
 }
 
+// Staff Claude connection (#265). Sign-in starts at /api/mcp/authorize, which
+// checks the staff role and asks for confirmation before calling the plugin
+// in-process; discovery lives at the site root. get-session would hand a
+// token's refresh token to anyone holding its short-lived access token, and
+// consent is unused because WAVE confirms on its own page.
+const CLOSED_MCP_PLUGIN_GETS = new Set([
+  "/api/auth/mcp/authorize",
+  "/api/auth/mcp/get-session",
+])
+const CLOSED_MCP_PLUGIN_POSTS = new Set(["/api/auth/oauth2/consent"])
+
 const RESET_LINK_PRIVACY_HEADERS = {
   "Cache-Control": "private, no-store, max-age=0",
   Pragma: "no-cache",
@@ -53,6 +64,9 @@ export async function GET(request: Request) {
   const pathname = new URL(request.url).pathname
   if (pathname.startsWith("/api/auth/reset-password/")) {
     return withResetLinkPrivacyHeaders(invalidResetTokenResponse())
+  }
+  if (CLOSED_MCP_PLUGIN_GETS.has(pathname) || pathname.startsWith("/api/auth/.well-known/")) {
+    return new Response("Not found", { status: 404 })
   }
   const response = await handlers.GET(request)
   return response
@@ -78,6 +92,9 @@ async function resetTokenFromRequest(request: Request) {
 
 export async function POST(request: Request) {
   const pathname = new URL(request.url).pathname
+  if (CLOSED_MCP_PLUGIN_POSTS.has(pathname)) {
+    return new Response("Not found", { status: 404 })
+  }
   const rule = AUTH_RATE_LIMITS[pathname]
   const isResetRequest =
     pathname === "/api/auth/reset-password" ||
