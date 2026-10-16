@@ -331,6 +331,16 @@ jobs:
             postgres:17-bookworm \
             bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-staff-mcp-oauth.sh'
 
+      - name: "Rehearse #268 append-only WAVE activity log"
+        run: |
+          docker run --rm \
+            --user postgres \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --env TMPDIR=/tmp \
+            postgres:17-bookworm \
+            bash -lc 'PG_BIN=/usr/lib/postgresql/17/bin bash scripts/rehearse-wave-activity-events.sh'
+
   w147-w148-database-rehearsal:
     name: W-147/W-148 database rehearsal
     runs-on: ubuntu-latest

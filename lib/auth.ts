@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth"
 import { nextCookies } from "better-auth/next-js"
 import { Pool } from "pg"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActorForUser } from "@/lib/activity/actor"
 import { trustedAuthOrigins } from "@/lib/auth-origin-policy"
 import { ACCESS_FROM_EMAIL, FROM_NAME, resend } from "@/lib/email/resend-client"
 import { renderPortalAccessSetupEmail } from "@/lib/email/portal-setup-email"
@@ -156,6 +158,20 @@ export const auth = betterAuth({
   hooks: {
     before: staffMcpRegistrationGuard,
     after: staffMcpRefreshRotation,
+  },
+
+  databaseHooks: {
+    session: {
+      create: {
+        // WAVE activity log (#268): every sign-in, by any role.
+        after: async (session) => {
+          recordActivity(async () => {
+            const actor = await activityActorForUser(session.userId)
+            return actor ? { action: "auth.signed_in", ...actor } : null
+          })
+        },
+      },
+    },
   },
 
   // Security settings

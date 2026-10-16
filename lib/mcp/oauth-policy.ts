@@ -2,13 +2,24 @@
  * Sign-in rules for the staff Claude connection (#265).
  *
  * A registered OAuth client may only send authorization codes to the loopback
- * listener Claude Code opens on the staff member's own Mac. A forwarded sign-in
- * link therefore delivers its code to the clicker's own computer, never to
- * whoever sent it. Hosted callbacks (claude.ai) are deliberately excluded in
- * v1: there the code would reach the account that started the flow.
+ * listener an app such as Claude Code or Codex opens on the staff member's own
+ * computer, or to the hosted connector callbacks of the Claude app (#273) and
+ * ChatGPT. A hosted callback delivers the code to whichever account started
+ * the sign-in, so the confirmation page warns staff never to approve a
+ * sign-in someone sent them.
  */
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
+const CLAUDE_APP_CALLBACKS = new Set([
+  "https://claude.ai/api/mcp/auth_callback",
+  "https://claude.com/api/mcp/auth_callback",
+])
+// ChatGPT uses the stable callback only for servers with RFC 9207 issuer
+// identification; otherwise one callback id per connection.
+const CHATGPT_STABLE_CALLBACK = "https://chatgpt.com/connector_platform_oauth_redirect"
+const CHATGPT_CALLBACK_ID_PATH = /^\/connector\/oauth\/[A-Za-z0-9_-]{1,128}$/
+
+export type McpDestination = "this_computer" | "claude_app" | "chatgpt"
 
 export const MCP_AUTHORIZE_PATH = "/api/mcp/authorize"
 export const MCP_CONTINUE_PARAM = "mcp_continue"
@@ -26,18 +37,31 @@ export const MCP_AUTHORIZE_FIELDS = [
   "resource",
 ] as const
 
-export function isAllowedMcpRedirectUri(value: unknown): boolean {
+/** Where a callback delivers the code, or null when WAVE refuses it. */
+export function mcpRedirectDestination(value: unknown): McpDestination | null {
   // Better Auth stores the list comma-joined, so a comma could smuggle in a
   // second address after this check.
-  if (typeof value !== "string" || value.length > 2048 || value.includes(",")) return false
+  if (typeof value !== "string" || value.length > 2048 || value.includes(",")) return null
   let url: URL
   try {
     url = new URL(value)
   } catch {
-    return false
+    return null
   }
-  if (url.username || url.password || url.hash) return false
-  return url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname)
+  if (url.username || url.password || url.hash) return null
+  if (url.protocol === "http:" && LOOPBACK_HOSTS.has(url.hostname)) return "this_computer"
+  if (url.search) return null
+  const address = `${url.origin}${url.pathname}`
+  if (CLAUDE_APP_CALLBACKS.has(address)) return "claude_app"
+  if (address === CHATGPT_STABLE_CALLBACK) return "chatgpt"
+  if (url.origin === "https://chatgpt.com" && CHATGPT_CALLBACK_ID_PATH.test(url.pathname)) {
+    return "chatgpt"
+  }
+  return null
+}
+
+export function isAllowedMcpRedirectUri(value: unknown): boolean {
+  return mcpRedirectDestination(value) !== null
 }
 
 export function areAllowedMcpRedirectUris(value: unknown): boolean {

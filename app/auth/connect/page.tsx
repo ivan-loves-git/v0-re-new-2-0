@@ -7,10 +7,15 @@ import { getCurrentUserAccess } from "@/lib/access-control"
 import {
   MISSING_DISPLAY_NAME,
   cancelledAuthorizeLocation,
+  connectionCopy,
   lacksDisplayName,
   nextAuthorizeStep,
 } from "@/lib/mcp/authorize-flow"
-import { MCP_AUTHORIZE_PATH, pickMcpAuthorizeParams } from "@/lib/mcp/oauth-policy"
+import {
+  MCP_AUTHORIZE_PATH,
+  mcpRedirectDestination,
+  pickMcpAuthorizeParams,
+} from "@/lib/mcp/oauth-policy"
 import { findMcpClient } from "@/lib/mcp/runtime"
 
 export const metadata: Metadata = {
@@ -75,19 +80,20 @@ export default async function ConnectClaudePage({ searchParams }: { searchParams
     return <Shell title="One detail missing" description={MISSING_DISPLAY_NAME} />
   }
 
+  const redirectUri = params.get("redirect_uri")!
+  const destination = mcpRedirectDestination(redirectUri)
   const client = await findMcpClient(params.get("client_id")!)
-  if (!client || !client.redirectUris.includes(params.get("redirect_uri")!)) return invalid
+  if (!destination || !client || !client.redirectUris.includes(redirectUri)) return invalid
 
-  // The registered client name is chosen by whoever registered it, so the page
-  // names the destination WAVE enforces instead.
+  const copy = connectionCopy(destination, access!.user.email)
   return (
-    <Shell
-      title="Connect Claude Code to WAVE"
-      description={`Claude Code on this computer is asking to read WAVE as ${access!.user.email}.`}
-    >
-      <p className="text-sm font-medium">
-        Only continue if you started this from Claude Code yourself just now.
-      </p>
+    <Shell title={copy.title} description={copy.description}>
+      <p className="text-sm font-medium">{copy.caution}</p>
+      {copy.warning ? (
+        <p role="alert" className="text-sm font-medium text-destructive">
+          {copy.warning}
+        </p>
+      ) : null}
       <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
         <li>It can read every record your staff account can see in WAVE.</li>
         <li>It cannot create, change or delete anything.</li>

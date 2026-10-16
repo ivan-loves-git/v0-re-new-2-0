@@ -1,6 +1,7 @@
 import {
   isAllowedMcpRedirectUri,
   mcpLoginRedirectPath,
+  type McpDestination,
 } from "@/lib/mcp/oauth-policy"
 
 /**
@@ -46,9 +47,38 @@ export function lacksDisplayName(user: { name?: string | null }) {
 }
 
 export const MISSING_DISPLAY_NAME =
-  "Your WAVE account has no display name, which the Claude sign-in needs. Ask Ivan to add your name, then try again."
+  "Your WAVE account has no display name, which the sign-in needs. Ask Ivan to add your name, then try again."
 
-/** Cancelling tells Claude Code's waiting listener that access was refused. */
+const HOSTED_APP_NAMES: Record<Exclude<McpDestination, "this_computer">, string> = {
+  claude_app: "Claude",
+  chatgpt: "ChatGPT",
+}
+
+/**
+ * Confirmation-page wording. It names the destination WAVE enforces, never the
+ * client's self-chosen name. A hosted app's sign-in delivers access to whichever
+ * account started it, so those pages also warn against forwarded links.
+ */
+export function connectionCopy(destination: McpDestination, email: string) {
+  if (destination === "this_computer") {
+    return {
+      title: "Connect an app on this computer to WAVE",
+      description: `An app on this computer, such as Claude Code or Codex, is asking to read WAVE as ${email}.`,
+      caution:
+        "Only continue if you started this yourself just now from Claude Code, Codex or another app on this computer.",
+      warning: null,
+    }
+  }
+  const app = HOSTED_APP_NAMES[destination]
+  return {
+    title: destination === "claude_app" ? "Connect the Claude app to WAVE" : "Connect ChatGPT to WAVE",
+    description: `The ${app} account that started this connection is asking to read WAVE as ${email}.`,
+    caution: `Only continue if you started this from ${app} yourself just now.`,
+    warning: `If someone sent you this link, press Cancel: approving would give their ${app} account your read access to WAVE.`,
+  }
+}
+
+/** Cancelling tells the app's waiting sign-in that access was refused. */
 export function cancelledAuthorizeLocation(params: URLSearchParams) {
   const target = new URL(params.get("redirect_uri")!)
   target.searchParams.set("error", "access_denied")

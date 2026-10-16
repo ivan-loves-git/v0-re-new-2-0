@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { requirePortalAccess, requireStaffAccess } from "@/lib/access-control"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActor } from "@/lib/activity/actor"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { verifyStaffPortalSelection } from "@/lib/staff-portal-selection"
 import { isUuid } from "@/lib/uuid"
@@ -56,6 +58,13 @@ export async function withdrawMyOpportunityInterest(
     p_reason: reason.trim(),
   })
   if (error || data?.status !== "withdrawn") return withdrawalFailure(error?.message)
+  recordActivity({
+    action: "portal.interest_withdrawn",
+    ...activityActor(access),
+    matchId,
+    opportunityId,
+    details: { reason: reason.trim() },
+  })
   refresh(matchId, opportunityId, access.repreneurId)
   return { ok: true, message: "Your interest was withdrawn before Re-New validation. This opportunity remains available if eligible." }
 }
@@ -88,6 +97,14 @@ export async function withdrawStaffPortalOpportunityInterest(input: {
     p_workspace_generation: selection.generation,
   })
   if (error || data?.status !== "withdrawn") return withdrawalFailure(error?.message)
+  recordActivity({
+    action: "portal.interest_withdrawn",
+    ...activityActor(access),
+    repreneurId: input.repreneurId,
+    matchId: input.matchId,
+    opportunityId: input.opportunityId,
+    details: { reason: input.reason.trim(), on_behalf_of_repreneur: true },
+  })
   refresh(input.matchId, input.opportunityId, input.repreneurId)
   return { ok: true, message: "Interest withdrawn by Re-New staff on this repreneur's behalf. The actual staff actor was recorded." }
 }

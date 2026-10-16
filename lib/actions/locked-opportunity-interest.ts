@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { requirePortalAccess } from "@/lib/access-control"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActor } from "@/lib/activity/actor"
 import { createLockedOpportunityInterestStore } from "@/lib/data/locked-opportunity-interest"
 import { sendLockedOpportunityInterestEmail } from "@/lib/email/locked-opportunity-interest"
 import {
@@ -69,6 +71,16 @@ export async function expressOpportunityInterestAction(
     revalidatePath("/portal/deals")
     revalidatePath("/opportunities/reviews")
     revalidatePath(`/opportunities/${opportunityId}`)
+
+    recordActivity({
+      action: "portal.interest_expressed",
+      ...activityActor(access),
+      opportunityId,
+      details: {
+        path: "self_initiated",
+        already_recorded: outcome.status === "success" && outcome.alreadyRecorded,
+      },
+    })
 
     if (outcome.status === "notification_failed") {
       queueM2RepreneurEvent({

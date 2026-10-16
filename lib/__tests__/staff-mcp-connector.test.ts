@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { createCatalog, type Queryable } from "@/lib/mcp/catalog"
 import {
   cancelledAuthorizeLocation,
+  connectionCopy,
   hasValidAuthorizeRequest,
   isSameOriginPost,
   issuedCodeLocation,
@@ -26,6 +27,7 @@ import {
 import {
   areAllowedMcpRedirectUris,
   isAllowedMcpRedirectUri,
+  mcpRedirectDestination,
   pickMcpAuthorizeParams,
   safeMcpContinuation,
 } from "@/lib/mcp/oauth-policy"
@@ -48,12 +50,31 @@ function authorizeParams(overrides: Record<string, string> = {}) {
 }
 
 describe("staff Claude connection sign-in", () => {
-  it("lets registered clients return codes only to Claude Code's listener on the same computer", () => {
-    expect(isAllowedMcpRedirectUri("http://localhost:53682/callback")).toBe(true)
-    expect(isAllowedMcpRedirectUri("http://127.0.0.1:9000/callback")).toBe(true)
+  it("lets registered clients return codes only to an app on this computer, the Claude app or ChatGPT", () => {
+    // Claude Code and Codex listen on this computer.
+    expect(mcpRedirectDestination("http://localhost:53682/callback")).toBe("this_computer")
+    expect(mcpRedirectDestination("http://127.0.0.1:9000/callback")).toBe("this_computer")
+    expect(mcpRedirectDestination("http://127.0.0.1/callback")).toBe("this_computer")
+    expect(mcpRedirectDestination("http://127.0.0.1/callback/XuuuHAzzHOni")).toBe("this_computer")
+    // Claude on the web, desktop and mobile share one callback.
+    expect(mcpRedirectDestination("https://claude.ai/api/mcp/auth_callback")).toBe("claude_app")
+    expect(mcpRedirectDestination("https://claude.com/api/mcp/auth_callback")).toBe("claude_app")
+    // ChatGPT uses one callback id per connection, or its stable callback.
+    expect(mcpRedirectDestination("https://chatgpt.com/connector/oauth/AbC_12-x")).toBe("chatgpt")
+    expect(mcpRedirectDestination("https://chatgpt.com/connector_platform_oauth_redirect")).toBe("chatgpt")
 
-    // A hosted callback would deliver a forwarded link's code to whoever started it.
-    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/auth_callback")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://chatgpt.com/connector/oauth/abc/extra")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://chatgpt.com/connector/oauth/")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://chatgpt.com/connector/oauth/abc?next=https://evil.example")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://chatgpt.com.evil.example/connector/oauth/abc")).toBe(false)
+    expect(isAllowedMcpRedirectUri("http://chatgpt.com/connector_platform_oauth_redirect")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://chatgpt.com/other")).toBe(false)
+
+    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/auth_callback?next=https://evil.example")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/other")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://claude.ai.evil.example/api/mcp/auth_callback")).toBe(false)
+    expect(isAllowedMcpRedirectUri("http://claude.ai/api/mcp/auth_callback")).toBe(false)
+    expect(isAllowedMcpRedirectUri("https://claude.ai/api/mcp/auth_callback,https://evil.example/cb")).toBe(false)
     expect(isAllowedMcpRedirectUri("https://localhost/callback")).toBe(false)
     expect(isAllowedMcpRedirectUri("https://evil.example/callback")).toBe(false)
     expect(isAllowedMcpRedirectUri("http://localhost.evil.example/callback")).toBe(false)
@@ -111,6 +132,25 @@ describe("staff Claude connection sign-in", () => {
     const withoutChallenge = authorizeParams()
     withoutChallenge.delete("code_challenge")
     expect(nextAuthorizeStep(withoutChallenge, "staff")).toEqual({ kind: "invalid" })
+  })
+
+  it("names the real destination and warns against forwarded hosted-app sign-ins", () => {
+    const local = connectionCopy("this_computer", "colin@example.test")
+    expect(local.title).toBe("Connect an app on this computer to WAVE")
+    expect(local.description).toContain("such as Claude Code or Codex")
+    expect(local.warning).toBeNull()
+
+    const claude = connectionCopy("claude_app", "colin@example.test")
+    expect(claude.title).toBe("Connect the Claude app to WAVE")
+    expect(claude.description).toContain("The Claude account that started this connection")
+    expect(claude.caution).toContain("started this from Claude yourself just now")
+    expect(claude.warning).toContain("If someone sent you this link, press Cancel")
+    expect(claude.warning).toContain("their Claude account")
+
+    const chatgpt = connectionCopy("chatgpt", "colin@example.test")
+    expect(chatgpt.title).toBe("Connect ChatGPT to WAVE")
+    expect(chatgpt.description).toContain("The ChatGPT account that started this connection")
+    expect(chatgpt.warning).toContain("their ChatGPT account")
   })
 
   it("tells Claude Code's listener when the staff member cancels", () => {

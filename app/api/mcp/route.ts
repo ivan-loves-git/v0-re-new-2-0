@@ -1,4 +1,5 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"
+import { recordActivity } from "@/lib/activity/activity-log"
 import {
   checkMcpStaff,
   forbiddenResponse,
@@ -26,10 +27,17 @@ export async function POST(request: Request) {
   const server = createWaveMcpServer({
     catalog: waveCatalog(),
     readRows: waveRowReader(),
-    audit: (event) =>
+    audit: (event) => {
       console.info(
         JSON.stringify({ event: "wave_mcp.tool_call", userId: gate.userId, ...event }),
-      ),
+      )
+      recordActivity({
+        action: "mcp.tool_called",
+        actorUserId: gate.userId,
+        actorRole: "staff",
+        details: event,
+      })
+    },
   })
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

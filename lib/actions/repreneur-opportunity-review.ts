@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache"
 import { requirePortalAccess } from "@/lib/access-control"
+import { recordActivity } from "@/lib/activity/activity-log"
+import { activityActor } from "@/lib/activity/actor"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { isUuid } from "@/lib/uuid"
 import type { RepreneurPersonalReview } from "@/lib/types/opportunity"
@@ -31,6 +33,10 @@ async function saveReview(
         return { ok: false, message: "Your review changed in another session. Refresh before trying again." }
       }
       return { ok: false, message: "Your review status could not be saved. Please try again." }
+    }
+    // Every visible open is an activity; the stored first view stays as is.
+    if (reviewed === null) {
+      recordActivity({ action: "portal.deal_opened", ...activityActor(access), opportunityId })
     }
     revalidatePath("/portal/deals", "layout")
     return { ok: true, state: { viewed: true, reviewed: data[0].reviewed === true } }
