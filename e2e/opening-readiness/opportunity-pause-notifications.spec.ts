@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises"
+import { createHmac } from "node:crypto"
 import { join } from "node:path"
 import { expect, test } from "@playwright/test"
 import { verifyPassword } from "better-auth/crypto"
@@ -14,14 +15,20 @@ const pursuitMatch = "26000000-0000-4000-8000-000000000303"
 const queuedOpportunityId = "26000000-0000-4000-8000-000000000401"
 const queuedMatchId = "26000000-0000-4000-8000-000000000402"
 const title = "QA PAUSE NOTICE — SYNTHETIC"
+const fictionalIp = "203.0.113.221"
+const fixtureAuthSecret = process.env.BETTER_AUTH_SECRET
+if (!fixtureAuthSecret) throw new Error("Protected fixture authentication configuration unavailable")
+const ownedSignInKeys = [
+  `${fictionalIp}|/sign-in/email`,
+  `auth:/api/auth/sign-in/email:${createHmac("sha256", fixtureAuthSecret).update(fictionalIp).digest("base64url")}`,
+]
 
 test("staff pause automatically sends only the public reason to both affected cohorts", async ({ page }) => {
   test.setTimeout(180_000)
   const db = new Client({ connectionString: databaseUrl.toString() })
   await db.connect()
-  const originalSignInKeys = new Set((await db.query<{ key: string }>(
-    `SELECT "key" FROM public."rateLimit" WHERE "key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%'`,
-  )).rows.map(row => row.key))
+  const existingOwnedKeys = await db.query('SELECT "key" FROM public."rateLimit" WHERE "key"=ANY($1::text[])', [ownedSignInKeys])
+  expect(existingOwnedKeys.rows).toHaveLength(0)
   try {
     // Initial synthetic relationship states, matching the protected paused-history fixture.
     // The positive pause below goes through the real authenticated product action.
@@ -51,7 +58,7 @@ test("staff pause automatically sends only the public reason to both affected co
       if (await verifyPassword({ hash, password: candidate })) loginPassword = candidate
     }
     if (!loginPassword) throw new Error("Protected fixture credential changed unexpectedly")
-    await page.context().setExtraHTTPHeaders({ "x-forwarded-for": "203.0.113.221" })
+    await page.context().setExtraHTTPHeaders({ "x-forwarded-for": fictionalIp })
     await page.goto("/auth/login")
     await page.getByRole("button", { name: "English", exact: true }).click()
     await page.locator("#email").fill(fixture.staff.email)
@@ -142,13 +149,9 @@ test("staff pause automatically sends only the public reason to both affected co
   } finally {
     await db.query("ROLLBACK")
     await db.query("SELECT public.email_policy_set('opportunity_paused',true,$1)", [fixture.authIds.staffUser])
-    // This journey owns the new buckets for its unique fictional client only.
-    // Leave earlier journeys' budgets intact and do not leak a new IP to later ones.
-    const ownedSignInKeys = (await db.query<{ key: string }>(
-      `SELECT "key" FROM public."rateLimit" WHERE "key" LIKE '%|/sign-in/email' OR "key" LIKE 'auth:/api/auth/sign-in/email:%'`,
-    )).rows.map(row => row.key).filter(key => !originalSignInKeys.has(key))
-    for (const key of ownedSignInKeys) expect(key).toMatch(/^203\.0\.113\.221\|\/sign-in\/email$|^auth:\/api\/auth\/sign-in\/email:[A-Za-z0-9_-]{43}$/)
-    if (ownedSignInKeys.length) await db.query('DELETE FROM public."rateLimit" WHERE "key"=ANY($1::text[])', [ownedSignInKeys])
+    // Match the canonical requestFingerprint algorithm for this exact fictional IP.
+    // Never infer ownership from a newly observed key or a generic hash shape.
+    await db.query('DELETE FROM public."rateLimit" WHERE "key"=ANY($1::text[])', [ownedSignInKeys])
     await db.end()
   }
 })
