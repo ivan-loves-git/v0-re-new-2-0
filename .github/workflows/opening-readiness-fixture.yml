@@ -192,6 +192,8 @@ jobs:
             ${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png
             ${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-mobile.png
             ${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png
+            ${{ runner.temp }}/opening-readiness-evidence/pause-email-template-desktop.png
+            ${{ runner.temp }}/opening-readiness-evidence/pause-email-template-mobile.png
           if-no-files-found: warn
           retention-days: 7
 

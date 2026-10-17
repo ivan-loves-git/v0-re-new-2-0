@@ -5,6 +5,7 @@ import { withBusinessMailApproval, finishBusinessMail } from "./business-mail"
 import { isBookingReminderDue } from "@/lib/booking-request-reminder"
 import type { StaffEmailReview } from "@/lib/actions/staff-email-review"
 import type { EmailTemplateKey } from "@/lib/types/email"
+import { pauseNotificationSourceContext } from "./opportunity-pause-copy"
 
 async function assertGenericSource(review: StaffEmailReview) {
   const db = createAdminClient(),
@@ -122,6 +123,12 @@ export async function dispatchBusinessReview(
   try {
     await withBusinessMailApproval({ review, token, actor }, async () => {
       switch (context.kind) {
+        case "opportunity_pause": {
+          const pause = pauseNotificationSourceContext.parse(context)
+          if (pause.matchId !== review.business_match_id) throw new Error("The pause source no longer matches this review.")
+          await (await import("./opportunity-pause-delivery")).deliverOpportunityPauseNotification(pause.notificationId)
+          break
+        }
         case "interest":
           await (
             await import("./interest-notification-delivery")

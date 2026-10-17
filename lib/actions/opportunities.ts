@@ -1,5 +1,10 @@
 "use server"
 
+import { after } from "next/server"
+import { z } from "zod"
+import { runPendingOpportunityPauseNotifications } from "@/lib/email/opportunity-pause-delivery"
+import { startCriticalOperation } from "@/lib/observability/critical-operation"
+
 import { areReasonedLifecycleWritesEnabled, REASONED_LIFECYCLE_WRITE_HOLD_MESSAGE } from "@/lib/reasoned-lifecycle-release"
 
 import { validateOpportunityPauseInput } from "@/lib/opportunity-outcome-reasons"
@@ -586,7 +591,7 @@ export async function pauseOpportunity(
   if (!explanation.success) return { success: false, message: explanation.message, fieldErrors: { [explanation.field]: explanation.message } }
 
   const supabase = createAdminClient()
-  const { error } = await supabase.rpc("pause_opportunity_with_reason", {
+  const { data: pauseId, error } = await supabase.rpc("pause_opportunity_with_reason", {
     p_opportunity_id: id,
     p_reason: explanation.reason,
     p_paused_by: user.id,
@@ -602,6 +607,19 @@ export async function pauseOpportunity(
     }
     throw new Error(error.message)
   }
+
+  const savedPause = z.string().uuid().safeParse(pauseId)
+  if (savedPause.success) after(async () => {
+    const trace = startCriticalOperation("email.opportunity_pause_notification")
+    try {
+      const result = await runPendingOpportunityPauseNotifications({ pauseId: savedPause.data, limit: 50 })
+      if (result.failed > 0) trace.failure("provider_unavailable")
+      else trace.success()
+    } catch {
+      trace.failure("persistence_failed")
+    }
+  })
+  else startCriticalOperation("email.opportunity_pause_notification").failure("persistence_failed")
 
   revalidatePath("/opportunities")
   revalidatePath("/opportunities/find")

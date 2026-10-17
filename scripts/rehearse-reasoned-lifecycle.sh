@@ -157,6 +157,11 @@ DO $$ BEGIN
    OR (SELECT count(*) FROM public.opportunity_closure_history WHERE opportunity_id='25200000-0000-4000-8000-000000000081' AND reason='stale')<>1 THEN RAISE EXCEPTION 'stale_activation_race_partial_outcome'; END IF;
 END $$;
 SQL
+"${psql[@]}" -f "$repo_root/scripts/108_notification_delivery_claims.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/scripts/rehearsals/opportunity-pause-notifications-before.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/supabase/migrations/20261016135843_opportunity_pause_notifications.sql" >/dev/null
+"${psql[@]}" -f "$repo_root/scripts/rehearsals/opportunity-pause-notifications-after.sql" >/dev/null
+echo 'Pause notification recipient, privacy, event identity, recovery, role denial and no-backfill checks passed.'
 TMPDIR=/tmp REASONED_LIFECYCLE_COMPATIBILITY=1 RENEW_DESCRIPTION_REHEARSAL_PORT="$((port+1))" \
   bash "$repo_root/scripts/rehearse-single-public-description.sh"
 echo 'Ticket #252 disposable persistence, history, confidentiality, clocks, independent-session races and historical import compatibility passed.'

@@ -30,6 +30,8 @@ import { InterestNotificationEmail } from "@/lib/email/templates/interest-notifi
 import { MemoFeedbackReminderEmail } from "@/lib/email/templates/memo-feedback-reminder"
 import { RecommendationCycleNotificationEmail } from "@/lib/email/templates/recommendation-cycle-notification"
 import { DiscoveryDigestEmail } from "@/lib/email/templates/discovery-digest"
+import { OpportunityPausedEmail } from "@/lib/email/templates/opportunity-paused"
+import { PAUSE_EMAIL_BODY, PAUSE_EMAIL_SUBJECT, pauseNotificationPayload, renderOpportunityPauseCopy } from "@/lib/email/opportunity-pause-copy"
 
 const MA_SAMPLE_VARIABLES = {
   firstName: "Camille",
@@ -384,6 +386,16 @@ export async function getRenderedTemplate(
         variables,
         staff: templateKey === "proposed_opportunity_response_staff",
       })
+      break
+    }
+    case "opportunity_paused": {
+      const copy = renderOpportunityPauseCopy(pauseNotificationPayload.parse({
+        notificationId: "26000000-0000-4000-8000-000000000001", pauseId: "26000000-0000-4000-8000-000000000002",
+        matchId: "26000000-0000-4000-8000-000000000003", repreneurId: "26000000-0000-4000-8000-000000000004",
+        recipientEmail: "sophie@example.test", firstName: "Sophie", publicTitle: "Opportunité fictive",
+        reason: "exclusivity_another_buyer", subject: row?.subject ?? PAUSE_EMAIL_SUBJECT, body: bodyMarkdown ?? PAUSE_EMAIL_BODY,
+      }))
+      element = OpportunityPausedEmail(copy)
       break
     }
     case "memo_feedback_reminder": {

@@ -17,6 +17,8 @@ export type CriticalOperationName =
   | "email.password_reset_send"
   | "email.ma_source_send"
   | "email.memo_notification"
+  | "email.opportunity_pause_notification"
+  | "cron.opportunity_pause_notifications"
   | "email.resend_webhook"
   | "cron.abandoned_forms"
   | "cron.abandoned_reminders"

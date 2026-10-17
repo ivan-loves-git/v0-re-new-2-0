@@ -126,6 +126,14 @@ export const TEMPLATE_METADATA: Record<
     copyEditable?: boolean
   }
 > = {
+  opportunity_paused: {
+    name: "Opportunity paused",
+    description: "Notifies affected repreneurs when staff pause an opportunity. Includes the selected public reason, never staff notes. Automatic for new pauses.",
+    category: "ma",
+    audience: "rep",
+    manualSend: false,
+    copyEditable: true,
+  },
   opportunity_memo_available: { name: "Memo available", description: "Once after an exact current confidential memo grant. No access is granted by sending.", category: "ma", audience: "rep", manualSend: false },
   locked_opportunity_interest: { name: "Direct interest alert", description: "Exact new direct interest to configured staff. Withdrawal, current interest and namespace gates remain required.", category: "ma", audience: "staff", manualSend: false },
   "code:e6_nda_ready": { name: "E6 NDA ready", description: "Exact current blank NDA validation to its repreneur. Prepared words editable; authorized portal link is protected.", category: "ma", audience: "rep", manualSend: false },

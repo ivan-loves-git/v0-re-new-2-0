@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const m = vi.hoisted(() => ({ staff: vi.fn(), rpc: vi.fn(), revalidate: vi.fn() }))
+const m = vi.hoisted(() => ({ staff: vi.fn(), rpc: vi.fn(), revalidate: vi.fn(), after: vi.fn(), notify: vi.fn(), traceFailure: vi.fn() }))
+vi.mock("next/server", () => ({ after: m.after }))
+vi.mock("@/lib/email/opportunity-pause-delivery", () => ({ runPendingOpportunityPauseNotifications: m.notify }))
+vi.mock("@/lib/observability/critical-operation", () => ({ startCriticalOperation: () => ({ success: vi.fn(), failure: m.traceFailure }) }))
 vi.mock("@/lib/access-control", () => ({ requireStaffAccess: m.staff }))
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({ rpc: m.rpc }) }))
 vi.mock("next/cache", () => ({ revalidatePath: m.revalidate }))
@@ -14,7 +17,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.unstubAllEnvs()
   m.staff.mockResolvedValue({ user: { id: "staff-1", email: "staff@re-new.invalid" } })
-  m.rpc.mockResolvedValue({ data: "lifecycle-event", error: null })
+  m.rpc.mockResolvedValue({ data: "26000000-0000-4000-8000-000000000001", error: null })
+  m.notify.mockResolvedValue({ failed: 0 })
 })
 
 describe("staff whole-opportunity lifecycle commands", () => {
@@ -27,6 +31,27 @@ describe("staff whole-opportunity lifecycle commands", () => {
     expect(await pauseOpportunity("opportunity-1", "other", "  ")).toMatchObject({ success: false, fieldErrors: { pause_note: expect.any(String) } })
     expect(m.rpc).not.toHaveBeenCalled()
     expect(m.revalidate).not.toHaveBeenCalled()
+  })
+
+  it("schedules notices for the exact committed pause without passing private notes", async () => {
+    await pauseOpportunity("opportunity-1", "other", "Private staff context")
+    expect(m.after).toHaveBeenCalledTimes(1)
+    await m.after.mock.calls[0][0]()
+    expect(m.notify).toHaveBeenCalledWith({ pauseId: "26000000-0000-4000-8000-000000000001", limit: 50 })
+  })
+
+  it("does not notify when the pause transaction is rejected", async () => {
+    m.rpc.mockResolvedValue({ data: null, error: { message: "opportunity_not_active_for_pause" } })
+    expect(await pauseOpportunity("opportunity-1", "paused_cabinet")).toMatchObject({ success: false })
+    expect(m.after).not.toHaveBeenCalled()
+  })
+
+  it("keeps a successful pause truthful and alerts if the returned notification identity is invalid", async () => {
+    m.rpc.mockResolvedValue({ data: "invalid-pause-id", error: null })
+    expect(await pauseOpportunity("opportunity-1", "paused_cabinet")).toMatchObject({ success: true })
+    expect(m.after).not.toHaveBeenCalled()
+    expect(m.notify).not.toHaveBeenCalled()
+    expect(m.traceFailure).toHaveBeenCalledWith("persistence_failed")
   })
 
   it.each(["stale", "no_viable_match", "path_stopped_seller_advisor"])("does not use %s as a whole-sale Pause", async (reason) => {

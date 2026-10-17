@@ -3,6 +3,10 @@
   "regions": ["fra1"],
   "crons": [
     {
+      "path": "/api/cron/opportunity-pause-notifications",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/critical-operation-alerts",
       "schedule": "15 9 * * *"
     },

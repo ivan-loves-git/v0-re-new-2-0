@@ -128,6 +128,8 @@ describe("opening-readiness artifact policy", () => {
         "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-desktop.png",
         "${{ runner.temp }}/opening-readiness-evidence/email-247-analytics-mobile.png",
         "${{ runner.temp }}/opening-readiness-evidence/email-247-templates-mobile.png",
+        "${{ runner.temp }}/opening-readiness-evidence/pause-email-template-desktop.png",
+        "${{ runner.temp }}/opening-readiness-evidence/pause-email-template-mobile.png",
       ], retentionDays: 7 },
       { files: [
         "${{ runner.temp }}/opening-readiness-evidence/external-handoff-en-desktop.png",
